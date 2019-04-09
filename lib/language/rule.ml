@@ -147,7 +147,6 @@ let rec apply ?(matcher = (module Matchers.Generic : Matchers.Matcher)) predicat
       in
       Option.value_map result ~f:ident ~default:(false, Some env)
     | Rewrite _ -> failwith "TODO"
-    | Rewrite_old _ -> failwith "Deprecated"
   in
   List.fold predicates ~init:(true, None) ~f:(fun (sat, out) predicate ->
       if sat then
