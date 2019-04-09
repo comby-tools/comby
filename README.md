@@ -95,16 +95,14 @@ int main(void) {
       },
       "replacement_content": "printf(\"comby, hello\")",
       "environment": [
-        [
-          "1",
-          {
-            "value": "hello",
-            "range": {
-              "start": { "offset": 15, "line": -1, "column": -1 },
-              "end": { "offset": 20, "line": -1, "column": -1 }
-            }
+        {
+          "variable": "1",
+          "value": "hello",
+          "range": {
+            "start": { "offset": 15, "line": -1, "column": -1 },
+            "end": { "offset": 20, "line": -1, "column": -1 }
           }
-        ]
+        }
       ]
     }
   ]
@@ -125,26 +123,22 @@ Note: line and column offsets are not currently calculated for rewrite ranges.
         "end": { "offset": 40, "line": 1, "column": 41 }
       },
       "environment": [
-        [
-          "1",
-          {
-            "value": "hello",
-            "range": {
-              "start": { "offset": 27, "line": 1, "column": 28 },
-              "end": { "offset": 32, "line": 1, "column": 33 }
-            }
+        {
+          "variable": "1",
+          "value": "hello",
+          "range": {
+            "start": { "offset": 27, "line": 1, "column": 28 },
+            "end": { "offset": 32, "line": 1, "column": 33 }
           }
-        ],
-        [
-          "2",
-          {
-            "value": "world",
-            "range": {
-              "start": { "offset": 33, "line": 1, "column": 34 },
-              "end": { "offset": 38, "line": 1, "column": 39 }
-            }
+        },
+        {
+          "variable": "2",
+          "value": "world",
+          "range": {
+            "start": { "offset": 33, "line": 1, "column": 34 },
+            "end": { "offset": 38, "line": 1, "column": 39 }
           }
-        ]
+        }
       ],
       "matched": "printf(\"hello world\")"
     }
