@@ -84,27 +84,31 @@ int main(void) {
 - Adding a `-json` flag will output JSON content of the rewrite:
 
 ```json
-[
-  {
-    "range": {
-      "start": { "offset": 19, "line": -1, "column": -1 },
-      "end": { "offset": 41, "line": -1, "column": -1 }
-    },
-    "replacement_content": "printf(\"comby, hello\")",
-    "environment": [
-      [
-        "1",
-        {
-          "value": "hello",
-          "range": {
-            "start": { "offset": 15, "line": -1, "column": -1 },
-            "end": { "offset": 20, "line": -1, "column": -1 }
+{
+  "uri": null,
+  "rewritten_source": "int main(void) {\n  printf(\"comby, hello\");\n}\n",
+  "in_place_substitutions": [
+    {
+      "range": {
+        "start": { "offset": 19, "line": -1, "column": -1 },
+        "end": { "offset": 41, "line": -1, "column": -1 }
+      },
+      "replacement_content": "printf(\"comby, hello\")",
+      "environment": [
+        [
+          "1",
+          {
+            "value": "hello",
+            "range": {
+              "start": { "offset": 15, "line": -1, "column": -1 },
+              "end": { "offset": 20, "line": -1, "column": -1 }
+            }
           }
-        }
+        ]
       ]
-    ]
-  }
-]
+    }
+  ]
+}
 ```
 
 Note: line and column offsets are not currently calculated for rewrite ranges.
@@ -112,37 +116,40 @@ Note: line and column offsets are not currently calculated for rewrite ranges.
 - Adding a `-match-only` flag will output JSON content of all matches:
 
 ```json
-[
-  {
-    "range": {
-      "start": { "offset": 19, "line": 1, "column": 20 },
-      "end": { "offset": 40, "line": 1, "column": 41 }
-    },
-    "environment": [
-      [
-        "1",
-        {
-          "value": "hello",
-          "range": {
-            "start": { "offset": 27, "line": 1, "column": 28 },
-            "end": { "offset": 32, "line": 1, "column": 33 }
+{
+  "uri": null,
+  "matches": [
+    {
+      "range": {
+        "start": { "offset": 19, "line": 1, "column": 20 },
+        "end": { "offset": 40, "line": 1, "column": 41 }
+      },
+      "environment": [
+        [
+          "1",
+          {
+            "value": "hello",
+            "range": {
+              "start": { "offset": 27, "line": 1, "column": 28 },
+              "end": { "offset": 32, "line": 1, "column": 33 }
+            }
           }
-        }
+        ],
+        [
+          "2",
+          {
+            "value": "world",
+            "range": {
+              "start": { "offset": 33, "line": 1, "column": 34 },
+              "end": { "offset": 38, "line": 1, "column": 39 }
+            }
+          }
+        ]
       ],
-      [
-        "2",
-        {
-          "value": "world",
-          "range": {
-            "start": { "offset": 33, "line": 1, "column": 34 },
-            "end": { "offset": 38, "line": 1, "column": 39 }
-          }
-        }
-      ]
-    ],
-    "matched": "printf(\"hello world\")"
-  }
-]
+      "matched": "printf(\"hello world\")"
+    }
+  ]
+}
 ```
 
 See other flags for more options with `./comby -h`:
