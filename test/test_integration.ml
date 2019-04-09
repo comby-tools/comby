@@ -103,16 +103,14 @@ let%expect_test "single_token" =
       "end": { "offset": 19, "line": 1, "column": 20 }
     },
     "environment": [
-      [
-        "1",
-        {
-          "value": "is",
-          "range": {
-            "start": { "offset": 12, "line": 1, "column": 13 },
-            "end": { "offset": 14, "line": 1, "column": 15 }
-          }
+      {
+        "variable": "1",
+        "value": "is",
+        "range": {
+          "start": { "offset": 12, "line": 1, "column": 13 },
+          "end": { "offset": 14, "line": 1, "column": 15 }
         }
-      ]
+      }
     ],
     "matched": "is this"
   }
@@ -131,16 +129,14 @@ let%expect_test "single_token_with_preceding_whitespace" =
       "end": { "offset": 19, "line": 1, "column": 20 }
     },
     "environment": [
-      [
-        "1",
-        {
-          "value": "is",
-          "range": {
-            "start": { "offset": 12, "line": 1, "column": 13 },
-            "end": { "offset": 14, "line": 1, "column": 15 }
-          }
+      {
+        "variable": "1",
+        "value": "is",
+        "range": {
+          "start": { "offset": 12, "line": 1, "column": 13 },
+          "end": { "offset": 14, "line": 1, "column": 15 }
         }
-      ]
+      }
     ],
     "matched": " is this"
   }
@@ -179,16 +175,14 @@ let%expect_test "shift_or_at_least_dont_get_stuck" =
       "end": { "offset": 1, "line": 1, "column": 2 }
     },
     "environment": [
-      [
-        "1",
-        {
-          "value": "a",
-          "range": {
-            "start": { "offset": 0, "line": 1, "column": 1 },
-            "end": { "offset": 1, "line": 1, "column": 2 }
-          }
+      {
+        "variable": "1",
+        "value": "a",
+        "range": {
+          "start": { "offset": 0, "line": 1, "column": 1 },
+          "end": { "offset": 1, "line": 1, "column": 2 }
         }
-      ]
+      }
     ],
     "matched": "a"
   }
@@ -206,16 +200,14 @@ let%expect_test "shift_or_at_least_dont_get_stuck" =
       "end": { "offset": 2, "line": 1, "column": 3 }
     },
     "environment": [
-      [
-        "1",
-        {
-          "value": "aa",
-          "range": {
-            "start": { "offset": 0, "line": 1, "column": 1 },
-            "end": { "offset": 2, "line": 1, "column": 3 }
-          }
+      {
+        "variable": "1",
+        "value": "aa",
+        "range": {
+          "start": { "offset": 0, "line": 1, "column": 1 },
+          "end": { "offset": 2, "line": 1, "column": 3 }
         }
-      ]
+      }
     ],
     "matched": "aa"
   }

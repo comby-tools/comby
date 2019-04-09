@@ -156,16 +156,14 @@ let%expect_test "where_true" =
           "end": { "offset": 11, "line": 1, "column": 12 }
         },
         "environment": [
-          [
-            "1",
-            {
-              "value": "b,c",
-              "range": {
-                "start": { "offset": 1, "line": 1, "column": 2 },
-                "end": { "offset": 4, "line": 1, "column": 5 }
-              }
+          {
+            "variable": "1",
+            "value": "b,c",
+            "range": {
+              "start": { "offset": 1, "line": 1, "column": 2 },
+              "end": { "offset": 4, "line": 1, "column": 5 }
             }
-          ]
+          }
         ],
         "matched": "(b,c) => {}"
       }
@@ -223,16 +221,14 @@ let%expect_test "match_sat" =
           "end": { "offset": 11, "line": 1, "column": 12 }
         },
         "environment": [
-          [
-            "1",
-            {
-              "value": "b,c",
-              "range": {
-                "start": { "offset": 1, "line": 1, "column": 2 },
-                "end": { "offset": 4, "line": 1, "column": 5 }
-              }
+          {
+            "variable": "1",
+            "value": "b,c",
+            "range": {
+              "start": { "offset": 1, "line": 1, "column": 2 },
+              "end": { "offset": 4, "line": 1, "column": 5 }
             }
-          ]
+          }
         ],
         "matched": "(b,c) => {}"
       }
@@ -268,16 +264,14 @@ let%expect_test "match_sat" =
           "end": { "offset": 9, "line": 1, "column": 10 }
         },
         "environment": [
-          [
-            "1",
-            {
-              "value": "a",
-              "range": {
-                "start": { "offset": 1, "line": 1, "column": 2 },
-                "end": { "offset": 2, "line": 1, "column": 3 }
-              }
+          {
+            "variable": "1",
+            "value": "a",
+            "range": {
+              "start": { "offset": 1, "line": 1, "column": 2 },
+              "end": { "offset": 2, "line": 1, "column": 3 }
             }
-          ]
+          }
         ],
         "matched": "(a) => {}"
       }
@@ -306,16 +300,14 @@ let%expect_test "match_sat" =
           "end": { "offset": 9, "line": 1, "column": 10 }
         },
         "environment": [
-          [
-            "1",
-            {
-              "value": "a",
-              "range": {
-                "start": { "offset": 1, "line": 1, "column": 2 },
-                "end": { "offset": 2, "line": 1, "column": 3 }
-              }
+          {
+            "variable": "1",
+            "value": "a",
+            "range": {
+              "start": { "offset": 1, "line": 1, "column": 2 },
+              "end": { "offset": 2, "line": 1, "column": 3 }
             }
-          ]
+          }
         ],
         "matched": "(a) => {}"
       }
@@ -362,16 +354,14 @@ let%expect_test "match_s_suffix" =
           "end": { "offset": 5, "line": 1, "column": 6 }
         },
         "environment": [
-          [
-            "1",
-            {
-              "value": "name",
-              "range": {
-                "start": { "offset": 0, "line": 1, "column": 1 },
-                "end": { "offset": 4, "line": 1, "column": 5 }
-              }
+          {
+            "variable": "1",
+            "value": "name",
+            "range": {
+              "start": { "offset": 0, "line": 1, "column": 1 },
+              "end": { "offset": 4, "line": 1, "column": 5 }
             }
-          ]
+          }
         ],
         "matched": "names"
       }
@@ -400,16 +390,14 @@ let%expect_test "match_s_suffix" =
           "end": { "offset": 5, "line": 1, "column": 6 }
         },
         "environment": [
-          [
-            "1",
-            {
-              "value": "names",
-              "range": {
-                "start": { "offset": 0, "line": 1, "column": 1 },
-                "end": { "offset": 5, "line": 1, "column": 6 }
-              }
+          {
+            "variable": "1",
+            "value": "names",
+            "range": {
+              "start": { "offset": 0, "line": 1, "column": 1 },
+              "end": { "offset": 5, "line": 1, "column": 6 }
             }
-          ]
+          }
         ],
         "matched": "names"
       }
@@ -459,16 +447,14 @@ let%expect_test "configuration_choice_based_on_case" =
           "end": { "offset": 5, "line": 1, "column": 6 }
         },
         "environment": [
-          [
-            "1",
-            {
-              "value": "names",
-              "range": {
-                "start": { "offset": 0, "line": 1, "column": 1 },
-                "end": { "offset": 5, "line": 1, "column": 6 }
-              }
+          {
+            "variable": "1",
+            "value": "names",
+            "range": {
+              "start": { "offset": 0, "line": 1, "column": 1 },
+              "end": { "offset": 5, "line": 1, "column": 6 }
             }
-          ]
+          }
         ],
         "matched": "names"
       }
@@ -519,16 +505,14 @@ let%expect_test "match_using_environment_merge" =
           "end": { "offset": 21, "line": 1, "column": 22 }
         },
         "environment": [
-          [
-            "1",
-            {
-              "value": "{ a : a } { a : a }",
-              "range": {
-                "start": { "offset": 1, "line": 1, "column": 2 },
-                "end": { "offset": 20, "line": 1, "column": 21 }
-              }
+          {
+            "variable": "1",
+            "value": "{ a : a } { a : a }",
+            "range": {
+              "start": { "offset": 1, "line": 1, "column": 2 },
+              "end": { "offset": 20, "line": 1, "column": 21 }
             }
-          ]
+          }
         ],
         "matched": "{{ a : a } { a : a }}"
       }
@@ -581,16 +565,14 @@ let%expect_test "nested_matches" =
           "end": { "offset": 37, "line": 1, "column": 38 }
         },
         "environment": [
-          [
-            "1",
-            {
-              "value": "{ { foo : { bar : { baz : qux } } } }",
-              "range": {
-                "start": { "offset": 0, "line": 1, "column": 1 },
-                "end": { "offset": 37, "line": 1, "column": 38 }
-              }
+          {
+            "variable": "1",
+            "value": "{ { foo : { bar : { baz : qux } } } }",
+            "range": {
+              "start": { "offset": 0, "line": 1, "column": 1 },
+              "end": { "offset": 37, "line": 1, "column": 38 }
             }
-          ]
+          }
         ],
         "matched": "{ { foo : { bar : { baz : qux } } } }"
       }
@@ -645,16 +627,14 @@ let%expect_test "match_on_template" =
           "end": { "offset": 6, "line": 1, "column": 7 }
         },
         "environment": [
-          [
-            "1",
-            {
-              "value": "oodles",
-              "range": {
-                "start": { "offset": 0, "line": 1, "column": 1 },
-                "end": { "offset": 6, "line": 1, "column": 7 }
-              }
+          {
+            "variable": "1",
+            "value": "oodles",
+            "range": {
+              "start": { "offset": 0, "line": 1, "column": 1 },
+              "end": { "offset": 6, "line": 1, "column": 7 }
             }
-          ]
+          }
         ],
         "matched": "oodles"
       }
@@ -684,16 +664,14 @@ let%expect_test "match_on_template" =
           "end": { "offset": 6, "line": 1, "column": 7 }
         },
         "environment": [
-          [
-            "1",
-            {
-              "value": "poodle",
-              "range": {
-                "start": { "offset": 0, "line": 1, "column": 1 },
-                "end": { "offset": 6, "line": 1, "column": 7 }
-              }
+          {
+            "variable": "1",
+            "value": "poodle",
+            "range": {
+              "start": { "offset": 0, "line": 1, "column": 1 },
+              "end": { "offset": 6, "line": 1, "column": 7 }
             }
-          ]
+          }
         ],
         "matched": "poodle"
       }

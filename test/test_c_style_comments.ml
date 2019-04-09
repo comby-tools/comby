@@ -72,26 +72,22 @@ let%expect_test "capture_comments" =
       "end": { "offset": 48, "line": 1, "column": 49 }
     },
     "environment": [
-      [
-        "1",
-        {
-          "value": "true",
-          "range": {
-            "start": { "offset": 4, "line": 1, "column": 5 },
-            "end": { "offset": 8, "line": 1, "column": 9 }
-          }
+      {
+        "variable": "1",
+        "value": "true",
+        "range": {
+          "start": { "offset": 4, "line": 1, "column": 5 },
+          "end": { "offset": 8, "line": 1, "column": 9 }
         }
-      ],
-      [
-        "2",
-        {
-          "value": "console.log(z);",
-          "range": {
-            "start": { "offset": 31, "line": 1, "column": 32 },
-            "end": { "offset": 46, "line": 1, "column": 47 }
-          }
+      },
+      {
+        "variable": "2",
+        "value": "console.log(z);",
+        "range": {
+          "start": { "offset": 31, "line": 1, "column": 32 },
+          "end": { "offset": 46, "line": 1, "column": 47 }
         }
-      ]
+      }
     ],
     "matched": "if (true) { /* some comment */ console.log(z); }"
   }

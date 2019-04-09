@@ -14,9 +14,6 @@ type data = Data.t
 
 type t = data Core.String.Map.t
 
-type t_alist = (string * data) list
-[@@deriving yojson, eq]
-
 let create () : t =
   String.Map.empty
 
@@ -67,8 +64,18 @@ let copy env =
   fold env ~init:(create ()) ~f:(fun ~key ~data:{ value; range } env' ->
       add ~range env' key value)
 
-let to_yojson env =
-  Map.to_alist env
-  |> t_alist_to_yojson
+let to_yojson env : Yojson.Safe.json =
+  let s =
+    Map.fold_right env ~init:[] ~f:(fun ~key:variable ~data:{value; range} acc ->
+        let item =
+          `Assoc
+            [ ("variable", `String variable)
+            ; ("value", `String value)
+            ; ("range", Range.to_yojson range)
+            ]
+        in
+        item::acc)
+  in
+  `List s
 
 let of_yojson _ = assert false

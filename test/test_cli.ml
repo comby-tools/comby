@@ -85,17 +85,19 @@ let%expect_test "json_output_option" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect_exact {|[
-  {
-    "range": {
-      "start": { "offset": 6, "line": -1, "column": -1 },
-      "end": { "offset": 11, "line": -1, "column": -1 }
-    },
-    "replacement_content": "c Y a",
-    "environment": [
-      [
-        "1",
+  [%expect_exact {|{
+  "uri": null,
+  "rewritten_source": "c X a c Y a",
+  "in_place_substitutions": [
+    {
+      "range": {
+        "start": { "offset": 6, "line": -1, "column": -1 },
+        "end": { "offset": 11, "line": -1, "column": -1 }
+      },
+      "replacement_content": "c Y a",
+      "environment": [
         {
+          "variable": "1",
           "value": "Y",
           "range": {
             "start": { "offset": 2, "line": -1, "column": -1 },
@@ -103,18 +105,16 @@ let%expect_test "json_output_option" =
           }
         }
       ]
-    ]
-  },
-  {
-    "range": {
-      "start": { "offset": 0, "line": -1, "column": -1 },
-      "end": { "offset": 5, "line": -1, "column": -1 }
     },
-    "replacement_content": "c X a",
-    "environment": [
-      [
-        "1",
+    {
+      "range": {
+        "start": { "offset": 0, "line": -1, "column": -1 },
+        "end": { "offset": 5, "line": -1, "column": -1 }
+      },
+      "replacement_content": "c X a",
+      "environment": [
         {
+          "variable": "1",
           "value": "X",
           "range": {
             "start": { "offset": 2, "line": -1, "column": -1 },
@@ -122,9 +122,9 @@ let%expect_test "json_output_option" =
           }
         }
       ]
-    ]
-  }
-]|}];
+    }
+  ]
+}|}];
 
   let source = "a X c a Y c" in
   let match_template = "a :[1] c" in
@@ -136,43 +136,42 @@ let%expect_test "json_output_option" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect_exact {|[
-  {
-    "range": {
-      "start": { "offset": 0, "line": 1, "column": 1 },
-      "end": { "offset": 5, "line": 1, "column": 6 }
-    },
-    "environment": [
-      [
-        "1",
+  [%expect_exact {|{
+  "uri": null,
+  "matches": [
+    {
+      "range": {
+        "start": { "offset": 0, "line": 1, "column": 1 },
+        "end": { "offset": 5, "line": 1, "column": 6 }
+      },
+      "environment": [
         {
+          "variable": "1",
           "value": "X",
           "range": {
             "start": { "offset": 2, "line": 1, "column": 3 },
             "end": { "offset": 3, "line": 1, "column": 4 }
           }
         }
-      ]
-    ],
-    "matched": "a X c"
-  },
-  {
-    "range": {
-      "start": { "offset": 6, "line": 1, "column": 7 },
-      "end": { "offset": 11, "line": 1, "column": 12 }
+      ],
+      "matched": "a X c"
     },
-    "environment": [
-      [
-        "1",
+    {
+      "range": {
+        "start": { "offset": 6, "line": 1, "column": 7 },
+        "end": { "offset": 11, "line": 1, "column": 12 }
+      },
+      "environment": [
         {
+          "variable": "1",
           "value": "Y",
           "range": {
             "start": { "offset": 8, "line": 1, "column": 9 },
             "end": { "offset": 9, "line": 1, "column": 10 }
           }
         }
-      ]
-    ],
-    "matched": "a Y c"
-  }
-]|}]
+      ],
+      "matched": "a Y c"
+    }
+  ]
+}|}]
