@@ -66,7 +66,7 @@ ending in `README.md`
 
 - Input can also be fed via `-stdin` instead of rewriting files:
 
-```
+```bash
 ./comby -stdin 'printf(":[1] :[2]")' 'printf("comby, :[1]")' << EOF 2> /dev/null
 int main(void) {
   printf("hello world");
@@ -83,7 +83,7 @@ int main(void) {
 ```
 - Adding a `-json` flag will output JSON content of the rewrite:
 
-```
+```json
 [
   {
     "range": {
@@ -111,7 +111,7 @@ Note: line and column offsets are not currently calculated for rewrite ranges.
 
 - Adding a `-match-only` flag will output JSON content of all matches:
 
-```
+```json
 [
   {
     "range": {
