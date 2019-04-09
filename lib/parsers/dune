@@ -1,0 +1,5 @@
+(library
+  (name parsers)
+  (public_name comby.parsers)
+  (preprocess (pps ppx_deriving.show ppx_sexp_conv))
+  (libraries ppxlib core mparser mparser.pcre))

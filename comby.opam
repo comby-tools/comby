@@ -1,0 +1,13 @@
+opam-version: "2.0"
+version: "0.1.0"
+maintainer: "rvantonder@gmail.com"
+authors: ["Rijnard van Tonder"]
+homepage: "https://github.com/comby-tools/comby"
+bug-reports: "https://github.com/comby-tools/comby/issues"
+dev-repo: "git+https://github.com/comby-tools/comby.git"
+license: "Apache-2.0"
+build: [["jbuilder" "build" "-p" name "-j" jobs "@install"]]
+depends: [
+  "mparser"
+  "core"
+]

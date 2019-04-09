@@ -1,0 +1,21 @@
+(library
+ (name test_integration)
+ (modules
+  test_match_rule
+  test_integration
+  test_statistics
+  test_c
+  test_cli
+  test_bash
+  test_go
+  test_c_style_comments
+  test_c_separators
+  test_string_literals
+  test_generic
+  test_rewrite_parts
+  test_rewrite_rule)
+ (inline_tests)
+ (preprocess (pps ppx_expect ppx_sexp_message))
+ (libraries
+  comby
+  core))

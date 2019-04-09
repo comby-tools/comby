@@ -1,0 +1,14 @@
+(library
+  (name comby)
+  (public_name comby)
+  (preprocess (pps ppx_deriving.show ppx_deriving.eq ppx_sexp_conv))
+  (libraries 
+   ppxlib 
+   core 
+   mparser 
+   mparser.pcre 
+   comby.matchers
+   comby.rewriter
+   comby.match
+   comby.language
+   comby.statistics))
