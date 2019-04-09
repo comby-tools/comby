@@ -123,7 +123,12 @@ let output_result stdin spec_number json source_path result =
   | Matches (matches, _) ->
     if json then
       let json_matches = `List (List.map ~f:Match.to_yojson matches) in
-      Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json_matches
+      let json =
+        match source_path with
+        | None -> `Assoc [("uri", `Null); ("matches", json_matches)]
+        | Some path -> `Assoc [("uri", `String path); ("matches", json_matches)]
+      in
+      Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json
     else
       let with_file =
         match source_path with
@@ -145,13 +150,15 @@ let output_result stdin spec_number json source_path result =
     | Some path, true, _ ->
       let json_rewrites =
         let value = `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
-        `Assoc [(path, value)]
+        `Assoc [("uri", `String path); ("rewritten_source", `String result); ("in_place_substitutions", value)]
       in
       Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json_rewrites
     (* JSON, no path *)
     | None, true, _ ->
       let json_rewrites =
-        `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
+        let value = `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
+        `Assoc [("uri", `Null); ("rewritten_source", `String result); ("in_place_substitutions", value)]
+      in
       Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json_rewrites
     | _ -> Format.printf "%s%!" result
 
