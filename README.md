@@ -107,6 +107,8 @@ int main(void) {
 ]
 ```
 
+Note: line and column offsets are not currently calculated for rewrite ranges.
+
 - Adding a `-match-only` flag will output JSON content of all matches:
 
 ```
