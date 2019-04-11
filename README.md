@@ -39,7 +39,7 @@ opam install pcre
 opam install oasis
 ```
 
-- Install mparser
+- Install [mparser](https://github.com/comby-tools/mparser)
 
 ```
 git clone https://github.com/comby-tools/mparser
