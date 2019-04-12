@@ -13,9 +13,11 @@
   test_string_literals
   test_generic
   test_rewrite_parts
-  test_rewrite_rule)
+  test_rewrite_rule
+  test_server)
  (inline_tests)
- (preprocess (pps ppx_expect ppx_sexp_message))
+ (preprocess (pps ppx_expect ppx_sexp_message ppx_deriving_yojson ppx_deriving_yojson.runtime))
  (libraries
   comby
+  cohttp-lwt-unix
   core))
