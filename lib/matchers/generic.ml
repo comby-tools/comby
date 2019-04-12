@@ -7,7 +7,10 @@ module Syntax = struct
     ; ("[", "]")
     ]
 
-  let escapable_string_literals = []
+  let escapable_string_literals =
+    [ {|"|}
+    ; {|'|}
+    ]
 
   let escape_char =
     '\\'

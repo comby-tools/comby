@@ -368,7 +368,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
       in
 
       let matcher =
-        let default = (module Matchers.C : Matchers.Matcher) in
+        let default = (module Matchers.Generic : Matchers.Matcher) in
         match file_extensions with
         | None | Some [] -> default
         | Some (hd::_) ->

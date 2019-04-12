@@ -74,6 +74,19 @@ let%expect_test "with_rewrite_rule" =
   |> print_string;
   [%expect_exact {|hello|}]
 
+let%expect_test "generic_matcher" =
+  let source = {|\footnote{\small \url{https://github.com}}|} in
+  let match_template = {|\footnote{\small :[1]}|} in
+  let rewrite_template = {|\footnote{\scriptsize :[1]}|} in
+  let command_args =
+    Format.sprintf "-stdin '%s' '%s' -f .generic" match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {|\footnote{\scriptsize \url{https://github.com}}|}]
+
+
 let%expect_test "json_output_option" =
   let source = "a X c a Y c" in
   let match_template = "a :[1] c" in
