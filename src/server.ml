@@ -59,8 +59,11 @@ let matches_to_json source matches =
     (Yojson.Safe.pretty_to_string (json_match_result_to_yojson { matches; source }))
 
 let apply_rule matcher rule =
-  List.filter ~f:(fun Match.{ environment; _ } ->
-      Rule.(sat @@ apply rule ~matcher environment))
+  let open Option in
+  List.filter_map ~f:(fun (Match.{ environment; _ } as matched) ->
+      let sat, env = Rule.apply rule ~matcher environment in
+      (if sat then env else None)
+      >>| fun environment -> { matched with environment })
 
 let perform_match request =
   App.string_of_body_exn request
@@ -135,8 +138,8 @@ let allow_cors =
   Rock.Middleware.create ~name:("allow cors") ~filter
 
 let () =
-    App.empty
-    |> post "/match" perform_match
-    |> post "/rewrite" perform_rewrite
-    |> middleware allow_cors
-    |> App.run_command
+  App.empty
+  |> post "/match" perform_match
+  |> post "/rewrite" perform_rewrite
+  |> middleware allow_cors
+  |> App.run_command
