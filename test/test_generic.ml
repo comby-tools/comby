@@ -405,4 +405,13 @@ let%expect_test "contextual_matching" =
   let match_template = {|memcpy(:[1], :[2], :[3])|} in
   let rewrite_template = {|:[1]|} in
   run source match_template rewrite_template;
-  [%expect_exact {|dst1; dst2;|}];
+  [%expect_exact {|dst1; dst2;|}]
+
+let%expect_test "contextual_matching_with_short_hole_syntax" =
+  let run = run_all in
+
+  let source = {|memcpy(dst1, src1, 1); memcpy(dst2, src2, 2);|} in
+  let match_template = {|memcpy(:[[1]], :[2], :[3])|} in
+  let rewrite_template = {|:[[1]]|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|dst1; dst2;|}]

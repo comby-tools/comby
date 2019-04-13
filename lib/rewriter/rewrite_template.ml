@@ -7,8 +7,10 @@ let substitute template env =
   |> List.fold ~init:(template, []) ~f:(fun (acc, vars) variable ->
       match Environment.lookup env variable with
       | Some value ->
-        if Option.is_some (String.substr_index template  ~pattern:(":["^variable^"]")) then
+        if Option.is_some (String.substr_index template ~pattern:(":["^variable^"]")) then
           (String.substr_replace_all acc ~pattern:(":["^variable^"]") ~with_:value, variable::vars)
+        else if Option.is_some (String.substr_index template ~pattern:(":[["^variable^"]]")) then
+          (String.substr_replace_all acc ~pattern:(":[["^variable^"]]") ~with_:value, variable::vars)
         else
           acc, vars
       | None -> acc, vars)
