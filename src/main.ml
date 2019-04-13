@@ -98,7 +98,7 @@ let process_single_source matcher verbose configuration source specification mat
             |> fun matches ->
             if matches = [] then
               (* If there are no matches, return the original source (for editor support). *)
-              Some (Some (Rewrite.{ rewritten_source = input_text; contextual_substitutions = [] }), [])
+              Some (Some (Rewrite.{ rewritten_source = input_text; in_place_substitutions = [] }), [])
             else
               Some (rewrite rewrite_template rewrite_rule input_text matches, matches)
           in
@@ -110,8 +110,8 @@ let process_single_source matcher verbose configuration source specification mat
       in
       result
       |> function
-      | Some (Some { rewritten_source; contextual_substitutions }, matches) ->
-        Rewritten (contextual_substitutions, rewritten_source, List.length matches)
+      | Some (Some { rewritten_source; in_place_substitutions }, matches) ->
+        Rewritten (in_place_substitutions, rewritten_source, List.length matches)
       | Some (None, _)
       | None -> Nothing
   with

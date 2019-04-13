@@ -55,7 +55,7 @@ let%expect_test "comments_in_string_literals_should_not_be_treated_as_comments_b
       | None -> print_string "BROKEN EXPECT");
   [%expect_exact {|{
   "rewritten_source": "123433312343331122",
-  "contextual_substitutions": [
+  "in_place_substitutions": [
     {
       "range": {
         "start": { "offset": 0, "line": -1, "column": -1 },
@@ -103,7 +103,7 @@ let%expect_test "comments_in_string_literals_should_not_be_treated_as_comments_b
       | None -> print_string "BROKEN EXPECT");
   [%expect_exact {|{
   "rewritten_source": "123433312343331122;123433312343331122;",
-  "contextual_substitutions": [
+  "in_place_substitutions": [
     {
       "range": {
         "start": { "offset": 19, "line": -1, "column": -1 },
@@ -184,7 +184,7 @@ let%expect_test "multiple_contextual_substitutions" =
       | None -> print_string "BROKEN EXPECT");
   [%expect_exact {|{
   "rewritten_source": "xxxx bar xxxx",
-  "contextual_substitutions": [
+  "in_place_substitutions": [
     {
       "range": {
         "start": { "offset": 9, "line": -1, "column": -1 },

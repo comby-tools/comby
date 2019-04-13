@@ -9,7 +9,7 @@ type match_context_replacement =
 
 type result =
   { rewritten_source : string
-  ; contextual_substitutions : match_context_replacement list
+  ; in_place_substitutions : match_context_replacement list
   }
 [@@deriving yojson]
 

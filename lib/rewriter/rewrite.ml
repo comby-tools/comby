@@ -11,13 +11,13 @@ type match_context_replacement =
 
 type result =
   { rewritten_source : string
-  ; contextual_substitutions : match_context_replacement list
+  ; in_place_substitutions : match_context_replacement list
   }
 [@@deriving yojson]
 
 let empty_result =
   { rewritten_source = ""
-  ; contextual_substitutions = []
+  ; in_place_substitutions = []
   }
 [@@deriving yojson]
 
@@ -40,7 +40,7 @@ let substitute_match_contexts (matches: Match.t list) source replacements =
   let rewritten_source = Rewrite_template.substitute rewrite_template environment |> fst in
   let offsets = Rewrite_template.get_offsets_for_holes rewrite_template (Environment.vars environment) in
   let offsets = Rewrite_template.get_offsets_after_substitution offsets environment in
-  let contextual_substitutions =
+  let in_place_substitutions =
     List.map2_exn replacements offsets ~f:(fun replacement (_uid, offset) ->
         let match_start = { Location.default with offset } in
         let offset = offset + String.length replacement.replacement_content in
@@ -49,7 +49,7 @@ let substitute_match_contexts (matches: Match.t list) source replacements =
         { replacement with range })
   in
   { rewritten_source
-  ; contextual_substitutions
+  ; in_place_substitutions
   }
 
   (*
@@ -108,5 +108,5 @@ let all ?source ~rewrite_template matches : result option =
       |> List.map ~f:(substitute_in_rewrite_template rewrite_template)
       |> List.map ~f:(fun { replacement_content; _ } -> replacement_content)
       |> String.concat ~sep:"\n"
-      |> (fun rewritten_source -> { rewritten_source; contextual_substitutions = [] })
+      |> (fun rewritten_source -> { rewritten_source; in_place_substitutions = [] })
       |> Option.some
