@@ -7,7 +7,7 @@ comby comby-server:
 	@ln -s _build/install/default/bin/$@ ./$@
 
 run-server:
-	@./comby-server -p 7777
+	@./comby-server -p 8888
 
 install:
 	@dune install

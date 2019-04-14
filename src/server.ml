@@ -6,6 +6,8 @@ open Language
 open Matchers
 open Rewriter
 
+let debug = true
+
 let (>>|) = Lwt.Infix.(>|=)
 
 type match_request =
@@ -70,7 +72,8 @@ let perform_match request =
   >>| Yojson.Safe.from_string
   >>| match_request_of_yojson
   >>| function
-  | Ok { source; match_template; rule; language } ->
+  | Ok ({ source; match_template; rule; language } as request) ->
+    if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (match_request_to_yojson request));
     let matcher = matcher_of_language language in
     let run ?rule () =
       get_matches matcher source match_template
@@ -83,8 +86,10 @@ let perform_match request =
       | Some Ok rule -> `Code 200, run ~rule ()
       | Some Error error -> `Code 400, Error.to_string_hum error
     in
+    if debug then Format.printf "Result (200) %s@." result;
     respond ~code (`String result)
   | Error error ->
+    if debug then Format.printf "Result (400) %s@." error;
     respond ~code:(`Code 400) (`String error)
 
 let rewrite_to_json result =
@@ -121,9 +126,9 @@ let perform_rewrite request =
 
 let add_cors_headers (headers: Cohttp.Header.t): Cohttp.Header.t =
   Cohttp.Header.add_list headers [
-    ("access-control-allow-origin", "*");
-    ("access-control-allow-headers", "Accept, Content-Type");
-    ("access-control-allow-methods", "GET, HEAD, POST, DELETE, OPTIONS, PUT, PATCH")
+    ("Access-Control-Allow-Origin", "*");
+    ("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
+    ("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
   ]
 
 let allow_cors =
@@ -135,11 +140,11 @@ let allow_cors =
     |> add_cors_headers
     |> Field.fset Response.Fields.headers response
   in
-  Rock.Middleware.create ~name:("allow cors") ~filter
+  Rock.Middleware.create ~name:"allow cors" ~filter
 
 let () =
   App.empty
-  |> post "/match" perform_match
-  |> post "/rewrite" perform_rewrite
-  |> middleware allow_cors
+  |> App.post "/match" perform_match
+  |> App.post "/rewrite" perform_rewrite
+  |> App.middleware allow_cors
   |> App.run_command

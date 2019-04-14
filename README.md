@@ -37,6 +37,7 @@ opam install hack_parallel
 opam install opium
 opam install pcre
 opam install oasis
+opam install tls
 ```
 
 - Install [mparser](https://github.com/comby-tools/mparser)

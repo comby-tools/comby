@@ -54,7 +54,10 @@ let%expect_test "post_match_request" =
   let result = post uri json in
 
   match Signal.send Signal.kill (`Pid pid) with
-  | `Ok -> print_string result;
+  | `Ok ->
+    print_string json;
+    [%expect "{\"source\":\"hello world\",\"match\":\"hello :[1]\",\"rule\":\"where :[1] == \\\"world\\\"\"}"];
+    print_string result;
     [%expect {|
       {
         "matches": [
