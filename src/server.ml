@@ -105,7 +105,7 @@ let perform_rewrite request =
     let matcher = matcher_of_language language in
     let source_substitution =
       match substitution_kind with
-      | "newline" -> None
+      | "newline_separated" -> None
       | "in_place" | _ -> Some source
     in
     let run ?rule () =

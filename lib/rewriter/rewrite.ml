@@ -102,7 +102,7 @@ let all ?source ~rewrite_template matches : result option =
       |> List.map ~f:(substitute_in_rewrite_template rewrite_template)
       |> substitute_match_contexts matches source
       |> Option.some
-    (* no-inplace substitution, emit result separated by newlines *)
+    (* no in place substitution, emit result separated by newlines *)
     | None ->
       matches
       |> List.map ~f:(substitute_in_rewrite_template rewrite_template)
