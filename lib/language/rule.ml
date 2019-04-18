@@ -222,7 +222,7 @@ let create rule =
   let rule_parser s =
     (spaces
      >> string Syntax.rule_prefix
-     >> spaces
+     >> spaces1
      >> comma_sep1 expression_parser
         << eof)
       s
