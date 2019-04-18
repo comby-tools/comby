@@ -118,7 +118,7 @@ let%expect_test "post_request" =
     Error in line 1, column 7:
     where :[1] = "world"
           ^
-    Expecting "false", "match", "rewrite", "true", end of input or string literal
+    Expecting "false", "match", "rewrite", "true" or string literal
     Backtracking occurred after:
       Error in line 1, column 12:
       where :[1] = "world"
@@ -180,5 +180,23 @@ let%expect_test "post_request" =
         "rewritten_source": "world, hello\nworld, hello",
         "in_place_substitutions": []
       } |}];
+
+  (* test there must be at least one predicate in a rule *)
+  let source = "hello world" in
+  let match_template = "hello :[1]" in
+  let rule = Some {|where |} in
+  let language = "generic" in
+
+  let request = { source; match_template; rule; language } in
+  let json = match_request_to_yojson request |> Yojson.Safe.to_string in
+
+  let result = post `Match json in
+
+  print_string result;
+  [%expect {|
+    Error in line 1, column 7:
+    where
+          ^
+    Expecting ":[", "false", "match", "rewrite", "true" or string literal |}];
 
   kill ()

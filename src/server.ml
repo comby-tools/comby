@@ -101,7 +101,8 @@ let perform_rewrite request =
   >>| Yojson.Safe.from_string
   >>| rewrite_request_of_yojson
   >>| function
-  | Ok { source; match_template; rewrite_template; rule; language; substitution_kind } ->
+  | Ok ({ source; match_template; rewrite_template; rule; language; substitution_kind } as request) ->
+    if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (rewrite_request_to_yojson request));
     let matcher = matcher_of_language language in
     let source_substitution =
       match substitution_kind with
@@ -120,8 +121,10 @@ let perform_rewrite request =
       | Some Ok rule -> `Code 200, run ~rule ()
       | Some Error error -> `Code 400, Error.to_string_hum error
     in
+    if debug then Format.printf "Result (200 or 400) %s@." result;
     respond ~code (`String result)
   | Error error ->
+    if debug then Format.printf "Result (400) %s@." error;
     respond ~code:(`Code 400) (`String error)
 
 let add_cors_headers (headers: Cohttp.Header.t): Cohttp.Header.t =
