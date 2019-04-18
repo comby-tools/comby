@@ -62,8 +62,9 @@ let kill () =
     | `Ok -> ()
     | `No_such_process -> ()
 
+let () = launch ()
+
 let%expect_test "post_request" =
-  launch ();
 
   let source = "hello world" in
   let match_template = "hello :[1]" in
@@ -197,6 +198,6 @@ let%expect_test "post_request" =
     Error in line 1, column 7:
     where
           ^
-    Expecting ":[", "false", "match", "rewrite", "true" or string literal |}];
+    Expecting ":[", "false", "match", "rewrite", "true" or string literal |}]
 
-  kill ()
+let () = kill ()
