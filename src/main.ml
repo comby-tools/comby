@@ -117,18 +117,21 @@ let process_single_source matcher verbose configuration source specification mat
   with
   | _ -> Nothing
 
-let output_result stdin spec_number json source_path result =
+let output_result stdin spec_number json_pretty json_lines source_path result in_place =
   match result with
   | Nothing -> ()
   | Matches (matches, _) ->
-    if json then
+    if json_pretty || json_lines then
       let json_matches = `List (List.map ~f:Match.to_yojson matches) in
       let json =
         match source_path with
         | None -> `Assoc [("uri", `Null); ("matches", json_matches)]
         | Some path -> `Assoc [("uri", `String path); ("matches", json_matches)]
       in
-      Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json
+      if json_lines then
+        Format.printf "%s@." @@ Yojson.Safe.to_string json
+      else
+        Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json
     else
       let with_file =
         match source_path with
@@ -141,25 +144,34 @@ let output_result stdin spec_number json source_path result =
         with_file
         (spec_number + 1)
   | Rewritten (replacements, result, _) ->
-    match source_path, json, stdin with
-    (* default: rewrite in place *)
-    | Some path, false, false -> Out_channel.write_all path ~data:result
+    match source_path, json_pretty, json_lines, stdin, in_place with
+    (* rewrite in place *)
+    | Some path, false, false, false, true -> Out_channel.write_all path ~data:result
     (* stdin, not JSON *)
-    | _, false, true -> Format.printf "%s%!" result
-    (* stdin, JSON with path *)
-    | Some path, true, _ ->
+    | _, false, false, true, false -> Format.printf "%s%!" result
+    (* JSON with path *)
+    | Some path, true, _, _, false
+    | Some path, _, true, _, false ->
       let json_rewrites =
         let value = `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
         `Assoc [("uri", `String path); ("rewritten_source", `String result); ("in_place_substitutions", value)]
       in
-      Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json_rewrites
-    (* JSON, no path *)
-    | None, true, _ ->
+      if json_lines then
+        Format.printf "%s@." @@ Yojson.Safe.to_string json_rewrites
+      else
+        Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json_rewrites
+    (* stdin, JSON, no path *)
+    | None, true, _, _, false
+    | None, _, true, _, false ->
       let json_rewrites =
         let value = `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
         `Assoc [("uri", `Null); ("rewritten_source", `String result); ("in_place_substitutions", value)]
       in
-      Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json_rewrites
+      if json_lines then
+        Format.printf "%s@." @@ Yojson.Safe.to_string json_rewrites
+      else
+        Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json_rewrites
+    (* stdout for everything else *)
     | _ -> Format.printf "%s%!" result
 
 let write_statistics number_of_matches paths total_time =
@@ -200,9 +212,11 @@ let run
     sequential
     number_of_workers
     stdin
-    json
+    json_pretty
+    json_lines
     verbose
-    match_timeout =
+    match_timeout
+    in_place =
   let number_of_workers = if sequential then 0 else number_of_workers in
   let scheduler = Scheduler.create ~number_of_workers () in
   let configuration = Configuration.create ~match_kind:Fuzzy () in
@@ -225,7 +239,7 @@ let run
             Rewritten (x, content, number_of_matches),
             count + number_of_matches)
     in
-    output_result stdin 0 json output_file result;
+    output_result stdin 0 json_pretty json_lines output_file result in_place;
     count
   in
 
@@ -323,7 +337,9 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and target_directory = flag "directory" (optional_with_default "." string) ~doc:(Format.sprintf "path Run on files in a directory. Default is current directory: %s" @@ Sys.getcwd ())
     and specification_directories = flag "templates" (optional (Arg_type.comma_separated string)) ~doc:"path CSV of directories containing templates"
     and file_extensions = flag "filter" (optional (Arg_type.comma_separated string)) ~doc:"extensions CSV of extensions to include"
-    and json = flag "json" no_arg ~doc:"Output JSON format for matches or rewrite text to stdout"
+    and json_pretty = flag "json-pretty" no_arg ~doc:"Output pretty JSON format"
+    and json_lines = flag "json-lines" no_arg ~doc:"Output JSON line format"
+    and in_place = flag "in-place" no_arg ~doc:"Rewrite files on disk, in place"
     and number_of_workers = flag "jobs" (optional_with_default 4 int) ~doc:"n Number of worker processes. Default: 4"
     and stdin = flag "stdin" no_arg ~doc:"Read source from stdin"
     and anonymous_arguments =
@@ -380,7 +396,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           | ".html" -> (module Matchers.Html : Matchers.Matcher)
           | _ -> default
       in
-      run matcher sources specifications sequential number_of_workers stdin json verbose match_timeout
+      run matcher sources specifications sequential number_of_workers stdin json_pretty json_lines verbose match_timeout in_place
   ]
 
 let default_command =
