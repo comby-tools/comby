@@ -92,7 +92,7 @@ let%expect_test "json_output_option" =
   let match_template = "a :[1] c" in
   let rewrite_template = "c :[1] a" in
   let command_args =
-    Format.sprintf "-stdin -sequential -json '%s' '%s' -f .c "
+    Format.sprintf "-stdin -sequential -json-pretty '%s' '%s' -f .c "
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -143,7 +143,7 @@ let%expect_test "json_output_option" =
   let match_template = "a :[1] c" in
   let rewrite_template = "c :[1] a" in
   let command_args =
-    Format.sprintf "-stdin -sequential -json -match-only '%s' '%s' -f .c "
+    Format.sprintf "-stdin -sequential -json-pretty -match-only '%s' '%s' -f .c "
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
