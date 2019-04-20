@@ -19,7 +19,14 @@ type input_kind =
   | Paths of string list
   | Path of string
   | String of string
-[@@deriving show]
+  | Zip of (Zip.in_file * Zip.entry list)
+
+let show_input_kind (i : input_kind) =
+  match i with
+  | Paths _ -> Format.sprintf "Paths..."
+  | Path path -> Format.sprintf "Path: %s" path
+  | String s -> Format.sprintf "String: %s" s
+  | Zip _ -> Format.sprintf "Zips..."
 
 type processed_source_result =
   | Matches of (Match.t list * int)
@@ -274,6 +281,14 @@ let run
           ()
       end;
       write_statistics number_of_matches paths total_time
+  | Zip (zip_in, entries) ->
+    let _number_of_matches =
+      List.fold ~init:0 entries ~f:(fun acc ({ filename; _ } as entry) ->
+          let source = Zip.read_entry zip_in entry in
+          let matches = run_on_specifications (String source) (Some filename) in
+          acc + matches)
+    in
+    ()
   | _ -> failwith "No single path handled here"
 
 let parse_source_directories ?(file_extensions = []) target_directory =
@@ -332,11 +347,12 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     let sequential = flag "sequential" no_arg ~doc:"Run sequentially"
     and match_only = flag "match-only" no_arg ~doc:"Only perform matching (ignore rewrite templates)"
     and verbose = flag "verbose" no_arg ~doc:(Format.sprintf "Log to %s" verbose_out_file)
-    and rule = flag "rule" (optional_with_default "where true" string) ~doc:"rule Apply rules to matches. Respects -f"
+    and rule = flag "rule" (optional_with_default "where true" string) ~doc:"rule Apply rules to matches."
     and match_timeout = flag "timeout" (optional_with_default 3 int) ~doc:"seconds Set match timeout on a source. Default: 3"
     and target_directory = flag "directory" (optional_with_default "." string) ~doc:(Format.sprintf "path Run on files in a directory. Default is current directory: %s" @@ Sys.getcwd ())
     and specification_directories = flag "templates" (optional (Arg_type.comma_separated string)) ~doc:"path CSV of directories containing templates"
     and file_extensions = flag "filter" (optional (Arg_type.comma_separated string)) ~doc:"extensions CSV of extensions to include"
+    and zip_file = flag "zip" (optional string) ~doc:"zipfile A zip file containing files to rewrite"
     and json_pretty = flag "json-pretty" no_arg ~doc:"Output pretty JSON format"
     and json_lines = flag "json-lines" no_arg ~doc:"Output JSON line format"
     and in_place = flag "in-place" no_arg ~doc:"Rewrite files on disk, in place"
@@ -378,9 +394,19 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           parse_specification_directories match_only specification_directories
       in
       let sources =
-        match stdin with
-        | false -> Paths (parse_source_directories ?file_extensions target_directory)
-        | true -> String (In_channel.input_all In_channel.stdin)
+        match stdin, zip_file with
+        | true, _ -> String (In_channel.input_all In_channel.stdin)
+        | _, Some zip_file ->
+          let zip_in = Zip.open_in zip_file in
+          let entries =
+            match file_extensions with
+            | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; _ } -> not is_directory)
+            | Some suffixes ->
+              List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
+                  not is_directory && List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename))
+          in
+          Zip (zip_in, entries)
+        | false, _ -> Paths (parse_source_directories ?file_extensions target_directory)
       in
 
       let matcher =
@@ -396,6 +422,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           | ".html" -> (module Matchers.Html : Matchers.Matcher)
           | _ -> default
       in
+      let in_place =  if is_some zip_file then false else in_place in
       run matcher sources specifications sequential number_of_workers stdin json_pretty json_lines verbose match_timeout in_place
   ]
 
