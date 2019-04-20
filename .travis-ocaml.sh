@@ -98,6 +98,7 @@ apt_install () {
             sudo apt-get update -qq
         fi
         sudo apt-get install --no-install-recommends -y "$@"
+        sudo apt-get install pkg-config pcre
     fi
 }
 
@@ -260,6 +261,8 @@ install_on_osx () {
         ;;
   esac
   brew upgrade python || true
+  brew install pkg-config || true
+  brew install pcre || true
   case "$OCAML_VERSION,$OPAM_VERSION" in
     3.12,1.2.2) OCAML_FULL_VERSION=3.12.1; brew install opam ;;
     3.12,2*) OCAML_FULL_VERSION=3.12.1; install_opam2 ;;
@@ -317,3 +320,25 @@ fi
 
 opam --version
 opam --git-version
+
+opam install ppx_deriving_yojson
+opam install core
+opam install ppxlib
+opam install ppx_deriving
+opam install angstrom
+opam install hack_parallel
+opam install opium
+opam install pcre
+opam install oasis
+opam install tls
+
+git clone https://github.com/comby-tools/mparser
+cd mparser
+oasis setup
+ocaml setup.ml -configure --enable-pcre --enable-re
+ocaml setup.ml -build
+ocaml setup.ml -install
+cd -
+
+make
+make test
