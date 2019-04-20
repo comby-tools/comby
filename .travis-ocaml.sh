@@ -98,7 +98,7 @@ apt_install () {
             sudo apt-get update -qq
         fi
         sudo apt-get install --no-install-recommends -y "$@"
-        sudo apt-get install pkg-config pcre
+        sudo apt-get install pkg-config libpcre3-dev
     fi
 }
 
