@@ -26,7 +26,7 @@ let%expect_test "stdin_command" =
   let match_template = "hello :[1]" in
   let rewrite_template = ":[1]" in
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -f .c" match_template rewrite_template
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c" match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
@@ -39,7 +39,7 @@ let%expect_test "with_match_rule" =
   let rewrite_template = ":[1]" in
   let rule = {|where :[1] == "world"|} in
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -rule '%s' -f .c "
+    Format.sprintf "-stdin -sequential '%s' '%s' -rule '%s' -f .c "
       match_template rewrite_template rule
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -52,7 +52,7 @@ let%expect_test "with_match_rule" =
   let rewrite_template = ":[1]" in
   let rule = {|where :[1] != "world"|} in
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -rule '%s' -f .c "
+    Format.sprintf "-stdin -sequential '%s' '%s' -rule '%s' -f .c "
       match_template rewrite_template rule
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -66,7 +66,7 @@ let%expect_test "with_rewrite_rule" =
   let rewrite_template = ":[1]" in
   let rule = {|where rewrite :[1] { | ":[_]" -> ":[2]" }|} in
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -rule '%s' -f .c "
+    Format.sprintf "-stdin -sequential '%s' '%s' -rule '%s' -f .c "
       match_template rewrite_template rule
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -79,7 +79,7 @@ let%expect_test "generic_matcher" =
   let match_template = {|\footnote{\small :[1]}|} in
   let rewrite_template = {|\footnote{\scriptsize :[1]}|} in
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -f .generic" match_template rewrite_template
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .generic" match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
@@ -92,7 +92,7 @@ let%expect_test "json_output_option" =
   let match_template = "a :[1] c" in
   let rewrite_template = "c :[1] a" in
   let command_args =
-    Format.sprintf "-stdin -json-pretty '%s' '%s' -f .c "
+    Format.sprintf "-stdin -sequential -json '%s' '%s' -f .c "
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -143,7 +143,7 @@ let%expect_test "json_output_option" =
   let match_template = "a :[1] c" in
   let rewrite_template = "c :[1] a" in
   let command_args =
-    Format.sprintf "-stdin -json-pretty -match-only '%s' '%s' -f .c "
+    Format.sprintf "-stdin -sequential -json -match-only '%s' '%s' -f .c "
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
