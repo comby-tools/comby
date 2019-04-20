@@ -16,7 +16,7 @@ opam switch create 4.05.0 4.05.0
 ### Linux
 
 ```
-sudo apt-get install pkg-config pcre
+sudo apt-get install pkg-config libpcre3-dev
 ```
 
 ### Mac
