@@ -1,6 +1,9 @@
 # comby
 
-## Build
+[![Build Status](https://travis-ci.com/comby-tools/comby.svg?branch=master)](https://travis-ci.com/comby-tools/comby)
+[![Apache-2.0](https://img.shields.io/badge/license-Apache-blue.svg)](LICENSE)
+
+## Source Build
 
 - Install [opam](https://opam.ocaml.org/doc/Install.html)
 
