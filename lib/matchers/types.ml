@@ -18,7 +18,7 @@ type dimension =
 
 type hole =
   | Lazy of (string * dimension)
-  | Single of (string * dimension)
+  | Single of (string * char option * dimension)
 
 type production =
   | Unit

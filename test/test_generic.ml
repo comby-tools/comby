@@ -28,9 +28,12 @@ let run ?(configuration = configuration) source match_template rewrite_template 
 
 let run_all ?(configuration = configuration) source match_template rewrite_template =
   Generic.all ~configuration ~template:match_template ~source
-  |> (fun results -> Option.value_exn (Rewrite.all ~source ~rewrite_template results))
-  |> (fun { rewritten_source; _ } -> rewritten_source)
-  |> print_string
+  |> function
+  | [] -> print_string "No matches."
+  | results ->
+    Option.value_exn (Rewrite.all ~source ~rewrite_template results)
+    |> (fun { rewritten_source; _ } -> rewritten_source)
+    |> print_string
 
 
 let%expect_test "basic" =
@@ -415,3 +418,75 @@ let%expect_test "contextual_matching_with_short_hole_syntax" =
   let rewrite_template = {|:[[1]]|} in
   run source match_template rewrite_template;
   [%expect_exact {|dst1; dst2;|}]
+
+let%expect_test "single_holes_with_character_classes" =
+  let run = run_all in
+
+  let source =
+    {|
+    match qatch
+    mak qatch
+    |}
+    |> format
+  in
+  let match_template = {|:[[1]h]|} in
+  let rewrite_template = {|->:[[1]]<-|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|->matc<-h-> qatc<-h
+->mak qatc<-h|}]
+
+let%expect_test "single_holes_with_character_classes" =
+  let run = run_all in
+
+  let source = "asdf fo foo fooo" in
+  let match_template = {|:[[1]o]|} in
+  let rewrite_template = {|->:[[1]]<-|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|->asdf f<-o-> f<-oo-> f<-ooo|}]
+
+let%expect_test "single_holes_with_character_classes" =
+  let run = run_all in
+
+  let source = "asdf foo bar foo quxxxxx blo bloo baz qux" in
+  let match_template = {|:[[1]x]|} in
+  let rewrite_template = {|->:[[1]]<-|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|->asdf foo bar foo qu<-xxxxx-> blo bloo baz qu<-x|}]
+
+(* this *should* fail: there is no newline.
+   let%expect_test "single_holes_with_character_classes" =
+   let run = run_all in
+
+   let source = "blah\n" in
+   let match_template = {|:[[1]\n]|} in
+   let rewrite_template = {|->:[[1]]<-|} in
+   run source match_template rewrite_template;
+   [%expect_exact {|->blah<-|}]
+*)
+
+(*
+let%expect_test "single_holes_with_character_classes" =
+  let run = run_all in
+
+  let source = "blah\n more blah\n" in
+  let match_template = {|:[[1]\n]|} in
+  let rewrite_template = {|->:[[1]]<-|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|->blah more blah<-|}]
+*)
+
+let%expect_test "single_holes_with_character_classes" =
+  let run = run_all in
+
+  let source =
+    {|
+      foo bar
+      baz qux
+    |}
+    |> format
+  in
+  let match_template = {|:[[1]\n]|} in
+  let rewrite_template = {|->:[[1]]<-|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|->foo bar<-
+->baz qux<-|}]
