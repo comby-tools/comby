@@ -35,6 +35,11 @@ let python_newline s =
   (string "#" >> anything_excluding_newlines ~until:"\n"
    |>> fun l -> ("#"^String.of_char_list l)) s
 
+let percentage_newline s =
+  (string "%" >> anything_excluding_newlines ~until:"\n"
+   |>> fun l -> ("%"^String.of_char_list l)) s
+
+
 let any_newline comment_string s =
   (string comment_string >> anything_excluding_newlines ~until:"\n" |>> fun l -> (comment_string^String.of_char_list l)) s
 
