@@ -394,6 +394,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           | ".go" -> (module Matchers.Go : Matchers.Matcher)
           | ".sh" -> (module Matchers.Bash : Matchers.Matcher)
           | ".html" -> (module Matchers.Html : Matchers.Matcher)
+          | ".tex" -> (module Matchers.Latex : Matchers.Matcher)
           | _ -> default
       in
       run matcher sources specifications sequential number_of_workers stdin json_pretty json_lines verbose match_timeout in_place
