@@ -331,6 +331,7 @@ opam install opium
 opam install pcre
 opam install oasis
 opam install tls
+opam install camlzip
 
 git clone https://github.com/comby-tools/mparser
 cd mparser
