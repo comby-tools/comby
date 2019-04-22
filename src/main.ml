@@ -26,7 +26,7 @@ let show_input_kind (i : input_kind) =
   | Paths _ -> Format.sprintf "Paths..."
   | Path path -> Format.sprintf "Path: %s" path
   | String s -> Format.sprintf "String: %s" s
-  | Zip _ -> Format.sprintf "Zips..."
+  | Zip _ -> Format.sprintf "Zip..."
 
 type processed_source_result =
   | Matches of (Match.t list * int)
@@ -422,7 +422,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           | ".html" -> (module Matchers.Html : Matchers.Matcher)
           | _ -> default
       in
-      let in_place =  if is_some zip_file then false else in_place in
+      let in_place = if is_some zip_file then false else in_place in
       run matcher sources specifications sequential number_of_workers stdin json_pretty json_lines verbose match_timeout in_place
   ]
 
