@@ -71,8 +71,17 @@ module Make (Syntax : Syntax.S) = struct
     is_not (string right_delimiter) |>> String.of_char
 
   (** a parser that understands the single hole matching is alphanum and _ *)
-  let generate_single_hole_parser () =
-    (alphanum <|> char '_') |>> String.of_char
+  let generate_single_hole_parser until_char =
+    match until_char with
+    | None ->
+      many1 ((alphanum <|> char '_') |>> String.of_char)
+    | Some until_char ->
+      many1
+        (not_followed_by (char until_char) "" >>
+         (alphanum <|> char '_'
+          (* comment out next line exclude whitespace *)
+          <|> char ' '
+         ) |>> String.of_char)
 
   let generate_spaces_parser () =
     (* at least a space followed by comments and spaces *)
@@ -101,22 +110,38 @@ module Make (Syntax : Syntax.S) = struct
     >> many Syntax.comment_parser
     >>= fun result -> f result
 
+  let greedy_hole_parser _s =
+    string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
+
+  let single_hole_parser _s =
+    string ":[[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
+    >>= fun id ->
+    (option (
+        (* literal \n, not a newline in the template. *)
+        (char '\\' >> char 'n' >>= fun _ ->
+         return '\n')
+        <|>
+        is_not (char ']')))
+    >>= fun until_char ->
+    string "]" >>= fun _ ->
+    return (id, until_char)
+
   let reserved_delimiters =
     List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
-    |> List.append [":["; "]"] (* lazy hole *)
-    |> List.append [":[["; "]]"] (* single token hole *)
     |> List.map ~f:string
+    |> fun reserved ->
+    let single =
+      string ":[[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]]"
+    in
+    let greedy =
+      string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
+    in
+    single::greedy::reserved
     |> choice
 
   let reserved =
     reserved_delimiters
     <|> (space |>> Char.to_string)
-
-  let greedy_hole_parser _s =
-    string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
-
-  let single_hole_parser _s =
-    string ":[[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]]"
 
   let until_of_from from =
     Syntax.user_defined_delimiters
@@ -225,8 +250,8 @@ module Make (Syntax : Syntax.S) = struct
               let hole_semantics = many (not_followed_by rest "" >> matcher) in
               record_matches identifier hole_semantics
 
-            | Hole (Single (identifier, _)) ->
-              let hole_semantics = many1 (generate_single_hole_parser ()) in
+            | Hole (Single (identifier, until_char, _)) ->
+              let hole_semantics = generate_single_hole_parser until_char in
               record_matches identifier hole_semantics
 
             | _ -> failwith "Hole expected"
@@ -239,8 +264,8 @@ module Make (Syntax : Syntax.S) = struct
     in
     match sort with
     | `Single ->
-      single_hole_parser () |>> fun id ->
-      skip_signal (Hole (Single (id, dimension)))
+      single_hole_parser () |>> fun (id, until_char) ->
+      skip_signal (Hole (Single (id, until_char, dimension)))
     | `Lazy ->
       greedy_hole_parser () |>> fun id ->
       skip_signal (Hole (Lazy (id, dimension)))
