@@ -73,7 +73,6 @@ module Make (Syntax : Syntax.S) = struct
   (** a parser that understands the single hole matching is alphanum and _, with
       possible augmentatation. *)
   let generate_single_hole_parser including until_char =
-    Format.printf "include size: %d@." @@ List.length including;
     let allowed =
       choice ([alphanum; char '_'] @ List.map including ~f:char)
       |>> String.of_char
