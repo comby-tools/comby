@@ -73,6 +73,7 @@ module Make (Syntax : Syntax.S) = struct
   (** a parser that understands the single hole matching is alphanum and _, with
       possible augmentatation. *)
   let generate_single_hole_parser including until_char =
+    Format.printf "include size: %d@." @@ List.length including;
     let allowed =
       choice ([alphanum; char '_'] @ List.map including ~f:char)
       |>> String.of_char
@@ -114,17 +115,18 @@ module Make (Syntax : Syntax.S) = struct
     string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
 
   let single_hole_parser _s =
-    string ":[" >> string "[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
+    string ":[" >>
+    many (is_not (char '[')) >>= fun including ->
+    string "[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
     >>= fun id ->
     (option (
-        (* literal \n, not a newline in the template. *)
         (char '\\' >> char 'n' >>= fun _ ->
          return '\n')
         <|>
         is_not (char ']')))
     >>= fun until_char ->
     string "]" >>= fun _ ->
-    return (id, [], until_char)
+    return (id, including, until_char)
 
   let reserved_delimiters =
     List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
