@@ -16,9 +16,13 @@ type dimension =
   | Raw_string_literal
   | Comment
 
+type id = string
+type including = char list
+type until = char option
+
 type hole =
-  | Lazy of (string * dimension)
-  | Single of (string * char option * dimension)
+  | Lazy of (id * dimension)
+  | Single of (id * including * until * dimension)
 
 type production =
   | Unit

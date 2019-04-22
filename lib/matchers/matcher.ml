@@ -70,18 +70,18 @@ module Make (Syntax : Syntax.S) = struct
   let raw_literal_grammar ~right_delimiter =
     is_not (string right_delimiter) |>> String.of_char
 
-  (** a parser that understands the single hole matching is alphanum and _ *)
-  let generate_single_hole_parser until_char =
+  (** a parser that understands the single hole matching is alphanum and _, with
+      possible augmentatation. *)
+  let generate_single_hole_parser including until_char =
+    let allowed =
+      choice ([alphanum; char '_'] @ List.map including ~f:char)
+      |>> String.of_char
+    in
     match until_char with
     | None ->
-      many1 ((alphanum <|> char '_') |>> String.of_char)
+      many1 allowed
     | Some until_char ->
-      many1
-        (not_followed_by (char until_char) "" >>
-         (alphanum <|> char '_'
-          (* comment out next line exclude whitespace *)
-          <|> char ' '
-         ) |>> String.of_char)
+      many1 (not_followed_by (char until_char) "" >> allowed)
 
   let generate_spaces_parser () =
     (* at least a space followed by comments and spaces *)
@@ -114,17 +114,18 @@ module Make (Syntax : Syntax.S) = struct
     string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
 
   let single_hole_parser _s =
-    string ":[[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
+    string ":[" >>
+    many (is_not (char '[')) >>= fun including ->
+    string "[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
     >>= fun id ->
     (option (
-        (* literal \n, not a newline in the template. *)
         (char '\\' >> char 'n' >>= fun _ ->
          return '\n')
         <|>
         is_not (char ']')))
     >>= fun until_char ->
     string "]" >>= fun _ ->
-    return (id, until_char)
+    return (id, including, until_char)
 
   let reserved_delimiters =
     List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
@@ -250,8 +251,8 @@ module Make (Syntax : Syntax.S) = struct
               let hole_semantics = many (not_followed_by rest "" >> matcher) in
               record_matches identifier hole_semantics
 
-            | Hole (Single (identifier, until_char, _)) ->
-              let hole_semantics = generate_single_hole_parser until_char in
+            | Hole (Single (identifier, including, until_char, _)) ->
+              let hole_semantics = generate_single_hole_parser including until_char in
               record_matches identifier hole_semantics
 
             | _ -> failwith "Hole expected"
@@ -264,16 +265,16 @@ module Make (Syntax : Syntax.S) = struct
     in
     match sort with
     | `Single ->
-      single_hole_parser () |>> fun (id, until_char) ->
-      skip_signal (Hole (Single (id, until_char, dimension)))
+      single_hole_parser () |>> fun (id, including, until_char) ->
+      skip_signal (Hole (Single (id, including, until_char, dimension)))
     | `Lazy ->
       greedy_hole_parser () |>> fun id ->
       skip_signal (Hole (Lazy (id, dimension)))
 
   let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter s =
     let p =
-      many (hole_parser `Single sort
-            <|> (hole_parser `Lazy sort)
+      many (attempt (hole_parser `Lazy sort)
+            <|> attempt (hole_parser `Single sort)
             <|> ((many1 (is_not (string ":[" <|> string ":[["))
                   |>> String.of_char_list) |>> generate_string_token_parser))
     in
@@ -294,8 +295,8 @@ module Make (Syntax : Syntax.S) = struct
     many (common s)
 
   and common _s =
-    (hole_parser `Single Code)
-    <|> (hole_parser `Lazy Code)
+    (attempt (hole_parser `Lazy Code))
+    <|> attempt (hole_parser `Single Code)
     (* string literals are handled specially because match semantics change inside string delimiters *)
     <|> (escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal))
     <|> (raw_string_literal_parser (generate_hole_for_literal Raw_string_literal))
