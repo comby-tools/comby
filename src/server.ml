@@ -126,11 +126,19 @@ let perform_rewrite request =
       | "newline_separated" -> None
       | "in_place" | _ -> Some source
     in
+    let default =
+      { rewritten_source = ""
+      ; in_place_substitutions = []
+      ; id
+      }
+      |> json_rewrite_result_to_yojson
+      |> Yojson.Safe.pretty_to_string
+    in
     let run ?rule () =
       get_matches matcher source match_template
       |> Option.value_map rule ~default:ident ~f:(apply_rule matcher)
       |> Rewrite.all ?source:source_substitution ~rewrite_template
-      |> Option.value_map ~default:"" ~f:(rewrite_to_json id)
+      |> Option.value_map ~default ~f:(rewrite_to_json id)
     in
     let code, result =
       match Option.map rule ~f:Rule.create with
