@@ -7,6 +7,7 @@ type match_request =
   ; match_template : string [@key "match"]
   ; rule : string option [@default None]
   ; language : string [@default "generic"]
+  ; id : int
   }
 [@@deriving yojson]
 
@@ -17,6 +18,7 @@ type rewrite_request =
   ; rule : string option [@default None]
   ; language : string [@default "generic"]
   ; substitution_kind : string [@default "in_place"]
+  ; id : int
   }
 [@@deriving yojson]
 
@@ -71,13 +73,13 @@ let%expect_test "post_request" =
   let rule = Some {|where :[1] == "world"|} in
   let language = "generic" in
 
-  let request = { source; match_template; rule; language } in
+  let request = { source; match_template; rule; language; id = 0 } in
   let json = match_request_to_yojson request |> Yojson.Safe.to_string in
 
   let result = post `Match json in
 
   print_string json;
-  [%expect "{\"source\":\"hello world\",\"match\":\"hello :[1]\",\"rule\":\"where :[1] == \\\"world\\\"\"}"];
+  [%expect "{\"source\":\"hello world\",\"match\":\"hello :[1]\",\"rule\":\"where :[1] == \\\"world\\\"\",\"id\":0}"];
   print_string result;
   [%expect {|
     {
@@ -100,7 +102,8 @@ let%expect_test "post_request" =
           "matched": "hello world"
         }
       ],
-      "source": "hello world"
+      "source": "hello world",
+      "id": 0
     } |}];
 
 
@@ -109,7 +112,7 @@ let%expect_test "post_request" =
   let rule = Some {|where :[1] = "world"|} in
   let language = "generic" in
 
-  let request = { source; match_template; rule; language } in
+  let request = { source; match_template; rule; language; id = 0 } in
   let json = match_request_to_yojson request |> Yojson.Safe.to_string in
 
   let result = post `Match json in
@@ -133,7 +136,7 @@ let%expect_test "post_request" =
   let rewrite_template = ":[1], hello" in
   let language = "generic" in
 
-  let request = { source; match_template; rewrite_template; rule; language; substitution_kind} in
+  let request = { source; match_template; rewrite_template; rule; language; substitution_kind; id = 0 } in
   let json = rewrite_request_to_yojson request |> Yojson.Safe.to_string in
 
   let result = post `Rewrite json in
@@ -160,7 +163,8 @@ let%expect_test "post_request" =
               }
             ]
           }
-        ]
+        ],
+        "id": 0
       } |}];
 
   let substitution_kind = "newline_separated" in
@@ -170,7 +174,7 @@ let%expect_test "post_request" =
   let rewrite_template = ":[1], hello" in
   let language = "generic" in
 
-  let request = { source; match_template; rewrite_template; rule; language; substitution_kind} in
+  let request = { source; match_template; rewrite_template; rule; language; substitution_kind; id = 0} in
   let json = rewrite_request_to_yojson request |> Yojson.Safe.to_string in
 
   let result = post `Rewrite json in
@@ -179,7 +183,8 @@ let%expect_test "post_request" =
   [%expect {|
       {
         "rewritten_source": "world, hello\nworld, hello",
-        "in_place_substitutions": []
+        "in_place_substitutions": [],
+        "id": 0
       } |}];
 
   (* test there must be at least one predicate in a rule *)
@@ -188,7 +193,7 @@ let%expect_test "post_request" =
   let rule = Some {|where |} in
   let language = "generic" in
 
-  let request = { source; match_template; rule; language } in
+  let request = { source; match_template; rule; language; id = 0 } in
   let json = match_request_to_yojson request |> Yojson.Safe.to_string in
 
   let result = post `Match json in
