@@ -417,8 +417,7 @@ let%expect_test "contextual_matching_with_short_hole_syntax" =
   let match_template = {|memcpy(:[[1]], :[2], :[3])|} in
   let rewrite_template = {|:[[1]]|} in
   run source match_template rewrite_template;
-  [%expect_exact {|include size: 0
-dst1; dst2;|}]
+  [%expect_exact {|dst1; dst2;|}]
 
 let%expect_test "single_holes_with_character_classes_suffix_over_lines" =
   let run = run_all in
@@ -433,8 +432,7 @@ let%expect_test "single_holes_with_character_classes_suffix_over_lines" =
   let match_template = {|:[[1]h]|} in
   let rewrite_template = {|->:[[1]]<-|} in
   run source match_template rewrite_template;
-  [%expect_exact {|include size: 0
-->matc<-h ->batc<-h
+  [%expect_exact {|->matc<-h ->batc<-h
 ->make<- ->batc<-h|}]
 
 let%expect_test "single_holes_with_character_classes_suffix" =
@@ -444,8 +442,7 @@ let%expect_test "single_holes_with_character_classes_suffix" =
   let match_template = {|:[[1]o]|} in
   let rewrite_template = {|->:[[1]]<-|} in
   run source match_template rewrite_template;
-  [%expect_exact {|include size: 0
-->asdf<- ->f<-o ->f<-oo ->f<-ooo|}]
+  [%expect_exact {|->asdf<- ->f<-o ->f<-oo ->f<-ooo|}]
 
 let%expect_test "single_holes_with_character_classes_not_escaped" =
   let run = run_all in
@@ -454,8 +451,7 @@ let%expect_test "single_holes_with_character_classes_not_escaped" =
   let match_template = {|:[[1]\n]|} in
   let rewrite_template = {|->:[[1]]<-|} in
   run source match_template rewrite_template;
-  [%expect_exact {|include size: 0
-->foo<-\->n<- ->foo<-\->n<-|}]
+  [%expect_exact {|->foo<-\->n<- ->foo<-\->n<-|}]
 
 let%expect_test "single_holes_with_character_classes_newlines" =
   let run = run_all in
@@ -470,8 +466,7 @@ let%expect_test "single_holes_with_character_classes_newlines" =
   let match_template = {|:[[1]\n]|} in
   let rewrite_template = {|->:[[1]]<-|} in
   run source match_template rewrite_template;
-  [%expect_exact {|include size: 0
-->foo<- ->bar<-
+  [%expect_exact {|->foo<- ->bar<-
 ->baz<- ->qux<-|}]
 
 
@@ -482,8 +477,7 @@ let%expect_test "single_holes_with_prefix_include_dot" =
   let match_template = {|:[.[2]]|} in
   let rewrite_template = {|=>:[2]<=|} in
   run source match_template rewrite_template;
-  [%expect_exact {|include size: 1
-=>foo<= =>bar.qux<=|}]
+  [%expect_exact {|=>foo<= =>bar.qux<=|}]
 
 let%expect_test "single_holes_with_prefix_include_dot_spaces" =
   let run = run_all in
@@ -492,8 +486,7 @@ let%expect_test "single_holes_with_prefix_include_dot_spaces" =
   let match_template = {|:[. [2]]|} in
   let rewrite_template = {|=>:[2]<=|} in
   run source match_template rewrite_template;
-  [%expect_exact {|include size: 2
-=>foo bar.qux<=|}]
+  [%expect_exact {|=>foo bar.qux<=|}]
 
 
 let%expect_test "single_holes_with_prefix_include_spaces" =
@@ -503,5 +496,4 @@ let%expect_test "single_holes_with_prefix_include_spaces" =
   let match_template = {|:[ [2]]|} in
   let rewrite_template = {|=>:[2]<=|} in
   run source match_template rewrite_template;
-  [%expect_exact {|include size: 1
-=>foo bar<=.=>qux<=|}]
+  [%expect_exact {|=>foo bar<=.=>qux<=|}]
