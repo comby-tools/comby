@@ -233,8 +233,8 @@ module Make (Syntax : Syntax.S) = struct
        delimiters *)
     let rec nested_grammar s =
       (comment_parser
-       <|> escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
        <|> raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
+       <|> escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
        <|> delimsx
        <|> (is_not reserved |>> String.of_char))
         s
@@ -320,8 +320,8 @@ module Make (Syntax : Syntax.S) = struct
     (attempt (hole_parser `Lazy Code))
     <|> attempt (hole_parser `Single Code)
     (* string literals are handled specially because match semantics change inside string delimiters *)
-    <|> (escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal))
     <|> (raw_string_literal_parser (generate_hole_for_literal Raw_string_literal))
+    <|> (escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal))
     (* whitespace is handled specially because we may change whether they are significant for matching *)
     <|> (spaces1 |>> generate_spaces_parser)
     (* nested delimiters are handled specially for nestedness *)
@@ -382,8 +382,8 @@ module Make (Syntax : Syntax.S) = struct
              (
                (* respect grammar but ignore contents up to a match *)
                skip comment_parser
-               <|> skip (escapable_string_literal_parser (fun ~contents:_ ~left_delimiter:_ ~right_delimiter:_ -> ()))
                <|> skip (raw_string_literal_parser (fun ~contents:_ ~left_delimiter:_ ~right_delimiter:_ -> ()))
+               <|> skip (escapable_string_literal_parser (fun ~contents:_ ~left_delimiter:_ ~right_delimiter:_ -> ()))
                <|> skip any_char)
             )
           >> matcher
