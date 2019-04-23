@@ -409,22 +409,38 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
         | false, _ -> Paths (parse_source_directories ?file_extensions target_directory)
       in
 
-      let matcher =
-        let default = (module Matchers.Generic : Matchers.Matcher) in
+      let (module M : Matchers.Matcher) =
         match file_extensions with
-        | None | Some [] -> default
+        | None | Some [] -> (module Matchers.Generic)
         | Some (hd::_) ->
           match hd with
-          | ".c" | ".h" | ".cc" | ".cpp" | ".hpp" -> (module Matchers.C : Matchers.Matcher)
-          | ".py" -> (module Matchers.Python : Matchers.Matcher)
-          | ".go" -> (module Matchers.Go : Matchers.Matcher)
-          | ".sh" -> (module Matchers.Bash : Matchers.Matcher)
-          | ".html" -> (module Matchers.Html : Matchers.Matcher)
-          | ".tex" -> (module Matchers.Latex : Matchers.Matcher)
-          | _ -> default
+          | ".c" | ".h" | ".cc" | ".cpp" | ".hpp" -> (module Matchers.C)
+          | ".clj" -> (module Matchers.Clojure)
+          | ".css" -> (module Matchers.CSS)
+          | ".dart" -> (module Matchers.Dart)
+          | ".elm" -> (module Matchers.Elm)
+          | ".erl" -> (module Matchers.Erlang)
+          | ".ex" -> (module Matchers.Elixir)
+          | ".html" | ".xml" -> (module Matchers.Html)
+          | ".hs" -> (module Matchers.Haskell)
+          | ".go" -> (module Matchers.Go)
+          | ".java" -> (module Matchers.Java)
+          | ".js" | ".ts" -> (module Matchers.Javascript)
+          | ".ml" | ".mli" -> (module Matchers.OCaml)
+          | ".php" -> (module Matchers.Php)
+          | ".py" -> (module Matchers.Python)
+          | ".rb" -> (module Matchers.Ruby)
+          | ".rs" -> (module Matchers.Rust)
+          | ".s" | ".asm" -> (module Matchers.Assembly)
+          | ".scala" -> (module Matchers.Scala)
+          | ".sql" -> (module Matchers.SQL)
+          | ".sh" -> (module Matchers.Bash)
+          | ".swift" -> (module Matchers.Swift)
+          | ".tex" | ".bib" -> (module Matchers.Latex)
+          | _ -> (module Matchers.Generic)
       in
       let in_place = if is_some zip_file then false else in_place in
-      run matcher sources specifications sequential number_of_workers stdin json_pretty json_lines verbose match_timeout in_place
+      run (module M) sources specifications sequential number_of_workers stdin json_pretty json_lines verbose match_timeout in_place
   ]
 
 let default_command =
@@ -433,4 +449,5 @@ let default_command =
 let () =
   Scheduler.Daemon.check_entry_point ();
   default_command
+
   |> Command.run

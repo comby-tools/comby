@@ -98,6 +98,8 @@ module Ruby = struct
       ; Until_newline "#"
       ]
   end
+
+  include Matcher.Make(Syntax)
 end
 
 module Elixir = struct
@@ -226,6 +228,8 @@ module Php = struct
       [ Until_newline "#"
       ]
   end
+
+  include Matcher.Make(Syntax)
 end
 
 (* TODO(RVT): model nested comments *)
@@ -240,6 +244,8 @@ module Lisp = struct
       ; Multiline ("#|", "|#")
       ]
   end
+
+  include Matcher.Make(Syntax)
 end
 
 module Go = struct
@@ -265,6 +271,8 @@ module Rust = struct
       [ ({|r#|}, {|#|})
       ]
   end
+
+  include Matcher.Make(Syntax)
 end
 
 (* TODO(RVT): model nested comments *)
@@ -281,6 +289,8 @@ module OCaml = struct
       [ Multiline ("(*", "*)")
       ]
   end
+
+  include Matcher.Make(Syntax)
 end
 
 module Haskell = struct
