@@ -15,7 +15,7 @@ let anything_excluding_newlines ~until =
       >>= fun () -> any_char))
 
 (** a parser for comments with delimiters [from] and [until] that do not nest *)
-let non_nested_comment_delimiters from until s =
+let non_nested_comment from until s =
   (between
      (string from)
      (string until)
@@ -41,7 +41,7 @@ let is_not p s =
       Empty_failed (unknown_error s)
 
 (** A nested comment parser *)
-let skip_nested_comments_inner from until s =
+let nested_comment from until s =
   let reserved = skip ((string from) <|> (string until)) in
   let rec grammar s =
     ((comment_delimiters >>= fun string -> return string)
@@ -57,8 +57,8 @@ let skip_nested_comments_inner from until s =
         return (String.concat result)))
       s
   in
-  (comment_delimiters >>= fun _ ->
-   return ()) s
+  (comment_delimiters |>> fun content ->
+   from ^ content ^ until) s
 
 (** a parser for, e.g., /* ... */ style block comments. Non-nested. *)
 module Multiline = struct
@@ -68,7 +68,7 @@ module Multiline = struct
   end
 
   module Make (M : S) = struct
-    let multiline_comment s = non_nested_comment_delimiters M.left M.right s
+    let comment s = non_nested_comment M.left M.right s
   end
 end
 
@@ -78,6 +78,17 @@ module Until_newline = struct
   end
 
   module Make (M : S) = struct
-    let until_newline_comment s = until_newline M.start s
+    let comment s = until_newline M.start s
+  end
+end
+
+module Nested_multiline = struct
+  module type S = sig
+    val left : string
+    val right : string
+  end
+
+  module Make (M : S) = struct
+    let comment s = nested_comment M.left M.right s
   end
 end
