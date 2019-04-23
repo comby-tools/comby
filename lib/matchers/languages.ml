@@ -213,9 +213,6 @@ module Scala = C
 
 module Dart = C
 
-(* TODO(RVT): model nested comments *)
-module Swift = C
-
 module Php = struct
   module Syntax = struct
     include C.Syntax
@@ -228,7 +225,6 @@ module Php = struct
   end
 end
 
-(* TODO(RVT): model nested comments *)
 module Lisp = struct
   module Syntax = struct
     include C.Syntax
@@ -237,7 +233,7 @@ module Lisp = struct
     let comment_parser =
       C.Syntax.comment_parser @
       [ Until_newline ";"
-      ; Multiline ("#|", "|#")
+      ; Nested_multiline ("#|", "|#")
       ]
   end
 end
@@ -256,18 +252,34 @@ end
 
 module Javascript = Go
 
-(* TODO(RVT): model nested comments *)
+module Swift = struct
+  module Syntax = struct
+    open Types
+    include Generic.Syntax
+
+    let comment_parser =
+      [ Nested_multiline ("/*", "*/")
+      ; Until_newline "//"
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end
+
+
 module Rust = struct
   module Syntax = struct
-    include C.Syntax
+    open Types
+    include Swift.Syntax
 
     let raw_string_literals =
       [ ({|r#|}, {|#|})
       ]
   end
+
+  include Matcher.Make(Syntax)
 end
 
-(* TODO(RVT): model nested comments *)
 module OCaml = struct
   module Syntax = struct
     open Types
@@ -278,9 +290,11 @@ module OCaml = struct
       ]
 
     let comments =
-      [ Multiline ("(*", "*)")
+      [ Nested_multiline ("(*", "*)")
       ]
   end
+
+  include Matcher.Make(Syntax)
 end
 
 module Haskell = struct
@@ -302,3 +316,17 @@ module Haskell = struct
 end
 
 module Elm = Haskell
+
+(** For testing *)
+module C_nested_comments = struct
+  module Syntax = struct
+    open Types
+    include Generic.Syntax
+
+    let comments =
+      [ Nested_multiline ("/*", "*/")
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end

@@ -65,14 +65,22 @@ module Make (Syntax : Syntax.S) = struct
                 let right = right
               end)
             in
-            M.multiline_comment
+            M.comment
+          | Nested_multiline (left, right)  ->
+            let module M =
+              Parsers.Comments.Nested_multiline.Make(struct
+                let left = left
+                let right = right
+              end)
+            in
+            M.comment
           | Until_newline start ->
             let module M =
               Parsers.Comments.Until_newline.Make(struct
                 let start = start
               end)
             in
-            M.until_newline_comment)
+            M.comment)
       |> choice
 
   let escapable_literal_grammar ~right_delimiter =
