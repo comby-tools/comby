@@ -71,6 +71,22 @@ module Bash = struct
   include Matcher.Make(Syntax)
 end
 
+module Ruby = struct
+  module Syntax = struct
+    open Types
+    include Generic.Syntax
+
+    let raw_string_literals =
+      [ ({|"|}, {|"|})
+      ]
+
+    let comment_parser =
+      [ Multiline ("=begin", "=end")
+      ; Until_newline "#"
+      ]
+  end
+end
+
 module Python = struct
   module Syntax = struct
     open Types
@@ -122,7 +138,28 @@ module C = struct
 end
 
 module Java = C
-module Javascript = C
+
+module Php = struct
+  module Syntax = struct
+    include C.Syntax
+    open Types
+
+    let comment_parser =
+      C.Syntax.comment_parser @
+      [ Until_newline "#"
+      ]
+  end
+end
+
+module Rust = struct
+  module Syntax = struct
+    include C.Syntax
+
+    let raw_string_literals =
+      [ ({|r#|}, {|#|})
+      ]
+  end
+end
 
 module Go = struct
   module Syntax = struct
@@ -135,3 +172,41 @@ module Go = struct
 
   include Matcher.Make(Syntax)
 end
+
+module Javascript = Go
+
+module OCaml = struct
+  module Syntax = struct
+    open Types
+    include Generic.Syntax
+
+    let raw_string_literals =
+      [ ("{|", "|}")
+      ]
+
+    let comments =
+      [ Multiline ("(*", "*)")
+      ]
+  end
+end
+
+module Haskell = struct
+  module Syntax = struct
+    open Types
+    include Generic.Syntax
+
+    let raw_string_literals =
+      [ ({|"""|}, {|"""|})
+      ]
+
+    let comments =
+      [ Multiline ("{-", "-}")
+      ; Until_newline "--"
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end
+
+
+module Elm = Haskell
