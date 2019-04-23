@@ -86,7 +86,7 @@ let perform_match request =
   >>| function
   | Ok ({ source; match_template; rule; language; id } as request) ->
     if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (match_request_to_yojson request));
-    let matcher = matcher_of_language language in
+    let matcher = matcher_of_file_extension language in
     let run ?rule () =
       get_matches matcher source match_template
       |> Option.value_map rule ~default:ident ~f:(apply_rule matcher)
@@ -120,7 +120,7 @@ let perform_rewrite request =
   >>| function
   | Ok ({ source; match_template; rewrite_template; rule; language; substitution_kind; id } as request) ->
     if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (rewrite_request_to_yojson request));
-    let matcher = matcher_of_language language in
+    let matcher = matcher_of_file_extension language in
     let source_substitution =
       match substitution_kind with
       | "newline_separated" -> None
