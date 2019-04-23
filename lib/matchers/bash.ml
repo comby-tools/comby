@@ -1,28 +1,15 @@
-open MParser
-
 module Syntax = struct
+  open Types
   include Generic.Syntax
 
   let user_defined_delimiters =
+    Dyck.Syntax.user_defined_delimiters @
     [ ("if", "fi")
     ; ("case", "esac")
     ]
-    @ Generic.Syntax.user_defined_delimiters
 
-  let escapable_string_literals =
-    [ {|"|}
-    ; {|'|}
-    ]
-
-  let escape_char =
-    '\\'
-
-  let raw_string_literals =
-    []
-
-  let comment_parser s =
-    (Parsers.Comments.c_multiline
-     <|> Parsers.Comments.c_newline) s
+  let comment_parser =
+    [ Until_newline "#" ]
 end
 
 include Matcher.Make(Syntax)

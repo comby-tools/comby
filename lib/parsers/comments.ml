@@ -23,22 +23,9 @@ let non_nested_comment_delimiters from until s =
    |>> to_string from until
   ) s
 
-(** a parser for /* ... */ style block comments. *)
-let c_multiline s =
-  non_nested_comment_delimiters "/*" "*/" s
-
-let c_newline s =
-  (string "//" >> anything_excluding_newlines ~until:"\n"
-   |>> fun l -> "//"^(String.of_char_list l)) s
-
-let python_newline s =
-  (string "#" >> anything_excluding_newlines ~until:"\n"
-   |>> fun l -> ("#"^String.of_char_list l)) s
-
-let percentage_newline s =
-  (string "%" >> anything_excluding_newlines ~until:"\n"
-   |>> fun l -> ("%"^String.of_char_list l)) s
-
+let until_newline start s =
+  (string start >> anything_excluding_newlines ~until:"\n"
+   |>> fun l -> start^(String.of_char_list l)) s
 
 let any_newline comment_string s =
   (string comment_string >> anything_excluding_newlines ~until:"\n" |>> fun l -> (comment_string^String.of_char_list l)) s
@@ -72,3 +59,25 @@ let skip_nested_comments_inner from until s =
   in
   (comment_delimiters >>= fun _ ->
    return ()) s
+
+(** a parser for, e.g., /* ... */ style block comments. Non-nested. *)
+module Multiline = struct
+  module type S = sig
+    val left : string
+    val right : string
+  end
+
+  module Make (M : S) = struct
+    let multiline_comment s = non_nested_comment_delimiters M.left M.right s
+  end
+end
+
+module Until_newline = struct
+  module type S = sig
+    val start : string
+  end
+
+  module Make (M : S) = struct
+    let until_newline_comment s = until_newline M.start s
+  end
+end

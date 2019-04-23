@@ -4,7 +4,6 @@ module Syntax = struct
   let raw_string_literals =
     [ ({|`|}, {|`|})
     ]
-
 end
 
 include Matcher.Make(Syntax)

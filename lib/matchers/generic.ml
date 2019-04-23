@@ -1,11 +1,6 @@
+(** Dyck with common string literals. *)
 module Syntax = struct
-  (** these are nestable. strings, on the other hand, are not
-      nestable without escapes *)
-  let user_defined_delimiters =
-    [ ("(", ")")
-    ; ("{", "}")
-    ; ("[", "]")
-    ]
+  include Dyck.Syntax
 
   let escapable_string_literals =
     [ {|"|}
@@ -14,10 +9,6 @@ module Syntax = struct
 
   let escape_char =
     '\\'
-
-  let raw_string_literals = []
-
-  let comment_parser = MParser.zero
 end
 
 include Matcher.Make(Syntax)

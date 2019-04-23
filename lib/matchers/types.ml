@@ -1,12 +1,16 @@
 open Core
 
+type comment_kind =
+  | Multiline of string * string
+  | Until_newline of string
+
 module Syntax = struct
   module type S = sig
     val user_defined_delimiters : (string * string) list
     val escapable_string_literals : string list
     val escape_char : char
     val raw_string_literals : (string * string) list
-    val comment_parser : (string, _) MParser.t
+    val comment_parser : comment_kind list
   end
 end
 

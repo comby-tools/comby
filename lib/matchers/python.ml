@@ -1,20 +1,14 @@
 module Python = struct
+  open Types
   include Generic.Syntax
-
-  let escapable_string_literals =
-    [ {|"|}
-    ; {|'|}
-    ]
-
-  let escape_char =
-    '\\'
 
   let raw_string_literals =
     [ ({|"""|}, {|"""|})
     ]
 
-  let comment_parser s =
-    Parsers.Comments.python_newline s
+  let comment_parser =
+    [ Until_newline "#"
+    ]
 end
 
 include Matcher.Make(Python)
