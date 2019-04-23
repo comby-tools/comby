@@ -53,6 +53,28 @@ module Make (Syntax : Syntax.S) = struct
         return (f ~contents ~left_delimiter ~right_delimiter))
     |> choice
 
+  let comment_parser =
+    match Syntax.comment_parser with
+    | [] -> MParser.zero
+    | syntax ->
+      List.map syntax ~f:(function
+          | Multiline (left, right) ->
+            let module M =
+              Parsers.Comments.Multiline.Make(struct
+                let left = left
+                let right = right
+              end)
+            in
+            M.multiline_comment
+          | Until_newline start ->
+            let module M =
+              Parsers.Comments.Until_newline.Make(struct
+                let start = start
+              end)
+            in
+            M.until_newline_comment)
+      |> choice
+
   let escapable_literal_grammar ~right_delimiter =
     (attempt
        (char Syntax.escape_char
@@ -86,11 +108,11 @@ module Make (Syntax : Syntax.S) = struct
   let generate_spaces_parser () =
     (* at least a space followed by comments and spaces *)
     (spaces1
-     >> many Syntax.comment_parser << spaces
+     >> many comment_parser << spaces
      >>= fun result -> f result)
     <|>
     (* This case not covered by tests, may not be needed *)
-    (many1 Syntax.comment_parser << spaces >>= fun result -> f result)
+    (many1 comment_parser << spaces >>= fun result -> f result)
 
   let sequence_chain (plist : ('c, Match.t) parser sexp_list) : ('c, Match.t) parser =
     List.fold plist ~init:(return Unit) ~f:(>>)
@@ -105,9 +127,9 @@ module Make (Syntax : Syntax.S) = struct
 
   (** All code can have comments interpolated *)
   let generate_string_token_parser str : ('c, _) parser =
-    many Syntax.comment_parser
+    many comment_parser
     >> string str
-    >> many Syntax.comment_parser
+    >> many comment_parser
     >>= fun result -> f result
 
   let greedy_hole_parser _s =
@@ -210,7 +232,7 @@ module Make (Syntax : Syntax.S) = struct
     (* a parser that understands the hole matching cut off points happen at
        delimiters *)
     let rec nested_grammar s =
-      (Syntax.comment_parser
+      (comment_parser
        <|> escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
        <|> raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
        <|> delimsx
@@ -359,7 +381,7 @@ module Make (Syntax : Syntax.S) = struct
             (not_followed_by matcher "" >>
              (
                (* respect grammar but ignore contents up to a match *)
-               skip Syntax.comment_parser
+               skip comment_parser
                <|> skip (escapable_string_literal_parser (fun ~contents:_ ~left_delimiter:_ ~right_delimiter:_ -> ()))
                <|> skip (raw_string_literal_parser (fun ~contents:_ ~left_delimiter:_ ~right_delimiter:_ -> ()))
                <|> skip any_char)

@@ -1,19 +1,15 @@
 module Syntax = struct
+  open Types
+  include Dyck.Syntax
+
   let user_defined_delimiters =
-    [ ("(", ")")
-    ; ("{", "}")
-    ; ("[", "]")
-    ; ({|\if|}, {|\fi|})
+    Dyck.Syntax.user_defined_delimiters @
+    [ ({|\if|}, {|\fi|})
     ]
 
-  let escapable_string_literals = []
-
-  let escape_char =
-    '\\'
-
-  let raw_string_literals = []
-
-  let comment_parser s = Parsers.Comments.percentage_newline s
+  let comment_parser =
+    [ Until_newline "%"
+    ]
 end
 
 include Matcher.Make(Syntax)
