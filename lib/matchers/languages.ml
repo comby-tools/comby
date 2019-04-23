@@ -269,7 +269,6 @@ end
 
 module Rust = struct
   module Syntax = struct
-    open Types
     include Swift.Syntax
 
     let raw_string_literals =
