@@ -37,6 +37,19 @@ module Latex = struct
   include Matcher.Make(Syntax)
 end
 
+module Assembly = struct
+  module Syntax = struct
+    open Types
+    include Dyck.Syntax
+
+    let comment_parser =
+      [ Until_newline ";"
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end
+
 module Generic = struct
   module Syntax = struct
     include Dyck.Syntax
@@ -87,18 +100,31 @@ module Ruby = struct
   end
 end
 
-module Python = struct
+module Elixir = struct
   module Syntax = struct
     open Types
     include Generic.Syntax
 
     let raw_string_literals =
       [ ({|"""|}, {|"""|})
-      ; ({|'''|}, {|'''|})
       ]
 
     let comment_parser =
       [ Until_newline "#"
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end
+
+
+module Python = struct
+  module Syntax = struct
+    include Elixir.Syntax
+
+    let raw_string_literals =
+      Elixir.Syntax.raw_string_literals @
+      [ ({|'''|}, {|'''|})
       ]
   end
 
@@ -123,6 +149,46 @@ module Html = struct
   include Matcher.Make(Syntax)
 end
 
+module SQL = struct
+  module Syntax = struct
+    open Types
+    include Generic.Syntax
+
+    let comment_parser =
+      [ Multiline ("/*", "*/")
+      ; Until_newline "--"
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end
+
+module Clojure = struct
+  module Syntax = struct
+    open Types
+    include Generic.Syntax
+
+    let comment_parser =
+      [ Until_newline ";"
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end
+
+module Erlang = struct
+  module Syntax = struct
+    open Types
+    include Generic.Syntax
+
+    let comment_parser =
+      [ Until_newline "%"
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end
+
 module C = struct
   module Syntax = struct
     open Types
@@ -139,6 +205,17 @@ end
 
 module Java = C
 
+module CSS = C
+
+module Kotlin = C
+
+module Scala = C
+
+module Dart = C
+
+(* TODO(RVT): model nested comments *)
+module Swift = C
+
 module Php = struct
   module Syntax = struct
     include C.Syntax
@@ -151,18 +228,19 @@ module Php = struct
   end
 end
 
-module Rust = struct
+(* TODO(RVT): model nested comments *)
+module Lisp = struct
   module Syntax = struct
     include C.Syntax
+    open Types
 
-    let raw_string_literals =
-      [ ({|r#|}, {|#|})
+    let comment_parser =
+      C.Syntax.comment_parser @
+      [ Until_newline ";"
+      ; Multiline ("#|", "|#")
       ]
   end
 end
-
-module Javascript = C
-
 
 module Go = struct
   module Syntax = struct
@@ -178,6 +256,18 @@ end
 
 module Javascript = Go
 
+(* TODO(RVT): model nested comments *)
+module Rust = struct
+  module Syntax = struct
+    include C.Syntax
+
+    let raw_string_literals =
+      [ ({|r#|}, {|#|})
+      ]
+  end
+end
+
+(* TODO(RVT): model nested comments *)
 module OCaml = struct
   module Syntax = struct
     open Types
@@ -210,6 +300,5 @@ module Haskell = struct
 
   include Matcher.Make(Syntax)
 end
-
 
 module Elm = Haskell
