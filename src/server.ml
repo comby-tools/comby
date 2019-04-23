@@ -44,25 +44,35 @@ type json_rewrite_result =
   }
 [@@deriving yojson]
 
-let matcher_of_file_extension =
-  function
-  | ".c" | ".h" | ".cc" | ".cpp" | ".hpp" -> (module Matchers.C : Matchers.Matcher)
-  | ".py" -> (module Matchers.Python : Matchers.Matcher)
-  | ".go" -> (module Matchers.Go : Matchers.Matcher)
-  | ".sh" -> (module Matchers.Bash : Matchers.Matcher)
-  | ".html" -> (module Matchers.Html : Matchers.Matcher)
-  | ".tex" -> (module Matchers.Html : Matchers.Matcher)
-  | _ -> (module Matchers.Generic : Matchers.Matcher)
-
-let matcher_of_language =
-  function
-  | "c" | "c++" -> (module Matchers.C : Matchers.Matcher)
-  | "pyhon" -> (module Matchers.Python : Matchers.Matcher)
-  | "go" -> (module Matchers.Go : Matchers.Matcher)
-  | "bash" -> (module Matchers.Bash : Matchers.Matcher)
-  | "html" -> (module Matchers.Html : Matchers.Matcher)
-  | "latex" -> (module Matchers.Latex : Matchers.Matcher)
-  | _ -> (module Matchers.Generic : Matchers.Matcher)
+let matcher_of_file_extension extension =
+  let (module M : Matchers.Matcher) =
+    match extension with
+    | ".c" | ".h" | ".cc" | ".cpp" | ".hpp" -> (module Matchers.C)
+    | ".clj" -> (module Matchers.Clojure)
+    | ".css" -> (module Matchers.CSS)
+    | ".dart" -> (module Matchers.Dart)
+    | ".elm" -> (module Matchers.Elm)
+    | ".erl" -> (module Matchers.Erlang)
+    | ".ex" -> (module Matchers.Elixir)
+    | ".html" | ".xml" -> (module Matchers.Html)
+    | ".hs" -> (module Matchers.Haskell)
+    | ".go" -> (module Matchers.Go)
+    | ".java" -> (module Matchers.Java)
+    | ".js" | ".ts" -> (module Matchers.Javascript)
+    | ".ml" | ".mli" -> (module Matchers.OCaml)
+    | ".php" -> (module Matchers.Php)
+    | ".py" -> (module Matchers.Python)
+    | ".rb" -> (module Matchers.Ruby)
+    | ".rs" -> (module Matchers.Rust)
+    | ".s" | ".asm" -> (module Matchers.Assembly)
+    | ".scala" -> (module Matchers.Scala)
+    | ".sql" -> (module Matchers.SQL)
+    | ".sh" -> (module Matchers.Bash)
+    | ".swift" -> (module Matchers.Swift)
+    | ".tex" | ".bib" -> (module Matchers.Latex)
+    | _ -> (module Matchers.Generic)
+  in
+  (module M : Matchers.Matcher)
 
 let get_matches (module Matcher : Matchers.Matcher) source match_template =
   let configuration = Configuration.create ~match_kind:Fuzzy () in

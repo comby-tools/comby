@@ -98,6 +98,8 @@ module Ruby = struct
       ; Until_newline "#"
       ]
   end
+
+  include Matcher.Make(Syntax)
 end
 
 module Elixir = struct
@@ -223,6 +225,8 @@ module Php = struct
       [ Until_newline "#"
       ]
   end
+
+  include Matcher.Make(Syntax)
 end
 
 module Lisp = struct
@@ -236,6 +240,8 @@ module Lisp = struct
       ; Nested_multiline ("#|", "|#")
       ]
   end
+
+  include Matcher.Make(Syntax)
 end
 
 module Go = struct
