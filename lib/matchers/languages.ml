@@ -161,6 +161,9 @@ module Rust = struct
   end
 end
 
+module Javascript = C
+
+
 module Go = struct
   module Syntax = struct
     include C.Syntax
