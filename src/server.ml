@@ -181,6 +181,14 @@ let allow_cors =
   Rock.Middleware.create ~name:"allow cors" ~filter
 
 let () =
+  Lwt.async_exception_hook := (function
+      | Unix.Unix_error (error, func, arg) ->
+        Logs.warn (fun m ->
+            m  "Client connection error %s: %s(%S)"
+              (Unix.error_message error) func arg
+          )
+      | exn -> Logs.err (fun m -> m "Unhandled exception: %a" Fmt.exn exn)
+    );
   App.empty
   |> App.post "/match" perform_match
   |> App.post "/rewrite" perform_rewrite
