@@ -365,7 +365,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and json_lines = flag "json-lines" no_arg ~doc:"Output JSON line format"
     and in_place = flag "in-place" no_arg ~doc:"Rewrite files on disk, in place"
     and number_of_workers = flag "jobs" (optional_with_default 4 int) ~doc:"n Number of worker processes. Default: 4"
-    and dump_statistics = flag "statistics" no_arg ~doc:"Dump statistics to stderr"
+    and dump_statistics = flag "statistics" ~aliases:["stats"] no_arg ~doc:"Dump statistics to stderr"
     and stdin = flag "stdin" no_arg ~doc:"Read source from stdin"
     and anonymous_arguments =
       anon
