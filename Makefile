@@ -1,7 +1,10 @@
 all: build comby comby-server
 
 build:
-	@dune build
+	@dune build --profile dev
+
+release:
+	@dune build --profile release
 
 comby comby-server:
 	@ln -s _build/install/default/bin/$@ ./$@
