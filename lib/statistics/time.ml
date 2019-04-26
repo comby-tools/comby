@@ -1,5 +1,3 @@
-open Core
-
 let start () = Unix.gettimeofday ()
 
 let stop start =
@@ -9,11 +7,11 @@ exception Time_out
 
 let time_out ~after f args =
   let behavior =
-    Signal.(Expert.signal alrm (`Handle (fun _ -> raise Time_out)))
+    Sys.(signal sigalrm @@ Signal_handle (fun _ -> raise Time_out))
   in
   let cancel_alarm () =
     Unix.alarm 0 |> ignore;
-    Signal.(Expert.set alrm behavior)
+    Sys.(set_signal sigalrm behavior)
   in
   Unix.alarm after |> ignore;
   match f args with

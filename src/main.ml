@@ -87,6 +87,7 @@ let process_single_source matcher verbose configuration source specification mat
           let f () = get_matches matcher configuration match_template match_rule input_text in
           Statistics.Time.time_out ~after:match_timeout f ();
         with Statistics.Time.Time_out ->
+          Format.eprintf "Timeout for input: %s!@." (show_input_kind source);
           Out_channel.with_file ~append:true verbose_out_file ~f:(fun out_channel ->
               Out_channel.output_lines out_channel [Format.sprintf "TIMEOUT: %s@." (show_input_kind source) ]);
           []
@@ -110,7 +111,8 @@ let process_single_source matcher verbose configuration source specification mat
               Some (rewrite rewrite_template rewrite_rule input_text matches, matches)
           in
           Statistics.Time.time_out ~after:match_timeout f ();
-        with Statistics.Time.Time_out ->
+        with Statistics__Time.Time_out ->
+          Format.eprintf "Timeout for input: %s!@." (show_input_kind source);
           Out_channel.with_file ~append:true verbose_out_file ~f:(fun out_channel ->
               Out_channel.output_lines out_channel [Format.sprintf "TIMEOUT: FOR %s@." (show_input_kind source) ]);
           None
@@ -122,7 +124,8 @@ let process_single_source matcher verbose configuration source specification mat
       | Some (None, _)
       | None -> Nothing
   with
-  | _ -> Nothing
+  | _ ->
+    Nothing
 
 let output_result stdin spec_number json_pretty json_lines source_path result in_place =
   match result with
