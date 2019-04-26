@@ -40,7 +40,8 @@ if [ -n "$EXISTS" ]; then
 fi
 
 if [ ! -d "$INSTALL_DIR" ]; then
-    printf "${YELLOW}[-] $INSTALL_DIR does not exist. Please download the binary from ${RELEASE_URL} and install it manually.\n"
+    printf "${YELLOW}[-]${NORMAL} $INSTALL_DIR does not exist. Please download the binary from ${RELEASE_URL} and install it manually.\n"
+    exit 1
 fi
 
 TMP=${TMPDIR:-/tmp}
@@ -88,7 +89,7 @@ fi
 SUCCESS_IN_PATH=$(command -v comby || echo notinpath)
 
 if [ $SUCCESS_IN_PATH == "notinpath" ]; then
-    printf "${BOLD}[*] Comby is not in your PATH. You should add $INSTALL_DIR to your PATH.\n"
+    printf "${BOLD}[*]${NORMAL} Comby is not in your PATH. You should add $INSTALL_DIR to your PATH.\n"
     exit
 fi
 
@@ -117,3 +118,4 @@ int main(void) {
 }
 EOF
 echo "${GREEN}------------------------------------------------------------"
+echo "${NORMAL}
