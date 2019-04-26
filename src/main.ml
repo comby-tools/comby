@@ -181,24 +181,27 @@ let output_result stdin spec_number json_pretty json_lines source_path result in
     (* stdout for everything else *)
     | _ -> Format.printf "%s%!" result
 
-let write_statistics number_of_matches paths total_time =
-  let total_time = Statistics.Time.stop total_time in
-  let lines_of_code =
-    List.fold paths ~init:0 ~f:(fun acc paths ->
-        In_channel.read_lines paths
-        |> List.length
-        |> (+) acc)
-  in
-  let statistics =
-    { number_of_files = List.length paths
-    ; lines_of_code
-    ; number_of_matches
-    ; total_time = total_time
-    }
-  in
-  Format.eprintf "%s%!"
-  @@ Yojson.Safe.pretty_to_string
-  @@ Statistics.to_yojson statistics
+let write_statistics number_of_matches paths total_time dump_statistics =
+  if dump_statistics then
+    let total_time = Statistics.Time.stop total_time in
+    let lines_of_code =
+      List.fold paths ~init:0 ~f:(fun acc paths ->
+          In_channel.read_lines paths
+          |> List.length
+          |> (+) acc)
+    in
+    let statistics =
+      { number_of_files = List.length paths
+      ; lines_of_code
+      ; number_of_matches
+      ; total_time = total_time
+      }
+    in
+    Format.eprintf "%s%!"
+    @@ Yojson.Safe.pretty_to_string
+    @@ Statistics.to_yojson statistics
+  else
+    ()
 
 let paths_with_file_size paths =
   List.map paths ~f:(fun path ->
@@ -223,7 +226,8 @@ let run
     json_lines
     verbose
     match_timeout
-    in_place =
+    in_place
+    dump_statistics =
   let number_of_workers = if sequential then 0 else number_of_workers in
   let scheduler = Scheduler.create ~number_of_workers () in
   let configuration = Configuration.create ~match_kind:Fuzzy () in
@@ -254,7 +258,7 @@ let run
   | String source ->
     let number_of_matches = run_on_specifications (String source) None in
     (* FIXME(RVT): statistics for single source text doesn't output LOC *)
-    write_statistics number_of_matches [] total_time
+    write_statistics number_of_matches [] total_time dump_statistics
   | Paths paths ->
     if sequential then
       let number_of_matches =
@@ -262,7 +266,7 @@ let run
             let matches = run_on_specifications (Path path) (Some path) in
             acc + matches)
       in
-      write_statistics number_of_matches paths total_time
+      write_statistics number_of_matches paths total_time dump_statistics
     else
       let map init paths =
         List.fold
@@ -280,7 +284,7 @@ let run
           (* No kill command on Mac OS X *)
           ()
       end;
-      write_statistics number_of_matches paths total_time
+      write_statistics number_of_matches paths total_time dump_statistics
   | Zip (zip_in, entries) ->
     let _number_of_matches =
       List.fold ~init:0 entries ~f:(fun acc ({ filename; _ } as entry) ->
@@ -361,6 +365,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and json_lines = flag "json-lines" no_arg ~doc:"Output JSON line format"
     and in_place = flag "in-place" no_arg ~doc:"Rewrite files on disk, in place"
     and number_of_workers = flag "jobs" (optional_with_default 4 int) ~doc:"n Number of worker processes. Default: 4"
+    and dump_statistics = flag "statistics" no_arg ~doc:"Dump statistics to stderr"
     and stdin = flag "stdin" no_arg ~doc:"Read source from stdin"
     and anonymous_arguments =
       anon
@@ -465,7 +470,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           | _ -> (module Matchers.Generic)
       in
       let in_place = if is_some zip_file then false else in_place in
-      run (module M) sources specifications sequential number_of_workers stdin json_pretty json_lines verbose match_timeout in_place
+      run (module M) sources specifications sequential number_of_workers stdin json_pretty json_lines verbose match_timeout in_place dump_statistics
   ]
 
 let default_command =
