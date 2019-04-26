@@ -12,6 +12,7 @@ INSTALL_DIR=/usr/local/bin
 function ctrl_c() {
         rm -f $TMP/$RELEASE_BIN &> /dev/null
         printf "${RED}[-]${NORMAL} Installation cancelled. Please see https://github.com/comby-tools/comby/releases if you prefer to install manually.\n"
+        exit 1
 }
 
 trap ctrl_c INT
@@ -72,8 +73,6 @@ if [ ! -e "$TMP/$RELEASE_BIN" ]; then
         printf "${RED}[-]${NORMAL} No binary release available for your system.\n"
         rm -f $TMP/$RELEASE_BIN
         exit 1
-    else
-        sleep 1
     fi
 	printf "${GREEN}[+]${NORMAL} Download complete.\n"
 fi
