@@ -68,10 +68,12 @@ if [ ! -e "$TMP/$RELEASE_BIN" ]; then
 
     SUCCESS=$(curl -s -L -o "$TMP/$RELEASE_BIN" "$RELEASE_URL" --write-out "%{http_code}")
 
-    if [ $SUCCESS == "404" ]; then
+    if [ "$SUCCESS" == "404" ]; then
         printf "${RED}[-]${NORMAL} No binary release available for your system.\n"
         rm -f $TMP/$RELEASE_BIN
         exit 1
+    else
+        sleep 1
     fi
 	printf "${GREEN}[+]${NORMAL} Download complete.\n"
 fi
@@ -79,7 +81,6 @@ fi
 chmod 755 "$TMP/$RELEASE_BIN"
 echo "${GREEN}[+]${NORMAL} Installing comby to $INSTALL_DIR"
 if [ ! $OS == "macos" ]; then
-    echo "Enter your password to continue..."
     sudo cp "$TMP/$RELEASE_BIN" "$INSTALL_DIR/comby"
 else
     cp "$TMP/$RELEASE_BIN" "$INSTALL_DIR/comby"
@@ -90,7 +91,7 @@ SUCCESS_IN_PATH=$(command -v comby || echo notinpath)
 
 if [ $SUCCESS_IN_PATH == "notinpath" ]; then
     printf "${BOLD}[*]${NORMAL} Comby is not in your PATH. You should add $INSTALL_DIR to your PATH.\n"
-    exit
+    exit 1
 fi
 
 rm -f $TMP/$RELEASE_BIN
@@ -118,4 +119,4 @@ int main(void) {
 }
 EOF
 echo "${GREEN}------------------------------------------------------------"
-echo "${NORMAL}
+echo "${NORMAL}"
