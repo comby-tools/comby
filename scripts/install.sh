@@ -9,6 +9,12 @@ RELEASE_URL="https://github.com/comby-tools/comby/releases"
 
 INSTALL_DIR=/usr/local/bin
 
+function ctrl_c() {
+        rm -f $TMP/$RELEASE_BIN &> /dev/null
+        printf "${RED}[-]${NORMAL} Installation cancelled. Please see https://github.com/comby-tools/comby/releases if you prefer to install manually.\n"
+}
+
+trap ctrl_c INT
 
 if which tput >/dev/null 2>&1; then
     colors=$(tput colors)
@@ -70,7 +76,14 @@ if [ ! -e "$TMP/$RELEASE_BIN" ]; then
 fi
 
 chmod 755 "$TMP/$RELEASE_BIN"
-cp "$TMP/$RELEASE_BIN" "$INSTALL_DIR/comby"
+echo "${GREEN}[+]${NORMAL} Installing comby to $INSTALL_DIR"
+if [ ! $OS == "macos" ]; then
+    echo "Enter your password to continue..."
+    sudo cp "$TMP/$RELEASE_BIN" "$INSTALL_DIR/comby"
+else
+    cp "$TMP/$RELEASE_BIN" "$INSTALL_DIR/comby"
+fi
+
 
 SUCCESS_IN_PATH=$(command -v comby || echo notinpath)
 
