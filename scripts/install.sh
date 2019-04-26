@@ -1,0 +1,106 @@
+#!/bin/bash
+
+set -ue
+# set -x
+
+RELEASE_VERSION="0.2.0"
+RELEASE_TAG="0.2.0"
+RELEASE_URL="https://github.com/comby-tools/comby/releases"
+
+INSTALL_DIR=/usr/local/bin
+
+
+if which tput >/dev/null 2>&1; then
+    colors=$(tput colors)
+fi
+if [ -t 1 ] && [ -n "$colors" ] && [ "$colors" -ge 8 ]; then
+  RED="$(tput setaf 1)"
+  GREEN="$(tput setaf 2)"
+  YELLOW="$(tput setaf 3)"
+  BOLD="$(tput bold)"
+  NORMAL="$(tput sgr0)"
+else
+  RED=""
+  GREEN=""
+  YELLOW=""
+  BOLD=""
+  NORMAL=""
+fi
+
+EXISTS=$(command -v comby || echo)
+
+if [ -n "$EXISTS" ]; then
+    INSTALL_DIR=$(dirname $EXISTS)
+fi
+
+if [ ! -d "$INSTALL_DIR" ]; then
+    printf "${YELLOW}[-] $INSTALL_DIR does not exist. Please download the binary from ${RELEASE_URL} and install it manually.\n"
+fi
+
+TMP=${TMPDIR:-/tmp}
+
+ARCH=$(uname -m || echo dunno)
+case "$ARCH" in
+    x86_64|amd64) ARCH="x86_64";;
+#   x86|i?86) ARCH="i686";;
+    *) ARCH="OTHER"
+esac
+
+OS=$(uname -s || echo dunno)
+
+if [ "$OS" = "Darwin" ]; then
+  OS=macos
+fi
+
+RELEASE_BIN="comby-${RELEASE_TAG}-${ARCH}-${OS}"
+RELEASE_URL="https://github.com/comby-tools/comby/releases/download/${RELEASE_TAG}/${RELEASE_BIN}"
+
+
+if [ ! -e "$TMP/$RELEASE_BIN" ]; then
+    printf "${GREEN}[+]${NORMAL} Downloading ${YELLOW}comby $RELEASE_VERSION${NORMAL}\n"
+
+    SUCCESS=$(curl -s -L -o "$TMP/$RELEASE_BIN" "$RELEASE_URL" --write-out "%{http_code}")
+
+    if [ $SUCCESS == "404" ]; then
+        printf "${RED}[-]${NORMAL} No binary release available for your system.\n"
+        rm -f $TMP/$RELEASE_BIN
+        exit 1
+    fi
+	printf "${GREEN}[+]${NORMAL} Download complete.\n"
+fi
+
+chmod 755 "$TMP/$RELEASE_BIN"
+cp "$TMP/$RELEASE_BIN" "$INSTALL_DIR/comby"
+
+SUCCESS_IN_PATH=$(command -v comby || echo notinpath)
+
+if [ $SUCCESS_IN_PATH == "notinpath" ]; then
+    printf "${BOLD}[*] Comby is not in your PATH. You should add $INSTALL_DIR to your PATH.\n"
+    exit
+fi
+
+rm -f $TMP/$RELEASE_BIN
+
+CHECK=$(printf 'printf("hello world!\\\n");' | $INSTALL_DIR/comby 'printf("hello :[1]!\\n");' 'printf("hello comby!\\n");' 2> /dev/null || echo broken)
+if [ "$CHECK"  == "broken" ]; then
+    printf "${RED}[-]${NORMAL} comby did not install correctly."
+    exit 1
+fi
+
+printf "${GREEN}[+]${NORMAL} ${YELLOW}comby${NORMAL} is installed!\n"
+printf "${GREEN}[+]${NORMAL} Running example command:\n"
+echo "${YELLOW}-----------------------------------------------------------"
+printf "${YELLOW}comby${NORMAL} 'printf(\"${GREEN}:[1] :[2]${NORMAL}!\")' 'printf(\"comby, ${GREEN}:[1]${NORMAL}!\")' << EOF\n"
+printf "int main(void) {\n"
+printf "  printf(\"hello world!\");\n"
+printf "}\n"
+printf "EOF\n"
+echo "${YELLOW}-----------------------------------------------------------"
+printf "${GREEN}[+]${NORMAL} Output:\n"
+echo "${GREEN}-----------------------------------------------------------${NORMAL}"
+comby 'printf(":[1] :[2]!")' 'printf("comby, :[1]!")' << EOF
+int main(void) {
+  printf("hello world!");
+}
+EOF
+echo "${GREEN}-----------------------------------------------------------"
