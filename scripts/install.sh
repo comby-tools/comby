@@ -89,18 +89,18 @@ fi
 
 printf "${GREEN}[+]${NORMAL} ${YELLOW}comby${NORMAL} is installed!\n"
 printf "${GREEN}[+]${NORMAL} Running example command:\n"
-echo "${YELLOW}-----------------------------------------------------------"
+echo "${YELLOW}------------------------------------------------------------"
 printf "${YELLOW}comby${NORMAL} 'printf(\"${GREEN}:[1] :[2]${NORMAL}!\")' 'printf(\"comby, ${GREEN}:[1]${NORMAL}!\")' << EOF\n"
 printf "int main(void) {\n"
 printf "  printf(\"hello world!\");\n"
 printf "}\n"
 printf "EOF\n"
-echo "${YELLOW}-----------------------------------------------------------"
+echo "${YELLOW}------------------------------------------------------------"
 printf "${GREEN}[+]${NORMAL} Output:\n"
-echo "${GREEN}-----------------------------------------------------------${NORMAL}"
+echo "${GREEN}------------------------------------------------------------${NORMAL}"
 comby 'printf(":[1] :[2]!")' 'printf("comby, :[1]!")' << EOF
 int main(void) {
   printf("hello world!");
 }
 EOF
-echo "${GREEN}-----------------------------------------------------------"
+echo "${GREEN}------------------------------------------------------------"
