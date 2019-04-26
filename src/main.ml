@@ -146,7 +146,7 @@ let output_result stdin spec_number json_pretty json_lines source_path result in
         | None -> " "
       in
       Format.printf
-        "%d matches%sfor spec %d (add -json for json format)@."
+        "%d matches%sfor spec %d (use -json-pretty for json format)@."
         (List.length matches)
         with_file
         (spec_number + 1)
@@ -181,24 +181,27 @@ let output_result stdin spec_number json_pretty json_lines source_path result in
     (* stdout for everything else *)
     | _ -> Format.printf "%s%!" result
 
-let write_statistics number_of_matches paths total_time =
-  let total_time = Statistics.Time.stop total_time in
-  let lines_of_code =
-    List.fold paths ~init:0 ~f:(fun acc paths ->
-        In_channel.read_lines paths
-        |> List.length
-        |> (+) acc)
-  in
-  let statistics =
-    { number_of_files = List.length paths
-    ; lines_of_code
-    ; number_of_matches
-    ; total_time = total_time
-    }
-  in
-  Format.eprintf "%s%!"
-  @@ Yojson.Safe.pretty_to_string
-  @@ Statistics.to_yojson statistics
+let write_statistics number_of_matches paths total_time dump_statistics =
+  if dump_statistics then
+    let total_time = Statistics.Time.stop total_time in
+    let lines_of_code =
+      List.fold paths ~init:0 ~f:(fun acc paths ->
+          In_channel.read_lines paths
+          |> List.length
+          |> (+) acc)
+    in
+    let statistics =
+      { number_of_files = List.length paths
+      ; lines_of_code
+      ; number_of_matches
+      ; total_time = total_time
+      }
+    in
+    Format.eprintf "%s%!"
+    @@ Yojson.Safe.pretty_to_string
+    @@ Statistics.to_yojson statistics
+  else
+    ()
 
 let paths_with_file_size paths =
   List.map paths ~f:(fun path ->
@@ -223,7 +226,8 @@ let run
     json_lines
     verbose
     match_timeout
-    in_place =
+    in_place
+    dump_statistics =
   let number_of_workers = if sequential then 0 else number_of_workers in
   let scheduler = Scheduler.create ~number_of_workers () in
   let configuration = Configuration.create ~match_kind:Fuzzy () in
@@ -254,7 +258,7 @@ let run
   | String source ->
     let number_of_matches = run_on_specifications (String source) None in
     (* FIXME(RVT): statistics for single source text doesn't output LOC *)
-    write_statistics number_of_matches [] total_time
+    write_statistics number_of_matches [] total_time dump_statistics
   | Paths paths ->
     if sequential then
       let number_of_matches =
@@ -262,7 +266,7 @@ let run
             let matches = run_on_specifications (Path path) (Some path) in
             acc + matches)
       in
-      write_statistics number_of_matches paths total_time
+      write_statistics number_of_matches paths total_time dump_statistics
     else
       let map init paths =
         List.fold
@@ -280,7 +284,7 @@ let run
           (* No kill command on Mac OS X *)
           ()
       end;
-      write_statistics number_of_matches paths total_time
+      write_statistics number_of_matches paths total_time dump_statistics
   | Zip (zip_in, entries) ->
     let _number_of_matches =
       List.fold ~init:0 entries ~f:(fun acc ({ filename; _ } as entry) ->
@@ -341,6 +345,10 @@ let parse_specification_directories match_only specification_directory_paths =
   in
   List.map specification_directory_paths ~f:parse_directory
 
+(** If users give e.g., *.c, convert it to .c *)
+let fake_glob_file_extensions file_extensions =
+  List.map file_extensions ~f:(String.substr_replace_all ~pattern:"*" ~with_:"")
+
 let base_command_parameters : (unit -> 'result) Command.Param.t =
   [%map_open
      (* flags. *)
@@ -348,20 +356,26 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and match_only = flag "match-only" no_arg ~doc:"Only perform matching (ignore rewrite templates)"
     and verbose = flag "verbose" no_arg ~doc:(Format.sprintf "Log to %s" verbose_out_file)
     and rule = flag "rule" (optional_with_default "where true" string) ~doc:"rule Apply rules to matches."
-    and match_timeout = flag "timeout" (optional_with_default 3 int) ~doc:"seconds Set match timeout on a source. Default: 3"
-    and target_directory = flag "directory" (optional_with_default "." string) ~doc:(Format.sprintf "path Run on files in a directory. Default is current directory: %s" @@ Sys.getcwd ())
+    and match_timeout = flag "timeout" (optional_with_default 3 int) ~doc:"seconds Set match timeout on a source. Default: 3 seconds"
+    and target_directory = flag "directory" ~aliases:["d"; "recursive"] (optional_with_default "." string) ~doc:(Format.sprintf "path Run recursively on files in a directory. Default is current directory: %s" @@ Sys.getcwd ())
     and specification_directories = flag "templates" (optional (Arg_type.comma_separated string)) ~doc:"path CSV of directories containing templates"
-    and file_extensions = flag "filter" (optional (Arg_type.comma_separated string)) ~doc:"extensions CSV of extensions to include"
-    and zip_file = flag "zip" (optional string) ~doc:"zipfile A zip file containing files to rewrite"
+    and file_extensions = flag "extensions" ~aliases:["e"; "file-extensions"; "f"] (optional (Arg_type.comma_separated string)) ~doc:"extensions CSV of extensions to include, like \".go\" or \".c,.h\""
+    and zip_file = flag "zip" ~aliases:["z"] (optional string) ~doc:"zipfile A zip file containing files to rewrite"
     and json_pretty = flag "json-pretty" no_arg ~doc:"Output pretty JSON format"
     and json_lines = flag "json-lines" no_arg ~doc:"Output JSON line format"
     and in_place = flag "in-place" no_arg ~doc:"Rewrite files on disk, in place"
     and number_of_workers = flag "jobs" (optional_with_default 4 int) ~doc:"n Number of worker processes. Default: 4"
+    and dump_statistics = flag "statistics" ~aliases:["stats"] no_arg ~doc:"Dump statistics to stderr"
     and stdin = flag "stdin" no_arg ~doc:"Read source from stdin"
     and anonymous_arguments =
-      anon (maybe (t2
-                     ("MATCH_TEMPLATE" %: string)
-                     ("REWRITE_TEMPLATE" %: string)))
+      anon
+        (maybe
+           (t3
+              ("MATCH_TEMPLATE" %: string)
+              ("REWRITE_TEMPLATE" %: string)
+              (maybe (sequence ("COMMA_SEPARATED_FILE_EXTENSIONS" %: (Arg_type.comma_separated string))))
+           )
+        )
     in
     fun () ->
       let () =
@@ -377,10 +391,10 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
         | None, None
         | Some [], None ->
           Format.eprintf
-            "Please either specify templates on the command line or using \
-             -templates [dir] for templates in directory [dir].@.";
+            "Please specify templates. Either on the command line, or using \
+             -templates [dir]@.";
           exit 1
-        | None, Some (match_template, rewrite_template) ->
+        | None, Some (match_template, rewrite_template, _) ->
           if match_only then
             [Specification.create ~match_template ~match_rule:rule ()]
           else
@@ -393,15 +407,31 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
              commandline and using those in directories instead@.";
           parse_specification_directories match_only specification_directories
       in
+      let stdin, file_extensions =
+        match anonymous_arguments with
+        | Some (_, _, None) -> true, file_extensions
+        | Some (_, _, Some file_extensions) -> false, (Some (List.concat file_extensions))
+        (* No anonymous arguments: if -stdin was specified, this lets
+           -templates work with stdin. *)
+        | None -> stdin, file_extensions
+      in
+      if stdin && (Option.is_some zip_file) then
+        (Format.eprintf "-zip may not be used with stdin";
+         exit 1)
+      else if stdin && in_place then
+        (Format.eprintf "-i may not be used with stdin";
+         exit 1);
       let sources =
         match stdin, zip_file with
-        | true, _ -> String (In_channel.input_all In_channel.stdin)
+        | true, _ ->
+          String (In_channel.input_all In_channel.stdin)
         | _, Some zip_file ->
           let zip_in = Zip.open_in zip_file in
           let entries =
             match file_extensions with
             | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; _ } -> not is_directory)
             | Some suffixes ->
+              let suffixes = fake_glob_file_extensions suffixes in
               List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
                   not is_directory && List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename))
           in
@@ -440,7 +470,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           | _ -> (module Matchers.Generic)
       in
       let in_place = if is_some zip_file then false else in_place in
-      run (module M) sources specifications sequential number_of_workers stdin json_pretty json_lines verbose match_timeout in_place
+      run (module M) sources specifications sequential number_of_workers stdin json_pretty json_lines verbose match_timeout in_place dump_statistics
   ]
 
 let default_command =
@@ -449,5 +479,4 @@ let default_command =
 let () =
   Scheduler.Daemon.check_entry_point ();
   default_command
-
   |> Command.run
