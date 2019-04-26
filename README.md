@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.com/comby-tools/comby.svg?branch=master)](https://travis-ci.com/comby-tools/comby)
 [![Apache-2.0](https://img.shields.io/badge/license-Apache-blue.svg)](LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/comby-tools/comby/total.svg?color=orange)](Downloads)
 
 ## Source Build
 
