@@ -345,6 +345,7 @@ cd -
 make
 make test
 
+echo $TRAVIS_JOB_ID
 bisect-ppx-report \
     -I _build/default/ \
     -coveralls coverage.json \
