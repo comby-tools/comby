@@ -7,6 +7,8 @@
 
 ## `bash <(curl -sL get.comby.dev)`
 
+### Or [try it live](https://comby.live/).
+
 ## Source Build
 
 - Install [opam](https://opam.ocaml.org/doc/Install.html)
