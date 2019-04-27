@@ -1,7 +1,7 @@
 all: build comby comby-server
 
 build:
-	@dune build --profile dev
+	@BISECT_ENABLE=yes dune build --profile dev
 
 release:
 	@dune build --profile release
@@ -20,6 +20,9 @@ doc:
 
 test:
 	@dune runtest
+
+coverage:
+	@bisect-ppx-report -I _build/default/ -html coverage/ `find . -name 'bisect*.out'`
 
 clean:
 	@dune clean
