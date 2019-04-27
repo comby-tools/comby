@@ -50,6 +50,37 @@ module Assembly = struct
   include Matcher.Make(Syntax)
 end
 
+module Clojure = struct
+  module Syntax = struct
+    open Types
+    include Dyck.Syntax
+
+    let escapable_string_literals =
+      [ {|"|}
+      ]
+
+    let comment_parser =
+      [ Until_newline ";"
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end
+
+module Lisp = struct
+  module Syntax = struct
+    include Clojure.Syntax
+    open Types
+
+    let comment_parser =
+      Clojure.Syntax.comment_parser @
+      [ Nested_multiline ("#|", "|#")
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end
+
 module Generic = struct
   module Syntax = struct
     include Dyck.Syntax
@@ -165,19 +196,6 @@ module SQL = struct
   include Matcher.Make(Syntax)
 end
 
-module Clojure = struct
-  module Syntax = struct
-    open Types
-    include Generic.Syntax
-
-    let comment_parser =
-      [ Until_newline ";"
-      ]
-  end
-
-  include Matcher.Make(Syntax)
-end
-
 module Erlang = struct
   module Syntax = struct
     open Types
@@ -234,21 +252,6 @@ module Php = struct
     let comment_parser =
       C.Syntax.comment_parser @
       [ Until_newline "#"
-      ]
-  end
-
-  include Matcher.Make(Syntax)
-end
-
-module Lisp = struct
-  module Syntax = struct
-    include C.Syntax
-    open Types
-
-    let comment_parser =
-      C.Syntax.comment_parser @
-      [ Until_newline ";"
-      ; Nested_multiline ("#|", "|#")
       ]
   end
 
