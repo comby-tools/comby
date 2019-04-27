@@ -1,12 +1,12 @@
 (executables
  (libraries comby core ppx_deriving_yojson ppx_deriving_yojson.runtime hack_parallel camlzip)
- (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show bisect_ppx -conditional -no-comment-parsing))
+ (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show))
  (modules main specification)
  (names main))
 
 (executables
  (libraries core opium comby ppx_deriving_yojson ppx_deriving_yojson.runtime hack_parallel)
- (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show bisect_ppx -conditional -no-comment-parsing))
+ (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show))
  (modules server)
  (names server))
 
