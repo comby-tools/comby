@@ -213,7 +213,18 @@ module Kotlin = C
 
 module Scala = C
 
-module Dart = C
+module Dart = struct
+  module Syntax = struct
+    include C.Syntax
+
+    let raw_string_literals =
+      [ ({|"""|}, {|"""|})
+      ; ({|'''|}, {|'''|})
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end
 
 module Php = struct
   module Syntax = struct
