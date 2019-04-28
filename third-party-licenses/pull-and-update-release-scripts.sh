@@ -57,8 +57,6 @@ wget -P ocaml-ci-scripts https://raw.githubusercontent.com/ocaml/ocaml-ci-script
 # ALL.txt
 for l in $LIBS; do 
     F=$(ls $l | head -n 1)
-    cat ../LICENSE >> ALL.txt
-    echo "" >> ALL.txt
     echo "LICENSE FOR $l:" >> ALL.txt
     echo "" >> ALL.txt
     cat $l/$F >> ALL.txt
@@ -67,6 +65,10 @@ done
 
 # update release script
 cp ../scripts/install.sh .
-printf "\n\n" >> install.sh
-printf "# Begin third party licenses \n\n" >> install.sh
+printf "\n\n# comby license\n" >> install.sh
+echo "#" >>  install.sh
+sed 's/^/# /' ../LICENSE >> install.sh
+echo "" >> install.sh
+printf "# Begin third party licenses\n\n" >> install.sh
 sed 's/^/# /' ALL.txt >> install.sh
+mv install.sh ../scripts/install-with-licenses.sh

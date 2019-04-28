@@ -3,8 +3,8 @@
 set -ue
 # set -x
 
-RELEASE_VERSION="0.2.0"
-RELEASE_TAG="0.2.0"
+RELEASE_VERSION="0.x.0"
+RELEASE_TAG="0.x.0"
 RELEASE_URL="https://github.com/comby-tools/comby/releases"
 
 INSTALL_DIR=/usr/local/bin
@@ -97,12 +97,11 @@ fi
 CHECK=$(printf 'printf("hello world!\\\n");' | $INSTALL_DIR/comby 'printf("hello :[1]!\\n");' 'printf("hello comby!\\n");' 2> /dev/null || echo broken)
 if [ "$CHECK"  == "broken" ]; then
     printf "${RED}[-]${NORMAL} ${YELLOW}comby${NORMAL} did not install correctly.\n"
-    printf "${YELLOW}[-]${NORMAL} My guess is that you need to install the pcre library on your system.\n"
-    printf "${YELLOW}[-]${NORMAL} Try:\n"
-    if [ ! $OS == "macos" ]; then
-        printf "${YELLOW}[*]${NORMAL} brew install pcre && bash <(curl -sL get.comby.dev)"
+    printf "${YELLOW}[-]${NORMAL} My guess is that you need to install the pcre library on your system. Try:\n"
+    if [ $OS == "macos" ]; then
+        printf "${YELLOW}[*]${NORMAL} ${BOLD}brew install pcre && bash <(curl -sL get.comby.dev)${NORMAL}\n"
     else
-        printf "${YELLOW}[*]${NORMAL} sudo apt-get install libpcre3-dev && bash <(curl -sL get.comby.dev)"
+        printf "${YELLOW}[*]${NORMAL} ${BOLD}sudo apt-get install libpcre3-dev && bash <(curl -sL get.comby.dev)${NORMAL}\n"
     fi
     rm -f $TMP/$RELEASE_BIN
     exit 1
