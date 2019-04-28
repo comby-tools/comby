@@ -12,6 +12,9 @@ comby comby-server:
 run-server:
 	@./comby-server -p 8888
 
+run-staging-server:
+	@./comby-server -p 8887
+
 install:
 	@dune install
 
