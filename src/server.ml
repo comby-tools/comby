@@ -6,7 +6,7 @@ open Language
 open Matchers
 open Rewriter
 
-let debug = true
+let debug = false
 
 let (>>|) = Lwt.Infix.(>|=)
 
