@@ -1,5 +1,5 @@
 (library
   (name rewriter)
   (public_name comby.rewriter)
-  (preprocess (pps ppx_deriving.show ppx_sexp_conv ppx_deriving_yojson))
+  (preprocess (pps ppx_deriving.show ppx_sexp_conv ppx_deriving_yojson bisect_ppx -conditional -no-comment-parsing))
   (libraries comby.matchers ppxlib core))
