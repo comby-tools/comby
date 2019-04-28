@@ -85,21 +85,30 @@ else
     cp "$TMP/$RELEASE_BIN" "$INSTALL_DIR/comby"
 fi
 
-
 SUCCESS_IN_PATH=$(command -v comby || echo notinpath)
 
 if [ $SUCCESS_IN_PATH == "notinpath" ]; then
     printf "${BOLD}[*]${NORMAL} Comby is not in your PATH. You should add $INSTALL_DIR to your PATH.\n"
+    rm -f $TMP/$RELEASE_BIN
+    exit 1
+fi
+
+
+CHECK=$(printf 'printf("hello world!\\\n");' | $INSTALL_DIR/comby 'printf("hello :[1]!\\n");' 'printf("hello comby!\\n");' 2> /dev/null || echo broken)
+if [ "$CHECK"  == "broken" ]; then
+    printf "${RED}[-]${NORMAL} ${YELLOW}comby${NORMAL} did not install correctly.\n"
+    printf "My guess is that you need to install the pcre library on your system.\n"
+    printf "${RED}[-]${NORMAL} Try:\n"
+    if [ ! $OS == "macos" ]; then
+        printf "${YELLOW}[*]${NORMAL} brew install pcre && bash <(curl -sL get.comby.dev)"
+    else
+        printf "${YELLOW}[*]${NORMAL} sudo apt-get install libpcre3-dev && bash <(curl -sL get.comby.dev)"
+    fi
+    rm -f $TMP/$RELEASE_BIN
     exit 1
 fi
 
 rm -f $TMP/$RELEASE_BIN
-
-CHECK=$(printf 'printf("hello world!\\\n");' | $INSTALL_DIR/comby 'printf("hello :[1]!\\n");' 'printf("hello comby!\\n");' 2> /dev/null || echo broken)
-if [ "$CHECK"  == "broken" ]; then
-    printf "${RED}[-]${NORMAL} comby did not install correctly."
-    exit 1
-fi
 
 printf "${GREEN}[+]${NORMAL} ${YELLOW}comby${NORMAL} is installed!\n"
 printf "${GREEN}[+]${NORMAL} Running example command:\n"

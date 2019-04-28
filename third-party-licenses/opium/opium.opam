@@ -1,0 +1,40 @@
+opam-version: "2.0"
+maintainer: "rudi.grinberg@gmail.com"
+authors: ["Rudi Grinberg"]
+license: "MIT"
+
+homepage: "https://github.com/rgrinberg/opium"
+bug-reports: "https://github.com/rgrinberg/opium/issues"
+dev-repo: "git+https://github.com/rgrinberg/opium.git"
+doc: "https://rgrinberg.github.io/opium/"
+synopsis: "Sinatra like web toolkit based on Lwt + Cohttp"
+description: """
+Opium is a minimalistic library for quickly binding functions to http routes. Its features include (but not limited to):
+
+    Middleware system for app independent components
+    A simple router for matching urls and parsing parameters
+    Request/Response pretty printing for easier debugging
+"""
+
+build: [
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "runtest" "-p" name "-j" jobs] {with-test}
+]
+
+depends: [
+  "ocaml" {>= "4.04.1"}
+  "dune" {build}
+  "opium_kernel"
+  "cohttp-lwt-unix" {>= "0.99.0"}
+  "base-unix"
+  "lwt"
+  "logs"
+  "cmdliner"
+  "ppx_fields_conv" {>= "v0.9.0"}
+  "ppx_sexp_conv" {>= "v0.9.0"}
+  "re" {>= "1.3.0"}
+  "magic-mime"
+  "stringext"
+  "alcotest" {with-test}
+]
