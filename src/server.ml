@@ -10,6 +10,8 @@ let debug = true
 
 let (>>|) = Lwt.Infix.(>|=)
 
+let max_request_length = 4000
+
 type match_request =
   { source : string
   ; match_template : string [@key "match"]
@@ -89,10 +91,26 @@ let apply_rule matcher rule =
       (if sat then env else None)
       >>| fun environment -> { matched with environment })
 
+let check_too_long s =
+  let n = String.length s in
+  if n > max_request_length then
+    Error
+      (Format.sprintf
+         "The source input is a bit big! Make it %d characters shorter, \
+          or click 'Run in Terminal' below to install and run comby locally :)"
+         (n - max_request_length))
+  else
+    Ok s
+
 let perform_match request =
   App.string_of_body_exn request
-  >>| Yojson.Safe.from_string
-  >>| match_request_of_yojson
+  >>| (fun s ->
+      match check_too_long s with
+      | Ok s ->
+        Yojson.Safe.from_string s
+        |> match_request_of_yojson
+      | Error e -> Error e
+    )
   >>| function
   | Ok ({ source; match_template; rule; language; id } as request) ->
     if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (match_request_to_yojson request));
@@ -125,8 +143,13 @@ let rewrite_to_json id ({ rewritten_source; in_place_substitutions } : Rewrite.r
 
 let perform_rewrite request =
   App.string_of_body_exn request
-  >>| Yojson.Safe.from_string
-  >>| rewrite_request_of_yojson
+  >>| (fun s ->
+      match check_too_long s with
+      | Ok s ->
+        Yojson.Safe.from_string s
+        |> rewrite_request_of_yojson
+      | Error e -> Error e
+    )
   >>| function
   | Ok ({ source; match_template; rewrite_template; rule; language; substitution_kind; id } as request) ->
     if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (rewrite_request_to_yojson request));
