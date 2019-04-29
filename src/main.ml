@@ -439,7 +439,10 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
                   not is_directory && List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename))
           in
           Zip (zip_in, entries)
-        | false, _ -> Paths (parse_source_directories ?file_extensions target_directory)
+        (* Recurse in directories *)
+        | false, None ->
+          let file_extensions = Option.map file_extensions ~f:fake_glob_file_extensions in
+          Paths (parse_source_directories ?file_extensions target_directory)
       in
 
       let (module M : Matchers.Matcher) =
