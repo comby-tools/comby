@@ -110,6 +110,7 @@ fi
 rm -f $TMP/$RELEASE_BIN
 
 printf "${GREEN}[+]${NORMAL} ${YELLOW}comby${NORMAL} is installed!\n"
+printf "${GREEN}[+]${NORMAL} The licenses for this distribution are included in this script. Licenses are also available at https://github.com/comby-tools/comby/tree/master/third-party-licenses\n"
 printf "${GREEN}[+]${NORMAL} Running example command:\n"
 echo "${YELLOW}------------------------------------------------------------"
 printf "${YELLOW}comby${NORMAL} 'printf(\"${GREEN}:[1] :[2]${NORMAL}!\")' 'printf(\"comby, ${GREEN}:[1]${NORMAL}!\")' << EOF\n"
