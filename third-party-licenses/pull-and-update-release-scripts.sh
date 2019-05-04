@@ -1,9 +1,13 @@
 #!/bin/bash
 
-LIBS="ppx_deriving_yojson core ppxlib ppx_deriving hack_parallel opium pcre-ocaml ocaml-tls camlzip bisect_ppx mparser ocaml-ci-scripts"
+LIBS="ppx_deriving_yojson core ppxlib ppx_deriving hack_parallel opium pcre-ocaml ocaml-tls camlzip bisect_ppx mparser ocaml-ci-scripts patdiff"
 
 rm ALL.txt 2> /dev/null
 for l in $LIBS; do rm -rf $l; done
+
+# MIT
+mkdir patdiff && \
+wget -P patdiff https://raw.githubusercontent.com/janestreet/patdiff/master/LICENSE.md
 
 # MIT
 mkdir ppx_deriving_yojson && \
