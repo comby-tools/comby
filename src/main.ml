@@ -163,8 +163,14 @@ let output_result stdin spec_number json_pretty json_lines source_path result in
     | Some path, true, _, _, false
     | Some path, _, true, _, false ->
       let json_rewrites =
+        let open Patdiff_lib in
+        (* FIXME(RVT) don't reread the file here *)
+        let from_ = Patdiff_core.{ name = path; text = In_channel.read_all path } in
+        let to_ = Patdiff_core.{ name = path; text = result } in
+        let diff = Patdiff_core.(patdiff ~produce_unified_lines:false ~print_global_header:true ~output:Output.Ascii ~from_ ~to_ ()) in
+        Format.printf "%s@." diff;
         let value = `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
-        `Assoc [("uri", `String path); ("rewritten_source", `String result); ("in_place_substitutions", value)]
+        `Assoc [("uri", `String path); ("rewritten_source", `String result); ("in_place_substitutions", value); ("diff", `String diff)]
       in
       if json_lines then
         Format.printf "%s@." @@ Yojson.Safe.to_string json_rewrites
