@@ -127,7 +127,13 @@ let process_single_source matcher verbose configuration source specification mat
   | _ ->
     Nothing
 
-let output_result stdin spec_number json_pretty json_lines source_path result in_place =
+let output_result stdin spec_number json_pretty json_lines output_diff source_path source_content result in_place =
+  let source_content =
+    match source_content with
+    | String content -> content
+    | Path path -> In_channel.read_all path
+    | _ -> failwith "This cannot be a zip or paths"
+  in
   match result with
   | Nothing -> ()
   | Matches (matches, _) ->
@@ -162,20 +168,39 @@ let output_result stdin spec_number json_pretty json_lines source_path result in
     (* JSON with path *)
     | Some path, true, _, _, false
     | Some path, _, true, _, false ->
-      let json_rewrites =
+      let diff =
         let open Patdiff_lib in
         (* FIXME(RVT) don't reread the file here *)
-        let from_ = Patdiff_core.{ name = path; text = In_channel.read_all path } in
+        let configuration = Diff_configuration.plain () in
+        let from_ = Patdiff_core.{ name = path; text = source_content } in
         let to_ = Patdiff_core.{ name = path; text = result } in
-        let diff = Patdiff_core.(patdiff ~produce_unified_lines:false ~print_global_header:true ~output:Output.Ascii ~from_ ~to_ ()) in
-        Format.printf "%s@." diff;
-        let value = `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
-        `Assoc [("uri", `String path); ("rewritten_source", `String result); ("in_place_substitutions", value); ("diff", `String diff)]
+        Compare_core.diff_strings
+          ~print_global_header:true
+          configuration
+          ~old:from_
+          ~new_:to_
+        |> function
+        | `Different diff -> Some diff
+        | `Same -> None
       in
-      if json_lines then
-        Format.printf "%s@." @@ Yojson.Safe.to_string json_rewrites
-      else
-        Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json_rewrites
+      begin match diff with
+        | Some diff ->
+          let json_rewrites =
+            let value =
+              `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
+            `Assoc
+              [ ("uri", `String path)
+              ; ("rewritten_source", `String result)
+              ; ("in_place_substitutions", value)
+              ; ("diff", `String diff)
+              ]
+          in
+          if json_lines then
+            Format.printf "%s@." @@ Yojson.Safe.to_string json_rewrites
+          else
+            Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json_rewrites
+        | None -> ()
+      end
     (* stdin, JSON, no path *)
     | None, true, _, _, false
     | None, _, true, _, false ->
@@ -188,7 +213,29 @@ let output_result stdin spec_number json_pretty json_lines source_path result in
       else
         Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json_rewrites
     (* stdout for everything else *)
-    | _ -> Format.printf "%s%!" result
+    | in_, _, _, _, _ ->
+      if not output_diff || Option.is_none in_ then
+        Format.printf "%s%!" result
+      else
+        let diff =
+          let open Patdiff_lib in
+          (* FIXME(RVT) don't reread the file here *)
+          let configuration = Diff_configuration.terminal () in
+          let path = Option.value_exn in_ in
+          let from_ = Patdiff_core.{ name = path; text = source_content } in
+          let to_ = Patdiff_core.{ name = path; text = result } in
+          Compare_core.diff_strings
+            ~print_global_header:true
+            configuration
+            ~old:from_
+            ~new_:to_
+          |> function
+          | `Different diff -> Some diff
+          | `Same -> None
+        in
+        match diff with
+        | Some result -> Format.printf "%s@." result
+        | None -> ()
 
 let write_statistics number_of_matches paths total_time dump_statistics =
   if dump_statistics then
@@ -233,6 +280,7 @@ let run
     stdin
     json_pretty
     json_lines
+    output_diff
     verbose
     match_timeout
     in_place
@@ -259,7 +307,7 @@ let run
             Rewritten (x, content, number_of_matches),
             count + number_of_matches)
     in
-    output_result stdin 0 json_pretty json_lines output_file result in_place;
+    output_result stdin 0 json_pretty json_lines output_diff output_file input result in_place;
     count
   in
 
@@ -376,6 +424,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and number_of_workers = flag "jobs" (optional_with_default 4 int) ~doc:"n Number of worker processes. Default: 4"
     and dump_statistics = flag "statistics" ~aliases:["stats"] no_arg ~doc:"Dump statistics to stderr"
     and stdin = flag "stdin" no_arg ~doc:"Read source from stdin"
+    and output_diff = flag "diff" no_arg ~doc:"Output colored diff"
     and anonymous_arguments =
       anon
         (maybe
@@ -482,7 +531,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           | _ -> (module Matchers.Generic)
       in
       let in_place = if is_some zip_file then false else in_place in
-      run (module M) sources specifications sequential number_of_workers stdin json_pretty json_lines verbose match_timeout in_place dump_statistics
+      run (module M) sources specifications sequential number_of_workers stdin json_pretty json_lines output_diff verbose match_timeout in_place dump_statistics
   ]
 
 let default_command =

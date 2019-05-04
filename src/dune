@@ -1,7 +1,7 @@
 (executables
  (libraries comby core ppx_deriving_yojson ppx_deriving_yojson.runtime hack_parallel camlzip patdiff.lib)
  (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show))
- (modules main specification)
+ (modules main specification diff_configuration)
  (names main))
 
 (executables
