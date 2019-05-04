@@ -22,4 +22,5 @@
  (libraries
   comby
   cohttp-lwt-unix
-  core))
+  core
+  camlzip))

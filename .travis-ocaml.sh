@@ -333,6 +333,7 @@ opam install oasis
 opam install tls
 opam install camlzip
 opam install bisect_ppx
+opam install patdiff
 
 git clone https://github.com/comby-tools/mparser
 cd mparser

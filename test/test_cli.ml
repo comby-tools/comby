@@ -15,10 +15,15 @@ let read_with_timeout read_from_channel =
 
 let read_source_from_stdin command source =
   let open Unix.Process_channels in
-  let { stdin; stdout ; stderr = _ } = Unix.open_process_full ~env:[||] command in
+  let { stdin; stdout; stderr = _ } = Unix.open_process_full ~env:[||] command in
   Out_channel.output_string stdin source;
   Out_channel.flush stdin;
   Out_channel.close stdin;
+  read_with_timeout stdout
+
+let read_output command =
+  let open Unix.Process_channels in
+  let { stdout; _ } = Unix.open_process_full ~env:[||] command in
   read_with_timeout stdout
 
 let%expect_test "stdin_command" =
@@ -202,3 +207,50 @@ let%expect_test "json_output_option" =
     }
   ]
 }|}]
+
+let with_zip f =
+  let file = Filename.temp_file "comby_" ".zip" in
+  let zip =  Zip.open_out file in
+  let entry_name = "main.ml" in
+  let entry_content = "hello world" in
+  Zip.add_entry entry_content zip entry_name;
+  Zip.close_out zip;
+  f file;
+  Unix.remove file
+
+let%expect_test "patdiff_and_zip" =
+  with_zip (fun file ->
+      let match_template = ":[2] :[1]" in
+      let rewrite_template = ":[1]" in
+      let command_args =
+        Format.sprintf "'%s' '%s' .ml -sequential -json-pretty -zip %s"
+          match_template rewrite_template file
+      in
+      let command = Format.sprintf "%s %s" binary_path command_args in
+      read_output command
+      |> print_string;
+      [%expect_exact {|{
+  "uri": "main.ml",
+  "rewritten_source": "world",
+  "in_place_substitutions": [
+    {
+      "range": {
+        "start": { "offset": 0, "line": -1, "column": -1 },
+        "end": { "offset": 5, "line": -1, "column": -1 }
+      },
+      "replacement_content": "world",
+      "environment": [
+        {
+          "variable": "1",
+          "value": "world",
+          "range": {
+            "start": { "offset": 0, "line": -1, "column": -1 },
+            "end": { "offset": 5, "line": -1, "column": -1 }
+          }
+        }
+      ]
+    }
+  ],
+  "diff": "--- main.ml\n+++ main.ml\n@@ -1,1 +1,1 @@\n -hello world\n +world"
+}|}]
+    )
