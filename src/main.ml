@@ -19,7 +19,7 @@ type input_kind =
   | Paths of string list
   | Path of string
   | String of string
-  | Zip of (Zip.in_file * Zip.entry list)
+  | Zip of string
 
 let show_input_kind (i : input_kind) =
   match i with
@@ -271,6 +271,10 @@ let paths_with_file_size paths =
       in
       (path, length))
 
+(** If users give e.g., *.c, convert it to .c *)
+let fake_glob_file_extensions file_extensions =
+  List.map file_extensions ~f:(String.substr_replace_all ~pattern:"*" ~with_:"")
+
 let run
     matcher
     (sources : input_kind)
@@ -284,7 +288,8 @@ let run
     verbose
     match_timeout
     in_place
-    dump_statistics =
+    dump_statistics
+    file_extensions =
   let number_of_workers = if sequential then 0 else number_of_workers in
   let scheduler = Scheduler.create ~number_of_workers () in
   let configuration = Configuration.create ~match_kind:Fuzzy () in
@@ -342,14 +347,61 @@ let run
           ()
       end;
       write_statistics number_of_matches paths total_time dump_statistics
-  | Zip (zip_in, entries) ->
-    let _number_of_matches =
-      List.fold ~init:0 entries ~f:(fun acc ({ filename; _ } as entry) ->
-          let source = Zip.read_entry zip_in entry in
-          let matches = run_on_specifications (String source) (Some filename) in
-          acc + matches)
-    in
-    ()
+  | Zip zip_file ->
+    if sequential then
+      let zip_in = Zip.open_in zip_file in
+      let entries =
+        match file_extensions with
+        | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; _ } -> not is_directory)
+        | Some suffixes ->
+          let suffixes = fake_glob_file_extensions suffixes in
+          List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
+              not is_directory && List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename))
+      in
+      let number_of_matches =
+        List.fold ~init:0 entries ~f:(fun acc ({ filename; _ } as entry) ->
+            let source = Zip.read_entry zip_in entry in
+            let matches = run_on_specifications (String source) (Some filename) in
+            acc + matches)
+      in
+      Zip.close_in zip_in;
+      write_statistics number_of_matches [] total_time dump_statistics
+    else
+      let map init (paths : Zip.entry list) =
+        let zip_in = Zip.open_in zip_file in
+        let result =
+          List.fold
+            paths
+            ~init
+            ~f:(fun count ({ filename; _ } as entry) ->
+                let source = Zip.read_entry zip_in entry in
+                let matches = run_on_specifications (String source) (Some filename) in
+                count + matches)
+        in
+        Zip.close_in zip_in;
+        result
+      in
+      let number_of_matches =
+        let zip_in = Zip.open_in zip_file in
+        let entries =
+          match file_extensions with
+          | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; _ } -> not is_directory)
+          | Some suffixes ->
+            let suffixes = fake_glob_file_extensions suffixes in
+            List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
+                not is_directory && List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename))
+        in
+        Zip.close_in zip_in;
+        try Scheduler.map_reduce scheduler ~init:0 ~map ~reduce:(+) entries
+        with End_of_file -> 0
+      in
+      begin
+        try Scheduler.destroy scheduler
+        with Unix.Unix_error (_,"kill",_) ->
+          (* No kill command on Mac OS X *)
+          ()
+      end;
+      write_statistics number_of_matches [] total_time dump_statistics
   | _ -> failwith "No single path handled here"
 
 let parse_source_directories ?(file_extensions = []) target_directory =
@@ -401,10 +453,6 @@ let parse_specification_directories match_only specification_directory_paths =
     Specification.create ~match_template ?match_rule ?rewrite_template ?rewrite_rule ()
   in
   List.map specification_directory_paths ~f:parse_directory
-
-(** If users give e.g., *.c, convert it to .c *)
-let fake_glob_file_extensions file_extensions =
-  List.map file_extensions ~f:(String.substr_replace_all ~pattern:"*" ~with_:"")
 
 let base_command_parameters : (unit -> 'result) Command.Param.t =
   [%map_open
@@ -484,16 +532,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
         | true, _ ->
           String (In_channel.input_all In_channel.stdin)
         | _, Some zip_file ->
-          let zip_in = Zip.open_in zip_file in
-          let entries =
-            match file_extensions with
-            | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; _ } -> not is_directory)
-            | Some suffixes ->
-              let suffixes = fake_glob_file_extensions suffixes in
-              List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
-                  not is_directory && List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename))
-          in
-          Zip (zip_in, entries)
+          Zip zip_file
         (* Recurse in directories *)
         | false, None ->
           let file_extensions = Option.map file_extensions ~f:fake_glob_file_extensions in
@@ -531,7 +570,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           | _ -> (module Matchers.Generic)
       in
       let in_place = if is_some zip_file then false else in_place in
-      run (module M) sources specifications sequential number_of_workers stdin json_pretty json_lines output_diff verbose match_timeout in_place dump_statistics
+      run (module M) sources specifications sequential number_of_workers stdin json_pretty json_lines output_diff verbose match_timeout in_place dump_statistics file_extensions
   ]
 
 let default_command =
