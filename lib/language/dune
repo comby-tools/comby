@@ -2,4 +2,4 @@
   (name language)
   (public_name comby.language)
   (preprocess (pps ppx_deriving.show ppx_sexp_conv ppx_sexp_message ppx_deriving_yojson bisect_ppx -conditional -no-comment-parsing))
-  (libraries comby.parsers comby.match comby.rewriter comby.matchers ppxlib core mparser mparser.pcre yojson ppx_deriving_yojson ppx_deriving_yojson.runtime))
+  (libraries comby.parsers comby.match comby.rewriter comby.matchers ppxlib core core.uuid mparser mparser.pcre yojson ppx_deriving_yojson ppx_deriving_yojson.runtime))
