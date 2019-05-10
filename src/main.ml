@@ -50,7 +50,7 @@ let compute_line_col source offset =
     | _ -> (offset - 1, line, col + 1)
   in
   let _, line, col = String.fold ~init:(offset, 0, 0) ~f source in
-  line, col
+  line + 1, col
 
 let get_matches (module Matcher : Matchers.Matcher) configuration match_template match_rule source =
   let update_match source m =
