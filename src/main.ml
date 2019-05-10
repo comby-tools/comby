@@ -66,8 +66,8 @@ let get_matches (module Matcher : Matchers.Matcher) configuration match_template
       { match_start; match_end }
     in
     let range = update_range m.range in
-    let update_environment e =
-      List.fold (Environment.vars e) ~init:e ~f:(fun env var ->
+    let update_environment env =
+      List.fold (Environment.vars env) ~init:env ~f:(fun env var ->
           let open Option in
           let updated =
             Environment.lookup_range env var
