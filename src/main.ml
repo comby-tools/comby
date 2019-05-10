@@ -42,9 +42,49 @@ let read_template =
 
 let verbose_out_file = "/tmp/comby.out"
 
+let compute_line_col source offset =
+  let f (offset, line, col) char =
+    match offset, char with
+    | 0, _ -> (0, line, col)
+    | _, '\n' -> (offset - 1, line + 1, 1)
+    | _ -> (offset - 1, line, col + 1)
+  in
+  let _, line, col = String.fold ~init:(offset, 0, 0) ~f source in
+  line, col
+
 let get_matches (module Matcher : Matchers.Matcher) configuration match_template match_rule source =
+  let update_match source m =
+    let update_range r =
+      let update_location l =
+        let open Location in
+        let line, column = compute_line_col source l.offset in
+        { l with line; column}
+      in
+      let open Range in
+      let match_start = update_location r.match_start in
+      let match_end = update_location r.match_end in
+      { match_start; match_end }
+    in
+    let range = update_range m.range in
+    let update_environment e =
+      List.fold (Environment.vars e) ~init:e ~f:(fun env var ->
+          let open Option in
+          let updated =
+            Environment.lookup_range env var
+            >>| update_range
+            >>| Environment.update_range env var
+          in
+          match updated with
+          | Some e -> e
+          | None -> failwith "Can't do this"
+        )
+    in
+    let environment = update_environment m.environment in
+    { m with range; environment }
+  in
   let rule = Rule.create match_rule |> Or_error.ok_exn in
   Matcher.all ~configuration ~template:match_template ~source
+  |> List.map ~f:(update_match source)
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule ~matcher:(module Matcher) environment))
 
 let apply_rewrite_rule matcher rewrite_rule matches =

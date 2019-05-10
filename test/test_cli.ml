@@ -173,16 +173,16 @@ let%expect_test "json_output_option" =
   "matches": [
     {
       "range": {
-        "start": { "offset": 0, "line": 1, "column": 1 },
-        "end": { "offset": 5, "line": 1, "column": 6 }
+        "start": { "offset": 0, "line": 0, "column": 0 },
+        "end": { "offset": 5, "line": 0, "column": 5 }
       },
       "environment": [
         {
           "variable": "1",
           "value": "X",
           "range": {
-            "start": { "offset": 2, "line": 1, "column": 3 },
-            "end": { "offset": 3, "line": 1, "column": 4 }
+            "start": { "offset": 2, "line": 0, "column": 2 },
+            "end": { "offset": 3, "line": 0, "column": 3 }
           }
         }
       ],
@@ -190,16 +190,16 @@ let%expect_test "json_output_option" =
     },
     {
       "range": {
-        "start": { "offset": 6, "line": 1, "column": 7 },
-        "end": { "offset": 11, "line": 1, "column": 12 }
+        "start": { "offset": 6, "line": 0, "column": 6 },
+        "end": { "offset": 11, "line": 0, "column": 11 }
       },
       "environment": [
         {
           "variable": "1",
           "value": "Y",
           "range": {
-            "start": { "offset": 8, "line": 1, "column": 9 },
-            "end": { "offset": 9, "line": 1, "column": 10 }
+            "start": { "offset": 8, "line": 0, "column": 8 },
+            "end": { "offset": 9, "line": 0, "column": 9 }
           }
         }
       ],
