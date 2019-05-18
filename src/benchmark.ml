@@ -49,15 +49,15 @@ let bench_diff ~iterations baseline_command new_command =
   let delta_x = 1.0 /. (time_new_command /. time_baseline) in
   if delta_x < 1.0 then begin
     let percentage_delta = 1.0 -. delta_x in
-    Format.printf "SLOWER: (%.4fx)@." delta_x;
+    Format.printf "SLOWER: %.4fx of master@." delta_x;
     if percentage_delta > epsilon_warn then begin
       Format.printf
-        "FAIL: benchmark epislon exceeded (%.4f > %.4f)"
+        "FAIL: benchmark epsilon exceeded (%.4f > %.4f)@."
         percentage_delta epsilon_warn;
       1
     end
     else begin
-      Format.printf "PASS: difference negligble (%.4f)@." percentage_delta;
+      Format.printf "PASS: difference negligible (%.4f)@." percentage_delta;
       0
     end
   end
@@ -117,7 +117,7 @@ let with_master_comby dir f =
           (Format.sprintf
              "git clone --depth=50 --branch=benchmark https://github.com/comby-tools/comby.git %s/comby-master && \
               make -C %s/comby-master release && \
-              cp %s/comby-master/comby %s" dir dir dir baseline_comby)
+              cp %s/comby-master/comby %s &> /dev/null" dir dir dir baseline_comby)
       with
       | Ok () ->
         if debug then Format.printf "master comby make and copy OK@.";
