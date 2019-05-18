@@ -93,7 +93,7 @@ let rec apply ?(matcher = (module Matchers.Generic : Matchers.Matcher)) predicat
       Option.value_map result ~f:ident ~default:(false, Some env)
     | Match (String template, cases) ->
       let source, _ = Rewriter.Rewrite_template.substitute template env in
-      let fresh_var = Uuid.(Fn.compose to_string create ()) in
+      let fresh_var = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
       let env = Environment.add env fresh_var source in
       rule_match env (Match (Variable fresh_var, cases))
     | RewriteTemplate rewrite_template ->

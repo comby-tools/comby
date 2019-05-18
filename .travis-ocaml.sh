@@ -325,12 +325,12 @@ opam install ppx_deriving_yojson
 opam install core
 opam install ppxlib
 opam install ppx_deriving
+opam install tls
 opam install angstrom
 opam install hack_parallel
 opam install opium
 opam install pcre
 opam install oasis
-opam install tls
 opam install camlzip
 opam install bisect_ppx
 opam install patdiff
@@ -354,3 +354,5 @@ bisect-ppx-report \
     -service-job-id $TRAVIS_JOB_ID \
     `find . -name 'bisect*.out'`
 curl -L -F json_file=@./coverage.json https://coveralls.io/api/v1/jobs
+
+./benchmark
