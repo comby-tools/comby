@@ -105,9 +105,9 @@ let with_master_comby dir f =
       match
         Unix.system
           (Format.sprintf
-             "git clone --depth=50 --branch=benchmark https://github.com/comby-tools/comby.git comby-master && \
-              make -C comby-master release && \
-              cp $(pwd)/comb-master/comby %s" baseline_comby)
+             "git clone --depth=50 --branch=benchmark https://github.com/comby-tools/comby.git %s/comby-master && \
+              make -C %s/comby-master release && \
+              cp %s/comb-master/comby %s" dir dir dir baseline_comby)
       with
       | Ok () ->
         Format.printf "master comby make and copy OK@.";
@@ -118,7 +118,7 @@ let with_master_comby dir f =
       | Error _ ->
         Unix.remove baseline_comby;
         Unix.remove new_comby;
-        Format.eprintf "Failed to checkout master and build baseline";
+        Format.eprintf "Failed to clone master and build baseline";
         1
     end
   | Error _ ->
