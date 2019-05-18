@@ -117,7 +117,7 @@ let with_master_comby dir f =
           (Format.sprintf
              "git clone --depth=50 --branch=benchmark https://github.com/comby-tools/comby.git %s/comby-master && \
               make -C %s/comby-master release && \
-              cp %s/comby-master/comby %s &> /dev/null" dir dir dir baseline_comby)
+              cp %s/comby-master/comby %s" dir dir dir baseline_comby)
       with
       | Ok () ->
         if debug then Format.printf "master comby make and copy OK@.";
