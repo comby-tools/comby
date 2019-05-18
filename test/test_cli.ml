@@ -7,7 +7,12 @@ let binary_path = "../../../comby"
 let read_with_timeout read_from_channel =
   let read_from_fd = Unix.descr_of_in_channel read_from_channel in
   let read_from_channel =
-    Unix.select ~read:[read_from_fd] ~write:[] ~except:[] ~timeout:(`After (Time.of_int_sec 5)) ()
+    Unix.select
+      ~read:[read_from_fd]
+      ~write:[]
+      ~except:[]
+      ~timeout:(`After (Time.of_int_sec 5))
+      ()
     |> (fun { Unix.Select_fds.read; _ } -> List.hd_exn read)
     |> Unix.in_channel_of_descr
   in

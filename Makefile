@@ -1,4 +1,4 @@
-all: build comby comby-server
+all: build comby comby-server benchmark
 
 build:
 	@BISECT_ENABLE=yes dune build --profile dev
@@ -6,7 +6,7 @@ build:
 release:
 	@dune build --profile release
 
-comby comby-server:
+comby comby-server benchmark:
 	@ln -s _build/install/default/bin/$@ ./$@
 
 run-server:
