@@ -19,7 +19,9 @@ let read_with_timeout read_from_channel =
     |> (fun { Unix.Select_fds.read; _ } -> List.hd_exn read)
     |> Unix.in_channel_of_descr
   in
-  In_channel.input_all read_from_channel
+  let result = In_channel.input_all read_from_channel in
+  Format.printf "Read: %s@." result;
+  result
 
 let read_stats command =
   let open Unix.Process_channels in
