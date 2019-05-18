@@ -104,10 +104,13 @@ let with_master_comby dir f =
     begin
       match
         Unix.system
-          (Format.sprintf "git checkout master && make release && cp $(pwd)/comby %s" baseline_comby)
+          (Format.sprintf
+             "git clone --depth=50 --branch=benchmark https://github.com/comby-tools/comby.git comby-master && \
+              make -C comby-master release && \
+              cp $(pwd)/comb-master/comby %s" baseline_comby)
       with
       | Ok () ->
-        Format.printf "master comby make OK@.";
+        Format.printf "master comby make and copy OK@.";
         let result = f baseline_comby new_comby in
         Unix.remove baseline_comby;
         Unix.remove new_comby;
