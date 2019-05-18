@@ -6,9 +6,12 @@ open Language
 open Matchers
 open Rewriter
 
-let debug = false
-
 let (>>|) = Lwt.Infix.(>|=)
+
+let debug =
+  match Sys.getenv "DEBUG" with
+  | None -> false
+  | Some _ -> true
 
 let max_request_length =
   match Sys.getenv "MAX_REQUEST_LENGTH" with
