@@ -10,7 +10,10 @@ let debug = true
 
 let (>>|) = Lwt.Infix.(>|=)
 
-let max_request_length = 4000
+let max_request_length =
+  match Sys.getenv "MAX_REQUEST_LENGTH" with
+  | None -> Int.max_value
+  | Some max -> Int.of_string max
 
 type match_request =
   { source : string
