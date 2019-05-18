@@ -177,8 +177,8 @@ let output_result stdin spec_number json_pretty json_lines output_diff source_pa
         Compare_core.diff_strings
           ~print_global_header:true
           configuration
-          ~old:from_
-          ~new_:to_
+          ~prev:from_
+          ~next:to_
         |> function
         | `Different diff -> Some diff
         | `Same -> None
@@ -227,8 +227,8 @@ let output_result stdin spec_number json_pretty json_lines output_diff source_pa
           Compare_core.diff_strings
             ~print_global_header:true
             configuration
-            ~old:from_
-            ~new_:to_
+            ~prev:from_
+            ~next:to_
           |> function
           | `Different diff -> Some diff
           | `Same -> None

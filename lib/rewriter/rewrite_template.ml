@@ -29,7 +29,7 @@ let of_match_context
       String.slice source 0 start_index
   in
   let after_part = String.slice source end_index (String.length source) in
-  let hole_id = Uuid.(Fn.compose to_string create ()) in
+  let hole_id = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
   let rewrite_template = String.concat [before_part; ":["; hole_id;  "]"; after_part] in
   hole_id, rewrite_template
 
