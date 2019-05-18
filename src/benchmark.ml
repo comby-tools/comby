@@ -2,7 +2,7 @@ open Core
 
 module Time = Core_kernel.Time_ns.Span
 
-let debug = true
+let debug = false
 
 let epsilon_same = 0.05
 let epsilon_warn = 0.2
@@ -20,7 +20,7 @@ let read_with_timeout read_from_channel =
     |> Unix.in_channel_of_descr
   in
   let result = In_channel.input_all read_from_channel in
-  Format.printf "Read: %s@." result;
+  if debug then Format.printf "Read: %s@." result;
   result
 
 let read_stats command =
@@ -77,10 +77,10 @@ let with_temp_dir f =
   let result = f dir in
   match Unix.system (Format.sprintf "rm -rf %s" dir) with
   | Ok () ->
-    Format.printf "Successfully removed temp dir@.";
+    if debug then Format.printf "Successfully removed temp dir@.";
     result
   | Error _ ->
-    Format.printf "Failed to remove temp dir@.";
+    if debug then Format.printf "Failed to remove temp dir@.";
     result
 
 let with_zip dir f =
@@ -110,7 +110,7 @@ let with_master_comby dir f =
   let baseline_comby = dir ^/ "comby" in
   match Unix.system (Format.sprintf "make release && cp $(pwd)/comby %s" new_comby) with
   | Ok () ->
-    Format.printf "new_comby copy OK@.";
+    if debug then Format.printf "new_comby copy OK@.";
     begin
       match
         Unix.system
@@ -120,7 +120,7 @@ let with_master_comby dir f =
               cp %s/comby-master/comby %s" dir dir dir baseline_comby)
       with
       | Ok () ->
-        Format.printf "master comby make and copy OK@.";
+        if debug then Format.printf "master comby make and copy OK@.";
         let result = f baseline_comby new_comby in
         Unix.remove baseline_comby;
         Unix.remove new_comby;
