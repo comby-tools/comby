@@ -25,7 +25,7 @@ let read_with_timeout read_from_channel =
 
 let read_stats command =
   let open Unix.Process_channels in
-  let _ = if debug then Format.printf "Running: %s@." command in
+  if debug then Format.printf "Running: %s@." command;
   let { stderr; _ } = Unix.open_process_full ~env:[||] command in
   read_with_timeout stderr
   |> Yojson.Safe.from_string
@@ -44,8 +44,8 @@ let run ~iterations ~command =
 let bench_diff ~iterations baseline_command new_command =
   let time_baseline = run ~iterations ~command:baseline_command in
   let time_new_command = run ~iterations ~command:new_command in
-  let _ = if debug then Format.printf "time_baseline: %f@." time_baseline in
-  let _ = if debug then  Format.printf "time_new: %f@." time_new_command in
+  if debug then Format.printf "time_baseline: %f@." time_baseline;
+  if debug then  Format.printf "time_new: %f@." time_new_command;
   let delta_x = 1.0 /. (time_new_command /. time_baseline) in
   if delta_x < 1.0 then begin
     let percentage_delta = 1.0 -. delta_x in
@@ -92,7 +92,10 @@ let with_zip dir f =
   begin
     match Unix.system curl_command with
     | Ok () ->
-      Format.printf "Download to %s OK@." output_zip;
+      if debug then Format.printf "Download to %s OK@." output_zip;
+      (* XXX for some reason Unix.system does not give enough time, and
+         we can run into '"/tmp/bench_.tmp.efb1e5_comby/master.zip: No such file or directory"'. This is a hack. Actually test for the file and wait *)
+      Unix.sleep 2;
       let result = f output_zip in
       Unix.remove output_zip;
       result
