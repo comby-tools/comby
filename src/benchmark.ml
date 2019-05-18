@@ -73,8 +73,13 @@ let bench_diff ~iterations baseline_command new_command =
 let with_temp_dir f =
   let dir = Filename.temp_dir "bench_" "_comby" in
   let result = f dir in
-  Unix.remove dir;
-  result
+  match Unix.system (Format.sprintf "rm -rf %s" dir) with
+  | Ok () ->
+    Format.printf "Successfully removed temp dir@.";
+    result
+  | Error _ ->
+    Format.printf "Failed to remove temp dir@.";
+    result
 
 let with_zip dir f =
   let output_zip = dir ^/ "master.zip" in
@@ -107,7 +112,7 @@ let with_master_comby dir f =
           (Format.sprintf
              "git clone --depth=50 --branch=benchmark https://github.com/comby-tools/comby.git %s/comby-master && \
               make -C %s/comby-master release && \
-              cp %s/comb-master/comby %s" dir dir dir baseline_comby)
+              cp %s/comby-master/comby %s" dir dir dir baseline_comby)
       with
       | Ok () ->
         Format.printf "master comby make and copy OK@.";
