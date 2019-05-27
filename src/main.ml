@@ -114,9 +114,45 @@ let process_single_source
   | _ ->
     Nothing
 
-let output_result
-    ({ json_pretty; json_lines; output_diff; _ } as output_options)
-    source_path source_content result spec_number =
+
+(* only used in rewrite *)
+let get_json_rewrites replacements result =
+  let value = `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
+  `Assoc [("uri", `Null); ("rewritten_source", `String result); ("in_place_substitutions", value)]
+
+(* only used in rewrite *)
+let json_rewrites replacements (path: string) (diff: string) result =
+  let value =
+    `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
+  `Assoc
+    [ ("uri", `String path)
+    ; ("rewritten_source", `String result)
+    ; ("in_place_substitutions", value)
+    ; ("diff", `String diff)
+    ]
+
+let get_diff path source_content result =
+  let open Patdiff_lib in
+  let configuration = Diff_configuration.plain () in
+  let prev = Patdiff_core.{ name = path; text = source_content } in
+  let next = Patdiff_core.{ name = path; text = result } in
+  Compare_core.diff_strings
+    ~print_global_header:true
+    configuration
+    ~prev
+    ~next
+  |> function
+  | `Different diff -> Some diff
+  | `Same -> None
+
+(* only used in match json *)
+let get_json source_path matches =
+  let json_matches matches = `List (List.map ~f:Match.to_yojson matches) in
+  match source_path with
+  | None -> `Assoc [("uri", `Null); ("matches", json_matches matches)]
+  | Some path -> `Assoc [("uri", `String path); ("matches", json_matches matches)]
+
+let output_result output_options source_path source_content result spec_number =
   let source_content =
     match source_content with
     | `String content -> content
@@ -125,28 +161,25 @@ let output_result
   match result with
   | Nothing -> ()
   | Matches (matches, _) ->
-    if json_pretty || json_lines then
-      let json_matches = `List (List.map ~f:Match.to_yojson matches) in
-      let json =
-        match source_path with
-        | None -> `Assoc [("uri", `Null); ("matches", json_matches)]
-        | Some path -> `Assoc [("uri", `String path); ("matches", json_matches)]
-      in
-      if json_lines then
-        Format.printf "%s@." @@ Yojson.Safe.to_string json
-      else
-        Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json
-    else
-      let with_file =
-        match source_path with
-        | Some path -> Format.sprintf " in %s " path
-        | None -> " "
-      in
-      Format.printf
-        "%d matches%sfor spec %d (use -json-pretty for json format)@."
-        (List.length matches)
-        with_file
-        (spec_number + 1)
+    begin
+      match output_options with
+      | { json_pretty = true; json_lines = true; _ }
+      | { json_pretty = true; json_lines = false; _ } ->
+        Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string @@ get_json source_path matches
+      | { json_pretty = false; json_lines = true; _ } ->
+        Format.printf "%s@." @@ Yojson.Safe.to_string @@ get_json source_path matches
+      | _ ->
+        let with_file =
+          match source_path with
+          | Some path -> Format.sprintf " in %s " path
+          | None -> " "
+        in
+        Format.printf
+          "%d matches%sfor spec %d (use -json-pretty for json format)@."
+          (List.length matches)
+          with_file
+          (spec_number + 1)
+    end
   | Rewritten (replacements, result, _) ->
     match source_path, output_options with
     (* rewrite in place *)
@@ -156,76 +189,26 @@ let output_result
     | _, { json_pretty = false; json_lines = false; stdin = true; in_place = false; _ } ->
       Format.printf "%s%!" result
     (* JSON with path *)
-    | Some path, { json_pretty = true; in_place = false; _ }
+    | Some path, { json_pretty = true; in_place = false; _ } ->
+      let diff = get_diff path source_content result in
+      Option.value_map diff ~default:() ~f:(fun diff ->
+          Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string @@ json_rewrites replacements path diff result)
     | Some path, { json_lines = true; in_place = false; _ } ->
-      let diff =
-        let open Patdiff_lib in
-        (* FIXME(RVT) don't reread the file here *)
-        let configuration = Diff_configuration.plain () in
-        let prev = Patdiff_core.{ name = path; text = source_content } in
-        let next = Patdiff_core.{ name = path; text = result } in
-        Compare_core.diff_strings
-          ~print_global_header:true
-          configuration
-          ~prev
-          ~next
-        |> function
-        | `Different diff -> Some diff
-        | `Same -> None
-      in
-      begin match diff with
-        | Some diff ->
-          let json_rewrites =
-            let value =
-              `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
-            `Assoc
-              [ ("uri", `String path)
-              ; ("rewritten_source", `String result)
-              ; ("in_place_substitutions", value)
-              ; ("diff", `String diff)
-              ]
-          in
-          if json_lines then
-            Format.printf "%s@." @@ Yojson.Safe.to_string json_rewrites
-          else
-            Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json_rewrites
-        | None -> ()
-      end
+      let diff = get_diff path source_content result in
+      Option.value_map diff ~default:() ~f:(fun diff ->
+          Format.printf "%s@." @@ Yojson.Safe.to_string @@ json_rewrites replacements path diff result)
     (* stdin, JSON, no path *)
-    | None, { json_pretty = true; in_place = false; _ }
+    | None, { json_pretty = true; in_place = false; _ } ->
+      Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string @@ get_json_rewrites replacements result
     | None, { json_lines = true; in_place = false; _ } ->
-      let json_rewrites =
-        let value = `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
-        `Assoc [("uri", `Null); ("rewritten_source", `String result); ("in_place_substitutions", value)]
-      in
-      if json_lines then
-        Format.printf "%s@." @@ Yojson.Safe.to_string json_rewrites
-      else
-        Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json_rewrites
+      Format.printf "%s@." @@ Yojson.Safe.to_string @@ get_json_rewrites replacements result
     (* stdout for everything else *)
-    | in_, _ ->
-      if not output_diff || Option.is_none in_ then
-        Format.printf "%s%!" result
-      else
-        let diff =
-          let open Patdiff_lib in
-          (* FIXME(RVT) don't reread the file here *)
-          let configuration = Diff_configuration.terminal () in
-          let path = Option.value_exn in_ in
-          let prev = Patdiff_core.{ name = path; text = source_content } in
-          let next = Patdiff_core.{ name = path; text = result } in
-          Compare_core.diff_strings
-            ~print_global_header:true
-            configuration
-            ~prev
-            ~next
-          |> function
-          | `Different diff -> Some diff
-          | `Same -> None
-        in
-        match diff with
-        | Some result -> Format.printf "%s@." result
-        | None -> ()
+    | in_, { output_diff = true; _ } ->
+      let diff = get_diff (Option.value_exn in_) source_content result in
+      Option.value_map diff ~default:() ~f:(fun diff -> Format.printf "%s@." diff)
+    | None, _ ->
+      Format.printf "%s%!" result
+    | _ -> failwith "Unhandled."
 
 let write_statistics number_of_matches paths total_time dump_statistics =
   if dump_statistics then
