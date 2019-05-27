@@ -3,9 +3,19 @@ open Core
 open Rewriter
 
 module Printer : sig
-  type t =
-    | Match_printer of (string option -> Match.t list -> unit)
-    | Rewrite_printer of (string option -> Rewrite.match_context_replacement list -> string -> string -> unit)
+  type printable_result =
+    | Matches of
+        { source_path : string option
+        ; matches : Match.t list
+        }
+    | Replacements of
+        { source_path : string option
+        ; replacements : Rewrite.match_context_replacement list
+        ; result : string
+        ; source_content : string
+        }
+
+  type t = printable_result -> unit
 end
 
 type output_options =

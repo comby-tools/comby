@@ -97,30 +97,37 @@ type user_input =
   }
 
 module Printer = struct
-  type t =
-    | Match_printer of (string option -> Match.t list -> unit)
-    | Rewrite_printer of (string option -> Rewrite.match_context_replacement list -> string -> string -> unit)
+  type printable_result =
+    | Matches of
+        { source_path : string option
+        ; matches : Match.t list
+        }
+    | Replacements of
+        { source_path : string option
+        ; replacements : Rewrite.match_context_replacement list
+        ; result : string
+        ; source_content : string
+        }
+
+  type t = printable_result -> unit
 
   module Match : sig
-    val create : output_options -> t
+    val print : output_options -> string option -> Match.t list -> unit
   end = struct
-    let create output_options =
-      let pp source_path matches =
-        let ppf = Format.std_formatter in
-        match output_options with
-        | { json_pretty = true; json_lines = true; _ }
-        | { json_pretty = true; json_lines = false; _ } ->
-          Format.fprintf ppf "%a" Match.pp_json_pretty (source_path, matches)
-        | { json_pretty = false; json_lines = true; _ } ->
-          Format.fprintf ppf "%a" Match.pp_json_lines (source_path, matches)
-        | _ ->
-          Format.fprintf ppf "%a" Match.pp_match_result (source_path, matches)
-      in
-      Match_printer pp
+    let print output_options source_path matches =
+      let ppf = Format.std_formatter in
+      match output_options with
+      | { json_pretty = true; json_lines = true; _ }
+      | { json_pretty = true; json_lines = false; _ } ->
+        Format.fprintf ppf "%a" Match.pp_json_pretty (source_path, matches)
+      | { json_pretty = false; json_lines = true; _ } ->
+        Format.fprintf ppf "%a" Match.pp_json_lines (source_path, matches)
+      | _ ->
+        Format.fprintf ppf "%a" Match.pp_match_result (source_path, matches)
   end
 
   module Rewrite : sig
-    val create : output_options -> t
+    val print : output_options -> string option -> Rewrite.match_context_replacement list -> string -> string -> unit
   end = struct
     let get_diff path source_content result =
       let open Patdiff_lib in
@@ -152,43 +159,40 @@ module Printer = struct
         ; ("diff", `String diff)
         ]
 
-    let create (output_options : output_options) : t =
+    let print output_options path replacements result source_content =
       let ppf = Format.std_formatter in
-      let pp path replacements result source_content =
-        match path, output_options with
-        (* rewrite in place *)
-        | Some path, { json_pretty = false; json_lines = false; stdin = false; in_place = true; _ } ->
-          Out_channel.write_all path ~data:result
-        (* stdin, not JSON *)
-        | _, { json_pretty = false; json_lines = false; stdin = false; in_place = false; _ } ->
-          Format.fprintf ppf "%s%!" result
-        (* JSON with path *)
-        | Some path, { json_pretty = true; in_place = false; _ } ->
-          let diff = get_diff path source_content result in
-          Option.value_map diff ~default:() ~f:(fun diff ->
-              Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string @@ json_rewrites replacements path diff result)
-        | Some path, { json_lines = true; in_place = false; _ } ->
-          let diff = get_diff path source_content result in
-          Option.value_map diff ~default:() ~f:(fun diff ->
-              Format.printf "%s@." @@ Yojson.Safe.to_string @@ json_rewrites replacements path diff result)
-        (* stdin, JSON, no path *)
-        | None, { json_pretty = true; in_place = false; _ } ->
-          Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string @@ get_json_rewrites replacements result
-        | None, { json_lines = true; in_place = false; _ } ->
-          Format.printf "%s@." @@ Yojson.Safe.to_string @@ get_json_rewrites replacements result
-        (* stdout for everything else *)
-        | in_, { output_diff = true; _ } ->
-          let diff = get_diff (Option.value_exn in_) source_content result in
-          Option.value_map diff ~default:() ~f:(fun diff -> Format.printf "%s@." diff)
-        | None, _ ->
-          (* if on stdin, print out, even if it's the same file *)
-          Format.printf "%s%!" result
-        | _ ->
-          (* if it's not on stdin, we already handled the path rewrite case, so just do nothing and
-             ignore the result *)
-          ()
-      in
-      Rewrite_printer pp
+      match path, output_options with
+      (* rewrite in place *)
+      | Some path, { json_pretty = false; json_lines = false; stdin = false; in_place = true; _ } ->
+        Out_channel.write_all path ~data:result
+      (* stdin, not JSON *)
+      | _, { json_pretty = false; json_lines = false; stdin = false; in_place = false; _ } ->
+        Format.fprintf ppf "%s%!" result
+      (* JSON with path *)
+      | Some path, { json_pretty = true; in_place = false; _ } ->
+        let diff = get_diff path source_content result in
+        Option.value_map diff ~default:() ~f:(fun diff ->
+            Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string @@ json_rewrites replacements path diff result)
+      | Some path, { json_lines = true; in_place = false; _ } ->
+        let diff = get_diff path source_content result in
+        Option.value_map diff ~default:() ~f:(fun diff ->
+            Format.printf "%s@." @@ Yojson.Safe.to_string @@ json_rewrites replacements path diff result)
+      (* stdin, JSON, no path *)
+      | None, { json_pretty = true; in_place = false; _ } ->
+        Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string @@ get_json_rewrites replacements result
+      | None, { json_lines = true; in_place = false; _ } ->
+        Format.printf "%s@." @@ Yojson.Safe.to_string @@ get_json_rewrites replacements result
+      (* stdout for everything else *)
+      | in_, { output_diff = true; _ } ->
+        let diff = get_diff (Option.value_exn in_) source_content result in
+        Option.value_map diff ~default:() ~f:(fun diff -> Format.printf "%s@." diff)
+      | None, _ ->
+        (* if on stdin, print out, even if it's the same file *)
+        Format.printf "%s%!" result
+      | _ ->
+        (* if it's not on stdin, we already handled the path rewrite case, so just do nothing and
+           ignore the result *)
+        ()
   end
 end
 
@@ -281,11 +285,14 @@ let create
   in
   let in_place = if is_some zip_file then false else in_place in
   let output_options = { output_options with in_place } in
-  let output_printer =
-    if match_only then
-      Printer.Match.create output_options
-    else
-      Printer.Rewrite.create output_options
+
+  let output_printer printable =
+    let open Printer in
+    match printable with
+    | Matches { source_path; matches } ->
+      Printer.Match.print output_options source_path matches
+    | Replacements { source_path; replacements; result; source_content } ->
+      Printer.Rewrite.print output_options source_path replacements result source_content
   in
   Ok { sources
      ; specifications

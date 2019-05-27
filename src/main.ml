@@ -19,7 +19,7 @@ type json_result =
 
 type processed_source_result =
   | Matches of (Match.t list * int)
-  | Rewritten of (Rewrite.match_context_replacement list * string * int)
+  | Replacement of (Rewrite.match_context_replacement list * string * int)
   | Nothing
 
 let verbose_out_file = "/tmp/comby.out"
@@ -107,61 +107,26 @@ let process_single_source
       result
       |> function
       | Some (Some { rewritten_source; in_place_substitutions }, matches) ->
-        Rewritten (in_place_substitutions, rewritten_source, List.length matches)
+        Replacement (in_place_substitutions, rewritten_source, List.length matches)
       | Some (None, _)
       | None -> Nothing
   with
   | _ ->
     Nothing
 
-(* only used in rewrite *)
-let get_json_rewrites replacements result =
-  let value = `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
-  `Assoc [("uri", `Null); ("rewritten_source", `String result); ("in_place_substitutions", value)]
-
-(* only used in rewrite *)
-let json_rewrites replacements (path: string) (diff: string) result =
-  let value =
-    `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
-  `Assoc
-    [ ("uri", `String path)
-    ; ("rewritten_source", `String result)
-    ; ("in_place_substitutions", value)
-    ; ("diff", `String diff)
-    ]
-
-let get_diff path source_content result =
-  let open Patdiff_lib in
-  let configuration = Diff_configuration.plain () in
-  let prev = Patdiff_core.{ name = path; text = source_content } in
-  let next = Patdiff_core.{ name = path; text = result } in
-  Compare_core.diff_strings
-    ~print_global_header:true
-    configuration
-    ~prev
-    ~next
-  |> function
-  | `Different diff -> Some diff
-  | `Same -> None
-
 let output_result output_printer source_path source_content result =
-  let source_content =
-    match source_content with
-    | `String content -> content
-    | `Path path -> In_channel.read_all path
-  in
   match result with
   | Nothing -> ()
   | Matches (matches, _) ->
-    begin match output_printer with
-      | Printer.Match_printer f -> f source_path matches
-      | _ -> ()
-    end
-  | Rewritten (replacements, result, _) ->
-    begin match output_printer with
-      | Printer.Rewrite_printer f -> f source_path replacements result source_content
-      | _ -> ()
-    end
+    output_printer (Printer.Matches { source_path; matches })
+  | Replacement (replacements, result, _) ->
+    let source_content =
+      match source_content with
+      | `String content -> content
+      | `Path path -> In_channel.read_all path
+    in
+    output_printer (Printer.Replacements { source_path; replacements; result; source_content })
+
 
 let write_statistics number_of_matches paths total_time dump_statistics =
   if dump_statistics then
@@ -223,15 +188,15 @@ let run
           let input =
             match result with
             | Nothing | Matches _ -> input
-            | Rewritten (_, content, _) -> `String content
+            | Replacement (_, content, _) -> `String content
           in
           process_single_source matcher match_configuration input specification verbose match_timeout
           |> function
           | Nothing -> Nothing, count
           | Matches (x, number_of_matches) ->
             Matches (x, number_of_matches), count + number_of_matches
-          | Rewritten (x, content, number_of_matches) ->
-            Rewritten (x, content, number_of_matches),
+          | Replacement (x, content, number_of_matches) ->
+            Replacement (x, content, number_of_matches),
             count + number_of_matches)
     in
     output_result output_printer output_file input result;
