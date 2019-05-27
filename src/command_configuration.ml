@@ -112,8 +112,11 @@ module Printer = struct
   type t = printable_result -> unit
 
   module Match : sig
+
     val print : output_options -> string option -> Match.t list -> unit
+
   end = struct
+
     let print output_options source_path matches =
       let ppf = Format.std_formatter in
       match output_options with
@@ -124,11 +127,15 @@ module Printer = struct
         Format.fprintf ppf "%a" Match.pp_json_lines (source_path, matches)
       | _ ->
         Format.fprintf ppf "%a" Match.pp_match_result (source_path, matches)
+
   end
 
   module Rewrite : sig
+
     val print : output_options -> string option -> Rewrite.match_context_replacement list -> string -> string -> unit
+
   end = struct
+
     let get_diff path source_content result =
       let open Patdiff_lib in
       let configuration = Diff_configuration.plain () in
@@ -204,47 +211,78 @@ type t =
   ; output_printer : Printer.t
   }
 
-let create
+let validate_errors
     { input_options =
         { rule
         ; specification_directories
         ; anonymous_arguments
-        ; file_extensions
         ; zip_file
-        ; match_only
-        ; target_directory
+        ; _
         }
-    ; run_options =
-        { sequential
-        ; verbose
-        ; match_timeout
-        ; number_of_workers
-        ; dump_statistics
-        }
+    ; run_options = _
     ; output_options =
-        ({
+        {
           in_place;
           stdin;
           _
-        } as output_options)
-    }
-  : t Or_error.t =
-  let () =
-    match Rule.create rule with
-    | Ok _ -> ()
-    | Error error ->
-      let message = Error.to_string_hum error in
-      Format.printf "Match rule parse error: %s@." message;
-      exit 1
+        }
+    } =
+  let violations =
+    [ stdin && Option.is_some zip_file
+    , "-zip may not be used with stdin"
+    ; stdin && in_place
+    , "-i may not be used with stdin"
+    ; anonymous_arguments = None &&
+      (specification_directories = None
+       || specification_directories = Some []),
+      "Please specify templates. \
+       Either on the command line, or \
+       using -templates \
+       <directory-containing-templates>"
+    ; let result = Rule.create rule in
+      Or_error.is_error result,
+      if Or_error.is_error result then
+        Format.sprintf "Match rule parse error: %s@." @@
+        Error.to_string_hum (Option.value_exn (Result.error result))
+      else
+        "UNREACHABLE"
+      ;
+    ]
   in
+  List.filter_map violations ~f:(function
+      | true, message -> Some (Or_error.error_string message)
+      | _ -> None)
+  |> Or_error.combine_errors_unit
+
+let create
+    ({ input_options =
+         { rule
+         ; specification_directories
+         ; anonymous_arguments
+         ; file_extensions
+         ; zip_file
+         ; match_only
+         ; target_directory
+         }
+     ; run_options =
+         { sequential
+         ; verbose
+         ; match_timeout
+         ; number_of_workers
+         ; dump_statistics
+         }
+     ; output_options =
+         ({
+           in_place;
+           stdin;
+           _
+         } as output_options)
+     } as configuration)
+  : t Or_error.t =
+  let open Or_error in
+  validate_errors configuration >>= fun () ->
   let specifications =
     match specification_directories, anonymous_arguments with
-    | None, None
-    | Some [], None ->
-      Format.eprintf
-        "Please specify templates. Either on the command line, or using \
-         -templates [dir]@.";
-      exit 1
     | None, Some (match_template, rewrite_template, _) ->
       if match_only then
         [Specification.create ~match_template ~match_rule:rule ()]
@@ -257,6 +295,7 @@ let create
         "Warning: ignoring match and rewrite templates and rules on \
          commandline and using those in directories instead@.";
       parse_specification_directories match_only specification_directories
+    | _ -> assert false
   in
   let stdin, file_extensions =
     match anonymous_arguments with
@@ -266,12 +305,6 @@ let create
        -templates work with stdin. *)
     | None -> stdin, file_extensions
   in
-  if stdin && (Option.is_some zip_file) then
-    (Format.eprintf "-zip may not be used with stdin";
-     exit 1)
-  else if stdin && in_place then
-    (Format.eprintf "-i may not be used with stdin";
-     exit 1);
   let sources =
     match stdin, zip_file with
     | true, _ ->
@@ -294,15 +327,16 @@ let create
     | Replacements { source_path; replacements; result; source_content } ->
       Printer.Rewrite.print output_options source_path replacements result source_content
   in
-  Ok { sources
-     ; specifications
-     ; file_extensions
-     ; run_options =
-         { sequential
-         ; verbose
-         ; match_timeout
-         ; number_of_workers
-         ; dump_statistics
-         }
-     ; output_printer
-     }
+  return
+    { sources
+    ; specifications
+    ; file_extensions
+    ; run_options =
+        { sequential
+        ; verbose
+        ; match_timeout
+        ; number_of_workers
+        ; dump_statistics
+        }
+    ; output_printer
+    }
