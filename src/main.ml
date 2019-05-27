@@ -144,7 +144,7 @@ let get_diff path source_content result =
   | `Different diff -> Some diff
   | `Same -> None
 
-let output_result output_printer output_options source_path source_content result =
+let output_result output_printer source_path source_content result =
   let source_content =
     match source_content with
     | `String content -> content
@@ -158,38 +158,10 @@ let output_result output_printer output_options source_path source_content resul
       | _ -> ()
     end
   | Rewritten (replacements, result, _) ->
-    match source_path, output_options with
-    (* rewrite in place *)
-    | Some path, { json_pretty = false; json_lines = false; stdin = false; in_place = true; _ } ->
-      Out_channel.write_all path ~data:result
-    (* stdin, not JSON *)
-    | _, { json_pretty = false; json_lines = false; stdin = true; in_place = false; _ } ->
-      Format.printf "%s%!" result
-    (* JSON with path *)
-    | Some path, { json_pretty = true; in_place = false; _ } ->
-      let diff = get_diff path source_content result in
-      Option.value_map diff ~default:() ~f:(fun diff ->
-          Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string @@ json_rewrites replacements path diff result)
-    | Some path, { json_lines = true; in_place = false; _ } ->
-      let diff = get_diff path source_content result in
-      Option.value_map diff ~default:() ~f:(fun diff ->
-          Format.printf "%s@." @@ Yojson.Safe.to_string @@ json_rewrites replacements path diff result)
-    (* stdin, JSON, no path *)
-    | None, { json_pretty = true; in_place = false; _ } ->
-      Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string @@ get_json_rewrites replacements result
-    | None, { json_lines = true; in_place = false; _ } ->
-      Format.printf "%s@." @@ Yojson.Safe.to_string @@ get_json_rewrites replacements result
-    (* stdout for everything else *)
-    | in_, { output_diff = true; _ } ->
-      let diff = get_diff (Option.value_exn in_) source_content result in
-      Option.value_map diff ~default:() ~f:(fun diff -> Format.printf "%s@." diff)
-    | None, _ ->
-      (* if on stdin, print out, even if it's the same file *)
-      Format.printf "%s%!" result
-    | _ ->
-      (* if it's not on stdin, we already handled the path rewrite case, so just do nothing and
-         ignore the result *)
-      ()
+    begin match output_printer with
+      | Printer.Rewrite_printer f -> f source_path replacements result source_content
+      | _ -> ()
+    end
 
 let write_statistics number_of_matches paths total_time dump_statistics =
   if dump_statistics then
@@ -238,7 +210,6 @@ let run
         ; dump_statistics
         }
     ; output_printer
-    ; output_options
     }
   =
   let number_of_workers = if sequential then 0 else number_of_workers in
@@ -263,7 +234,7 @@ let run
             Rewritten (x, content, number_of_matches),
             count + number_of_matches)
     in
-    output_result output_printer output_options output_file input result;
+    output_result output_printer output_file input result;
     count
   in
 

@@ -1,9 +1,11 @@
 open Core
 
+open Rewriter
+
 module Printer : sig
   type t =
     | Match_printer of (string option -> Match.t list -> unit)
-    | Rewrite_printer of unit
+    | Rewrite_printer of (string option -> Rewrite.match_context_replacement list -> string -> string -> unit)
 end
 
 type output_options =
@@ -44,7 +46,6 @@ type t =
   ; file_extensions : string list option
   ; run_options : run_options
   ; output_printer : Printer.t
-  ; output_options : output_options
   }
 
 val create : user_input -> t Or_error.t
