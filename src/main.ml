@@ -184,8 +184,12 @@ let output_result output_printer output_options source_path source_content resul
       let diff = get_diff (Option.value_exn in_) source_content result in
       Option.value_map diff ~default:() ~f:(fun diff -> Format.printf "%s@." diff)
     | None, _ ->
+      (* if on stdin, print out, even if it's the same file *)
       Format.printf "%s%!" result
-    | _ -> failwith "Unhandled."
+    | _ ->
+      (* if it's not on stdin, we already handled the path rewrite case, so just do nothing and
+         ignore the result *)
+      ()
 
 let write_statistics number_of_matches paths total_time dump_statistics =
   if dump_statistics then
