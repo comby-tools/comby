@@ -114,7 +114,6 @@ let process_single_source
   | _ ->
     Nothing
 
-
 (* only used in rewrite *)
 let get_json_rewrites replacements result =
   let value = `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
@@ -145,56 +144,19 @@ let get_diff path source_content result =
   | `Different diff -> Some diff
   | `Same -> None
 
-(* only used in match json *)
-let get_json source_path matches =
-  let json_matches matches = `List (List.map ~f:Match.to_yojson matches) in
-  match source_path with
-  | None -> `Assoc [("uri", `Null); ("matches", json_matches matches)]
-  | Some path -> `Assoc [("uri", `String path); ("matches", json_matches matches)]
-
-let output_result output_options source_path source_content result spec_number =
+let output_result output_printer output_options source_path source_content result =
   let source_content =
     match source_content with
     | `String content -> content
     | `Path path -> In_channel.read_all path
   in
-  let pp_json_pretty ppf matches =
-    let f = Yojson.Safe.pretty_to_string in
-    let json_string = f @@ get_json source_path matches in
-    Format.fprintf ppf "%s" json_string
-  in
-  let pp_json_lines ppf matches =
-    let f = Yojson.Safe.to_string in
-    let json_string = f @@ get_json source_path matches in
-    Format.fprintf ppf "%s" json_string
-  in
-  let pp_match_result ppf matches =
-    let pp_source_path ppf source_path =
-      match source_path with
-      | Some path -> Format.fprintf ppf " in %s " path
-      | None -> Format.fprintf ppf "%s" " "
-    in
-    Format.fprintf ppf
-      "%d matches%afor spec %d (use -json-pretty for json format)\n"
-      (List.length matches)
-      pp_source_path source_path
-      (spec_number + 1)
-  in
-  let pp_matches ppf matches =
-    match output_options with
-    | { json_pretty = true; json_lines = true; _ }
-    | { json_pretty = true; json_lines = false; _ } ->
-      Format.fprintf ppf "%a" pp_json_pretty matches
-    | { json_pretty = false; json_lines = true; _ } ->
-      Format.fprintf ppf "%a" pp_json_lines matches
-    | _ ->
-      Format.fprintf ppf "%a" pp_match_result matches
-  in
-  let ppf = Format.std_formatter in
   match result with
   | Nothing -> ()
   | Matches (matches, _) ->
-    Format.fprintf ppf "%a" pp_matches matches
+    begin match output_printer with
+      | Printer.Match_printer f -> f source_path matches
+      | _ -> ()
+    end
   | Rewritten (replacements, result, _) ->
     match source_path, output_options with
     (* rewrite in place *)
@@ -271,6 +233,7 @@ let run
         ; number_of_workers
         ; dump_statistics
         }
+    ; output_printer
     ; output_options
     }
   =
@@ -296,7 +259,7 @@ let run
             Rewritten (x, content, number_of_matches),
             count + number_of_matches)
     in
-    output_result output_options output_file input result 0;
+    output_result output_printer output_options output_file input result;
     count
   in
 

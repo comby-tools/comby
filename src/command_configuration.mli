@@ -1,5 +1,11 @@
 open Core
 
+module Printer : sig
+  type t =
+    | Match_printer of (string option -> Match.t list -> unit)
+    | Rewrite_printer of unit
+end
+
 type output_options =
   { json_pretty : bool
   ; json_lines : bool
@@ -37,6 +43,7 @@ type t =
   ; specifications : Specification.t list
   ; file_extensions : string list option
   ; run_options : run_options
+  ; output_printer : Printer.t
   ; output_options : output_options
   }
 

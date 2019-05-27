@@ -95,11 +95,36 @@ type user_input =
   ; output_options : output_options
   }
 
+module Printer = struct
+  type t =
+    | Match_printer of (string option -> Match.t list -> unit)
+    | Rewrite_printer of unit
+
+  module Match : sig
+    val create : output_options -> t
+  end = struct
+    let create output_options =
+      let pp source_path matches =
+        let ppf = Format.std_formatter in
+        match output_options with
+        | { json_pretty = true; json_lines = true; _ }
+        | { json_pretty = true; json_lines = false; _ } ->
+          Format.fprintf ppf "%a" Match.pp_json_pretty (source_path, matches)
+        | { json_pretty = false; json_lines = true; _ } ->
+          Format.fprintf ppf "%a" Match.pp_json_lines (source_path, matches)
+        | _ ->
+          Format.fprintf ppf "%a" Match.pp_match_result (source_path, matches)
+      in
+      Match_printer (fun source_path matches -> pp source_path matches)
+  end
+end
+
 type t =
   { sources : Command_input.t
   ; specifications : Specification.t list
   ; file_extensions : string list option
   ; run_options : run_options
+  ; output_printer : Printer.t
   ; output_options : output_options
   }
 
@@ -121,12 +146,13 @@ let create
         ; dump_statistics
         }
     ; output_options =
-        { json_pretty
-        ; json_lines
-        ; in_place
-        ; stdin
-        ; output_diff
-        }
+        ({
+          json_pretty;
+          json_lines;
+          in_place;
+          stdin;
+          output_diff
+        } as output_options)
     }
   : t Or_error.t =
   let () =
@@ -184,6 +210,9 @@ let create
       `Paths (parse_source_directories ?file_extensions target_directory)
   in
   let in_place = if is_some zip_file then false else in_place in
+  let output_printer =
+    Printer.Match.create output_options
+  in
   Ok { sources
      ; specifications
      ; file_extensions
@@ -194,11 +223,12 @@ let create
          ; number_of_workers
          ; dump_statistics
          }
-     ; output_options =
-         { json_pretty
-         ; json_lines
-         ; in_place
-         ; stdin
-         ; output_diff
-         }
+     ; output_printer
+     ; output_options = {
+         json_pretty;
+         json_lines;
+         in_place;
+         stdin;
+         output_diff
+       }
      }
