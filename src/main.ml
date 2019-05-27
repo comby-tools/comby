@@ -158,28 +158,43 @@ let output_result output_options source_path source_content result spec_number =
     | `String content -> content
     | `Path path -> In_channel.read_all path
   in
+  let pp_json_pretty ppf matches =
+    let f = Yojson.Safe.pretty_to_string in
+    let json_string = f @@ get_json source_path matches in
+    Format.fprintf ppf "%s" json_string
+  in
+  let pp_json_lines ppf matches =
+    let f = Yojson.Safe.to_string in
+    let json_string = f @@ get_json source_path matches in
+    Format.fprintf ppf "%s" json_string
+  in
+  let pp_match_result ppf matches =
+    let pp_source_path ppf source_path =
+      match source_path with
+      | Some path -> Format.fprintf ppf " in %s " path
+      | None -> Format.fprintf ppf "%s" " "
+    in
+    Format.fprintf ppf
+      "%d matches%afor spec %d (use -json-pretty for json format)\n"
+      (List.length matches)
+      pp_source_path source_path
+      (spec_number + 1)
+  in
+  let pp_matches ppf matches =
+    match output_options with
+    | { json_pretty = true; json_lines = true; _ }
+    | { json_pretty = true; json_lines = false; _ } ->
+      Format.fprintf ppf "%a" pp_json_pretty matches
+    | { json_pretty = false; json_lines = true; _ } ->
+      Format.fprintf ppf "%a" pp_json_lines matches
+    | _ ->
+      Format.fprintf ppf "%a" pp_match_result matches
+  in
+  let ppf = Format.std_formatter in
   match result with
   | Nothing -> ()
   | Matches (matches, _) ->
-    begin
-      match output_options with
-      | { json_pretty = true; json_lines = true; _ }
-      | { json_pretty = true; json_lines = false; _ } ->
-        Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string @@ get_json source_path matches
-      | { json_pretty = false; json_lines = true; _ } ->
-        Format.printf "%s@." @@ Yojson.Safe.to_string @@ get_json source_path matches
-      | _ ->
-        let with_file =
-          match source_path with
-          | Some path -> Format.sprintf " in %s " path
-          | None -> " "
-        in
-        Format.printf
-          "%d matches%sfor spec %d (use -json-pretty for json format)@."
-          (List.length matches)
-          with_file
-          (spec_number + 1)
-    end
+    Format.fprintf ppf "%a" pp_matches matches
   | Rewritten (replacements, result, _) ->
     match source_path, output_options with
     (* rewrite in place *)
