@@ -114,12 +114,13 @@ let process_single_source
   | _ ->
     Nothing
 
-let output_result { stdin; json_pretty; json_lines; output_diff; in_place } source_path source_content result spec_number =
+let output_result
+    ({ json_pretty; json_lines; output_diff; _ } as output_options)
+    source_path source_content result spec_number =
   let source_content =
     match source_content with
     | `String content -> content
     | `Path path -> In_channel.read_all path
-    | _ -> failwith "This cannot be a zip or paths"
   in
   match result with
   | Nothing -> ()
@@ -147,14 +148,16 @@ let output_result { stdin; json_pretty; json_lines; output_diff; in_place } sour
         with_file
         (spec_number + 1)
   | Rewritten (replacements, result, _) ->
-    match source_path, json_pretty, json_lines, stdin, in_place with
+    match source_path, output_options with
     (* rewrite in place *)
-    | Some path, false, false, false, true -> Out_channel.write_all path ~data:result
+    | Some path, { json_pretty = false; json_lines = false; stdin = false; in_place = true; _ } ->
+      Out_channel.write_all path ~data:result
     (* stdin, not JSON *)
-    | _, false, false, true, false -> Format.printf "%s%!" result
+    | _, { json_pretty = false; json_lines = false; stdin = true; in_place = false; _ } ->
+      Format.printf "%s%!" result
     (* JSON with path *)
-    | Some path, true, _, _, false
-    | Some path, _, true, _, false ->
+    | Some path, { json_pretty = true; in_place = false; _ }
+    | Some path, { json_lines = true; in_place = false; _ } ->
       let diff =
         let open Patdiff_lib in
         (* FIXME(RVT) don't reread the file here *)
@@ -189,8 +192,8 @@ let output_result { stdin; json_pretty; json_lines; output_diff; in_place } sour
         | None -> ()
       end
     (* stdin, JSON, no path *)
-    | None, true, _, _, false
-    | None, _, true, _, false ->
+    | None, { json_pretty = true; in_place = false; _ }
+    | None, { json_lines = true; in_place = false; _ } ->
       let json_rewrites =
         let value = `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
         `Assoc [("uri", `Null); ("rewritten_source", `String result); ("in_place_substitutions", value)]
@@ -200,7 +203,7 @@ let output_result { stdin; json_pretty; json_lines; output_diff; in_place } sour
       else
         Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string json_rewrites
     (* stdout for everything else *)
-    | in_, _, _, _, _ ->
+    | in_, _ ->
       if not output_diff || Option.is_none in_ then
         Format.printf "%s%!" result
       else
