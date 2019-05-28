@@ -229,13 +229,13 @@ let validate_errors
     } =
   let violations =
     [ stdin && Option.is_some zip_file
-    , "-zip may not be used with stdin"
+    , "-zip may not be used with stdin."
     ; stdin && in_place
-    , "-i may not be used with stdin"
+    , "-i may not be used with stdin."
     ; anonymous_arguments = None &&
       (specification_directories = None
        || specification_directories = Some []),
-      "Please specify templates. \
+      "No templates specified. \
        Either on the command line, or \
        using -templates \
        <directory-containing-templates>"
@@ -269,6 +269,21 @@ let validate_errors
       in
       Error.of_string message)
 
+let emit_warnings { input_options; output_options; _ } =
+  let warn_on =
+    [ is_some input_options.specification_directories
+      && is_some input_options.anonymous_arguments,
+      "Templates specified on the command line AND using -templates. Ignoring match
+      and rewrite templates on the command line and only using those in directories."
+    ; output_options.json_lines = true && output_options.json_pretty = true,
+      "Both -json-lines and -json-pretty specified. Using -json-pretty."
+    ]
+  in
+  List.iter warn_on ~f:(function
+      | true, message -> Format.eprintf "Warning: %s@." message
+      | _ -> ());
+  Ok ()
+
 let create
     ({ input_options =
          { rule
@@ -296,6 +311,7 @@ let create
   : t Or_error.t =
   let open Or_error in
   validate_errors configuration >>= fun () ->
+  emit_warnings configuration >>= fun () ->
   let specifications =
     match specification_directories, anonymous_arguments with
     | None, Some (match_template, rewrite_template, _) ->
@@ -303,16 +319,14 @@ let create
         [Specification.create ~match_template ~match_rule:rule ()]
       else
         [Specification.create ~match_template ~rewrite_template ~match_rule:rule ~rewrite_rule:rule ()]
-    | Some specification_directories, None ->
-      parse_specification_directories match_only specification_directories
-    | Some specification_directories, Some _ ->
-      Format.eprintf
-        "Warning: ignoring match and rewrite templates and rules on \
-         commandline and using those in directories instead@.";
+    | Some specification_directories, _ ->
       parse_specification_directories match_only specification_directories
     | _ -> assert false
   in
   let stdin, file_extensions =
+    (* Really activate stdin mode if not in the 3rd anonymous arg?
+       Is the 3rd arnonymous arg meant to case out on a matcher kind, filter, or
+       control stdin activation? *)
     match anonymous_arguments with
     | Some (_, _, None) -> true, file_extensions
     | Some (_, _, Some file_extensions) -> false, (Some (List.concat file_extensions))
