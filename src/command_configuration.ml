@@ -253,6 +253,21 @@ let validate_errors
       | true, message -> Some (Or_error.error_string message)
       | _ -> None)
   |> Or_error.combine_errors_unit
+  |> Result.map_error ~f:(fun error ->
+      let message =
+        let rec to_string acc =
+          function
+          | Sexp.Atom s -> s
+          | List [] -> ""
+          | List (x::[]) -> to_string acc x
+          | List (x::xs) ->
+            (List.fold xs ~init:acc ~f:to_string) ^ "\nNext error: " ^ to_string acc x
+        in
+        Error.to_string_hum error
+        |> Sexp.of_string
+        |> to_string ""
+      in
+      Error.of_string message)
 
 let create
     ({ input_options =

@@ -346,6 +346,11 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; output_diff
             }
         }
+      |> function
+      | Ok configuration -> configuration
+      | Error error ->
+        Format.eprintf "%s@." @@ Error.to_string_hum error;
+        exit 1
     in
     fun () ->
       let (module M : Matchers.Matcher) =
@@ -378,7 +383,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           | ".tex" | ".bib" -> (module Matchers.Latex)
           | _ -> (module Matchers.Generic)
       in
-      run (module M) (Or_error.ok_exn configuration)
+      run (module M) configuration
   ]
 
 let default_command =

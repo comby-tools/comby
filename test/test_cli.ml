@@ -4,11 +4,11 @@ module Time = Core_kernel.Time_ns.Span
 
 let binary_path = "../../../comby"
 
-let read_with_timeout read_from_channel =
-  let read_from_fd = Unix.descr_of_in_channel read_from_channel in
+let read_with_timeout read_from_channels =
+  let read_from_fds = List.map ~f:Unix.descr_of_in_channel read_from_channels in
   let read_from_channel =
     Unix.select
-      ~read:[read_from_fd]
+      ~read:read_from_fds
       ~write:[]
       ~except:[]
       ~timeout:(`After (Time.of_int_sec 5))
@@ -20,16 +20,25 @@ let read_with_timeout read_from_channel =
 
 let read_source_from_stdin command source =
   let open Unix.Process_channels in
-  let { stdin; stdout; stderr = _ } = Unix.open_process_full ~env:[||] command in
+  let { stdin; stdout; stderr } = Unix.open_process_full ~env:[||] command in
   Out_channel.output_string stdin source;
   Out_channel.flush stdin;
   Out_channel.close stdin;
-  read_with_timeout stdout
+  read_with_timeout [stdout; stderr]
 
 let read_output command =
   let open Unix.Process_channels in
-  let { stdout; _ } = Unix.open_process_full ~env:[||] command in
-  read_with_timeout stdout
+  let { stdout; stderr; _ } = Unix.open_process_full ~env:[||] command in
+  read_with_timeout [stdout; stderr]
+
+let%expect_test "stdin_command" =
+  let command_args = "-zip x -stdin" in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command "none"
+  |> print_string;
+  [%expect_exact {|Please specify templates. Either on the command line, or using -templates <directory-containing-templates>
+Next error: -zip may not be used with stdin
+|}]
 
 let%expect_test "stdin_command" =
   let source = "hello world" in
