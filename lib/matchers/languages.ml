@@ -348,3 +348,30 @@ module C_nested_comments = struct
 
   include Matcher.Make(Syntax)
 end
+
+let select_with_extension extension : (module Types.Matcher.S) =
+  match extension with
+  | ".c" | ".h" | ".cc" | ".cpp" | ".hpp" -> (module C)
+  | ".clj" -> (module Clojure)
+  | ".css" -> (module CSS)
+  | ".dart" -> (module Dart)
+  | ".elm" -> (module Elm)
+  | ".erl" -> (module Erlang)
+  | ".ex" -> (module Elixir)
+  | ".html" | ".xml" -> (module Html)
+  | ".hs" -> (module Haskell)
+  | ".go" -> (module Go)
+  | ".java" -> (module Java)
+  | ".js" | ".ts" -> (module Javascript)
+  | ".ml" | ".mli" -> (module OCaml)
+  | ".php" -> (module Php)
+  | ".py" -> (module Python)
+  | ".rb" -> (module Ruby)
+  | ".rs" -> (module Rust)
+  | ".s" | ".asm" -> (module Assembly)
+  | ".scala" -> (module Scala)
+  | ".sql" -> (module SQL)
+  | ".sh" -> (module Bash)
+  | ".swift" -> (module Swift)
+  | ".tex" | ".bib" -> (module Latex)
+  | _ -> (module Generic)

@@ -353,37 +353,12 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
         exit 1
     in
     fun () ->
-      let (module M : Matchers.Matcher) =
+      let matcher =
         match file_extensions with
-        | None | Some [] -> (module Matchers.Generic)
-        | Some (hd::_) ->
-          match hd with
-          | ".c" | ".h" | ".cc" | ".cpp" | ".hpp" -> (module Matchers.C)
-          | ".clj" -> (module Matchers.Clojure)
-          | ".css" -> (module Matchers.CSS)
-          | ".dart" -> (module Matchers.Dart)
-          | ".elm" -> (module Matchers.Elm)
-          | ".erl" -> (module Matchers.Erlang)
-          | ".ex" -> (module Matchers.Elixir)
-          | ".html" | ".xml" -> (module Matchers.Html)
-          | ".hs" -> (module Matchers.Haskell)
-          | ".go" -> (module Matchers.Go)
-          | ".java" -> (module Matchers.Java)
-          | ".js" | ".ts" -> (module Matchers.Javascript)
-          | ".ml" | ".mli" -> (module Matchers.OCaml)
-          | ".php" -> (module Matchers.Php)
-          | ".py" -> (module Matchers.Python)
-          | ".rb" -> (module Matchers.Ruby)
-          | ".rs" -> (module Matchers.Rust)
-          | ".s" | ".asm" -> (module Matchers.Assembly)
-          | ".scala" -> (module Matchers.Scala)
-          | ".sql" -> (module Matchers.SQL)
-          | ".sh" -> (module Matchers.Bash)
-          | ".swift" -> (module Matchers.Swift)
-          | ".tex" | ".bib" -> (module Matchers.Latex)
-          | _ -> (module Matchers.Generic)
+        | None | Some [] -> Matchers.select_with_extension ".generic"
+        | Some (extension::_) -> Matchers.select_with_extension extension
       in
-      run (module M) configuration
+      run matcher configuration
   ]
 
 let default_command =
