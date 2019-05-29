@@ -1,7 +1,5 @@
 open Core
 
-open Rewriter
-
 module Printer : sig
   type printable_result =
     | Matches of
@@ -10,7 +8,7 @@ module Printer : sig
         }
     | Replacements of
         { source_path : string option
-        ; replacements : Rewrite.match_context_replacement list
+        ; replacements : Rewriter.Replacement.t list
         ; result : string
         ; source_content : string
         }

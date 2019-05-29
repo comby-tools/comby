@@ -19,7 +19,7 @@ type json_result =
 
 type processed_source_result =
   | Matches of (Match.t list * int)
-  | Replacement of (Rewrite.match_context_replacement list * string * int)
+  | Replacement of (Rewriter.Replacement.t list * string * int)
   | Nothing
 
 let verbose_out_file = "/tmp/comby.out"
@@ -93,7 +93,7 @@ let process_single_source
             |> fun matches ->
             if matches = [] then
               (* If there are no matches, return the original source (for editor support). *)
-              Some (Some (Rewrite.{ rewritten_source = input_text; in_place_substitutions = [] }), [])
+              Some (Some (Rewriter.Replacement.{ rewritten_source = input_text; in_place_substitutions = [] }), [])
             else
               Some (rewrite rewrite_template rewrite_rule input_text matches, matches)
           in

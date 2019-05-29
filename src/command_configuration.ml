@@ -1,7 +1,6 @@
 open Core
 
 open Language
-open Rewriter
 
 let read = Fn.compose String.rstrip In_channel.read_all
 
@@ -114,7 +113,7 @@ module Printer = struct
         }
     | Replacements of
         { source_path : string option
-        ; replacements : Rewrite.match_context_replacement list
+        ; replacements : Rewriter.Replacement.t list
         ; result : string
         ; source_content : string
         }
@@ -168,7 +167,8 @@ module Printer = struct
 
     val convert : output_options -> replacement_output
 
-    val print : replacement_output -> string option -> Rewrite.match_context_replacement list -> string -> string -> unit
+
+    val print : replacement_output -> string option -> Rewriter.Replacement.t list -> string -> string -> unit
 
   end = struct
 
@@ -181,13 +181,13 @@ module Printer = struct
 
     (* only used in rewrite *)
     let get_json_rewrites replacements result =
-      let value = `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
+      let value = `List (List.map ~f:Rewriter.Replacement.to_yojson replacements) in
       `Assoc [("uri", `Null); ("rewritten_source", `String result); ("in_place_substitutions", value)]
 
     (* only used in rewrite *)
     let json_rewrites replacements (path: string) (diff: string) result =
       let value =
-        `List (List.map ~f:Rewrite.match_context_replacement_to_yojson replacements) in
+        `List (List.map ~f:Rewriter.Replacement.to_yojson replacements) in
       `Assoc
         [ ("uri", `String path)
         ; ("rewritten_source", `String result)

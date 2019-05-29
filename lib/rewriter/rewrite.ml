@@ -1,25 +1,7 @@
 open Core
 
 open Match
-
-type match_context_replacement =
-  { range : range
-  ; replacement_content : string
-  ; environment : environment
-  }
-[@@deriving yojson]
-
-type result =
-  { rewritten_source : string
-  ; in_place_substitutions : match_context_replacement list
-  }
-[@@deriving yojson]
-
-let empty_result =
-  { rewritten_source = ""
-  ; in_place_substitutions = []
-  }
-[@@deriving yojson]
+open Replacement
 
 let substitute_match_contexts (matches: Match.t list) source replacements =
   let rewrite_template, environment =
