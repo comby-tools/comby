@@ -21,24 +21,23 @@ let empty_result =
   }
 [@@deriving yojson]
 
-(* only used in rewrite *)
-let get_json_rewrites replacements result =
-  let value = `List (List.map ~f:to_yojson replacements) in
-  `Assoc [("uri", `Null); ("rewritten_source", `String result); ("in_place_substitutions", value)]
-
-(* only used in rewrite *)
-let to_json replacements path (diff: string) result =
+let to_json replacements path diff result =
   let value = `List (List.map ~f:to_yojson replacements) in
   let uri =
     match path with
     | Some path -> `String path
     | None -> `Null
   in
+  let diff =
+    match diff with
+    | Some diff -> `String diff
+    | None -> `Null
+  in
   `Assoc
     [ ("uri", uri)
     ; ("rewritten_source", `String result)
     ; ("in_place_substitutions", value)
-    ; ("diff", `String diff)
+    ; ("diff", diff)
     ]
 
 let get_diff source_path source_content result =
@@ -60,15 +59,18 @@ let get_diff source_path source_content result =
   | `Different diff -> Some diff
   | `Same -> None
 
+let yojson_to_string kind json =
+  match kind with
+  | `Pretty -> Yojson.Safe.pretty_to_string json
+  | `Lines -> Yojson.Safe.to_string json
+
 let pp_json_pretty ppf (source_path, source_content, replacements, replacement_content) =
   let diff = get_diff source_path source_content replacement_content in
-  Option.value_map diff ~default:() ~f:(fun diff ->
-      Format.fprintf ppf "%s" @@ Yojson.Safe.pretty_to_string @@ to_json replacements source_path diff replacement_content)
+  Format.fprintf ppf "%s" @@ yojson_to_string `Pretty @@ to_json replacements source_path diff replacement_content
 
 let pp_json_lines ppf (source_path, source_content, replacements, replacement_content) =
   let diff = get_diff source_path source_content replacement_content in
-  Option.value_map diff ~default:() ~f:(fun diff ->
-      Format.fprintf ppf "%s" @@ Yojson.Safe.to_string @@ to_json replacements source_path diff replacement_content)
+  Format.fprintf ppf "%s" @@ Yojson.Safe.to_string @@ to_json replacements source_path diff replacement_content
 
 let pp_diff ppf (source_path, source_content, replacement_content) =
   let diff = get_diff source_path source_content replacement_content in
