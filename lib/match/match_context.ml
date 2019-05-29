@@ -14,7 +14,7 @@ let create () =
   }
 
 let to_json source_path matches =
-  let json_matches matches = `List (List.map ~f:(fun x -> to_yojson x) matches) in
+  let json_matches matches = `List (List.map ~f:to_yojson matches) in
   match source_path with
   | None -> `Assoc [("uri", `Null); ("matches", json_matches matches)]
   | Some path -> `Assoc [("uri", `String path); ("matches", json_matches matches)]

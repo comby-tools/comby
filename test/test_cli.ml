@@ -199,7 +199,9 @@ let%expect_test "json_output_option" =
         }
       ]
     }
-  ]
+  ],
+  "diff":
+    "--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n -a X c a Y c\n +c X a c Y a"
 }|}];
 
   let source = "a X c a Y c" in

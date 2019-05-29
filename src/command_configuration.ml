@@ -90,20 +90,6 @@ type user_input =
   ; output_options : output_options
   }
 
-let get_diff path source_content result =
-  let open Patdiff_lib in
-  let configuration = Diff_configuration.plain () in
-  let prev = Patdiff_core.{ name = path; text = source_content } in
-  let next = Patdiff_core.{ name = path; text = result } in
-  Compare_core.diff_strings
-    ~print_global_header:true
-    configuration
-    ~prev
-    ~next
-  |> function
-  | `Different diff -> Some diff
-  | `Same -> None
-
 module Printer = struct
 
   type printable_result =
@@ -179,22 +165,6 @@ module Printer = struct
       | Json_pretty
       | Diff
 
-    (* only used in rewrite *)
-    let get_json_rewrites replacements result =
-      let value = `List (List.map ~f:Replacement.to_yojson replacements) in
-      `Assoc [("uri", `Null); ("rewritten_source", `String result); ("in_place_substitutions", value)]
-
-    (* only used in rewrite *)
-    let json_rewrites replacements (path: string) (diff: string) result =
-      let value =
-        `List (List.map ~f:Replacement.to_yojson replacements) in
-      `Assoc
-        [ ("uri", `String path)
-        ; ("rewritten_source", `String result)
-        ; ("in_place_substitutions", value)
-        ; ("diff", `String diff)
-        ]
-
     let convert output_options : replacement_output =
       match output_options with
       | { json_pretty = false; json_lines = false; stdin = false; in_place = true; _ } -> In_place
@@ -204,25 +174,18 @@ module Printer = struct
       | { output_diff = true; _ } -> Diff
       | _ -> Stdout
 
-    let print replacement_output path replacements result source_content =
+    let print replacement_output path replacements replacement_content source_content =
       let ppf = Format.std_formatter in
       match path, replacement_output with
-      | Some path, In_place -> Out_channel.write_all path ~data:result
-      | _, Stdout -> Format.fprintf ppf "%s%!" result
+      | Some path, In_place -> Out_channel.write_all path ~data:replacement_content
+      | _, Stdout -> Format.fprintf ppf "%s" replacement_content
       | Some path, Json_pretty ->
-        let diff = get_diff path source_content result in
-        Option.value_map diff ~default:() ~f:(fun diff ->
-            Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string @@ json_rewrites replacements path diff result)
-      | Some path, Json_lines ->
-        let diff = get_diff path source_content result in
-        Option.value_map diff ~default:() ~f:(fun diff ->
-            Format.printf "%s@." @@ Yojson.Safe.to_string @@ json_rewrites replacements path diff result)
-      | None, Json_pretty -> Format.printf "%s%!" @@ Yojson.Safe.pretty_to_string @@ get_json_rewrites replacements result
-      | None, Json_lines -> Format.printf "%s@." @@ Yojson.Safe.to_string @@ get_json_rewrites replacements result
-      | in_, Diff ->
-        let diff = get_diff (Option.value_exn in_) source_content result in
-        Option.value_map diff ~default:() ~f:(fun diff -> Format.printf "%s@." diff)
-      | None, _ -> Format.printf "%s%!" result
+        Format.fprintf ppf "%a" Replacement.pp_json_pretty (Some path, source_content, replacements, replacement_content)
+      | Some path, Json_lines -> Format.fprintf ppf "%a" Replacement.pp_json_lines (Some path, source_content, replacements, replacement_content)
+      | None, Json_pretty -> Format.fprintf ppf "%a" Replacement.pp_json_pretty (path, source_content, replacements, replacement_content)
+      | None, Json_lines -> Format.fprintf ppf "%a" Replacement.pp_json_lines (path, source_content, replacements, replacement_content)
+      | Some in_, Diff -> Format.fprintf ppf "%a" Replacement.pp_diff (Some in_, source_content, replacement_content)
+      | None, _ -> Format.printf "%s" replacement_content
   end
 end
 

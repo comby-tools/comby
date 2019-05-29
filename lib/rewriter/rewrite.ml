@@ -8,8 +8,7 @@ let substitute_match_contexts (matches: Match.t list) source replacements =
     List.fold2_exn
       matches replacements
       ~init:(source, Environment.create ())
-      ~f:(fun
-           (rewrite_template, accumulator_environment)
+      ~f:(fun (rewrite_template, accumulator_environment)
            ({ environment = _match_environment; _ } as match_)
            { replacement_content; _ } ->
            (* create a hole in the rewrite template based on this match context *)

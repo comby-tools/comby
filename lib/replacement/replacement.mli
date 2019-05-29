@@ -14,3 +14,9 @@ type result =
 [@@deriving yojson]
 
 val empty_result : result
+
+val pp_json_pretty : Format.formatter -> string option * string * t list * string -> unit
+
+val pp_json_lines : Format.formatter -> string option * string * t list * string -> unit
+
+val pp_diff : Format.formatter -> string option * string * string -> unit
