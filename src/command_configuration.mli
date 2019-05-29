@@ -59,5 +59,3 @@ type t =
   }
 
 val create : user_input -> t Or_error.t
-
-val fake_glob_file_extensions : string list -> string list

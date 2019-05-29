@@ -241,7 +241,6 @@ let run
         match file_extensions with
         | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; _ } -> not is_directory)
         | Some suffixes ->
-          let suffixes = fake_glob_file_extensions suffixes in
           List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
               not is_directory && List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename))
       in
@@ -274,7 +273,6 @@ let run
           match file_extensions with
           | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; _ } -> not is_directory)
           | Some suffixes ->
-            let suffixes = fake_glob_file_extensions suffixes in
             List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
                 not is_directory && List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename))
         in
