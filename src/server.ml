@@ -47,7 +47,7 @@ type json_match_result =
 
 type json_rewrite_result =
   { rewritten_source : string
-  ; in_place_substitutions : Rewriter.Replacement.t list
+  ; in_place_substitutions : Replacement.t list
   ; id : int
   }
 [@@deriving yojson]
@@ -108,7 +108,7 @@ let perform_match request =
     if debug then Format.printf "Result (400) %s@." error;
     respond ~code:(`Code 400) (`String error)
 
-let rewrite_to_json id ({ rewritten_source; in_place_substitutions } : Rewriter.Replacement.result) =
+let rewrite_to_json id ({ rewritten_source; in_place_substitutions } : Replacement.result) =
   Format.sprintf "%s"
     (Yojson.Safe.pretty_to_string
        (json_rewrite_result_to_yojson

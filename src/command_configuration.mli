@@ -8,7 +8,7 @@ module Printer : sig
         }
     | Replacements of
         { source_path : string option
-        ; replacements : Rewriter.Replacement.t list
+        ; replacements : Replacement.t list
         ; result : string
         ; source_content : string
         }
