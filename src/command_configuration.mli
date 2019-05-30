@@ -18,11 +18,13 @@ end
 
 
 type output_options =
-  { json_pretty : bool
+  { color : bool
+  ; json_pretty : bool
   ; json_lines : bool
   ; in_place : bool
   ; diff : bool
   ; stdout : bool
+  ; count : bool
   }
 
 type anonymous_arguments =

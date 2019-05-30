@@ -48,11 +48,13 @@ let parse_source_directories ?(file_extensions = []) target_directory =
   ls_rec target_directory
 
 type output_options =
-  { json_pretty : bool
+  { color : bool
+  ; json_pretty : bool
   ; json_lines : bool
   ; in_place : bool
   ; diff : bool
   ; stdout : bool
+  ; count : bool
   }
 
 type anonymous_arguments =
@@ -109,11 +111,14 @@ module Printer = struct
 
   module Match : sig
 
+    type match_only_kind =
+      | Colored
+      | Count
+
     type match_output =
       | Json_lines
       | Json_pretty
-      | Diff
-      | Number_of_matches
+      | Match_only of match_only_kind
 
     val convert : output_options -> match_output
 
@@ -121,59 +126,73 @@ module Printer = struct
 
   end = struct
 
+    type match_only_kind =
+      | Colored
+      | Count
+
     type match_output =
       | Json_lines
       | Json_pretty
-      | Diff
-      | Number_of_matches
+      | Match_only of match_only_kind
 
     let convert output_options =
       match output_options with
       | { json_pretty = true; json_lines = true; _ }
       | { json_pretty = true; json_lines = false; _ } -> Json_pretty
       | { json_pretty = false; json_lines = true; _ } -> Json_lines
-      | _ -> Number_of_matches
+      | { count = true; _ } -> Match_only Count
+      | _ -> Match_only Colored
 
     let print (match_output : match_output) source_path matches =
       let ppf = Format.std_formatter in
       match match_output with
       | Json_lines -> Format.fprintf ppf "%a" Match.pp_json_lines (source_path, matches)
       | Json_pretty -> Format.fprintf ppf "%a" Match.pp_json_pretty (source_path, matches)
-      | Number_of_matches -> Format.fprintf ppf "%a" Match.pp_match_result (source_path, matches)
-      | Diff -> assert false
+      | Match_only _ -> Format.fprintf ppf "%a" Match.pp_match_count (source_path, matches)
+
   end
 
   module Rewrite : sig
+
+    type diff_kind =
+      | Plain
+      | Colored
 
     type replacement_output =
       | In_place
       | Stdout
       | Json_lines
       | Json_pretty
-      | Diff
+      | Diff of diff_kind
+      | Match_only
 
     val convert : output_options -> replacement_output
-
 
     val print : replacement_output -> string option -> Replacement.t list -> string -> string -> unit
 
   end = struct
 
+    type diff_kind =
+      | Plain
+      | Colored
+
     type replacement_output =
       | In_place
       | Stdout
       | Json_lines
       | Json_pretty
-      | Diff
+      | Diff of diff_kind
+      | Match_only
 
     let convert output_options : replacement_output =
       match output_options with
       | { in_place = true; _ } -> In_place
       | { json_pretty = true; in_place = false; _ } -> Json_pretty
       | { json_lines = true; in_place = false; _ } -> Json_lines
-      | { diff = true; _ } -> Diff
       | { stdout = true; _ } -> Stdout
-      | _ -> Diff
+      | { diff = true; color = false; _ } -> Diff Plain
+      | { color = true; _ }
+      | _ -> Diff Colored
 
     let print replacement_output path replacements replacement_content source_content =
       let ppf = Format.std_formatter in
@@ -181,12 +200,23 @@ module Printer = struct
       | Stdout ->
         Format.fprintf ppf "%s" replacement_content
       | Json_pretty ->
-        Format.fprintf ppf "%a" Replacement.pp_json_pretty (path, source_content, replacements, replacement_content)
-      | Json_lines -> Format.fprintf ppf "%a" Replacement.pp_json_lines (path, source_content, replacements, replacement_content)
-      | Diff -> Format.fprintf ppf "%a" Replacement.pp_diff (path, source_content, replacement_content)
+        let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
+        Format.fprintf ppf "%a" Replacement.pp_json_pretty (path, replacements, replacement_content, diff)
+      | Json_lines ->
+        let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
+        Format.fprintf ppf "%a" Replacement.pp_json_lines (path, replacements, replacement_content, diff)
+      | Diff Plain ->
+        let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
+        Option.value_map diff ~default:() ~f:(fun diff -> Format.fprintf ppf "%s@." diff)
+      | Diff Colored ->
+        let diff = Diff_configuration.get_diff Colored path source_content replacement_content in
+        Option.value_map diff ~default:() ~f:(fun diff -> Format.fprintf ppf "%s@." diff)
+      | Match_only ->
+        let diff = Diff_configuration.get_diff Match_only path replacement_content source_content in
+        Option.value_map diff ~default:() ~f:(fun diff -> Format.fprintf ppf "%s@." diff)
       | In_place ->
         match path with
-        | Some path ->Out_channel.write_all path ~data:replacement_content
+        | Some path -> Out_channel.write_all path ~data:replacement_content
         (* This should be impossible since we checked in validate_errors. Leaving the code path explicit. *)
         | None -> failwith "Error: could not write to file."
   end
@@ -257,6 +287,14 @@ let emit_warnings { input_options; output_options; _ } =
       and rewrite templates on the command line and only using those in directories."
     ; output_options.json_lines = true && output_options.json_pretty = true,
       "Both -json-lines and -json-pretty specified. Using -json-pretty."
+    ; output_options.color
+      && (output_options.stdout
+          || output_options.json_pretty
+          || output_options.json_lines
+          || output_options.in_place)
+    , "-color only works with -diff or -match-only"
+    ; output_options.count && not input_options.match_only
+    , "-count only works with -match-only. Ignoring -count."
     ]
   in
   List.iter warn_on ~f:(function
@@ -284,6 +322,7 @@ let create
          }
      ; output_options =
          ({ in_place
+          ; color
           ; _
           } as output_options)
      } as configuration)
@@ -295,7 +334,11 @@ let create
     match specification_directories, anonymous_arguments with
     | None, Some { match_template; rewrite_template; _ } ->
       if match_only then
-        [ Specification.create ~match_template ~match_rule:rule () ]
+        if color then
+          (* Fake a replacement with empty to get a nice colored match output. More expensive though. *)
+          [ Specification.create ~match_template ~match_rule:rule ~rewrite_template:"" () ]
+        else
+          [ Specification.create ~match_template ~match_rule:rule () ]
       else
         [ Specification.create ~match_template ~rewrite_template ~match_rule:rule ~rewrite_rule:rule () ]
     | Some specification_directories, _ ->
@@ -332,7 +375,10 @@ let create
     | Replacements { source_path; replacements; result; source_content } ->
       Printer.Rewrite.convert output_options
       |> fun replacement_output ->
-      Printer.Rewrite.print replacement_output source_path replacements result source_content
+      if match_only && color then
+        Printer.Rewrite.print Match_only source_path replacements result source_content
+      else
+        Printer.Rewrite.print replacement_output source_path replacements result source_content
   in
   return
     { sources

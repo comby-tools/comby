@@ -40,38 +40,13 @@ let to_json replacements path diff result =
     ; ("diff", diff)
     ]
 
-let get_diff source_path source_content result =
-  let open Patdiff_lib in
-  let source_path =
-    match source_path with
-    | Some path -> path
-    | None -> "/dev/null"
-  in
-  let configuration = Diff_configuration.plain () in
-  let prev = Patdiff_core.{ name = source_path; text = source_content } in
-  let next = Patdiff_core.{ name = source_path; text = result } in
-  Compare_core.diff_strings
-    ~print_global_header:true
-    configuration
-    ~prev
-    ~next
-  |> function
-  | `Different diff -> Some diff
-  | `Same -> None
-
 let yojson_to_string kind json =
   match kind with
   | `Pretty -> Yojson.Safe.pretty_to_string json
   | `Lines -> Yojson.Safe.to_string json
 
-let pp_json_pretty ppf (source_path, source_content, replacements, replacement_content) =
-  let diff = get_diff source_path source_content replacement_content in
+let pp_json_pretty ppf (source_path, replacements, replacement_content, diff) =
   Format.fprintf ppf "%s" @@ yojson_to_string `Pretty @@ to_json replacements source_path diff replacement_content
 
-let pp_json_lines ppf (source_path, source_content, replacements, replacement_content) =
-  let diff = get_diff source_path source_content replacement_content in
+let pp_json_lines ppf (source_path, replacements, replacement_content, diff) =
   Format.fprintf ppf "%s" @@ Yojson.Safe.to_string @@ to_json replacements source_path diff replacement_content
-
-let pp_diff ppf (source_path, source_content, replacement_content) =
-  let diff = get_diff source_path source_content replacement_content in
-  Option.value_map diff ~default:() ~f:(fun diff -> Format.fprintf ppf "%s@." diff)

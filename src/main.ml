@@ -307,8 +307,10 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and number_of_workers = flag "jobs" (optional_with_default 4 int) ~doc:"n Number of worker processes. Default: 4"
     and dump_statistics = flag "statistics" ~aliases:["stats"] no_arg ~doc:"Dump statistics to stderr"
     and stdin = flag "stdin" no_arg ~doc:"Read source from stdin"
-    and stdout = flag "stdout" no_arg ~doc:"Print changed content to stdout"
-    and diff = flag "diff" no_arg ~doc:"Output colored diff"
+    and stdout = flag "stdout" no_arg ~doc:"Print changed content to stdout. This option basically exists so editors can read in changed content."
+    and diff = flag "diff" no_arg ~doc:"Output diff"
+    and color = flag "color" no_arg ~doc:"Color matches or replacements (patience diff)."
+    and count = flag "count" no_arg ~doc:"Display a count of matches in a file."
     and anonymous_arguments =
       anon
         (maybe
@@ -343,7 +345,9 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; dump_statistics
             }
         ; output_options =
-            { json_pretty
+            { color
+            ; count
+            ; json_pretty
             ; json_lines
             ; in_place
             ; diff
