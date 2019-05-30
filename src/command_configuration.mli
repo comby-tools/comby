@@ -24,10 +24,16 @@ type output_options =
   ; output_diff : bool
   }
 
+type anonymous_arguments =
+  { match_template : string
+  ; rewrite_template : string
+  ; extensions : string list option
+  }
+
 type user_input_options =
   { rule : string
   ; specification_directories : string list option
-  ; anonymous_arguments : (string * string * string list list option) option
+  ; anonymous_arguments : anonymous_arguments option
   ; file_extensions : string list option
   ; zip_file : string option
   ; match_only : bool

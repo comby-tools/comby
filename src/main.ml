@@ -314,9 +314,13 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
            (t3
               ("MATCH_TEMPLATE" %: string)
               ("REWRITE_TEMPLATE" %: string)
-              (maybe (sequence ("COMMA_SEPARATED_FILE_EXTENSIONS" %: (Arg_type.comma_separated string))))
+              (maybe ("COMMA_SEPARATED_FILE_EXTENSIONS" %: (Arg_type.comma_separated string)))
            )
         )
+    in
+    let anonymous_arguments =
+      Option.map anonymous_arguments ~f:(fun (match_template, rewrite_template, extensions) ->
+          { match_template; rewrite_template; extensions })
     in
     let configuration =
       Command_configuration.create

@@ -55,10 +55,16 @@ type output_options =
   ; output_diff : bool
   }
 
+type anonymous_arguments =
+  { match_template : string
+  ; rewrite_template : string
+  ; extensions : string list option
+  }
+
 type user_input_options =
   { rule : string
   ; specification_directories : string list option
-  ; anonymous_arguments : (string * string * string list list option) option
+  ; anonymous_arguments : anonymous_arguments option
   ; file_extensions : string list option
   ; zip_file : string option
   ; match_only : bool
@@ -289,7 +295,7 @@ let create
   emit_warnings configuration >>= fun () ->
   let specifications =
     match specification_directories, anonymous_arguments with
-    | None, Some (match_template, rewrite_template, _) ->
+    | None, Some { match_template; rewrite_template; _ } ->
       if match_only then
         [Specification.create ~match_template ~match_rule:rule ()]
       else
@@ -303,8 +309,8 @@ let create
        Is the 3rd arnonymous arg meant to case out on a matcher kind, filter, or
        control stdin activation? *)
     match anonymous_arguments with
-    | Some (_, _, None) -> true, file_extensions
-    | Some (_, _, Some file_extensions) -> false, (Some (List.concat file_extensions))
+    | Some { extensions = None; _ } -> true, file_extensions
+    | Some { extensions = Some file_extensions; _ } -> false, (Some file_extensions)
     (* No anonymous arguments: if -stdin was specified, this lets
        -templates work with stdin. *)
     | None -> stdin, file_extensions

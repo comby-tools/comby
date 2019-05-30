@@ -31,6 +31,9 @@ let read_output command =
   let { stdout; stderr; _ } = Unix.open_process_full ~env:[||] command in
   read_with_timeout [stdout; stderr]
 
+let () =
+  ()
+
 let%expect_test "error_on_zip_and_stdin" =
   let command_args = "-zip x -stdin" in
   let command = Format.sprintf "%s %s" binary_path command_args in
