@@ -51,8 +51,8 @@ type output_options =
   { json_pretty : bool
   ; json_lines : bool
   ; in_place : bool
-  ; stdin : bool
-  ; output_diff : bool
+  ; diff : bool
+  ; stdout : bool
   }
 
 type anonymous_arguments =
@@ -63,6 +63,7 @@ type anonymous_arguments =
 
 type user_input_options =
   { rule : string
+  ; stdin : bool
   ; specification_directories : string list option
   ; anonymous_arguments : anonymous_arguments option
   ; file_extensions : string list option
@@ -84,6 +85,11 @@ type user_input =
   ; run_options : run_options
   ; output_options : output_options
   }
+
+type input_source =
+  | Stdin
+  | Zip
+  | Directory
 
 module Printer = struct
 
@@ -162,12 +168,12 @@ module Printer = struct
 
     let convert output_options : replacement_output =
       match output_options with
-      | { json_pretty = false; json_lines = false; stdin = false; in_place = true; _ } -> In_place
-      | { json_pretty = false; json_lines = false; stdin = false; in_place = false; _ } -> Stdout
+      | { json_pretty = false; json_lines = false; stdout = false; in_place = true; _ } -> In_place
       | { json_pretty = true; in_place = false; _ } -> Json_pretty
       | { json_lines = true; in_place = false; _ } -> Json_lines
-      | { output_diff = true; _ } -> Diff
-      | _ -> Stdout
+      | { diff = true; _ } -> Diff
+      | { stdout = true; _ } -> Stdout
+      | _ -> Diff
 
     let print replacement_output path replacements replacement_content source_content =
       let ppf = Format.std_formatter in
@@ -192,35 +198,26 @@ type t =
   ; output_printer : Printer.t
   }
 
-let validate_errors
-    { input_options =
-        { rule
-        ; specification_directories
-        ; anonymous_arguments
-        ; zip_file
-        ; _
-        }
-    ; run_options = _
-    ; output_options =
-        {
-          in_place;
-          stdin;
-          _
-        }
-    } =
+let validate_errors { input_options; run_options = _; output_options } =
   let violations =
-    [ stdin && Option.is_some zip_file
+    [ input_options.stdin && Option.is_some input_options.zip_file
     , "-zip may not be used with stdin."
-    ; stdin && in_place
-    , "-i may not be used with stdin."
-    ; anonymous_arguments = None &&
-      (specification_directories = None
-       || specification_directories = Some []),
+    ; output_options.in_place && is_some input_options.zip_file
+    , "-in-place may not be used with -zip"
+    ; output_options.in_place && output_options.stdout
+    , "-in-place may not be used with stdout."
+    ; output_options.in_place && output_options.diff
+    , "-in-place may not be used with -diff"
+    ; output_options.in_place && (output_options.json_lines || output_options.json_pretty)
+    , "-in-place may not be used with -json-lines or -json-pretty"
+    ; input_options.anonymous_arguments = None &&
+      (input_options.specification_directories = None
+       || input_options.specification_directories = Some []),
       "No templates specified. \
        Either on the command line, or \
        using -templates \
        <directory-containing-templates>"
-    ; let result = Rule.create rule in
+    ; let result = Rule.create input_options.rule in
       Or_error.is_error result,
       if Or_error.is_error result then
         Format.sprintf "Match rule parse error: %s@." @@
@@ -273,6 +270,7 @@ let create
          ; file_extensions
          ; zip_file
          ; match_only
+         ; stdin
          ; target_directory
          }
      ; run_options =
@@ -283,11 +281,9 @@ let create
          ; dump_statistics
          }
      ; output_options =
-         ({
-           in_place;
-           stdin;
-           _
-         } as output_options)
+         ({ in_place
+          ; _
+          } as output_options)
      } as configuration)
   : t Or_error.t =
   let open Or_error in
@@ -297,37 +293,33 @@ let create
     match specification_directories, anonymous_arguments with
     | None, Some { match_template; rewrite_template; _ } ->
       if match_only then
-        [Specification.create ~match_template ~match_rule:rule ()]
+        [ Specification.create ~match_template ~match_rule:rule () ]
       else
-        [Specification.create ~match_template ~rewrite_template ~match_rule:rule ~rewrite_rule:rule ()]
+        [ Specification.create ~match_template ~rewrite_template ~match_rule:rule ~rewrite_rule:rule () ]
     | Some specification_directories, _ ->
       parse_specification_directories match_only specification_directories
     | _ -> assert false
   in
-  let stdin, file_extensions =
-    (* Really activate stdin mode if not in the 3rd anonymous arg?
-       Is the 3rd arnonymous arg meant to case out on a matcher kind, filter, or
-       control stdin activation? *)
+  let file_extensions =
     match anonymous_arguments with
-    | Some { extensions = None; _ } -> true, file_extensions
-    | Some { extensions = Some file_extensions; _ } -> false, (Some file_extensions)
-    (* No anonymous arguments: if -stdin was specified, this lets
-       -templates work with stdin. *)
-    | None -> stdin, file_extensions
+    | None -> file_extensions
+    | Some { extensions = None; _ } -> file_extensions
+    | Some { extensions = Some file_extensions; _ } -> Some file_extensions
+  in
+  let input_source =
+    match stdin, zip_file with
+    | true, _ -> Stdin
+    | _, Some _ -> Zip
+    | false, None -> Directory
   in
   let sources =
-    match stdin, zip_file with
-    | true, _ ->
-      `String (In_channel.input_all In_channel.stdin)
-    | _, Some zip_file ->
-      `Zip zip_file
-    (* Recurse in directories *)
-    | false, None ->
-      `Paths (parse_source_directories ?file_extensions target_directory)
+    match input_source with
+    | Stdin -> `String (In_channel.input_all In_channel.stdin)
+    | Zip -> `Zip (Option.value_exn zip_file)
+    | Directory -> `Paths (parse_source_directories ?file_extensions target_directory)
   in
-  let in_place = if is_some zip_file then false else in_place in
+  let in_place = if input_source = Zip || input_source = Stdin then false else in_place in
   let output_options = { output_options with in_place } in
-
   let output_printer printable =
     let open Printer in
     match printable with
