@@ -325,3 +325,52 @@ let%expect_test "template_parsing_with_trailing_newline" =
   read_source_from_stdin command source
   |> print_string;
   [%expect_exact {|hello world|}]
+
+let%expect_test "diff_is_default" =
+  let source = "a X c a Y c" in
+  let match_template = "a :[1] c" in
+  let rewrite_template = "c :[1] a" in
+  let command_args =
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {||}]
+
+let%expect_test "diff_option" =
+  let source = "a X c a Y c" in
+  let match_template = "a :[1] c" in
+  let rewrite_template = "c :[1] a" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -diff '%s' '%s' -f .c"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {||}]
+
+let%expect_test "stdout_option" =
+  let source = "a X c a Y c" in
+  let match_template = "a :[1] c" in
+  let rewrite_template = "c :[1] a" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -stdout '%s' '%s' -f .c"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {||}]
+
+
+
+(* file extension override *)
+
+(* match only with diff *)
+
+(* no output should be -diff *)
+
+(* test code path with in place and path exists *)

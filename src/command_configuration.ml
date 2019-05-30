@@ -168,7 +168,7 @@ module Printer = struct
 
     let convert output_options : replacement_output =
       match output_options with
-      | { json_pretty = false; json_lines = false; stdout = false; in_place = true; _ } -> In_place
+      | { in_place = true; _ } -> In_place
       | { json_pretty = true; in_place = false; _ } -> Json_pretty
       | { json_lines = true; in_place = false; _ } -> Json_lines
       | { diff = true; _ } -> Diff
@@ -177,16 +177,18 @@ module Printer = struct
 
     let print replacement_output path replacements replacement_content source_content =
       let ppf = Format.std_formatter in
-      match path, replacement_output with
-      | Some path, In_place -> Out_channel.write_all path ~data:replacement_content
-      | _, Stdout -> Format.fprintf ppf "%s" replacement_content
-      | Some path, Json_pretty ->
-        Format.fprintf ppf "%a" Replacement.pp_json_pretty (Some path, source_content, replacements, replacement_content)
-      | Some path, Json_lines -> Format.fprintf ppf "%a" Replacement.pp_json_lines (Some path, source_content, replacements, replacement_content)
-      | None, Json_pretty -> Format.fprintf ppf "%a" Replacement.pp_json_pretty (path, source_content, replacements, replacement_content)
-      | None, Json_lines -> Format.fprintf ppf "%a" Replacement.pp_json_lines (path, source_content, replacements, replacement_content)
-      | Some in_, Diff -> Format.fprintf ppf "%a" Replacement.pp_diff (Some in_, source_content, replacement_content)
-      | None, _ -> Format.printf "%s" replacement_content
+      match replacement_output with
+      | Stdout ->
+        Format.fprintf ppf "%s" replacement_content
+      | Json_pretty ->
+        Format.fprintf ppf "%a" Replacement.pp_json_pretty (path, source_content, replacements, replacement_content)
+      | Json_lines -> Format.fprintf ppf "%a" Replacement.pp_json_lines (path, source_content, replacements, replacement_content)
+      | Diff -> Format.fprintf ppf "%a" Replacement.pp_diff (path, source_content, replacement_content)
+      | In_place ->
+        match path with
+        | Some path ->Out_channel.write_all path ~data:replacement_content
+        (* This should be impossible since we checked in validate_errors. Leaving the code path explicit. *)
+        | None -> failwith "Error: could not write to file."
   end
 end
 
