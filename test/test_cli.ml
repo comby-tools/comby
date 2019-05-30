@@ -374,3 +374,7 @@ let%expect_test "stdout_option" =
 (* no output should be -diff *)
 
 (* test code path with in place and path exists *)
+
+(* patch option for non-color *)
+
+(* html *)
