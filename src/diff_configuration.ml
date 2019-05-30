@@ -3,7 +3,8 @@ open Patdiff_lib
 
 open Configuration
 
-(* This is the default patdiff configuration. *)
+(* This is the default patdiff configuration, except whitespace is toggled to
+   true. See patdiff/lib/configuration record for options.*)
 let default context =
   Format.sprintf
     {|;; -*- scheme -*-
@@ -14,6 +15,8 @@ let default context =
 
  (line_same
   ((prefix ((text " |") (style ((bg bright_black) (fg black)))))))
+
+ (keep_whitespace true)
 
  (line_old
   ((prefix ((text "-|") (style ((bg red)(fg black)))))
