@@ -24,3 +24,7 @@
   cohttp-lwt-unix
   core
   camlzip))
+
+(alias
+(name runtest)
+(deps (source_tree example)))

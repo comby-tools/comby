@@ -2,41 +2,30 @@ open Core
 
 open Language
 
-let read = Fn.compose String.rstrip In_channel.read_all
-
-let read_template =
-  Fn.compose
-    String.chop_suffix_exn ~suffix:"\n"
-    In_channel.read_all
+let read filename =
+  In_channel.read_all filename
+  |> fun template ->
+  String.chop_suffix template ~suffix:"\n"
+  |> Option.value ~default:template
 
 let parse_specification_directories match_only specification_directory_paths =
   let parse_directory path =
     let match_template =
       let filename = path ^/ "match" in
-      try read_template filename
-      with _ -> failwith (Format.sprintf "Could not read required match file %s" filename)
+      match read filename with
+      | content -> content
+      | exception _ ->
+        Format.eprintf "Could not read required match file %s@." filename;
+        exit 1
     in
-    let match_rule =
-      let filename = path ^/ "match_rule" in
-      try Some (read filename)
-      with _ -> None
+    let read_optional filename =
+      match read filename with
+      | content -> Some content
+      | exception _ -> None
     in
-    let rewrite_template =
-      let filename = path ^/ "rewrite" in
-      if match_only then
-        None
-      else
-        try Some (read_template filename)
-        with _ -> None
-    in
-    let rewrite_rule =
-      let filename = path ^/ "rewrite_rule" in
-      if match_only then
-        None
-      else
-        try Some (read filename)
-        with _ -> None
-    in
+    let match_rule = read_optional (path ^/ "match_rule") in
+    let rewrite_template = read_optional (path ^/ "rewrite") in
+    let rewrite_rule = if match_only then None else read_optional (path ^/ "rewrite_rule") in
     Specification.create ~match_template ?match_rule ?rewrite_template ?rewrite_rule ()
   in
   List.map specification_directory_paths ~f:parse_directory

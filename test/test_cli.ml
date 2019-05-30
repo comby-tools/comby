@@ -52,7 +52,7 @@ let%expect_test "warn_on_anonymous_and_templates_flag" =
   |> print_string;
   [%expect_exact {|Warning: Templates specified on the command line AND using -templates. Ignoring match
       and rewrite templates on the command line and only using those in directories.
-(Failure "Could not read required match file nonexistent/match")
+Could not read required match file nonexistent/match
 |}]
 
 let%expect_test "warn_json_lines_and_json_pretty" =
@@ -67,8 +67,6 @@ let%expect_test "warn_json_lines_and_json_pretty" =
   |> print_string;
   [%expect_exact {|Warning: Both -json-lines and -json-pretty specified. Using -json-pretty.
 |}]
-
-
 
 let%expect_test "stdin_command" =
   let source = "hello world" in
@@ -300,3 +298,31 @@ let%expect_test "patdiff_and_zip" =
   "diff": "--- main.ml\n+++ main.ml\n@@ -1,1 +1,1 @@\n -hello world\n +world"
 }|}]
     )
+
+let%expect_test "template_parsing_no_match_template" =
+  let source = "hello world" in
+  let template_dir = "example" ^/ "templates" ^/ "parse-no-match-template" in
+  let command_args = Format.sprintf "-stdin -sequential -f .c -templates %s" template_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {|Could not read required match file example/templates/parse-no-match-template/match
+|}]
+
+let%expect_test "template_parsing_with_trailing_newline" =
+  let source = "hello world" in
+  let template_dir = "example" ^/ "templates" ^/ "parse-template-no-trailing-newline" in
+  let command_args = Format.sprintf "-stdin -sequential -f .c -templates %s" template_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {|hello world|}]
+
+let%expect_test "template_parsing_with_trailing_newline" =
+  let source = "hello world" in
+  let template_dir = "example" ^/ "templates" ^/ "parse-template-with-trailing-newline" in
+  let command_args = Format.sprintf "-stdin -sequential -f .c -templates %s" template_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {|hello world|}]
