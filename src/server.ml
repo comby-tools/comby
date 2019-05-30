@@ -47,40 +47,10 @@ type json_match_result =
 
 type json_rewrite_result =
   { rewritten_source : string
-  ; in_place_substitutions : Rewrite.match_context_replacement list
+  ; in_place_substitutions : Replacement.t list
   ; id : int
   }
 [@@deriving yojson]
-
-let matcher_of_file_extension extension =
-  let (module M : Matchers.Matcher) =
-    match extension with
-    | ".c" | ".h" | ".cc" | ".cpp" | ".hpp" -> (module Matchers.C)
-    | ".clj" -> (module Matchers.Clojure)
-    | ".css" -> (module Matchers.CSS)
-    | ".dart" -> (module Matchers.Dart)
-    | ".elm" -> (module Matchers.Elm)
-    | ".erl" -> (module Matchers.Erlang)
-    | ".ex" -> (module Matchers.Elixir)
-    | ".html" | ".xml" -> (module Matchers.Html)
-    | ".hs" -> (module Matchers.Haskell)
-    | ".go" -> (module Matchers.Go)
-    | ".java" -> (module Matchers.Java)
-    | ".js" | ".ts" -> (module Matchers.Javascript)
-    | ".ml" | ".mli" -> (module Matchers.OCaml)
-    | ".php" -> (module Matchers.Php)
-    | ".py" -> (module Matchers.Python)
-    | ".rb" -> (module Matchers.Ruby)
-    | ".rs" -> (module Matchers.Rust)
-    | ".s" | ".asm" -> (module Matchers.Assembly)
-    | ".scala" -> (module Matchers.Scala)
-    | ".sql" -> (module Matchers.SQL)
-    | ".sh" -> (module Matchers.Bash)
-    | ".swift" -> (module Matchers.Swift)
-    | ".tex" | ".bib" -> (module Matchers.Latex)
-    | _ -> (module Matchers.Generic)
-  in
-  (module M : Matchers.Matcher)
 
 let get_matches (module Matcher : Matchers.Matcher) source match_template =
   let configuration = Configuration.create ~match_kind:Fuzzy () in
@@ -120,7 +90,7 @@ let perform_match request =
   >>| function
   | Ok ({ source; match_template; rule; language; id } as request) ->
     if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (match_request_to_yojson request));
-    let matcher = matcher_of_file_extension language in
+    let matcher = Matchers.select_with_extension language in
     let run ?rule () =
       get_matches matcher source match_template
       |> Option.value_map rule ~default:ident ~f:(apply_rule matcher)
@@ -138,7 +108,7 @@ let perform_match request =
     if debug then Format.printf "Result (400) %s@." error;
     respond ~code:(`Code 400) (`String error)
 
-let rewrite_to_json id ({ rewritten_source; in_place_substitutions } : Rewrite.result) =
+let rewrite_to_json id ({ rewritten_source; in_place_substitutions } : Replacement.result) =
   Format.sprintf "%s"
     (Yojson.Safe.pretty_to_string
        (json_rewrite_result_to_yojson
@@ -159,7 +129,7 @@ let perform_rewrite request =
   >>| function
   | Ok ({ source; match_template; rewrite_template; rule; language; substitution_kind; id } as request) ->
     if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (rewrite_request_to_yojson request));
-    let matcher = matcher_of_file_extension language in
+    let matcher = Matchers.select_with_extension language in
     let source_substitution =
       match substitution_kind with
       | "newline_separated" -> None

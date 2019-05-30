@@ -51,7 +51,7 @@ let%expect_test "comments_in_string_literals_should_not_be_treated_as_comments_b
   all match_template source
   |> Rewrite.all ~source ~rewrite_template
   |> (function
-      | Some rewrite_result -> print_string (Yojson.Safe.pretty_to_string (Rewrite.result_to_yojson rewrite_result))
+      | Some rewrite_result -> print_string (Yojson.Safe.pretty_to_string (Replacement.result_to_yojson rewrite_result))
       | None -> print_string "BROKEN EXPECT");
   [%expect_exact {|{
   "rewritten_source": "123433312343331122",
@@ -99,7 +99,7 @@ let%expect_test "comments_in_string_literals_should_not_be_treated_as_comments_b
   all match_template source
   |> Rewrite.all ~source ~rewrite_template
   |> (function
-      | Some rewrite_result -> print_string (Yojson.Safe.pretty_to_string (Rewrite.result_to_yojson rewrite_result))
+      | Some rewrite_result -> print_string (Yojson.Safe.pretty_to_string (Replacement.result_to_yojson rewrite_result))
       | None -> print_string "BROKEN EXPECT");
   [%expect_exact {|{
   "rewritten_source": "123433312343331122;123433312343331122;",
@@ -180,7 +180,7 @@ let%expect_test "multiple_contextual_substitutions" =
   all match_template source
   |> Rewrite.all ~source ~rewrite_template
   |> (function
-      | Some rewrite_result -> print_string (Yojson.Safe.pretty_to_string (Rewrite.result_to_yojson rewrite_result))
+      | Some rewrite_result -> print_string (Yojson.Safe.pretty_to_string (Replacement.result_to_yojson rewrite_result))
       | None -> print_string "BROKEN EXPECT");
   [%expect_exact {|{
   "rewritten_source": "xxxx bar xxxx",
