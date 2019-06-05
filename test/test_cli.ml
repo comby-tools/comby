@@ -127,8 +127,7 @@ let%expect_test "with_rewrite_rule_stdin_default_no_extension" =
   let rewrite_template = ":[1]" in
   let rule = {|where rewrite :[1] { | ":[_]" -> ":[2]" }|} in
   let command_args =
-    Format.sprintf "-sequential '%s' '%s' -rule '%s'"
-      match_template rewrite_template rule
+    Format.sprintf "-sequential '%s' '%s' -rule '%s' -stdin" match_template rewrite_template rule
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source

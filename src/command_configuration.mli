@@ -16,18 +16,26 @@ module Printer : sig
   type t = printable_result -> unit
 end
 
+
 type output_options =
   { json_pretty : bool
   ; json_lines : bool
   ; in_place : bool
-  ; stdin : bool
-  ; output_diff : bool
+  ; diff : bool
+  ; stdout : bool
+  }
+
+type anonymous_arguments =
+  { match_template : string
+  ; rewrite_template : string
+  ; extensions : string list option
   }
 
 type user_input_options =
   { rule : string
+  ; stdin : bool
   ; specification_directories : string list option
-  ; anonymous_arguments : (string * string * string list list option) option
+  ; anonymous_arguments : anonymous_arguments option
   ; file_extensions : string list option
   ; zip_file : string option
   ; match_only : bool
