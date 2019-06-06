@@ -1,3 +1,19 @@
+module Text = struct
+  module Syntax = struct
+    let user_defined_delimiters = []
+    let escapable_string_literals = []
+
+    let escape_char =
+      '\\'
+
+    let raw_string_literals = []
+
+    let comment_parser = []
+  end
+
+  include Matcher.Make(Syntax)
+end
+
 module Dyck = struct
   module Syntax = struct
     let user_defined_delimiters =
@@ -18,6 +34,8 @@ module Dyck = struct
 
   include Matcher.Make(Syntax)
 end
+
+module Json = Dyck
 
 module Latex = struct
   module Syntax = struct
@@ -223,6 +241,8 @@ module C = struct
   include Matcher.Make(Syntax)
 end
 
+module Csharp = C
+
 module Java = C
 
 module CSS = C
@@ -315,6 +335,8 @@ module OCaml = struct
   include Matcher.Make(Syntax)
 end
 
+module Fsharp = OCaml
+
 (** Follow Free Pascal that allows nested comments, although Rosetta takes the opposite view. *)
 module Pascal = struct
   module Syntax = struct
@@ -396,17 +418,24 @@ let select_with_extension extension : (module Types.Matcher.S) =
   match extension with
   | ".c" | ".h" | ".cc" | ".cpp" | ".hpp" -> (module C)
   | ".clj" -> (module Clojure)
+  | ".cs" -> (module Csharp)
   | ".css" -> (module CSS)
   | ".dart" -> (module Dart)
   | ".elm" -> (module Elm)
   | ".erl" -> (module Erlang)
   | ".ex" -> (module Elixir)
+  | ".f" | ".for" | ".f90"
+  | ".f95" | ".f03" | ".f08" | ".F" | ".F90" -> (module Fortran)
+  | ".fsx" -> (module Fsharp)
   | ".html" | ".xml" -> (module Html)
   | ".hs" -> (module Haskell)
   | ".go" -> (module Go)
   | ".java" -> (module Java)
+  | ".jl" -> (module Julia)
   | ".js" | ".ts" -> (module Javascript)
+  | ".json" -> (module Json)
   | ".ml" | ".mli" -> (module OCaml)
+  | ".pas" -> (module Pascal)
   | ".php" -> (module Php)
   | ".py" -> (module Python)
   | ".rb" -> (module Ruby)
@@ -417,4 +446,5 @@ let select_with_extension extension : (module Types.Matcher.S) =
   | ".sh" -> (module Bash)
   | ".swift" -> (module Swift)
   | ".tex" | ".bib" -> (module Latex)
+  | ".txt" -> (module Text)
   | _ -> (module Generic)
