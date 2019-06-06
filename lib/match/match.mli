@@ -70,4 +70,4 @@ val pp_json_pretty : Format.formatter -> string option * t list -> unit
 
 val pp_json_lines : Format.formatter -> string option * t list -> unit
 
-val pp_match_result : Format.formatter -> string option * t list -> unit
+val pp_match_count : Format.formatter -> string option * t list -> unit

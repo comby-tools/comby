@@ -36,7 +36,7 @@ let pp_json_pretty ppf (source_path, matches) =
 let pp_json_lines ppf (source_path, matches) =
   Format.fprintf ppf "%s" @@ yojson_to_string `Lines @@ to_json source_path matches
 
-let pp_match_result ppf (source_path, matches) =
+let pp_match_count ppf (source_path, matches) =
   let pp_source_path ppf source_path =
     match source_path with
     | Some path -> Format.fprintf ppf " in %s " path

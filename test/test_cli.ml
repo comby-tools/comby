@@ -31,6 +31,42 @@ let read_output command =
   let { stdout; stderr; _ } = Unix.open_process_full ~env:[||] command in
   read_with_timeout [stdout; stderr]
 
+let%expect_test "json_lines_separates_by_line" =
+  let source = "hello world" in
+  let match_template = "o" in
+  let rewrite_template = "i" in
+  let command_args =
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -json-lines" match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {|{"uri":null,"rewritten_source":"helli wirld","in_place_substitutions":[{"range":{"start":{"offset":7,"line":-1,"column":-1},"end":{"offset":8,"line":-1,"column":-1}},"replacement_content":"i","environment":[]},{"range":{"start":{"offset":4,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}},"replacement_content":"i","environment":[]}],"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-hello world\n+helli wirld"}
+|}]
+
+let%expect_test "json_lines_and_json_pretty_do_not_output_when_diff_null" =
+  let source = "hello world" in
+  let match_template = "asdf" in
+  let rewrite_template = "asdf" in
+  let command_args =
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -json-pretty" match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {||}];
+
+  let source = "hello world" in
+  let match_template = "asdf" in
+  let rewrite_template = "asdf" in
+  let command_args =
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -json-lines" match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {||}]
+
 let%expect_test "error_on_zip_and_stdin" =
   let command_args = "-zip x -stdin" in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -78,7 +114,11 @@ let%expect_test "stdin_command" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect_exact {|world|}]
+  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+[0;32m++++++ [0m[0;1m/dev/null[0m
+[0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
+[0;43;30m!|[0m[0;31mhello [0mworld
+|}]
 
 let%expect_test "with_match_rule" =
   let source = "hello world" in
@@ -92,20 +132,24 @@ let%expect_test "with_match_rule" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect_exact {|world|}];
+  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+[0;32m++++++ [0m[0;1m/dev/null[0m
+[0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
+[0;43;30m!|[0m[0;31mhello [0mworld
+|}];
 
   let source = "hello world" in
   let match_template = "hello :[1]" in
   let rewrite_template = ":[1]" in
   let rule = {|where :[1] != "world"|} in
   let command_args =
-    Format.sprintf "-stdin -sequential '%s' '%s' -rule '%s' -f .c "
+    Format.sprintf "-stdin -sequential '%s' '%s' -rule '%s' -f .c -stdout"
       match_template rewrite_template rule
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect_exact {|hello world|}]
+  [%expect{| hello world |}]
 
 let%expect_test "with_rewrite_rule" =
   let source = "hello world" in
@@ -119,7 +163,11 @@ let%expect_test "with_rewrite_rule" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect_exact {|hello|}]
+  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+[0;32m++++++ [0m[0;1m/dev/null[0m
+[0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
+[0;43;30m!|[0mhello[0;31m world[0m
+|}]
 
 let%expect_test "with_rewrite_rule_stdin_default_no_extension" =
   let source = "hello world" in
@@ -132,7 +180,11 @@ let%expect_test "with_rewrite_rule_stdin_default_no_extension" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect_exact {|hello|}]
+  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+[0;32m++++++ [0m[0;1m/dev/null[0m
+[0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
+[0;43;30m!|[0mhello[0;31m world[0m
+|}]
 
 let%expect_test "generic_matcher" =
   let source = {|\footnote{\small \url{https://github.com}}|} in
@@ -144,7 +196,12 @@ let%expect_test "generic_matcher" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect_exact {|\footnote{\scriptsize \url{https://github.com}}|}]
+  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+[0;32m++++++ [0m[0;1m/dev/null[0m
+[0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
+[0;41;30m-|[0m[0m[0;2m\footnote{[0m[0;31m\small[0m[0;2m \url{https://github.com}}[0m[0m
+[0;42;30m+|[0m[0m\footnote{[0;32m\scriptsize[0m \url{https://github.com}}[0m
+|}]
 
 
 let%expect_test "json_output_option" =
@@ -198,8 +255,9 @@ let%expect_test "json_output_option" =
     }
   ],
   "diff":
-    "--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n -a X c a Y c\n +c X a c Y a"
-}|}];
+    "--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-a X c a Y c\n+c X a c Y a"
+}
+|}];
 
   let source = "a X c a Y c" in
   let match_template = "a :[1] c" in
@@ -294,8 +352,9 @@ let%expect_test "patdiff_and_zip" =
       ]
     }
   ],
-  "diff": "--- main.ml\n+++ main.ml\n@@ -1,1 +1,1 @@\n -hello world\n +world"
-}|}]
+  "diff": "--- main.ml\n+++ main.ml\n@@ -1,1 +1,1 @@\n-hello world\n+world"
+}
+|}]
     )
 
 let%expect_test "template_parsing_no_match_template" =
@@ -311,17 +370,115 @@ let%expect_test "template_parsing_no_match_template" =
 let%expect_test "template_parsing_with_trailing_newline" =
   let source = "hello world" in
   let template_dir = "example" ^/ "templates" ^/ "parse-template-no-trailing-newline" in
-  let command_args = Format.sprintf "-stdin -sequential -f .c -templates %s" template_dir in
+  let command_args = Format.sprintf "-stdin -sequential -f .c -templates %s -stdout" template_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect_exact {|hello world|}]
+  [%expect{| hello world |}]
 
 let%expect_test "template_parsing_with_trailing_newline" =
   let source = "hello world" in
   let template_dir = "example" ^/ "templates" ^/ "parse-template-with-trailing-newline" in
-  let command_args = Format.sprintf "-stdin -sequential -f .c -templates %s" template_dir in
+  let command_args = Format.sprintf "-stdin -sequential -f .c -templates %s -stdout" template_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect_exact {|hello world|}]
+  [%expect{| hello world |}]
+
+let%expect_test "diff_is_default" =
+  let source = "a X c a Y c" in
+  let match_template = "a :[1] c" in
+  let rewrite_template = "c :[1] a" in
+  let command_args =
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+[0;32m++++++ [0m[0;1m/dev/null[0m
+[0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
+[0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
+[0;42;30m+|[0m[0m[0;32mc[0m X [0;32ma c[0m Y [0;32ma[0m[0m
+|}]
+
+let%expect_test "diff_option" =
+  let source = "a X c a Y c" in
+  let match_template = "a :[1] c" in
+  let rewrite_template = "c :[1] a" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -diff '%s' '%s' -f .c"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {|--- /dev/null
++++ /dev/null
+@@ -1,1 +1,1 @@
+-a X c a Y c
++c X a c Y a
+|}]
+
+let%expect_test "stdout_option" =
+  let source = "a X c a Y c" in
+  let match_template = "a :[1] c" in
+  let rewrite_template = "c :[1] a" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -stdout '%s' '%s' -f .c"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {|c X a c Y a|}]
+
+let%expect_test "only_color_prints_colored_diff" =
+  let source = "a X c a Y c" in
+  let match_template = "a :[1] c" in
+  let rewrite_template = "c :[1] a" in
+  let command_args =
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -color"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+[0;32m++++++ [0m[0;1m/dev/null[0m
+[0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
+[0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
+[0;42;30m+|[0m[0m[0;32mc[0m X [0;32ma c[0m Y [0;32ma[0m[0m
+|}]
+
+let%expect_test "diff_explicit_color" =
+  let source = "a X c a Y c" in
+  let match_template = "a :[1] c" in
+  let rewrite_template = "c :[1] a" in
+  let command_args =
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -diff -color"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+[0;32m++++++ [0m[0;1m/dev/null[0m
+[0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
+[0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
+[0;42;30m+|[0m[0m[0;32mc[0m X [0;32ma c[0m Y [0;32ma[0m[0m
+|}]
+
+
+(* match only with diff *)
+
+(* file extension -f override *)
+
+(* test code path with in place and path exists *)
+
+(* html *)
+
+(* exclude dirs *)
+
+(* fix rules *)
