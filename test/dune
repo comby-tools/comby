@@ -13,6 +13,7 @@
   test_c_style_comments
   test_c_separators
   test_string_literals
+  test_special_matcher_cases
   test_generic
   test_rewrite_parts
   test_rewrite_rule
