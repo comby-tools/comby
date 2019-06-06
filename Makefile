@@ -1,6 +1,9 @@
 all: build comby comby-server benchmark
 
 build:
+	dune build --profile dev
+
+build-with-coverage:
 	@BISECT_ENABLE=yes dune build --profile dev
 
 release:
