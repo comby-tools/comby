@@ -1,4 +1,3 @@
-(*
 open Core
 
 module Time = Core_kernel.Time_ns.Span
@@ -470,17 +469,3 @@ let%expect_test "diff_explicit_color" =
 [0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
 [0;42;30m+|[0m[0m[0;32mc[0m X [0;32ma c[0m Y [0;32ma[0m[0m
 |}]
-
-
-(* match only with diff *)
-
-(* file extension -f override *)
-
-(* test code path with in place and path exists *)
-
-(* html *)
-
-(* exclude dirs *)
-
-(* fix rules *)
-*)
