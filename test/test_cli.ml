@@ -474,15 +474,30 @@ let%expect_test "diff_explicit_color" =
 let%expect_test "exclude_dir_option" =
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
-  let command_args = Format.sprintf "'main' 'pain' -d %s" src_dir in
+  let command_args = Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir 'ignore' -diff" src_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect{| hello world |}];
+  [%expect{|
+    --- example/src/main.c
+    +++ example/src/main.c
+    @@ -1,1 +1,1 @@
+    -int main() {}
+    +int pain() {} |}];
 
   let src_dir = "example" ^/ "src" in
-  let command_args = Format.sprintf "'main' 'pain' -d %s -exclude-dir 'nonexist'" src_dir in
+  let command_args = Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir 'nonexist' -diff" src_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect{| hello world |}]
+  [%expect{|
+    --- example/src/ignore-me/main.c
+    +++ example/src/ignore-me/main.c
+    @@ -1,1 +1,1 @@
+    -int main() {}
+    +int pain() {}
+    --- example/src/main.c
+    +++ example/src/main.c
+    @@ -1,1 +1,1 @@
+    -int main() {}
+    +int pain() {} |}]
