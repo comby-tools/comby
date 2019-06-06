@@ -343,6 +343,7 @@ ocaml setup.ml -build
 ocaml setup.ml -install
 cd -
 
+make
 make build-with-coverage
 make test
 
