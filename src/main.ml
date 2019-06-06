@@ -311,6 +311,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and diff = flag "diff" no_arg ~doc:"Output diff"
     and color = flag "color" no_arg ~doc:"Color matches or replacements (patience diff)."
     and count = flag "count" no_arg ~doc:"Display a count of matches in a file."
+    and exclude_directory_prefix = flag "exclude-dir" (optional_with_default "." string) ~doc:"prefix of directories to exclude. Default: '.'"
     and anonymous_arguments =
       anon
         (maybe
@@ -336,6 +337,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; match_only
             ; stdin
             ; target_directory
+            ; exclude_directory_prefix
             }
         ; run_options =
             { sequential

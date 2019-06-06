@@ -30,7 +30,7 @@ let parse_specification_directories match_only specification_directory_paths =
   in
   List.map specification_directory_paths ~f:parse_directory
 
-let parse_source_directories ?(file_extensions = []) target_directory =
+let parse_source_directories ?(file_extensions = []) exclude_directory_prefix target_directory =
   let rec ls_rec path =
     if Sys.is_file path = `Yes then
       match file_extensions with
@@ -39,9 +39,12 @@ let parse_source_directories ?(file_extensions = []) target_directory =
       | _ -> []
     else
       try
-        Sys.ls_dir path
-        |> List.map ~f:(fun sub -> ls_rec (Filename.concat path sub))
-        |> List.concat
+        let dir = Sys.ls_dir path in
+        if String.is_prefix (Filename.basename path) ~prefix:exclude_directory_prefix then
+          []
+        else
+          List.map dir ~f:(fun sub -> ls_rec (Filename.concat path sub))
+          |> List.concat
       with
       | _ -> []
   in
@@ -72,6 +75,7 @@ type user_input_options =
   ; zip_file : string option
   ; match_only : bool
   ; target_directory : string
+  ; exclude_directory_prefix : string
   }
 
 type run_options =
@@ -314,6 +318,7 @@ let create
          ; match_only
          ; stdin
          ; target_directory
+         ; exclude_directory_prefix
          }
      ; run_options =
          { sequential
@@ -363,7 +368,7 @@ let create
     match input_source with
     | Stdin -> `String (In_channel.input_all In_channel.stdin)
     | Zip -> `Zip (Option.value_exn zip_file)
-    | Directory -> `Paths (parse_source_directories ?file_extensions target_directory)
+    | Directory -> `Paths (parse_source_directories ?file_extensions exclude_directory_prefix target_directory)
   in
   let in_place = if input_source = Zip || input_source = Stdin then false else in_place in
   let output_options = { output_options with in_place } in
