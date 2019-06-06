@@ -48,5 +48,5 @@ let yojson_to_string kind json =
 let pp_json_pretty ppf (source_path, replacements, replacement_content, diff) =
   Format.fprintf ppf "%s" @@ yojson_to_string `Pretty @@ to_json replacements source_path diff replacement_content
 
-let pp_json_lines ppf (source_path, replacements, replacement_content, diff) =
+let pp_json_line ppf (source_path, replacements, replacement_content, diff) =
   Format.fprintf ppf "%s" @@ Yojson.Safe.to_string @@ to_json replacements source_path diff replacement_content

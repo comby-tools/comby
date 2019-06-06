@@ -201,10 +201,12 @@ module Printer = struct
         Format.fprintf ppf "%s" replacement_content
       | Json_pretty ->
         let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
-        Format.fprintf ppf "%a" Replacement.pp_json_pretty (path, replacements, replacement_content, diff)
+        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_pretty (path, replacements, replacement_content, diff) in
+        Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
       | Json_lines ->
         let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
-        Format.fprintf ppf "%a" Replacement.pp_json_lines (path, replacements, replacement_content, diff)
+        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_line (path, replacements, replacement_content, diff) in
+        Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
       | Diff Plain ->
         let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
         Option.value_map diff ~default:() ~f:(fun diff -> Format.fprintf ppf "%s@." diff)

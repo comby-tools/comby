@@ -31,6 +31,42 @@ let read_output command =
   let { stdout; stderr; _ } = Unix.open_process_full ~env:[||] command in
   read_with_timeout [stdout; stderr]
 
+let%expect_test "json_lines_separates_by_line" =
+  let source = "hello world" in
+  let match_template = "o" in
+  let rewrite_template = "i" in
+  let command_args =
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -json-lines" match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {|{"uri":null,"rewritten_source":"helli wirld","in_place_substitutions":[{"range":{"start":{"offset":7,"line":-1,"column":-1},"end":{"offset":8,"line":-1,"column":-1}},"replacement_content":"i","environment":[]},{"range":{"start":{"offset":4,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}},"replacement_content":"i","environment":[]}],"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-hello world\n+helli wirld"}
+|}]
+
+let%expect_test "json_lines_and_json_pretty_do_not_output_when_diff_null" =
+  let source = "hello world" in
+  let match_template = "asdf" in
+  let rewrite_template = "asdf" in
+  let command_args =
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -json-pretty" match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {||}];
+
+  let source = "hello world" in
+  let match_template = "asdf" in
+  let rewrite_template = "asdf" in
+  let command_args =
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -json-lines" match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect_exact {||}]
+
 let%expect_test "error_on_zip_and_stdin" =
   let command_args = "-zip x -stdin" in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -81,7 +117,7 @@ let%expect_test "stdin_command" =
   [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
-[0;43;30m!|[0m[0;31mhello[0m world
+[0;43;30m!|[0m[0;31mhello [0mworld
 |}]
 
 let%expect_test "with_match_rule" =
@@ -99,7 +135,7 @@ let%expect_test "with_match_rule" =
   [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
-[0;43;30m!|[0m[0;31mhello[0m world
+[0;43;30m!|[0m[0;31mhello [0mworld
 |}];
 
   let source = "hello world" in
@@ -220,7 +256,8 @@ let%expect_test "json_output_option" =
   ],
   "diff":
     "--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-a X c a Y c\n+c X a c Y a"
-}|}];
+}
+|}];
 
   let source = "a X c a Y c" in
   let match_template = "a :[1] c" in
@@ -316,7 +353,8 @@ let%expect_test "patdiff_and_zip" =
     }
   ],
   "diff": "--- main.ml\n+++ main.ml\n@@ -1,1 +1,1 @@\n-hello world\n+world"
-}|}]
+}
+|}]
     )
 
 let%expect_test "template_parsing_no_match_template" =
@@ -361,8 +399,8 @@ let%expect_test "diff_is_default" =
   [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
-[0;41;30m-|[0m[0m[0;31ma[0m[0;2m X[0m[0;2m c[0m[0;31m a[0m[0;2m Y[0m[0;31m c[0m[0m
-[0;42;30m+|[0m[0m[0;32mc[0m X[0;32m a[0m c Y[0;32m a[0m[0m
+[0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
+[0;42;30m+|[0m[0m[0;32mc[0m X [0;32ma c[0m Y [0;32ma[0m[0m
 |}]
 
 let%expect_test "diff_option" =
@@ -410,8 +448,8 @@ let%expect_test "only_color_prints_colored_diff" =
   [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
-[0;41;30m-|[0m[0m[0;31ma[0m[0;2m X[0m[0;2m c[0m[0;31m a[0m[0;2m Y[0m[0;31m c[0m[0m
-[0;42;30m+|[0m[0m[0;32mc[0m X[0;32m a[0m c Y[0;32m a[0m[0m
+[0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
+[0;42;30m+|[0m[0m[0;32mc[0m X [0;32ma c[0m Y [0;32ma[0m[0m
 |}]
 
 let%expect_test "diff_explicit_color" =
@@ -428,8 +466,8 @@ let%expect_test "diff_explicit_color" =
   [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
-[0;41;30m-|[0m[0m[0;31ma[0m[0;2m X[0m[0;2m c[0m[0;31m a[0m[0;2m Y[0m[0;31m c[0m[0m
-[0;42;30m+|[0m[0m[0;32mc[0m X[0;32m a[0m c Y[0;32m a[0m[0m
+[0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
+[0;42;30m+|[0m[0m[0;32mc[0m X [0;32ma c[0m Y [0;32ma[0m[0m
 |}]
 
 
