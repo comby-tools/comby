@@ -45,9 +45,7 @@ let%expect_test "custom_long_delimiters" =
   let rewrite_template = {|case nuked blocks esac|} in
 
   run_bash source match_template rewrite_template;
-  [%expect_exact {|
-      case nuked blocks esac
-    |}]
+  [%expect_exact {|case nuked blocks esac|}]
 
 let%expect_test "custom_long_delimiters_doesn't_work_in_go" =
   let source =

@@ -1,9 +1,27 @@
+let experimental = true
+
+module Text = struct
+  module Syntax = struct
+    let user_defined_delimiters = []
+    let escapable_string_literals = []
+
+    let escape_char =
+      '\\'
+
+    let raw_string_literals = []
+
+    let comment_parser = []
+  end
+
+  include Matcher.Make(Syntax)
+end
+
 module Dyck = struct
   module Syntax = struct
     let user_defined_delimiters =
-      [ ("(", ")")
-      ; ("{", "}")
-      ; ("[", "]")
+      [ "(", ")"
+      ; "{", "}"
+      ; "[", "]"
       ]
 
     let escapable_string_literals = []
@@ -20,6 +38,8 @@ module Dyck = struct
   include Matcher.Make(Syntax)
 end
 
+module Json = Dyck
+
 module Latex = struct
   module Syntax = struct
     open Types
@@ -27,7 +47,7 @@ module Latex = struct
 
     let user_defined_delimiters =
       Dyck.Syntax.user_defined_delimiters @
-      [ ({|\if|}, {|\fi|})
+      [ {|\if|}, {|\fi|}
       ]
 
     let comment_parser =
@@ -105,8 +125,8 @@ module Bash = struct
 
     let user_defined_delimiters =
       Dyck.Syntax.user_defined_delimiters @
-      [ ("if", "fi")
-      ; ("case", "esac")
+      [ "if ", "fi"
+      ; "case ", "esac"
       ]
 
     let comment_parser =
@@ -120,6 +140,24 @@ module Ruby = struct
   module Syntax = struct
     open Types
     include Generic.Syntax
+
+    let user_defined_delimiters =
+      Generic.Syntax.user_defined_delimiters
+      @ if experimental then
+        [ "class", "end"
+        ; "def", "end"
+        ; "do", "end"
+        ; "if", "end"
+        ; "case", "end"
+        ; "unless", "end"
+        ; "while", "end"
+        ; "until", "end"
+        ; "for", "end"
+        ; "begin", "end"
+        ; "module", "end"
+        ]
+      else
+        []
 
     let raw_string_literals =
       [ ({|"|}, {|"|})
@@ -138,6 +176,19 @@ module Elixir = struct
   module Syntax = struct
     open Types
     include Generic.Syntax
+
+    let user_defined_delimiters =
+      Generic.Syntax.user_defined_delimiters
+      @ if experimental then
+        [ "fn", "end"
+        ; "do", "end"
+        ; "case", "end"
+        ; "cond", "end"
+        ; "if", "end"
+        ; "<", ">"
+        ]
+      else
+        []
 
     let raw_string_literals =
       [ ({|"""|}, {|"""|})
@@ -202,6 +253,16 @@ module Erlang = struct
     open Types
     include Generic.Syntax
 
+    let user_defined_delimiters =
+      Generic.Syntax.user_defined_delimiters
+      @ if experimental then
+        [ "fun", "end"
+        ; "case", "end"
+        ; "if", "end"
+        ]
+      else
+        []
+
     let comment_parser =
       [ Until_newline "%"
       ]
@@ -223,6 +284,8 @@ module C = struct
 
   include Matcher.Make(Syntax)
 end
+
+module Csharp = C
 
 module Java = C
 
@@ -310,6 +373,17 @@ module OCaml = struct
     open Types
     include Generic.Syntax
 
+    let user_defined_delimiters =
+      Generic.Syntax.user_defined_delimiters
+      @ if experimental then
+        [ "begin", "end"
+        ; "struct", "end"
+        ; "sig", "end"
+        ]
+      else
+        []
+
+
     (* Override ' as escapable string literal, since
        these can be used in typing *)
     let escapable_string_literals =
@@ -327,6 +401,8 @@ module OCaml = struct
 
   include Matcher.Make(Syntax)
 end
+
+module Fsharp = OCaml
 
 (** Follow Free Pascal that allows nested comments, although Rosetta takes the opposite view. *)
 module Pascal = struct
@@ -409,17 +485,24 @@ let select_with_extension extension : (module Types.Matcher.S) =
   match extension with
   | ".c" | ".h" | ".cc" | ".cpp" | ".hpp" -> (module C)
   | ".clj" -> (module Clojure)
+  | ".cs" -> (module Csharp)
   | ".css" -> (module CSS)
   | ".dart" -> (module Dart)
   | ".elm" -> (module Elm)
   | ".erl" -> (module Erlang)
   | ".ex" -> (module Elixir)
+  | ".f" | ".for" | ".f90"
+  | ".f95" | ".f03" | ".f08" | ".F" | ".F90" -> (module Fortran)
+  | ".fsx" -> (module Fsharp)
   | ".html" | ".xml" -> (module Html)
   | ".hs" -> (module Haskell)
   | ".go" -> (module Go)
   | ".java" -> (module Java)
+  | ".jl" -> (module Julia)
   | ".js" | ".ts" -> (module Javascript)
+  | ".json" -> (module Json)
   | ".ml" | ".mli" -> (module OCaml)
+  | ".pas" -> (module Pascal)
   | ".php" -> (module Php)
   | ".py" -> (module Python)
   | ".rb" -> (module Ruby)
@@ -430,4 +513,5 @@ let select_with_extension extension : (module Types.Matcher.S) =
   | ".sh" -> (module Bash)
   | ".swift" -> (module Swift)
   | ".tex" | ".bib" -> (module Latex)
+  | ".txt" -> (module Text)
   | _ -> (module Generic)
