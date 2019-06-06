@@ -315,6 +315,49 @@ module OCaml = struct
   include Matcher.Make(Syntax)
 end
 
+(** Follow Free Pascal that allows nested comments, although Rosetta takes the opposite view. *)
+module Pascal = struct
+  module Syntax = struct
+    open Types
+    include Generic.Syntax
+
+    let comments =
+      [ Nested_multiline ("(*", "*)")
+      ; Nested_multiline ("{", "}")
+      ; Until_newline "//"
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end
+
+module Julia = struct
+  module Syntax = struct
+    open Types
+    include Generic.Syntax
+
+    let comments =
+      [ Nested_multiline ("#=", "=#")
+      ; Until_newline "#"
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end
+
+module Fortran = struct
+  module Syntax = struct
+    open Types
+    include Generic.Syntax
+
+    let comments =
+      [ Until_newline "!"
+      ]
+  end
+
+  include Matcher.Make(Syntax)
+end
+
 module Haskell = struct
   module Syntax = struct
     open Types
