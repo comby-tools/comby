@@ -115,7 +115,7 @@ let with_master_comby dir f =
       match
         Unix.system
           (Format.sprintf
-             "git clone --depth=50 --branch=benchmark https://github.com/comby-tools/comby.git %s/comby-master && \
+             "git clone --depth=50 --branch=master https://github.com/comby-tools/comby.git %s/comby-master && \
               make -C %s/comby-master release && \
               cp %s/comby-master/comby %s" dir dir dir baseline_comby)
       with
