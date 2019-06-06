@@ -5,3 +5,4 @@
 !Makefile
 !comby.opam
 !dune
+!push-coverage-report.sh
