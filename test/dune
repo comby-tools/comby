@@ -28,4 +28,4 @@
 
 (alias
 (name runtest)
-(deps (source_tree example)))
+(deps (source_tree example) (source_tree example/src/.ignore-me)))

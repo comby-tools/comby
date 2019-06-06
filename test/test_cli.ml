@@ -44,7 +44,7 @@ let%expect_test "json_lines_separates_by_line" =
   [%expect_exact {|{"uri":null,"rewritten_source":"helli wirld","in_place_substitutions":[{"range":{"start":{"offset":7,"line":-1,"column":-1},"end":{"offset":8,"line":-1,"column":-1}},"replacement_content":"i","environment":[]},{"range":{"start":{"offset":4,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}},"replacement_content":"i","environment":[]}],"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-hello world\n+helli wirld"}
 |}]
 
-let%expect_test "json_lines_and_json_pretty_do_not_output_when_diff_null" =
+let%expect_test "json_lines_json_pretty_do_not_output_when_diff_null" =
   let source = "hello world" in
   let match_template = "asdf" in
   let rewrite_template = "asdf" in
@@ -54,8 +54,9 @@ let%expect_test "json_lines_and_json_pretty_do_not_output_when_diff_null" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect_exact {||}];
+  [%expect_exact {||}]
 
+let%expect_test "json_lines_do_not_output_when_diff_null" =
   let source = "hello world" in
   let match_template = "asdf" in
   let rewrite_template = "asdf" in
@@ -469,3 +470,34 @@ let%expect_test "diff_explicit_color" =
 [0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
 [0;42;30m+|[0m[0m[0;32mc[0m X [0;32ma c[0m Y [0;32ma[0m[0m
 |}]
+
+let%expect_test "exclude_dir_option" =
+  let source = "hello world" in
+  let src_dir = "example" ^/ "src" in
+  let command_args = Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir 'ignore' -diff" src_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect{|
+    --- example/src/main.c
+    +++ example/src/main.c
+    @@ -1,1 +1,1 @@
+    -int main() {}
+    +int pain() {} |}];
+
+  let src_dir = "example" ^/ "src" in
+  let command_args = Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir 'nonexist' -diff" src_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect{|
+    --- example/src/ignore-me/main.c
+    +++ example/src/ignore-me/main.c
+    @@ -1,1 +1,1 @@
+    -int main() {}
+    +int pain() {}
+    --- example/src/main.c
+    +++ example/src/main.c
+    @@ -1,1 +1,1 @@
+    -int main() {}
+    +int pain() {} |}]

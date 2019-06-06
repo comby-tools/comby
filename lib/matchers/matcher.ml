@@ -159,16 +159,25 @@ module Make (Syntax : Syntax.S) = struct
     return (id, including, until_char)
 
   let reserved_delimiters =
-    List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
-    |> List.map ~f:string
-    |> fun reserved ->
+    let reserved_delimiters =
+      List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
+      |> List.map ~f:string
+    in
+    let reserved_escapable_strings =
+      List.concat_map Syntax.escapable_string_literals ~f:(fun x -> [x])
+      |> List.map ~f:string
+    in
+    let reserved_raw_strings =
+      List.concat_map Syntax.raw_string_literals ~f:(fun (from, until) -> [from; until])
+      |> List.map ~f:string
+    in
     let single =
       string ":[[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]]"
     in
     let greedy =
       string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
     in
-    single::greedy::reserved
+    [single] @ [greedy] @ reserved_delimiters @ reserved_escapable_strings @ reserved_raw_strings
     |> choice
 
   let reserved =

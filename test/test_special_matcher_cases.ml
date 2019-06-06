@@ -16,6 +16,14 @@ let run ?(configuration = configuration) (module M : Matchers.Matcher) source ma
     |> print_string
 
 let%expect_test "parse_rust_apostrophe_ok" =
+  let source = {|width="1280"|} in
+  let match_template = {|width=":[1]"|} in
+  let rewrite_template = {|:[1]|} in
+
+  run (module Matchers.Generic) source match_template rewrite_template;
+  [%expect_exact {|1280|}]
+
+let%expect_test "parse_rust_apostrophe_ok" =
   let source = {|pub struct GlobBuilder<'a> {}|} in
   let match_template = {|{}|} in
   let rewrite_template = {|{} // success|} in
