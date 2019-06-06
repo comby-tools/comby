@@ -30,3 +30,100 @@ let%expect_test "parse_ocaml_apostrophe_ok" =
 
   run (module Matchers.OCaml) source match_template rewrite_template;
   [%expect_exact {|'a, int |}]
+
+let%expect_test "strict_nested_matching" =
+  let source = {|({})|} in
+  let match_template = {|(:[1])|} in
+  let rewrite_template = {|:[1]|} in
+
+  run (module Matchers.Dyck) source match_template rewrite_template;
+  [%expect_exact {|{}|}]
+
+let%expect_test "strict_nested_matching" =
+  let source = {|(})|} in
+  let match_template = {|(:[1])|} in
+  let rewrite_template = {|:[1]|} in
+
+  run (module Matchers.Dyck) source match_template rewrite_template;
+  [%expect_exact {|No matches.|}]
+
+
+
+(*
+let%expect_test "ocaml_blocks" =
+  let source = {|
+    module M : sig
+        type t
+    end = struct
+       type t = int
+
+       module Nested_M = struct
+         type r = int
+       end
+    end
+|}
+  in
+  let match_template = {|struct :[1] end|} in
+  let rewrite_template = {|struct <bye> end|} in
+
+  run (module Matchers.OCaml) source match_template rewrite_template;
+  [%expect_exact {|No matches.|}]
+*)
+
+let%expect_test "ocaml_complex_blocks_with_same_end" =
+  let source = {|
+    begin
+    match x with
+    | _ ->
+        let module M = struct type t end
+        begin
+        begin
+        match y with
+        | _ -> ()
+        end
+        end
+    end
+|}
+  in
+  let match_template = {|begin :[1] end|} in
+  let rewrite_template = {|-Body->:[1]<-Body-|} in
+
+  run (module Matchers.OCaml) source match_template rewrite_template;
+  [%expect_exact {|
+    -Body->match x with
+    | _ ->
+        let module M = struct type t end
+        begin
+        begin
+        match y with
+        | _ -> ()
+        end
+        end<-Body-
+|}]
+
+(* FIXME(#35): "before" triggers "for" block *)
+let%expect_test "ruby_blocks" =
+  let source = {|
+class ActionController::Base
+  before_filter :generate_css_from_less
+
+  def generate_css_from_less
+    Less::More.generate_all
+  end
+end
+|}
+  in
+  let match_template = {|class :[1] end|} in
+  let rewrite_template = {|-Block->:[1]<-Block-|} in
+
+  run (module Matchers.Ruby) source match_template rewrite_template;
+  [%expect_exact {|No matches.|}]
+
+
+let%expect_test "erlang_blocks" =
+  let source = {|Big =  fun(X) -> if X > 10 -> true; true -> false end end.|} in
+  let match_template = {|fun(:[1]) :[rest] end|} in
+  let rewrite_template = {|-Block->:[rest]<-Block-|} in
+
+  run (module Matchers.Erlang) source match_template rewrite_template;
+  [%expect_exact {|Big =  -Block->-> if X > 10 -> true; true -> false end<-Block-.|}]

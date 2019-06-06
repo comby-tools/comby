@@ -1,3 +1,5 @@
+let experimental = true
+
 module Text = struct
   module Syntax = struct
     let user_defined_delimiters = []
@@ -17,9 +19,9 @@ end
 module Dyck = struct
   module Syntax = struct
     let user_defined_delimiters =
-      [ ("(", ")")
-      ; ("{", "}")
-      ; ("[", "]")
+      [ "(", ")"
+      ; "{", "}"
+      ; "[", "]"
       ]
 
     let escapable_string_literals = []
@@ -45,7 +47,7 @@ module Latex = struct
 
     let user_defined_delimiters =
       Dyck.Syntax.user_defined_delimiters @
-      [ ({|\if|}, {|\fi|})
+      [ {|\if|}, {|\fi|}
       ]
 
     let comment_parser =
@@ -123,8 +125,8 @@ module Bash = struct
 
     let user_defined_delimiters =
       Dyck.Syntax.user_defined_delimiters @
-      [ ("if", "fi")
-      ; ("case", "esac")
+      [ "if ", "fi"
+      ; "case ", "esac"
       ]
 
     let comment_parser =
@@ -138,6 +140,24 @@ module Ruby = struct
   module Syntax = struct
     open Types
     include Generic.Syntax
+
+    let user_defined_delimiters =
+      Generic.Syntax.user_defined_delimiters
+      @ if experimental then
+        [ "class", "end"
+        ; "def", "end"
+        ; "do", "end"
+        ; "if", "end"
+        ; "case", "end"
+        ; "unless", "end"
+        ; "while", "end"
+        ; "until", "end"
+        ; "for", "end"
+        ; "begin", "end"
+        ; "module", "end"
+        ]
+      else
+        []
 
     let raw_string_literals =
       [ ({|"|}, {|"|})
@@ -156,6 +176,19 @@ module Elixir = struct
   module Syntax = struct
     open Types
     include Generic.Syntax
+
+    let user_defined_delimiters =
+      Generic.Syntax.user_defined_delimiters
+      @ if experimental then
+        [ "fn", "end"
+        ; "do", "end"
+        ; "case", "end"
+        ; "cond", "end"
+        ; "if", "end"
+        ; "<", ">"
+        ]
+      else
+        []
 
     let raw_string_literals =
       [ ({|"""|}, {|"""|})
@@ -219,6 +252,16 @@ module Erlang = struct
   module Syntax = struct
     open Types
     include Generic.Syntax
+
+    let user_defined_delimiters =
+      Generic.Syntax.user_defined_delimiters
+      @ if experimental then
+        [ "fun", "end"
+        ; "case", "end"
+        ; "if", "end"
+        ]
+      else
+        []
 
     let comment_parser =
       [ Until_newline "%"
@@ -329,6 +372,17 @@ module OCaml = struct
   module Syntax = struct
     open Types
     include Generic.Syntax
+
+    let user_defined_delimiters =
+      Generic.Syntax.user_defined_delimiters
+      @ if experimental then
+        [ "begin", "end"
+        ; "struct", "end"
+        ; "sig", "end"
+        ]
+      else
+        []
+
 
     (* Override ' as escapable string literal, since
        these can be used in typing *)

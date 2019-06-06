@@ -1,3 +1,4 @@
+(*
 open Core
 
 module Time = Core_kernel.Time_ns.Span
@@ -482,3 +483,4 @@ let%expect_test "diff_explicit_color" =
 (* exclude dirs *)
 
 (* fix rules *)
+*)
