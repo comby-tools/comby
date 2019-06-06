@@ -172,7 +172,7 @@ module Html = struct
 
     let user_defined_delimiters =
       Dyck.Syntax.user_defined_delimiters @
-      [ ("<", ">")
+      [ "<", ">"
       ]
 
     let comment_parser =
