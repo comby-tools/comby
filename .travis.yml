@@ -5,4 +5,4 @@ sudo: required
 before_install: 
     - make docker-build
 script:
-    - make docker-test
+    - docker run -it comby-local-build:latest -e TRAVIS_JOB_ID="$TRAVIS_JOB_ID" /bin/bash -c "make && make clean && make build-with-coverage && make test && ./push-coverage-report.sh && ./benchmark"
