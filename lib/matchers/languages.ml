@@ -8,6 +8,7 @@ module Dyck = struct
 
     let escapable_string_literals = []
 
+    (* This is ignored since there are no literals *)
     let escape_char =
       '\\'
 
@@ -290,6 +291,12 @@ module Rust = struct
   module Syntax = struct
     include Swift.Syntax
 
+    (* Override ' as escapable string literal, since
+       these can be used in typing *)
+    let escapable_string_literals =
+      [ {|"|}
+      ]
+
     let raw_string_literals =
       [ ({|r#|}, {|#|})
       ]
@@ -302,6 +309,12 @@ module OCaml = struct
   module Syntax = struct
     open Types
     include Generic.Syntax
+
+    (* Override ' as escapable string literal, since
+       these can be used in typing *)
+    let escapable_string_literals =
+      [ {|"|}
+      ]
 
     let raw_string_literals =
       [ ("{|", "|}")
