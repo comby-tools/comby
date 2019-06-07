@@ -5,6 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/comby-tools/comby/badge.svg?branch=master)](https://coveralls.io/github/comby-tools/comby?branch=master)
 [![Downloads](https://img.shields.io/github/downloads/comby-tools/comby/total.svg?color=orange)](Downloads)
 [![Commit](https://img.shields.io/github/last-commit/comby-tools/comby.svg)](Commit)
+[![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](Gitter)
 
 ## `bash <(curl -sL get.comby.dev)`
 
