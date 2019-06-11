@@ -873,6 +873,14 @@ let%expect_test "matcher_override" =
   let src_dir = "example" ^/ "src" in
   let command_args = Format.sprintf "'(' '_unbalanced_match_' main.c -sequential -d %s -diff" src_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_source_from_stdin command source
-  |> print_string;
+  let result =
+    let rec rerun () =
+      try
+        read_source_from_stdin command source
+      with
+      | Unix.Unix_error (EINTR, _, _) -> rerun ()
+    in
+    rerun ()
+  in
+  print_string result;
   [%expect{| |}]
