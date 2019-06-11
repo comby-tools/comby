@@ -45,4 +45,5 @@ docker rmi -f comby-alpine-binary-build:latest
 ./build-docker-binary.sh
 docker tag comby-alpine-binary-build:latest comby/comby:$VERSION
 docker push comby/comby:$VERSION
-docker pull -it comby/comby:$VERSION -version
+# docker pull comby/comby:$VERSION
+# docker run -it comby/comby:$VERSION -version
