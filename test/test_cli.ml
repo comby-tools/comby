@@ -20,7 +20,9 @@ let read_with_timeout read_from_channels =
 
 let read_source_from_stdin command source =
   let open Unix.Process_channels in
-  let { stdin; stdout; stderr } = Unix.open_process_full ~env:[||] command in
+  let { stdin; stdout; stderr } =
+    Unix.open_process_full ~env:(Array.of_list ["COMBY_TEST=1"]) command
+  in
   Out_channel.output_string stdin source;
   Out_channel.flush stdin;
   Out_channel.close stdin;
@@ -28,7 +30,9 @@ let read_source_from_stdin command source =
 
 let read_output command =
   let open Unix.Process_channels in
-  let { stdout; stderr; _ } = Unix.open_process_full ~env:[||] command in
+  let { stdout; stderr; _ } =
+    Unix.open_process_full ~env:(Array.of_list ["COMBY_TEST=1"]) command
+  in
   read_with_timeout [stdout; stderr]
 
 let%expect_test "json_lines_separates_by_line" =

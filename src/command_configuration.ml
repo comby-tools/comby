@@ -47,8 +47,14 @@ let parse_source_directories ?(file_extensions = []) exclude_directory_prefix ta
             if String.is_prefix (Filename.basename path) ~prefix:exclude_directory_prefix then
               []
             else
-              Sys.ls_dir path
-              |> List.concat_map ~f:(fun sub ->
+              let dir_contents =
+                if Option.is_some (Sys.getenv "COMBY_TEST") then
+                  Sys.ls_dir path
+                  |> List.sort ~compare:String.compare
+                else
+                  Sys.ls_dir path
+              in
+              List.concat_map dir_contents ~f:(fun sub ->
                   ls_rec (Filename.concat path sub) (depth + 1))
           with
           | _ -> []
