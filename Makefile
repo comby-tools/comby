@@ -1,6 +1,9 @@
 all: build comby comby-server benchmark
 
 build:
+	dune build --profile dev
+
+build-with-coverage:
 	@BISECT_ENABLE=yes dune build --profile dev
 
 release:
@@ -36,4 +39,11 @@ uninstall:
 promote:
 	@dune promote
 
-.PHONY: all build install test clean promote
+docker-build:
+	docker build -t comby-local-build .
+
+docker-test:
+	docker run -it comby-local-build:latest /bin/bash -c "make && make clean && make build-with-coverage && make test && ./benchmark"
+
+
+.PHONY: all build build-with-coverage release run-server run-staging-server install doc test coverage clean uninstall promote docker-build docker-test

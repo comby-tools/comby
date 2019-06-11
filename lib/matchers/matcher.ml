@@ -8,6 +8,7 @@ open Location
 open Types
 
 let configuration_ref = ref (Configuration.create ())
+let weaken_delimiter_hole_matching = false
 
 let debug = false
 
@@ -158,16 +159,25 @@ module Make (Syntax : Syntax.S) = struct
     return (id, including, until_char)
 
   let reserved_delimiters =
-    List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
-    |> List.map ~f:string
-    |> fun reserved ->
+    let reserved_delimiters =
+      List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
+      |> List.map ~f:string
+    in
+    let reserved_escapable_strings =
+      List.concat_map Syntax.escapable_string_literals ~f:(fun x -> [x])
+      |> List.map ~f:string
+    in
+    let reserved_raw_strings =
+      List.concat_map Syntax.raw_string_literals ~f:(fun (from, until) -> [from; until])
+      |> List.map ~f:string
+    in
     let single =
       string ":[[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]]"
     in
     let greedy =
       string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
     in
-    single::greedy::reserved
+    [single] @ [greedy] @ reserved_delimiters @ reserved_escapable_strings @ reserved_raw_strings
     |> choice
 
   let reserved =
@@ -221,18 +231,32 @@ module Make (Syntax : Syntax.S) = struct
       |>> fun result -> (String.concat @@ [from] @ result @ [until])
     in
     let between_nested_delims p =
-      (match left_delimiter, right_delimiter with
-       | Some left_delimiter, Some right_delimiter -> [ (left_delimiter, right_delimiter) ]
-       | _ -> Syntax.user_defined_delimiters)
+      let trigger_nested_parsing_prefix =
+        if weaken_delimiter_hole_matching then
+          match left_delimiter, right_delimiter with
+          | Some left_delimiter, Some right_delimiter ->
+            [ (left_delimiter, right_delimiter) ]
+          | _ -> Syntax.user_defined_delimiters
+        else
+          Syntax.user_defined_delimiters
+      in
+      trigger_nested_parsing_prefix
       |> List.map ~f:fst
       |> List.map ~f:(between_nested_delims p)
       |> choice
     in
     (* applies looser delimiter constraints for matching *)
     let reserved =
-      (match left_delimiter, right_delimiter with
-       | Some left_delimiter, Some right_delimiter -> [ (left_delimiter, right_delimiter) ]
-       | _ -> Syntax.user_defined_delimiters)
+      let trigger_nested_parsing_prefix =
+        if weaken_delimiter_hole_matching then
+          match left_delimiter, right_delimiter with
+          | Some left_delimiter, Some right_delimiter ->
+            [ (left_delimiter, right_delimiter) ]
+          | _ -> Syntax.user_defined_delimiters
+        else
+          Syntax.user_defined_delimiters
+      in
+      trigger_nested_parsing_prefix
       |> List.concat_map ~f:(fun (from, until) -> [from; until])
       |> List.map ~f:string
       |> choice

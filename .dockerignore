@@ -1,0 +1,8 @@
+**
+!src
+!lib
+!test
+!Makefile
+!comby.opam
+!dune
+!push-coverage-report.sh

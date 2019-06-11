@@ -2,3 +2,5 @@
 _build
 *.install
 /dune-project
+\#*
+.\#*

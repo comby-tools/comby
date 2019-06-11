@@ -344,6 +344,8 @@ ocaml setup.ml -install
 cd -
 
 make
+make clean
+make build-with-coverage
 make test
 
 echo $TRAVIS_JOB_ID
