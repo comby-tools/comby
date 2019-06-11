@@ -42,6 +42,7 @@ type user_input_options =
   ; zip_file : string option
   ; match_only : bool
   ; target_directory : string
+  ; directory_depth : int option
   ; exclude_directory_prefix : string
   }
 

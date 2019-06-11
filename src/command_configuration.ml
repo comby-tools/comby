@@ -30,25 +30,32 @@ let parse_specification_directories match_only specification_directory_paths =
   in
   List.map specification_directory_paths ~f:parse_directory
 
-let parse_source_directories ?(file_extensions = []) exclude_directory_prefix target_directory =
-  let rec ls_rec path =
-    if Sys.is_file path = `Yes then
-      match file_extensions with
-      | [] -> [path]
-      | suffixes when List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix path) -> [path]
-      | _ -> []
+let parse_source_directories ?(file_extensions = []) exclude_directory_prefix target_directory directory_depth =
+  let max_depth = Option.value directory_depth ~default:Int.max_value in
+  let rec ls_rec path depth =
+    if depth > max_depth then
+      []
     else
-      try
-        let dir = Sys.ls_dir path in
-        if String.is_prefix (Filename.basename path) ~prefix:exclude_directory_prefix then
-          []
+      begin
+        if Sys.is_file path = `Yes then
+          match file_extensions with
+          | [] -> [path]
+          | suffixes when List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix path) -> [path]
+          | _ -> []
         else
-          List.map dir ~f:(fun sub -> ls_rec (Filename.concat path sub))
-          |> List.concat
-      with
-      | _ -> []
+          try
+            if String.is_prefix (Filename.basename path) ~prefix:exclude_directory_prefix then
+              []
+            else
+              Sys.ls_dir path
+              |> List.concat_map ~f:(fun sub ->
+                  ls_rec (Filename.concat path sub) (depth + 1))
+          with
+          | _ -> []
+      end
   in
-  ls_rec target_directory
+  (* The first valid ls_dir happens at depth 0 *)
+  ls_rec target_directory (-1)
 
 type output_options =
   { color : bool
@@ -75,6 +82,7 @@ type user_input_options =
   ; zip_file : string option
   ; match_only : bool
   ; target_directory : string
+  ; directory_depth : int option
   ; exclude_directory_prefix : string
   }
 
@@ -250,19 +258,23 @@ let validate_errors { input_options; run_options = _; output_options } =
     , "-in-place may not be used with -json-lines or -json-pretty"
     ; input_options.anonymous_arguments = None &&
       (input_options.specification_directories = None
-       || input_options.specification_directories = Some []),
-      "No templates specified. \
+       || input_options.specification_directories = Some [])
+    , "No templates specified. \
        Either on the command line, or \
        using -templates \
        <directory-containing-templates>"
+    ; Option.is_some input_options.directory_depth
+      && Option.value_exn (input_options.directory_depth) < 0
+    , "-depth must be 0 or greater"
+    ; Sys.is_directory input_options.target_directory = `No
+    , "Directory specified with -d or -r or -directory is not a directory"
     ; let result = Rule.create input_options.rule in
-      Or_error.is_error result,
-      if Or_error.is_error result then
+      Or_error.is_error result
+    , if Or_error.is_error result then
         Format.sprintf "Match rule parse error: %s@." @@
         Error.to_string_hum (Option.value_exn (Result.error result))
       else
         "UNREACHABLE"
-      ;
     ]
   in
   List.filter_map violations ~f:(function
@@ -318,6 +330,7 @@ let create
          ; match_only
          ; stdin
          ; target_directory
+         ; directory_depth
          ; exclude_directory_prefix
          }
      ; run_options =
@@ -368,7 +381,7 @@ let create
     match input_source with
     | Stdin -> `String (In_channel.input_all In_channel.stdin)
     | Zip -> `Zip (Option.value_exn zip_file)
-    | Directory -> `Paths (parse_source_directories ?file_extensions exclude_directory_prefix target_directory)
+    | Directory -> `Paths (parse_source_directories ?file_extensions exclude_directory_prefix target_directory directory_depth)
   in
   let in_place = if input_source = Zip || input_source = Stdin then false else in_place in
   let output_options = { output_options with in_place } in
