@@ -34,6 +34,8 @@ RUN eval $(opam env) \
     && ocaml setup.ml -install \
     && cd ..
 
+ARG CACHEBUST=1
+
 RUN eval $(opam env) \
     && git clone https://github.com/comby-tools/comby.git \
     && make -C comby \
