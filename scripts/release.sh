@@ -40,5 +40,9 @@ comby '"0.x.0"' "$VERSION" .html -i -d scripts/$VERSION
 
 # docker images
 cd scripts
+docker rmi -f comby-alpine-source-build:latest
+docker rmi -f comby-alpine-binary-build:latest
 ./build-docker-binary.sh
+docker tag comby-alpine-binary-build:latest comby/comby:$VERSION
 docker push comby/comby:$VERSION
+docker pull -it comby/comby:$VERSION -version
