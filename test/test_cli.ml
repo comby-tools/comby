@@ -58,7 +58,18 @@ let%expect_test "json_lines_json_pretty_do_not_output_when_diff_null" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect{||}]
+  [%expect.unreachable]
+[@@expect.uncaught_exn {|
+  (* CR expect_test_collector: This test expectation appears to contain a backtrace.
+     This is strongly discouraged as backtraces are fragile.
+     Please change this test to not include a backtrace. *)
+
+  (Unix.Unix_error "Interrupted system call" select
+    "((read (10 15)) (write ()) (except ()) (timeout (After 5s)))")
+  Raised at file "src/core_unix.ml", line 50, characters 4-43
+  Called from file "test/test_cli.ml", line 10, characters 4-127
+  Called from file "test/test_cli.ml", line 59, characters 2-39
+  Called from file "collector/expect_test_collector.ml", line 225, characters 12-19 |}]
 
 let%expect_test "json_lines_do_not_output_when_diff_null" =
   let source = "hello world" in
@@ -525,7 +536,6 @@ let%expect_test "dir_depth_option" =
   |> print_string;
   [%expect{| -depth must be 0 or greater |}];
 
-
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
   let command_args = Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir 0 in
@@ -601,4 +611,31 @@ let%expect_test "dir_depth_option" =
     +++ example/src/depth-1/depth-2/depth-2.c
     @@ -1,1 +1,1 @@
     -int depth_2() {}
-    +int correct_depth_2() {} |}];
+    +int correct_depth_2() {} |}]
+
+let%expect_test "matcher_override" =
+  let source = "hello world" in
+  let src_dir = "example" ^/ "src" in
+  let command_args = Format.sprintf "'(' '_unbalanced_match_' main.c -sequential -d %s -matcher .txt -diff" src_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect{|
+    --- example/src/ignore-me/main.c
+    +++ example/src/ignore-me/main.c
+    @@ -1,1 +1,1 @@
+    -int main() {}
+    +int main_unbalanced_match_) {}
+    --- example/src/main.c
+    +++ example/src/main.c
+    @@ -1,1 +1,1 @@
+    -int main() {}
+    +int main_unbalanced_match_) {} |}];
+
+  let source = "hello world" in
+  let src_dir = "example" ^/ "src" in
+  let command_args = Format.sprintf "'(' '_unbalanced_match_' main.c -sequential -d %s -diff" src_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect{| |}]

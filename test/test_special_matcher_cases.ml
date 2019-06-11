@@ -100,13 +100,12 @@ let%expect_test "ocaml_complex_blocks_with_same_end" =
   [%expect_exact {|
     -Body->match x with
     | _ ->
-        let module M = struct type t end
-        begin
-        begin
+        let module M = struct type t<-Body-
+        -Body->begin
         match y with
-        | _ -> ()
+        | _ -> ()<-Body-
         end
-        end<-Body-
+    end
 |}]
 
 (* FIXME(#35): "before" triggers "for" block *)
@@ -125,7 +124,14 @@ end
   let rewrite_template = {|-Block->:[1]<-Block-|} in
 
   run (module Matchers.Ruby) source match_template rewrite_template;
-  [%expect_exact {|No matches.|}]
+  [%expect_exact {|
+-Block->ActionController::Base
+  before_filter :generate_css_from_less
+
+  def generate_css_from_less
+    Less::More.generate_all<-Block-
+end
+|}]
 
 
 let%expect_test "erlang_blocks" =
@@ -134,4 +140,4 @@ let%expect_test "erlang_blocks" =
   let rewrite_template = {|-Block->:[rest]<-Block-|} in
 
   run (module Matchers.Erlang) source match_template rewrite_template;
-  [%expect_exact {|Big =  -Block->-> if X > 10 -> true; true -> false end<-Block-.|}]
+  [%expect_exact {|Big =  -Block->-> if X > 10 -> true; true -> false<-Block- end.|}]
