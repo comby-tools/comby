@@ -20,7 +20,9 @@ let read_with_timeout read_from_channels =
 
 let read_source_from_stdin command source =
   let open Unix.Process_channels in
-  let { stdin; stdout; stderr } = Unix.open_process_full ~env:[||] command in
+  let { stdin; stdout; stderr } =
+    Unix.open_process_full ~env:(Array.of_list ["COMBY_TEST=1"]) command
+  in
   Out_channel.output_string stdin source;
   Out_channel.flush stdin;
   Out_channel.close stdin;
@@ -28,7 +30,9 @@ let read_source_from_stdin command source =
 
 let read_output command =
   let open Unix.Process_channels in
-  let { stdout; stderr; _ } = Unix.open_process_full ~env:[||] command in
+  let { stdout; stderr; _ } =
+    Unix.open_process_full ~env:(Array.of_list ["COMBY_TEST=1"]) command
+  in
   read_with_timeout [stdout; stderr]
 
 let%expect_test "json_lines_separates_by_line" =
@@ -54,7 +58,7 @@ let%expect_test "json_lines_json_pretty_do_not_output_when_diff_null" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect_exact {||}]
+  [%expect{||}]
 
 let%expect_test "json_lines_do_not_output_when_diff_null" =
   let source = "hello world" in
@@ -66,7 +70,7 @@ let%expect_test "json_lines_do_not_output_when_diff_null" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_source_from_stdin command source
   |> print_string;
-  [%expect_exact {||}]
+  [%expect{||}]
 
 let%expect_test "error_on_zip_and_stdin" =
   let command_args = "-zip x -stdin" in
@@ -471,6 +475,16 @@ let%expect_test "diff_explicit_color" =
 [0;42;30m+|[0m[0m[0;32mc[0m X [0;32ma c[0m Y [0;32ma[0m[0m
 |}]
 
+let%expect_test "is_real_directory" =
+  let source = "hello world" in
+  let src_dir = "example" ^/ "src" ^/ "main.c" in
+  let command_args = Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir 'ignore' -diff" src_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect{|
+    Directory specified with -d or -r or -directory is not a directory |}]
+
 let%expect_test "exclude_dir_option" =
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
@@ -501,3 +515,90 @@ let%expect_test "exclude_dir_option" =
     @@ -1,1 +1,1 @@
     -int main() {}
     +int pain() {} |}]
+
+let%expect_test "dir_depth_option" =
+  let source = "hello world" in
+  let src_dir = "example" ^/ "src" in
+  let command_args = Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir (-1) in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect{| -depth must be 0 or greater |}];
+
+
+  let source = "hello world" in
+  let src_dir = "example" ^/ "src" in
+  let command_args = Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir 0 in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect{|
+    --- example/src/depth-0.c
+    +++ example/src/depth-0.c
+    @@ -1,1 +1,1 @@
+    -int depth_0() {}
+    +int correct_depth_0() {} |}];
+
+  let source = "hello world" in
+  let src_dir = "example" ^/ "src" in
+  let command_args = Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir 1 in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect{|
+    --- example/src/depth-0.c
+    +++ example/src/depth-0.c
+    @@ -1,1 +1,1 @@
+    -int depth_0() {}
+    +int correct_depth_0() {}
+    --- example/src/depth-1/depth-1.c
+    +++ example/src/depth-1/depth-1.c
+    @@ -1,1 +1,1 @@
+    -int depth_1() {}
+    +int correct_depth_1() {} |}];
+
+  let source = "hello world" in
+  let src_dir = "example" ^/ "src" in
+  let command_args = Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir 2 in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect{|
+    --- example/src/depth-0.c
+    +++ example/src/depth-0.c
+    @@ -1,1 +1,1 @@
+    -int depth_0() {}
+    +int correct_depth_0() {}
+    --- example/src/depth-1/depth-1.c
+    +++ example/src/depth-1/depth-1.c
+    @@ -1,1 +1,1 @@
+    -int depth_1() {}
+    +int correct_depth_1() {}
+    --- example/src/depth-1/depth-2/depth-2.c
+    +++ example/src/depth-1/depth-2/depth-2.c
+    @@ -1,1 +1,1 @@
+    -int depth_2() {}
+    +int correct_depth_2() {} |}];
+
+  let source = "hello world" in
+  let src_dir = "example" ^/ "src" in
+  let command_args = Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir 1000 in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect{|
+    --- example/src/depth-0.c
+    +++ example/src/depth-0.c
+    @@ -1,1 +1,1 @@
+    -int depth_0() {}
+    +int correct_depth_0() {}
+    --- example/src/depth-1/depth-1.c
+    +++ example/src/depth-1/depth-1.c
+    @@ -1,1 +1,1 @@
+    -int depth_1() {}
+    +int correct_depth_1() {}
+    --- example/src/depth-1/depth-2/depth-2.c
+    +++ example/src/depth-1/depth-2/depth-2.c
+    @@ -1,1 +1,1 @@
+    -int depth_2() {}
+    +int correct_depth_2() {} |}];
