@@ -36,4 +36,9 @@ fi
 
 cp scripts/check-and-install.sh scripts/$VERSION/0/index.html
 cp scripts/install-with-licenses.sh scripts/$VERSION/get/index.html
-comby '"0.x.0"' "$VERSION" * -i .html -d scripts/$VERSION
+comby '"0.x.0"' "$VERSION" .html -i -d scripts/$VERSION
+
+# docker images
+cd scripts
+./build-docker-binary.sh
+docker push comby/comby:$VERSION

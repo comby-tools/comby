@@ -2,7 +2,8 @@ FROM alpine:3.9
 
 RUN apk --no-cache add pcre-dev tini
 
-COPY --from=comby-build-test /home/opam/comby/_build/default/src/main.exe /usr/local/bin/comby
+COPY --from=comby-alpine-src-build /home/opam/comby/_build/default/src/main.exe /usr/local/bin/comby
+COPY --from=comby-alpine-src-build /home/opam/comby/third-party-licenses /usr/local/bin/comby-third-party-licenses
 
 WORKDIR /
 
