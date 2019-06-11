@@ -301,6 +301,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and directory_depth = flag "depth" (optional int) ~doc:"n Depth to recursively descend into directories"
     and specification_directories = flag "templates" (optional (Arg_type.comma_separated string)) ~doc:"path CSV of directories containing templates"
     and file_extensions = flag "extensions" ~aliases:["e"; "file-extensions"; "f"] (optional (Arg_type.comma_separated string)) ~doc:"extensions Comma-separated extensions to include, like \".go\" or \".c,.h\". It is just a file suffix, so you can use it to match whole file names like \"main.go\""
+    and override_matcher = flag "matcher" ~aliases:["m"] (optional string) ~doc:"extension Use this matcher on all files regardless of their file extension"
     and zip_file = flag "zip" ~aliases:["z"] (optional string) ~doc:"zipfile A zip file containing files to rewrite"
     and json_pretty = flag "json-pretty" no_arg ~doc:"Output pretty JSON format"
     and json_lines = flag "json-lines" no_arg ~doc:"Output JSON line format"
@@ -366,9 +367,12 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     in
     fun () ->
       let matcher =
-        match file_extensions with
-        | None | Some [] -> Matchers.select_with_extension ".generic"
-        | Some (extension::_) -> Matchers.select_with_extension extension
+        if Option.is_some override_matcher then
+          Matchers.select_with_extension (Option.value_exn override_matcher)
+        else
+          match file_extensions with
+          | None | Some [] -> Matchers.select_with_extension ".generic"
+          | Some (extension::_) -> Matchers.select_with_extension extension
       in
       run matcher configuration
   ]

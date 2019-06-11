@@ -840,4 +840,39 @@ let%expect_test "dir_depth_option" =
     +++ example/src/depth-1/depth-2/depth-2.c
     @@ -1,1 +1,1 @@
     -int depth_2() {}
-    +int correct_depth_2() {} |}];
+    +int correct_depth_2() {} |}]
+
+let%expect_test "matcher_override" =
+  let source = "hello world" in
+  let src_dir = "example" ^/ "src" in
+  let command_args = Format.sprintf "'(' '_unbalanced_match_' main.c -sequential -d %s -matcher .txt -diff" src_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result =
+    let rec rerun () =
+      try
+        read_source_from_stdin command source
+      with
+      | Unix.Unix_error (EINTR, _, _) -> rerun ()
+    in
+    rerun ()
+  in
+  print_string result;
+  [%expect{|
+    --- example/src/ignore-me/main.c
+    +++ example/src/ignore-me/main.c
+    @@ -1,1 +1,1 @@
+    -int main() {}
+    +int main_unbalanced_match_) {}
+    --- example/src/main.c
+    +++ example/src/main.c
+    @@ -1,1 +1,1 @@
+    -int main() {}
+    +int main_unbalanced_match_) {} |}];
+
+  let source = "hello world" in
+  let src_dir = "example" ^/ "src" in
+  let command_args = Format.sprintf "'(' '_unbalanced_match_' main.c -sequential -d %s -diff" src_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_source_from_stdin command source
+  |> print_string;
+  [%expect{| |}]
