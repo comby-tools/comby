@@ -121,7 +121,7 @@ printf "EOF\n"
 echo "${YELLOW}------------------------------------------------------------"
 printf "${GREEN}[+]${NORMAL} Output:\n"
 echo "${GREEN}------------------------------------------------------------${NORMAL}"
-comby 'printf(":[1] :[2]!")' 'printf("comby, :[1]!")' << EOF
+comby 'printf(":[1] :[2]!")' 'printf("comby, :[1]!")' -stdin << EOF
 int main(void) {
   printf("hello world!");
 }
