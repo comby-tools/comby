@@ -7,6 +7,11 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
+echo -n "Did you bump the number in main.ml?"
+read X
+echo -n "Did you commit release script changes?"
+read X
+
 VERSION=$1
 
 rm -rf $VERSION
