@@ -16,6 +16,16 @@ module Text = struct
   include Matcher.Make(Syntax)
 end
 
+module Paren = struct
+  module Syntax = struct
+    include Text.Syntax
+    let user_defined_delimiters =
+      [ "(", ")"
+      ]
+  end
+  include Matcher.Make(Syntax)
+end
+
 module Dyck = struct
   module Syntax = struct
     let user_defined_delimiters =
@@ -488,6 +498,7 @@ let select_with_extension extension : (module Types.Matcher.S) =
   | ".cs" -> (module Csharp)
   | ".css" -> (module CSS)
   | ".dart" -> (module Dart)
+  | ".dyck" -> (module Dyck)
   | ".elm" -> (module Elm)
   | ".erl" -> (module Erlang)
   | ".ex" -> (module Elixir)
@@ -502,6 +513,7 @@ let select_with_extension extension : (module Types.Matcher.S) =
   | ".js" | ".ts" -> (module Javascript)
   | ".json" -> (module Json)
   | ".ml" | ".mli" -> (module OCaml)
+  | ".paren" -> (module Paren)
   | ".pas" -> (module Pascal)
   | ".php" -> (module Php)
   | ".py" -> (module Python)
