@@ -2,6 +2,62 @@ open Core
 
 open Language
 
+(* skip or continue directory descent *)
+type 'a next =
+  | Skip of 'a
+  | Continue of 'a
+
+let fold_directory root ~init ~f =
+  let rec aux acc absolute_path depth =
+    if Sys.is_file absolute_path = `Yes then
+      match f acc ~depth ~absolute_path ~is_file:true with
+      | Continue acc
+      | Skip acc -> acc
+    else if Sys.is_directory absolute_path = `Yes then
+      match f acc ~depth ~absolute_path ~is_file:false with
+      | Skip acc -> acc
+      | Continue acc ->
+        let dir_contents =
+          if Option.is_some (Sys.getenv "COMBY_TEST") then
+            Sys.ls_dir absolute_path
+            |> List.sort ~compare:String.compare
+            |> List.rev
+          else
+            Sys.ls_dir absolute_path
+        in
+        List.fold dir_contents ~init:acc ~f:(fun acc subdir ->
+            aux acc (Filename.concat absolute_path subdir) (depth + 1))
+    else
+      acc
+  in
+  (* The first valid ls_dir happens at depth 0 *)
+  aux init root (-1)
+
+let parse_source_directories ?(file_extensions = []) exclude_directory_prefix target_directory directory_depth =
+  let max_depth = Option.value directory_depth ~default:Int.max_value in
+  let f acc ~depth ~absolute_path ~is_file =
+    if depth > max_depth then
+      Skip acc
+    else
+      begin
+        if is_file then
+          match file_extensions with
+          | [] ->
+            Continue (absolute_path::acc)
+          | suffixes when List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix absolute_path) ->
+            Continue (absolute_path::acc)
+          | _ -> Continue acc
+        else
+          begin
+            if String.is_prefix (Filename.basename absolute_path) ~prefix:exclude_directory_prefix then
+              Skip acc
+            else
+              Continue acc
+          end
+      end
+  in
+  fold_directory target_directory ~init:[] ~f
+
 let read filename =
   In_channel.read_all filename
   |> fun template ->
@@ -29,39 +85,6 @@ let parse_specification_directories match_only specification_directory_paths =
     Specification.create ~match_template ?match_rule ?rewrite_template ?rewrite_rule ()
   in
   List.map specification_directory_paths ~f:parse_directory
-
-let parse_source_directories ?(file_extensions = []) exclude_directory_prefix target_directory directory_depth =
-  let max_depth = Option.value directory_depth ~default:Int.max_value in
-  let rec ls_rec path depth =
-    if depth > max_depth then
-      []
-    else
-      begin
-        if Sys.is_file path = `Yes then
-          match file_extensions with
-          | [] -> [path]
-          | suffixes when List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix path) -> [path]
-          | _ -> []
-        else
-          try
-            if String.is_prefix (Filename.basename path) ~prefix:exclude_directory_prefix then
-              []
-            else
-              let dir_contents =
-                if Option.is_some (Sys.getenv "COMBY_TEST") then
-                  Sys.ls_dir path
-                  |> List.sort ~compare:String.compare
-                else
-                  Sys.ls_dir path
-              in
-              List.concat_map dir_contents ~f:(fun sub ->
-                  ls_rec (Filename.concat path sub) (depth + 1))
-          with
-          | _ -> []
-      end
-  in
-  (* The first valid ls_dir happens at depth 0 *)
-  ls_rec target_directory (-1)
 
 type output_options =
   { color : bool
