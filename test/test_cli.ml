@@ -8,6 +8,7 @@ let read_with_timeout read_from_channels =
   let read_from_fds = List.map ~f:Unix.descr_of_in_channel read_from_channels in
   let read_from_channels =
     Unix.select
+      ~restart:true
       ~read:read_from_fds
       ~write:[]
       ~except:[]
@@ -35,6 +36,18 @@ let read_output command =
     Unix.open_process_full ~env:(Array.of_list ["COMBY_TEST=1"]) command
   in
   read_with_timeout [stdout; stderr]
+
+let read_expect_stdin_and_stdout command source =
+  let open Unix.Process_channels in
+  let { stdin; stdout; stderr } =
+    Unix.open_process_full ~env:(Array.of_list ["COMBY_TEST=1"]) command
+  in
+  Out_channel.output_string stdin source;
+  Out_channel.flush stdin;
+  Out_channel.close stdin;
+  let stdout_result = In_channel.input_all stdout in
+  let stderr_result = In_channel.input_all stderr in
+  stderr_result ^ stdout_result
 
 let%expect_test "json_lines_separates_by_line" =
   let source = "hello world" in
@@ -562,16 +575,12 @@ let%expect_test "nested_templates" =
   let command_args = Format.sprintf "-stdin -sequential -f .c -templates %s -stdout" template_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result =
-    let rec rerun () =
-      try
-        read_source_from_stdin command source
-      with
-      | Unix.Unix_error (EINTR, _, _) -> rerun ()
-    in
-    rerun ()
+    read_expect_stdin_and_stdout command source
   in
   print_string result;
-  [%expect{| hello world |}]
+  [%expect{|
+    Warning: Could not read required match file in example/multiple-nested-templates/invalid-subdir
+    +1 +2 +3 |}]
 
 let%expect_test "diff_is_default" =
   let source = "a X c a Y c" in

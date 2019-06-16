@@ -74,7 +74,7 @@ let pp match_only paths =
     in
     match read_optional (path ^/ "match") with
     | None ->
-      Format.printf "Warning: Could not read required match file in %s@." path;
+      Format.eprintf "Warning: Could not read required match file in %s@." path;
       None
     | Some match_template ->
       let match_rule = read_optional (path ^/ "match_rule") in
