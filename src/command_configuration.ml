@@ -65,7 +65,7 @@ let read filename =
   String.chop_suffix template ~suffix:"\n"
   |> Option.value ~default:template
 
-let pp match_only paths =
+let parse_template_directories match_only paths =
   let parse_directory path =
     let read_optional filename =
       match read filename with
@@ -97,30 +97,6 @@ let pp match_only paths =
       Continue acc
   in
   List.concat_map paths ~f:(fun path -> fold_directory path ~init:[] ~f)
-
-(*
-let parse_specification_directories match_only specification_directory_paths =
-  let parse_directory path =
-    let match_template =
-      let filename = path ^/ "match" in
-      match read filename with
-      | content -> content
-      | exception _ ->
-        Format.eprintf "Could not read required match file %s@." filename;
-        exit 1
-    in
-    let read_optional filename =
-      match read filename with
-      | content -> Some content
-      | exception _ -> None
-    in
-    let match_rule = read_optional (path ^/ "match_rule") in
-    let rewrite_template = read_optional (path ^/ "rewrite") in
-    let rewrite_rule = if match_only then None else read_optional (path ^/ "rewrite_rule") in
-    Specification.create ~match_template ?match_rule ?rewrite_template ?rewrite_rule ()
-  in
-  List.map specification_directory_paths ~f:parse_directory
-*)
 
 type output_options =
   { color : bool
@@ -434,7 +410,7 @@ let create
       else
         [ Specification.create ~match_template ~rewrite_template ~match_rule:rule ~rewrite_rule:rule () ]
     | Some specification_directories, _ ->
-      pp match_only specification_directories
+      parse_template_directories match_only specification_directories
     | _ -> assert false
   in
   let file_extensions =
