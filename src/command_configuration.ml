@@ -46,7 +46,8 @@ let parse_source_directories ?(file_extensions = []) exclude_directory_prefix ta
             Continue (absolute_path::acc)
           | suffixes when List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix absolute_path) ->
             Continue (absolute_path::acc)
-          | _ -> Continue acc
+          | _ ->
+            Continue acc
         else
           begin
             if String.is_prefix (Filename.basename absolute_path) ~prefix:exclude_directory_prefix then
@@ -64,6 +65,35 @@ let read filename =
   String.chop_suffix template ~suffix:"\n"
   |> Option.value ~default:template
 
+let pp match_only paths =
+  let parse_directory path =
+    let read_optional filename =
+      match read filename with
+      | content -> Some content
+      | exception _ -> None
+    in
+    match read_optional (path ^/ "match") with
+    | None ->
+      Format.eprintf "Warning: Could not read required match file in %s@." path;
+      None
+    | Some match_template ->
+      let match_rule = read_optional (path ^/ "match_rule") in
+      let rewrite_template = read_optional (path ^/ "rewrite") in
+      let rewrite_rule = if match_only then None else read_optional (path ^/ "rewrite_rule") in
+      Specification.create ~match_template ?match_rule ?rewrite_template ?rewrite_rule ()
+      |> Option.some
+  in
+  let f acc ~depth:_ ~absolute_path ~is_file =
+    if not is_file then
+      match parse_directory absolute_path with
+      | Some spec -> Continue (spec::acc)
+      | None -> Continue acc
+    else
+      Continue acc
+  in
+  List.fold paths ~init:[] ~f:(fun acc path -> fold_directory path ~init:acc ~f)
+
+(*
 let parse_specification_directories match_only specification_directory_paths =
   let parse_directory path =
     let match_template =
@@ -85,6 +115,7 @@ let parse_specification_directories match_only specification_directory_paths =
     Specification.create ~match_template ?match_rule ?rewrite_template ?rewrite_rule ()
   in
   List.map specification_directory_paths ~f:parse_directory
+*)
 
 type output_options =
   { color : bool
@@ -297,6 +328,13 @@ let validate_errors { input_options; run_options = _; output_options } =
     , "-depth must be 0 or greater"
     ; Sys.is_directory input_options.target_directory = `No
     , "Directory specified with -d or -r or -directory is not a directory"
+    ; Option.is_some input_options.specification_directories
+      && List.exists
+        (Option.value_exn input_options.specification_directories)
+        ~f:(fun dir ->
+            (*Format.printf "checking %s %b@." dir (Sys.is_directory dir = `No);*)
+            not (Sys.is_directory dir = `Yes))
+    , "One or more directories specified with -templates is not a directory"
     ; let result = Rule.create input_options.rule in
       Or_error.is_error result
     , if Or_error.is_error result then
@@ -391,7 +429,7 @@ let create
       else
         [ Specification.create ~match_template ~rewrite_template ~match_rule:rule ~rewrite_rule:rule () ]
     | Some specification_directories, _ ->
-      parse_specification_directories match_only specification_directories
+      pp match_only specification_directories
     | _ -> assert false
   in
   let file_extensions =

@@ -113,7 +113,7 @@ let%expect_test "error_on_zip_and_stdin" =
 Next error: -zip may not be used with stdin.
 |}]
 
-let%expect_test "warn_on_anonymous_and_templates_flag" =
+let%expect_test "error_on_invalid_templates_dir" =
   let source = "hello world" in
   let match_template = "hello :[1]" in
   let rewrite_template = ":[1]" in
@@ -131,10 +131,31 @@ let%expect_test "warn_on_anonymous_and_templates_flag" =
     rerun ()
   in
   print_string result;
+  [%expect_exact {|One or more directories specified with -templates is not a directory
+|}]
+
+let%expect_test "warn_on_anonymous_and_templates_flag" =
+  let source = "hello world" in
+  let match_template = "hello :[1]" in
+  let rewrite_template = ":[1]" in
+  let command_args =
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -templates example/templates/identity" match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result =
+    let rec rerun () =
+      try
+        read_source_from_stdin command source
+      with
+      | Unix.Unix_error (EINTR, _, _) -> rerun ()
+    in
+    rerun ()
+  in
+  print_string result;
   [%expect_exact {|Warning: Templates specified on the command line AND using -templates. Ignoring match
       and rewrite templates on the command line and only using those in directories.
-Could not read required match file nonexistent/match
 |}]
+
 
 let%expect_test "warn_json_lines_and_json_pretty" =
   let source = "hello world" in
@@ -497,7 +518,7 @@ let%expect_test "template_parsing_no_match_template" =
     rerun ()
   in
   print_string result;
-  [%expect_exact {|Could not read required match file example/templates/parse-no-match-template/match
+  [%expect_exact {|Warning: Could not read required match file in example/templates/parse-no-match-template
 |}]
 
 let%expect_test "template_parsing_with_trailing_newline" =
