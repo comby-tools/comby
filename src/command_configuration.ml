@@ -74,7 +74,7 @@ let pp match_only paths =
     in
     match read_optional (path ^/ "match") with
     | None ->
-      Format.eprintf "Warning: Could not read required match file in %s@." path;
+      Format.printf "Warning: Could not read required match file in %s@." path;
       None
     | Some match_template ->
       let match_rule = read_optional (path ^/ "match_rule") in
@@ -84,14 +84,19 @@ let pp match_only paths =
       |> Option.some
   in
   let f acc ~depth:_ ~absolute_path ~is_file =
-    if not is_file then
+    let is_leaf_directory absolute_path =
+      not is_file &&
+      Sys.ls_dir absolute_path
+      |> List.for_all ~f:(fun path -> Sys.is_directory (absolute_path ^/ path) = `No)
+    in
+    if is_leaf_directory absolute_path then
       match parse_directory absolute_path with
       | Some spec -> Continue (spec::acc)
       | None -> Continue acc
     else
       Continue acc
   in
-  List.fold paths ~init:[] ~f:(fun acc path -> fold_directory path ~init:acc ~f)
+  List.concat_map paths ~f:(fun path -> fold_directory path ~init:[] ~f)
 
 (*
 let parse_specification_directories match_only specification_directory_paths =

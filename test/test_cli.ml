@@ -6,17 +6,18 @@ let binary_path = "../../../comby"
 
 let read_with_timeout read_from_channels =
   let read_from_fds = List.map ~f:Unix.descr_of_in_channel read_from_channels in
-  let read_from_channel =
+  let read_from_channels =
     Unix.select
       ~read:read_from_fds
       ~write:[]
       ~except:[]
       ~timeout:(`After (Time.of_int_sec 1))
       ()
-    |> (fun { Unix.Select_fds.read; _ } -> List.hd_exn read)
-    |> Unix.in_channel_of_descr
+    |> (fun { Unix.Select_fds.read; _ } -> read)
+    |> List.map ~f:Unix.in_channel_of_descr
   in
-  In_channel.input_all read_from_channel
+  List.map read_from_channels ~f:In_channel.input_all
+  |> String.concat ~sep:"\n"
 
 let read_source_from_stdin command source =
   let open Unix.Process_channels in
@@ -541,6 +542,23 @@ let%expect_test "template_parsing_with_trailing_newline" =
 let%expect_test "template_parsing_with_trailing_newline" =
   let source = "hello world" in
   let template_dir = "example" ^/ "templates" ^/ "parse-template-with-trailing-newline" in
+  let command_args = Format.sprintf "-stdin -sequential -f .c -templates %s -stdout" template_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result =
+    let rec rerun () =
+      try
+        read_source_from_stdin command source
+      with
+      | Unix.Unix_error (EINTR, _, _) -> rerun ()
+    in
+    rerun ()
+  in
+  print_string result;
+  [%expect{| hello world |}]
+
+let%expect_test "nested_templates" =
+  let source = "1 2 3" in
+  let template_dir = "example" ^/ "multiple-nested-templates" in
   let command_args = Format.sprintf "-stdin -sequential -f .c -templates %s -stdout" template_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result =
