@@ -2,12 +2,103 @@ open Core
 
 open Language
 
+(* skip or continue directory descent *)
+type 'a next =
+  | Skip of 'a
+  | Continue of 'a
+
+let fold_directory root ~init ~f =
+  let rec aux acc absolute_path depth =
+    if Sys.is_file absolute_path = `Yes then
+      match f acc ~depth ~absolute_path ~is_file:true with
+      | Continue acc
+      | Skip acc -> acc
+    else if Sys.is_directory absolute_path = `Yes then
+      match f acc ~depth ~absolute_path ~is_file:false with
+      | Skip acc -> acc
+      | Continue acc ->
+        let dir_contents =
+          if Option.is_some (Sys.getenv "COMBY_TEST") then
+            Sys.ls_dir absolute_path
+            |> List.sort ~compare:String.compare
+            |> List.rev
+          else
+            Sys.ls_dir absolute_path
+        in
+        List.fold dir_contents ~init:acc ~f:(fun acc subdir ->
+            aux acc (Filename.concat absolute_path subdir) (depth + 1))
+    else
+      acc
+  in
+  (* The first valid ls_dir happens at depth 0 *)
+  aux init root (-1)
+
+let parse_source_directories ?(file_extensions = []) exclude_directory_prefix target_directory directory_depth =
+  let max_depth = Option.value directory_depth ~default:Int.max_value in
+  let f acc ~depth ~absolute_path ~is_file =
+    if depth > max_depth then
+      Skip acc
+    else
+      begin
+        if is_file then
+          match file_extensions with
+          | [] ->
+            Continue (absolute_path::acc)
+          | suffixes when List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix absolute_path) ->
+            Continue (absolute_path::acc)
+          | _ ->
+            Continue acc
+        else
+          begin
+            if String.is_prefix (Filename.basename absolute_path) ~prefix:exclude_directory_prefix then
+              Skip acc
+            else
+              Continue acc
+          end
+      end
+  in
+  fold_directory target_directory ~init:[] ~f
+
 let read filename =
   In_channel.read_all filename
   |> fun template ->
   String.chop_suffix template ~suffix:"\n"
   |> Option.value ~default:template
 
+let pp match_only paths =
+  let parse_directory path =
+    let read_optional filename =
+      match read filename with
+      | content -> Some content
+      | exception _ -> None
+    in
+    match read_optional (path ^/ "match") with
+    | None ->
+      Format.eprintf "Warning: Could not read required match file in %s@." path;
+      None
+    | Some match_template ->
+      let match_rule = read_optional (path ^/ "match_rule") in
+      let rewrite_template = read_optional (path ^/ "rewrite") in
+      let rewrite_rule = if match_only then None else read_optional (path ^/ "rewrite_rule") in
+      Specification.create ~match_template ?match_rule ?rewrite_template ?rewrite_rule ()
+      |> Option.some
+  in
+  let f acc ~depth:_ ~absolute_path ~is_file =
+    let is_leaf_directory absolute_path =
+      not is_file &&
+      Sys.ls_dir absolute_path
+      |> List.for_all ~f:(fun path -> Sys.is_directory (absolute_path ^/ path) = `No)
+    in
+    if is_leaf_directory absolute_path then
+      match parse_directory absolute_path with
+      | Some spec -> Continue (spec::acc)
+      | None -> Continue acc
+    else
+      Continue acc
+  in
+  List.concat_map paths ~f:(fun path -> fold_directory path ~init:[] ~f)
+
+(*
 let parse_specification_directories match_only specification_directory_paths =
   let parse_directory path =
     let match_template =
@@ -29,39 +120,7 @@ let parse_specification_directories match_only specification_directory_paths =
     Specification.create ~match_template ?match_rule ?rewrite_template ?rewrite_rule ()
   in
   List.map specification_directory_paths ~f:parse_directory
-
-let parse_source_directories ?(file_extensions = []) exclude_directory_prefix target_directory directory_depth =
-  let max_depth = Option.value directory_depth ~default:Int.max_value in
-  let rec ls_rec path depth =
-    if depth > max_depth then
-      []
-    else
-      begin
-        if Sys.is_file path = `Yes then
-          match file_extensions with
-          | [] -> [path]
-          | suffixes when List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix path) -> [path]
-          | _ -> []
-        else
-          try
-            if String.is_prefix (Filename.basename path) ~prefix:exclude_directory_prefix then
-              []
-            else
-              let dir_contents =
-                if Option.is_some (Sys.getenv "COMBY_TEST") then
-                  Sys.ls_dir path
-                  |> List.sort ~compare:String.compare
-                else
-                  Sys.ls_dir path
-              in
-              List.concat_map dir_contents ~f:(fun sub ->
-                  ls_rec (Filename.concat path sub) (depth + 1))
-          with
-          | _ -> []
-      end
-  in
-  (* The first valid ls_dir happens at depth 0 *)
-  ls_rec target_directory (-1)
+*)
 
 type output_options =
   { color : bool
@@ -274,6 +333,13 @@ let validate_errors { input_options; run_options = _; output_options } =
     , "-depth must be 0 or greater"
     ; Sys.is_directory input_options.target_directory = `No
     , "Directory specified with -d or -r or -directory is not a directory"
+    ; Option.is_some input_options.specification_directories
+      && List.exists
+        (Option.value_exn input_options.specification_directories)
+        ~f:(fun dir ->
+            (*Format.printf "checking %s %b@." dir (Sys.is_directory dir = `No);*)
+            not (Sys.is_directory dir = `Yes))
+    , "One or more directories specified with -templates is not a directory"
     ; let result = Rule.create input_options.rule in
       Or_error.is_error result
     , if Or_error.is_error result then
@@ -368,7 +434,7 @@ let create
       else
         [ Specification.create ~match_template ~rewrite_template ~match_rule:rule ~rewrite_rule:rule () ]
     | Some specification_directories, _ ->
-      parse_specification_directories match_only specification_directories
+      pp match_only specification_directories
     | _ -> assert false
   in
   let file_extensions =
