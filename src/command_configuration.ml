@@ -7,7 +7,7 @@ type 'a next =
   | Skip of 'a
   | Continue of 'a
 
-let fold_directory root ~init ~f =
+let fold_directory ?(sorted=false) root ~init ~f =
   let rec aux acc absolute_path depth =
     if Sys.is_file absolute_path = `Yes then
       match f acc ~depth ~absolute_path ~is_file:true with
@@ -18,7 +18,7 @@ let fold_directory root ~init ~f =
       | Skip acc -> acc
       | Continue acc ->
         let dir_contents =
-          if Option.is_some (Sys.getenv "COMBY_TEST") then
+          if Option.is_some (Sys.getenv "COMBY_TEST") || sorted then
             Sys.ls_dir absolute_path
             |> List.sort ~compare:String.compare
             |> List.rev
@@ -96,7 +96,7 @@ let parse_template_directories match_only paths =
     else
       Continue acc
   in
-  List.concat_map paths ~f:(fun path -> fold_directory path ~init:[] ~f)
+  List.concat_map paths ~f:(fun path -> fold_directory path ~sorted:true ~init:[] ~f)
 
 type output_options =
   { color : bool
