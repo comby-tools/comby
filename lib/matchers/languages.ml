@@ -510,7 +510,7 @@ let select_with_extension extension : (module Types.Matcher.S) =
   | ".go" -> (module Go)
   | ".java" -> (module Java)
   | ".jl" -> (module Julia)
-  | ".js" | ".ts" -> (module Javascript)
+  | ".js" | ".ts" | ".jsx" | ".tsx" -> (module Javascript)
   | ".json" -> (module Json)
   | ".ml" | ".mli" -> (module OCaml)
   | ".paren" -> (module Paren)
