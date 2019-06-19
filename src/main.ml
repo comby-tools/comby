@@ -166,7 +166,7 @@ let run
     matcher
     { sources
     ; specifications
-    ; file_extensions
+    ; file_filters
     ; run_options =
         { sequential
         ; verbose
@@ -238,7 +238,7 @@ let run
     if sequential then
       let zip_in = Zip.open_in zip_file in
       let entries =
-        match file_extensions with
+        match file_filters with
         | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; _ } -> not is_directory)
         | Some suffixes ->
           List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
@@ -270,7 +270,7 @@ let run
       let number_of_matches =
         let zip_in = Zip.open_in zip_file in
         let entries =
-          match file_extensions with
+          match file_filters with
           | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; _ } -> not is_directory)
           | Some suffixes ->
             List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
@@ -300,7 +300,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and target_directory = flag "directory" ~aliases:["d"; "r"; "recursive"] (optional_with_default (Sys.getcwd ()) string) ~doc:(Format.sprintf "path Run recursively on files in a directory. Default is current directory: %s" @@ Sys.getcwd ())
     and directory_depth = flag "depth" (optional int) ~doc:"n Depth to recursively descend into directories"
     and specification_directories = flag "templates" (optional (Arg_type.comma_separated string)) ~doc:"path CSV of directories containing templates"
-    and file_extensions = flag "extensions" ~aliases:["e"; "file-extensions"; "f"] (optional (Arg_type.comma_separated string)) ~doc:"extensions Comma-separated extensions to include, like \".go\" or \".c,.h\". It is just a file suffix, so you can use it to match whole file names like \"main.go\""
+    and file_filters = flag "extensions" ~aliases:["e"; "file-extensions"; "f"] (optional (Arg_type.comma_separated string)) ~doc:"extensions Comma-separated extensions to include, like \".go\" or \".c,.h\". It is just a file suffix, so you can use it to filter file names like \"main.go\". The extension will be used to infer a matcher, unless --matcher is specified"
     and override_matcher = flag "matcher" ~aliases:["m"] (optional string) ~doc:"extension Use this matcher on all files regardless of their file extension"
     and zip_file = flag "zip" ~aliases:["z"] (optional string) ~doc:"zipfile A zip file containing files to rewrite"
     and json_pretty = flag "json-pretty" no_arg ~doc:"Output pretty JSON format"
@@ -320,13 +320,13 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
            (t3
               ("MATCH_TEMPLATE" %: string)
               ("REWRITE_TEMPLATE" %: string)
-              (maybe ("COMMA_SEPARATED_FILE_EXTENSIONS" %: (Arg_type.comma_separated string)))
+              (maybe ("COMMA_SEPARATED_FILE_FILTERS" %: (Arg_type.comma_separated string)))
            )
         )
     in
     let anonymous_arguments =
-      Option.map anonymous_arguments ~f:(fun (match_template, rewrite_template, extensions) ->
-          { match_template; rewrite_template; extensions })
+      Option.map anonymous_arguments ~f:(fun (match_template, rewrite_template, file_filters) ->
+          { match_template; rewrite_template; file_filters })
     in
     let configuration =
       Command_configuration.create
@@ -334,7 +334,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             { rule
             ; specification_directories
             ; anonymous_arguments
-            ; file_extensions
+            ; file_filters
             ; zip_file
             ; match_only
             ; stdin
@@ -370,9 +370,15 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
         if Option.is_some override_matcher then
           Matchers.select_with_extension (Option.value_exn override_matcher)
         else
-          match file_extensions with
-          | None | Some [] -> Matchers.select_with_extension ".generic"
-          | Some (extension::_) -> Matchers.select_with_extension extension
+          match configuration.file_filters with
+          | None | Some [] ->
+            Matchers.select_with_extension ".generic"
+          | Some (filter::_) ->
+            match Filename.split_extension filter with
+            | _, Some extension ->
+              Matchers.select_with_extension ("." ^ extension)
+            | _ ->
+              Matchers.select_with_extension ".generic"
       in
       run matcher configuration
   ]
