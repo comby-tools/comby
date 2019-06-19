@@ -1,0 +1,2 @@
+// src
+func main() {}

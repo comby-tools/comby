@@ -306,6 +306,7 @@ type t =
   { sources : Command_input.t
   ; specifications : Specification.t list
   ; file_filters : string list option
+  ; exclude_directory_prefix : string
   ; run_options : run_options
   ; output_printer : Printer.t
   }
@@ -460,6 +461,7 @@ let create
   let sources =
     match input_source with
     | Stdin -> `String (In_channel.input_all In_channel.stdin)
+    (* TODO(RVT): Unify exclude-dir handling. Currently exclude-dir option must be done while processing zip file in main.ml. *)
     | Zip -> `Zip (Option.value_exn zip_file)
     | Directory -> `Paths (parse_source_directories ?file_filters exclude_directory_prefix target_directory directory_depth)
   in
@@ -484,6 +486,7 @@ let create
     { sources
     ; specifications
     ; file_filters
+    ; exclude_directory_prefix
     ; run_options =
         { sequential
         ; verbose
