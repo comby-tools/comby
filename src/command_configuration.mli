@@ -30,7 +30,7 @@ type output_options =
 type anonymous_arguments =
   { match_template : string
   ; rewrite_template : string
-  ; extensions : string list option
+  ; file_filters : string list option
   }
 
 type user_input_options =
@@ -38,7 +38,7 @@ type user_input_options =
   ; stdin : bool
   ; specification_directories : string list option
   ; anonymous_arguments : anonymous_arguments option
-  ; file_extensions : string list option
+  ; file_filters : string list option
   ; zip_file : string option
   ; match_only : bool
   ; target_directory : string
@@ -63,7 +63,7 @@ type user_input =
 type t =
   { sources : Command_input.t
   ; specifications : Specification.t list
-  ; file_extensions : string list option
+  ; file_filters : string list option
   ; run_options : run_options
   ; output_printer : Printer.t
   }
