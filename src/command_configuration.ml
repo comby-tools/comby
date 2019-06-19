@@ -33,7 +33,7 @@ let fold_directory ?(sorted=false) root ~init ~f =
   (* The first valid ls_dir happens at depth 0 *)
   aux init root (-1)
 
-let parse_source_directories ?(file_extensions = []) exclude_directory_prefix target_directory directory_depth =
+let parse_source_directories ?(file_filters = []) exclude_directory_prefix target_directory directory_depth =
   let max_depth = Option.value directory_depth ~default:Int.max_value in
   let f acc ~depth ~absolute_path ~is_file =
     if depth > max_depth then
@@ -41,7 +41,7 @@ let parse_source_directories ?(file_extensions = []) exclude_directory_prefix ta
     else
       begin
         if is_file then
-          match file_extensions with
+          match file_filters with
           | [] ->
             Continue (absolute_path::acc)
           | suffixes when List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix absolute_path) ->
@@ -112,7 +112,7 @@ type output_options =
 type anonymous_arguments =
   { match_template : string
   ; rewrite_template : string
-  ; extensions : string list option
+  ; file_filters : string list option
   }
 
 type user_input_options =
@@ -120,7 +120,7 @@ type user_input_options =
   ; stdin : bool
   ; specification_directories : string list option
   ; anonymous_arguments : anonymous_arguments option
-  ; file_extensions : string list option
+  ; file_filters : string list option
   ; zip_file : string option
   ; match_only : bool
   ; target_directory : string
@@ -305,7 +305,7 @@ end
 type t =
   { sources : Command_input.t
   ; specifications : Specification.t list
-  ; file_extensions : string list option
+  ; file_filters : string list option
   ; run_options : run_options
   ; output_printer : Printer.t
   }
@@ -400,7 +400,7 @@ let create
          { rule
          ; specification_directories
          ; anonymous_arguments
-         ; file_extensions
+         ; file_filters
          ; zip_file
          ; match_only
          ; stdin
@@ -440,11 +440,16 @@ let create
       parse_template_directories match_only specification_directories
     | _ -> assert false
   in
-  let file_extensions =
+  let file_filters =
     match anonymous_arguments with
-    | None -> file_extensions
-    | Some { extensions = None; _ } -> file_extensions
-    | Some { extensions = Some file_extensions; _ } -> Some file_extensions
+    | None -> file_filters
+    | Some { file_filters = None; _ } -> file_filters
+    | Some { file_filters = Some anonymous_file_filters; _ } ->
+      match file_filters with
+      | Some additional_file_filters ->
+        Some (additional_file_filters @ anonymous_file_filters)
+      | None ->
+        Some anonymous_file_filters
   in
   let input_source =
     match stdin, zip_file with
@@ -456,7 +461,7 @@ let create
     match input_source with
     | Stdin -> `String (In_channel.input_all In_channel.stdin)
     | Zip -> `Zip (Option.value_exn zip_file)
-    | Directory -> `Paths (parse_source_directories ?file_extensions exclude_directory_prefix target_directory directory_depth)
+    | Directory -> `Paths (parse_source_directories ?file_filters exclude_directory_prefix target_directory directory_depth)
   in
   let in_place = if input_source = Zip || input_source = Stdin then false else in_place in
   let output_options = { output_options with in_place } in
@@ -478,7 +483,7 @@ let create
   return
     { sources
     ; specifications
-    ; file_extensions
+    ; file_filters
     ; run_options =
         { sequential
         ; verbose

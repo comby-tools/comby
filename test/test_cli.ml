@@ -533,6 +533,21 @@ let%expect_test "exclude_dir_option" =
   let result = read_source_from_stdin command source in
   print_string result;
   [%expect{|
+    --- example/src/honor-file-extensions/honor.pb.generic
+    +++ example/src/honor-file-extensions/honor.pb.generic
+    @@ -1,3 +1,3 @@
+    -func main() {
+    +func pain() {
+     // foo()
+     }
+    --- example/src/honor-file-extensions/honor.pb.go
+    +++ example/src/honor-file-extensions/honor.pb.go
+    @@ -1,4 +1,4 @@
+    -func main() {
+    +func pain() {
+     // in a comment foo()
+     foo()
+     }
     --- example/src/main.c
     +++ example/src/main.c
     @@ -1,1 +1,1 @@
@@ -545,6 +560,21 @@ let%expect_test "exclude_dir_option" =
   let result = read_source_from_stdin command source in
   print_string result;
   [%expect{|
+    --- example/src/honor-file-extensions/honor.pb.generic
+    +++ example/src/honor-file-extensions/honor.pb.generic
+    @@ -1,3 +1,3 @@
+    -func main() {
+    +func pain() {
+     // foo()
+     }
+    --- example/src/honor-file-extensions/honor.pb.go
+    +++ example/src/honor-file-extensions/honor.pb.go
+    @@ -1,4 +1,4 @@
+    -func main() {
+    +func pain() {
+     // in a comment foo()
+     foo()
+     }
     --- example/src/ignore-me/main.c
     +++ example/src/ignore-me/main.c
     @@ -1,1 +1,1 @@
@@ -669,6 +699,38 @@ let%expect_test "matcher_override" =
   print_string result;
   [%expect{| |}]
 
+let%expect_test "infer_and_honor_extensions" =
+  let source = "doesn't matter" in
+  let src_dir = "example" ^/ "src" ^/ "honor-file-extensions" in
+  let command_args = Format.sprintf "'foo()' 'bar()' .go -sequential -d %s -diff" src_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_source_from_stdin command source in
+  print_string result;
+  [%expect{|
+    --- example/src/honor-file-extensions/honor.pb.go
+    +++ example/src/honor-file-extensions/honor.pb.go
+    @@ -1,4 +1,4 @@
+     func main() {
+     // in a comment foo()
+    -foo()
+    +bar()
+     } |}];
+
+  let source = "doesn't matter" in
+  let src_dir = "example" ^/ "src" ^/ "honor-file-extensions" in
+  let command_args = Format.sprintf "'foo()' 'bar()' .generic -sequential -d %s -diff" src_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_source_from_stdin command source in
+  print_string result;
+  [%expect{|
+    --- example/src/honor-file-extensions/honor.pb.generic
+    +++ example/src/honor-file-extensions/honor.pb.generic
+    @@ -1,3 +1,3 @@
+     func main() {
+    -// foo()
+    +// bar()
+     } |}]
+
 let%expect_test "diff_only" =
   let source = "hello world" in
   let command_args = Format.sprintf "'hello' 'world' -stdin -sequential -json-lines -json-only-diff" in
@@ -679,7 +741,6 @@ let%expect_test "diff_only" =
     {"uri":null,"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-hello world\n+world world"} |}];
 
   let source = "hello world" in
-
   let command_args = Format.sprintf "'hello' 'world' -stdin -sequential -json-only-diff" in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_source_from_stdin command source in
