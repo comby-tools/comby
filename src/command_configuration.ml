@@ -102,6 +102,7 @@ type output_options =
   { color : bool
   ; json_pretty : bool
   ; json_lines : bool
+  ; json_only_diff : bool
   ; in_place : bool
   ; diff : bool
   ; stdout : bool
@@ -211,11 +212,15 @@ module Printer = struct
       | Plain
       | Colored
 
+    type json_kind =
+      | Everything
+      | Diff
+
     type replacement_output =
       | In_place
       | Stdout
-      | Json_lines
-      | Json_pretty
+      | Json_lines of json_kind
+      | Json_pretty of json_kind
       | Diff of diff_kind
       | Match_only
 
@@ -229,19 +234,31 @@ module Printer = struct
       | Plain
       | Colored
 
+    type json_kind =
+      | Everything
+      | Diff
+
     type replacement_output =
       | In_place
       | Stdout
-      | Json_lines
-      | Json_pretty
+      | Json_lines of json_kind
+      | Json_pretty of json_kind
       | Diff of diff_kind
       | Match_only
 
     let convert output_options : replacement_output =
       match output_options with
       | { in_place = true; _ } -> In_place
-      | { json_pretty = true; in_place = false; _ } -> Json_pretty
-      | { json_lines = true; in_place = false; _ } -> Json_lines
+      | { json_pretty = true; in_place = false; _ } ->
+        if output_options.json_only_diff then
+          Json_pretty Diff
+        else
+          Json_pretty Everything
+      | { json_lines = true; in_place = false; _ } ->
+        if output_options.json_only_diff then
+          Json_lines Diff
+        else
+          Json_lines Everything
       | { stdout = true; _ } -> Stdout
       | { diff = true; color = false; _ } -> Diff Plain
       | { color = true; _ }
@@ -252,13 +269,21 @@ module Printer = struct
       match replacement_output with
       | Stdout ->
         Format.fprintf ppf "%s" replacement_content
-      | Json_pretty ->
+      | Json_pretty Everything ->
         let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
-        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_pretty (path, replacements, replacement_content, diff) in
+        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_pretty (path, replacements, replacement_content, diff, false) in
         Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
-      | Json_lines ->
+      | Json_pretty Diff ->
         let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
-        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_line (path, replacements, replacement_content, diff) in
+        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_pretty (path, replacements, replacement_content, diff, true) in
+        Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
+      | Json_lines Everything ->
+        let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
+        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_line (path, replacements, replacement_content, diff, false) in
+        Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
+      | Json_lines Diff ->
+        let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
+        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_line (path, replacements, replacement_content, diff, true) in
         Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
       | Diff Plain ->
         let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
@@ -316,6 +341,8 @@ let validate_errors { input_options; run_options = _; output_options } =
             (*Format.printf "checking %s %b@." dir (Sys.is_directory dir = `No);*)
             not (Sys.is_directory dir = `Yes))
     , "One or more directories specified with -templates is not a directory"
+    ; output_options.json_only_diff && (not output_options.json_lines && not output_options.json_pretty)
+    , "-json-only-diff can only be supplied with -json-lines or -json-pretty."
     ; let result = Rule.create input_options.rule in
       Or_error.is_error result
     , if Or_error.is_error result then
