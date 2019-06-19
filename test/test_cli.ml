@@ -746,4 +746,36 @@ let%expect_test "diff_only" =
   let result = read_source_from_stdin command source in
   print_string result;
   [%expect{|
-    -json-only-diff can only be supplied with -json-lines or -json-pretty. |}];
+    -json-only-diff can only be supplied with -json-lines or -json-pretty. |}]
+
+let%expect_test "zip_exclude_dir_with_extension" =
+  let source = "doesn't matter" in
+  let zip = "example" ^/ "zip-test" ^/ "sample-repo.zip" in
+  let exclude_dir = "sample-repo/vendor" in
+  let command_args = Format.sprintf "'main' 'pain' .go -zip %s -sequential -diff -exclude-dir %s" zip exclude_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_source_from_stdin command source in
+  print_string result;
+  [%expect{|
+    --- sample-repo/src/main.go
+    +++ sample-repo/src/main.go
+    @@ -1,2 +1,2 @@
+     // src
+    -func main() {}
+    +func pain() {} |}]
+
+let%expect_test "zip_exclude_dir_no_extension" =
+  let source = "doesn't matter" in
+  let zip = "example" ^/ "zip-test" ^/ "sample-repo.zip" in
+  let exclude_dir = "sample-repo/vendor" in
+  let command_args = Format.sprintf "'main' 'pain' -zip %s -sequential -diff -exclude-dir %s" zip exclude_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_source_from_stdin command source in
+  print_string result;
+  [%expect{|
+    --- sample-repo/src/main.go
+    +++ sample-repo/src/main.go
+    @@ -1,2 +1,2 @@
+     // src
+    -func main() {}
+    +func pain() {} |}];

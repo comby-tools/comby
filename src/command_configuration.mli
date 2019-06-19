@@ -65,6 +65,7 @@ type t =
   { sources : Command_input.t
   ; specifications : Specification.t list
   ; file_filters : string list option
+  ; exclude_directory_prefix : string
   ; run_options : run_options
   ; output_printer : Printer.t
   }

@@ -167,6 +167,7 @@ let run
     { sources
     ; specifications
     ; file_filters
+    ; exclude_directory_prefix
     ; run_options =
         { sequential
         ; verbose
@@ -237,12 +238,22 @@ let run
   | `Zip zip_file ->
     if sequential then
       let zip_in = Zip.open_in zip_file in
+      let not_in_an_exclude_directory filename =
+        not (String.is_prefix ~prefix:exclude_directory_prefix filename)
+      in
       let entries =
         match file_filters with
-        | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; _ } -> not is_directory)
+        | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
+            not is_directory && not_in_an_exclude_directory filename)
         | Some suffixes ->
+          let has_acceptable_suffix filename =
+            List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename)
+          in
+          let not_in_an_exclude_directory filename =
+            not (String.is_prefix ~prefix:exclude_directory_prefix filename)
+          in
           List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
-              not is_directory && List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename))
+              not is_directory && not_in_an_exclude_directory filename && has_acceptable_suffix filename)
       in
       let number_of_matches =
         List.fold ~init:0 entries ~f:(fun acc ({ filename; _ } as entry) ->
@@ -269,12 +280,19 @@ let run
       in
       let number_of_matches =
         let zip_in = Zip.open_in zip_file in
+        let not_in_an_exclude_directory filename =
+          not (String.is_prefix ~prefix:exclude_directory_prefix filename)
+        in
         let entries =
           match file_filters with
-          | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; _ } -> not is_directory)
+          | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
+              not is_directory && not_in_an_exclude_directory filename)
           | Some suffixes ->
+            let has_acceptable_suffix filename =
+              List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename)
+            in
             List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
-                not is_directory && List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename))
+                not is_directory && not_in_an_exclude_directory filename && has_acceptable_suffix filename)
         in
         Zip.close_in zip_in;
         try Scheduler.map_reduce scheduler ~init:0 ~map ~reduce:(+) entries
