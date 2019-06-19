@@ -21,6 +21,7 @@ type output_options =
   { color : bool
   ; json_pretty : bool
   ; json_lines : bool
+  ; json_only_diff : bool
   ; in_place : bool
   ; diff : bool
   ; stdout : bool

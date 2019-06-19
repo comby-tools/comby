@@ -668,3 +668,21 @@ let%expect_test "matcher_override" =
   let result = read_source_from_stdin command source in
   print_string result;
   [%expect{| |}]
+
+let%expect_test "diff_only" =
+  let source = "hello world" in
+  let command_args = Format.sprintf "'hello' 'world' -stdin -sequential -json-lines -json-only-diff" in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_source_from_stdin command source in
+  print_string result;
+  [%expect{|
+    {"uri":null,"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-hello world\n+world world"} |}];
+
+  let source = "hello world" in
+
+  let command_args = Format.sprintf "'hello' 'world' -stdin -sequential -json-only-diff" in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_source_from_stdin command source in
+  print_string result;
+  [%expect{|
+    -json-only-diff can only be supplied with -json-lines or -json-pretty. |}];
