@@ -9,6 +9,8 @@
 
 ## `bash <(curl -sL get.comby.dev)`
 
+### See the [usage docs](https://comby.dev)
+
 ### Or [try it live](https://comby.live/).
 
 ## Source Build
