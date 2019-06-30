@@ -141,22 +141,25 @@ module Make (Syntax : Syntax.S) = struct
     >> many comment_parser
     >>= fun result -> f result
 
+  let fully_qualified_hole _s =
+    let id_parser = many1 (alphanum <|> char '_') |>> String.of_char_list in
+    let posix_parser =
+      string "[:" >> many1 (is_not (string ":]")) >>= fun posix_class ->
+      string ":]" >> return posix_class
+    in
+    string ":[" >> id_parser >>= fun id ->
+    string "|" >> posix_parser << string "]" >>= fun posix_pattern ->
+    return (id, posix_pattern)
+
   let greedy_hole_parser _s =
     string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
 
   let single_hole_parser _s =
     string ":[" >>
-    many (is_not (char '[')) >>= fun including ->
     string "[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
     >>= fun id ->
-    (option (
-        (char '\\' >> char 'n' >>= fun _ ->
-         return '\n')
-        <|>
-        is_not (char ']')))
-    >>= fun until_char ->
-    string "]" >>= fun _ ->
-    return (id, including, until_char)
+    string "]" >>
+    return (id, [], None)
 
   let reserved_delimiters =
     let reserved_delimiters =
