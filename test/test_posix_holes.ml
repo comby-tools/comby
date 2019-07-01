@@ -32,3 +32,8 @@ let%expect_test "posix_parse" =
   let rewrite_template = {|:[x]|} in
   run source match_template rewrite_template;
   [%expect_exact {|No matches.|}]
+
+(* echo 'foo.bar.quux' | ./comby 'foo.:[x|[:graph:]]' 'foo' -stdin *)
+(* outputs empty. should output foo.foo *)
+(* ^ doesn't work because the fully_qualified pattern isn't in reserved, and it is parsed
+   as ordinary chars *)

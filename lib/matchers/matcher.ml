@@ -117,6 +117,7 @@ module Make (Syntax : Syntax.S) = struct
   let generate_fully_qualified_hole_parser posix =
     let allowed = match posix with
       | Alnum -> alphanum |>> String.of_char
+      (* include/exclude characters based on language *)
       | Punct ->
         ".,:;_|/\\\"'&^*%$#@!?-=+~`"
         |> String.to_list
@@ -157,7 +158,7 @@ module Make (Syntax : Syntax.S) = struct
     >> many comment_parser
     >>= fun result -> f result
 
-  let fully_qualified_hole_parser _s =
+  let fully_qualified_hole_parser () =
     let id_parser = many1 (alphanum <|> char '_') |>> String.of_char_list in
     let posix_parser =
       string "[:" >> many1 (is_not (string ":]")) >>= fun posix_class ->
@@ -191,28 +192,34 @@ module Make (Syntax : Syntax.S) = struct
   let reserved_delimiters =
     let reserved_delimiters =
       List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
-      |> List.map ~f:string
+      |> List.map ~f:(Fn.compose skip string)
     in
     let reserved_escapable_strings =
       List.concat_map Syntax.escapable_string_literals ~f:(fun x -> [x])
-      |> List.map ~f:string
+      |> List.map ~f:(Fn.compose skip string)
     in
     let reserved_raw_strings =
       List.concat_map Syntax.raw_string_literals ~f:(fun (from, until) -> [from; until])
-      |> List.map ~f:string
+      |> List.map ~f:(Fn.compose skip string)
     in
     let single =
-      string ":[[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]]"
+      skip (string ":[[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]]")
     in
     let greedy =
-      string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
+      skip (string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]")
     in
-    [single] @ [greedy] @ reserved_delimiters @ reserved_escapable_strings @ reserved_raw_strings
+    let fully_qualified =
+      skip @@ (fully_qualified_hole_parser ())
+    in
+    [fully_qualified] @
+    [single] @
+    [greedy]
+    @ reserved_delimiters @ reserved_escapable_strings @ reserved_raw_strings
     |> choice
 
   let reserved =
     reserved_delimiters
-    <|> (space |>> Char.to_string)
+    <|> skip (space |>> Char.to_string)
 
   let until_of_from from =
     Syntax.user_defined_delimiters
@@ -385,9 +392,9 @@ module Make (Syntax : Syntax.S) = struct
     many (common s)
 
   and common _s =
-    (attempt (hole_parser `Fully_qualified Code)
-     <|> attempt (hole_parser `Lazy Code))
-    <|> attempt (hole_parser `Single Code)
+    (attempt (hole_parser `Fully_qualified Code))
+    <|> (attempt (hole_parser `Lazy Code))
+    <|> (attempt (hole_parser `Single Code))
     (* string literals are handled specially because match semantics change inside string delimiters *)
     <|> (raw_string_literal_parser (generate_hole_for_literal Raw_string_literal))
     <|> (escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal))
