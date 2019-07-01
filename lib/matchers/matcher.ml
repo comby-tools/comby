@@ -114,6 +114,22 @@ module Make (Syntax : Syntax.S) = struct
     | Some until_char ->
       many1 (not_followed_by (char until_char) "" >> allowed)
 
+  let generate_fully_qualified_hole_parser posix =
+    let allowed = match posix with
+      | Alnum -> alphanum |>> String.of_char
+      | Punct ->
+        ".,:;_|/\\\"'&^*%$#@!?-=+~`"
+        |> String.to_list
+        |> List.map ~f:char
+        |> choice
+        |>> String.of_char
+      | Blank -> blank |>> String.of_char
+      | Space -> space |>> String.of_char
+      | Graph -> non_space |>> String.of_char
+      | Print -> any_char |>> String.of_char (* sort of. *)
+    in
+    many1 allowed
+
   let generate_spaces_parser () =
     (* at least a space followed by comments and spaces *)
     (spaces1
@@ -153,12 +169,12 @@ module Make (Syntax : Syntax.S) = struct
       | "space" -> return Space
       | "graph" -> return Graph
       | "print" -> return Print
-      | _ ->
-        (*fail "Expected posix class"*)
-        failwith "Expected posix class"
+      | other ->
+        (* raising Failure is caught somewhere up in process_single_source. FIXME. *)
+        Format.eprintf "Expected posix class, not %s.@." other;
+        exit 1;
     in
     string ":[" >> id_parser >>= fun id ->
-    Format.printf "Id... %s@." id;
     string "|" >> posix_parser << string "]" >>= fun posix_pattern ->
     return (id, posix_pattern)
 
@@ -295,6 +311,14 @@ module Make (Syntax : Syntax.S) = struct
           | Failed _ -> p
           | Success result ->
             match result with
+            | Hole Fully_qualified (identifier, _dimension, posix) ->
+              let hole_semantics = generate_fully_qualified_hole_parser posix in
+              record_matches identifier hole_semantics
+
+            | Hole Single (identifier, including, until_char, _) ->
+              let hole_semantics = generate_single_hole_parser including until_char in
+              record_matches identifier hole_semantics
+
             | Hole Lazy (identifier, dimension) ->
               let matcher =
                 match dimension with
@@ -319,10 +343,6 @@ module Make (Syntax : Syntax.S) = struct
               let hole_semantics = many (not_followed_by rest "" >> matcher) in
               record_matches identifier hole_semantics
 
-            | Hole Single (identifier, including, until_char, _) ->
-              let hole_semantics = generate_single_hole_parser including until_char in
-              record_matches identifier hole_semantics
-
             | _ -> failwith "Hole expected"
         in
         process_hole::acc)
@@ -330,6 +350,9 @@ module Make (Syntax : Syntax.S) = struct
   let hole_parser sort dimension =
     let skip_signal result = skip (string "_signal_hole") |>> fun () -> result in
     match sort with
+    | `Fully_qualified ->
+      fully_qualified_hole_parser () |>> fun (id, posix) ->
+      skip_signal (Hole (Fully_qualified (id, dimension, posix)))
     | `Lazy ->
       greedy_hole_parser () |>> fun id ->
       skip_signal (Hole (Lazy (id, dimension)))
@@ -362,7 +385,8 @@ module Make (Syntax : Syntax.S) = struct
     many (common s)
 
   and common _s =
-    (attempt (hole_parser `Lazy Code))
+    (attempt (hole_parser `Fully_qualified Code)
+     <|> attempt (hole_parser `Lazy Code))
     <|> attempt (hole_parser `Single Code)
     (* string literals are handled specially because match semantics change inside string delimiters *)
     <|> (raw_string_literal_parser (generate_hole_for_literal Raw_string_literal))

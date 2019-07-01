@@ -35,7 +35,7 @@ type posix =
 
 type hole =
   | Fully_qualified of (id * dimension * posix)
-  (* rename Lazy -> Print *)
+  (* rename Lazy -> Print or Structural *)
   | Lazy of (id * dimension)
   | Single of (id * including * until * dimension)
 
