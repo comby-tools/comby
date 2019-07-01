@@ -34,10 +34,11 @@ type posix =
   | Print
 
 type hole =
-  | Fully_qualified of (id * dimension * posix)
-  (* rename Lazy -> Print or Structural *)
-  | Lazy of (id * dimension)
-  | Single of (id * including * until * dimension)
+  | Everything of (id * dimension)
+  | Alphanum of (id * including * until * dimension)
+  | Non_space of (id * dimension)
+  | Line of (id * dimension)
+  | Blank of (id * dimension)
 
 type production =
   | Unit
