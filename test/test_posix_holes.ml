@@ -31,7 +31,7 @@ let%expect_test "posix_parse" =
   let match_template = {|:[x|[:alnum:]]|} in
   let rewrite_template = {|:[x]|} in
   run source match_template rewrite_template;
-  [%expect_exact {|No matches.|}]
+  [%expect_exact {|foo|}]
 
 (* echo 'foo.bar.quux' | ./comby 'foo.:[x|[:graph:]]' 'foo' -stdin *)
 (* outputs empty. should output foo.foo *)

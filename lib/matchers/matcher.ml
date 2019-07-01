@@ -179,14 +179,12 @@ module Make (Syntax : Syntax.S) = struct
     string "|" >> posix_parser << string "]" >>= fun posix_pattern ->
     return (id, posix_pattern)
 
-  let greedy_hole_parser _s =
+  let greedy_hole_parser () =
     string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
 
-  let single_hole_parser _s =
-    string ":[" >>
-    string "[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
+  let single_hole_parser () =
+    string ":[[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]]"
     >>= fun id ->
-    string "]" >>
     return (id, [], None)
 
   let reserved_delimiters =
@@ -203,18 +201,21 @@ module Make (Syntax : Syntax.S) = struct
       |> List.map ~f:(Fn.compose skip string)
     in
     let single =
-      skip (string ":[[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]]")
+      skip @@ single_hole_parser ()
     in
     let greedy =
-      skip (string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]")
+      skip @@ greedy_hole_parser ()
     in
     let fully_qualified =
-      skip @@ (fully_qualified_hole_parser ())
+      skip @@ fully_qualified_hole_parser ()
     in
     [fully_qualified] @
     [single] @
     [greedy]
     @ reserved_delimiters @ reserved_escapable_strings @ reserved_raw_strings
+    (* attempt the reserved: otherwise, if fully_qualified passes partially,
+       it won't detect that single or greedy is reserved *)
+    |> List.map ~f:attempt
     |> choice
 
   let reserved =
