@@ -141,13 +141,24 @@ module Make (Syntax : Syntax.S) = struct
     >> many comment_parser
     >>= fun result -> f result
 
-  let fully_qualified_hole _s =
+  let fully_qualified_hole_parser _s =
     let id_parser = many1 (alphanum <|> char '_') |>> String.of_char_list in
     let posix_parser =
       string "[:" >> many1 (is_not (string ":]")) >>= fun posix_class ->
-      string ":]" >> return posix_class
+      string ":]" >>
+      match String.of_char_list posix_class with
+      | "alnum" -> return Alnum
+      | "punct" -> return Punct
+      | "blank" -> return Blank
+      | "space" -> return Space
+      | "graph" -> return Graph
+      | "print" -> return Print
+      | _ ->
+        (*fail "Expected posix class"*)
+        failwith "Expected posix class"
     in
     string ":[" >> id_parser >>= fun id ->
+    Format.printf "Id... %s@." id;
     string "|" >> posix_parser << string "]" >>= fun posix_pattern ->
     return (id, posix_pattern)
 
@@ -284,7 +295,7 @@ module Make (Syntax : Syntax.S) = struct
           | Failed _ -> p
           | Success result ->
             match result with
-            | Hole (Lazy (identifier, dimension)) ->
+            | Hole Lazy (identifier, dimension) ->
               let matcher =
                 match dimension with
                 | Code ->
@@ -308,7 +319,7 @@ module Make (Syntax : Syntax.S) = struct
               let hole_semantics = many (not_followed_by rest "" >> matcher) in
               record_matches identifier hole_semantics
 
-            | Hole (Single (identifier, including, until_char, _)) ->
+            | Hole Single (identifier, including, until_char, _) ->
               let hole_semantics = generate_single_hole_parser including until_char in
               record_matches identifier hole_semantics
 
@@ -317,23 +328,22 @@ module Make (Syntax : Syntax.S) = struct
         process_hole::acc)
 
   let hole_parser sort dimension =
-    let skip_signal result =
-      skip (string "_signal_hole") |>> fun () -> result
-    in
+    let skip_signal result = skip (string "_signal_hole") |>> fun () -> result in
     match sort with
-    | `Single ->
-      single_hole_parser () |>> fun (id, including, until_char) ->
-      skip_signal (Hole (Single (id, including, until_char, dimension)))
     | `Lazy ->
       greedy_hole_parser () |>> fun id ->
       skip_signal (Hole (Lazy (id, dimension)))
+    | `Single ->
+      single_hole_parser () |>> fun (id, including, until_char) ->
+      skip_signal (Hole (Single (id, including, until_char, dimension)))
 
   let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter s =
     let p =
-      many (attempt (hole_parser `Lazy sort)
-            <|> attempt (hole_parser `Single sort)
-            <|> ((many1 (is_not (string ":[" <|> string ":[["))
-                  |>> String.of_char_list) |>> generate_string_token_parser))
+      many
+        (attempt (hole_parser `Lazy sort)
+         <|> attempt (hole_parser `Single sort)
+         <|> ((many1 (is_not (string ":[" <|> string ":[["))
+               |>> String.of_char_list) |>> generate_string_token_parser))
     in
     match parse_string p contents "" with
     | Success p ->

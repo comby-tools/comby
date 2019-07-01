@@ -25,7 +25,17 @@ type id = string
 type including = char list
 type until = char option
 
+type posix =
+  | Alnum
+  | Punct
+  | Blank
+  | Space
+  | Graph
+  | Print
+
 type hole =
+  | Fully_qualified of (id * dimension * posix)
+  (* rename Lazy -> Print *)
   | Lazy of (id * dimension)
   | Single of (id * including * until * dimension)
 
