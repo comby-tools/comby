@@ -26,8 +26,11 @@ type including = char list
 type until = char option
 
 type hole =
-  | Lazy of (id * dimension)
-  | Single of (id * including * until * dimension)
+  | Everything of (id * dimension)
+  | Alphanum of (id * dimension)
+  | Non_space of (id * dimension)
+  | Line of (id * dimension)
+  | Blank of (id * dimension)
 
 type production =
   | Unit
