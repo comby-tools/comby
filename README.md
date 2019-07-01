@@ -52,6 +52,8 @@ opam install pcre
 opam install oasis
 opam install tls
 opam install camlzip
+opam install bisect_ppx 
+opam install patdiff
 ```
 
 - Install [mparser](https://github.com/comby-tools/mparser)
