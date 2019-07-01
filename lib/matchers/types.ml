@@ -25,14 +25,6 @@ type id = string
 type including = char list
 type until = char option
 
-type posix =
-  | Alnum
-  | Punct
-  | Blank
-  | Space
-  | Graph
-  | Print
-
 type hole =
   | Everything of (id * dimension)
   | Alphanum of (id * dimension)
