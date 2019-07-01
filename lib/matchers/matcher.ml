@@ -128,7 +128,7 @@ module Make (Syntax : Syntax.S) = struct
     >> many comment_parser
     >>= fun result -> f result
 
-  let greedy_hole_parser () =
+  let everything_hole_parser () =
     string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
 
   let non_space_hole_parser () =
@@ -140,43 +140,39 @@ module Make (Syntax : Syntax.S) = struct
   let blank_hole_parser () =
     string ":[" >> (many1 blank) >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
 
-  let single_hole_parser () =
+  let alphanum_hole_parser () =
     string ":[[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]]"
     >>= fun id ->
-    return (id, [], None)
+    return id
 
   let reserved_delimiters =
     let reserved_delimiters =
       List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
-      |> List.map ~f:(Fn.compose skip string)
+      |> List.map ~f:string
     in
     let reserved_escapable_strings =
       List.concat_map Syntax.escapable_string_literals ~f:(fun x -> [x])
-      |> List.map ~f:(Fn.compose skip string)
+      |> List.map ~f:string
     in
     let reserved_raw_strings =
       List.concat_map Syntax.raw_string_literals ~f:(fun (from, until) -> [from; until])
-      |> List.map ~f:(Fn.compose skip string)
+      |> List.map ~f:string
     in
-    let single =
-      skip @@ single_hole_parser ()
-    in
-    let greedy =
-      skip @@ greedy_hole_parser ()
-    in
-    let non_space =
-      skip @@ non_space_hole_parser ()
-    in
-    let blank =
-      skip @@ blank_hole_parser ()
-    in
-    let line =
-      skip @@ line_hole_parser ()
-    in
-    [non_space; line; blank] @
-    [single] @
-    [greedy]
-    @ reserved_delimiters @ reserved_escapable_strings @ reserved_raw_strings
+    let alphanum = alphanum_hole_parser () in
+    let everything = everything_hole_parser () in
+    let non_space = non_space_hole_parser () in
+    let blank = blank_hole_parser () in
+    let line = line_hole_parser () in
+    [ non_space
+    ; line
+    ; blank
+    ; alphanum
+    ; everything
+    ]
+    @ reserved_delimiters
+    @ reserved_escapable_strings
+    @ reserved_raw_strings
+    |> List.map ~f:skip
     (* attempt the reserved: otherwise, if something passes partially,
        it won't detect that single or greedy is reserved *)
     |> List.map ~f:attempt
@@ -285,7 +281,7 @@ module Make (Syntax : Syntax.S) = struct
           | Failed _ -> p
           | Success result ->
             match result with
-            | Hole Alphanum (identifier, _, _, _) ->
+            | Hole Alphanum (identifier, _) ->
               let rest =
                 match acc with
                 | [] -> eof >>= fun () -> f [""]
@@ -362,7 +358,7 @@ module Make (Syntax : Syntax.S) = struct
     let skip_signal result = skip (string "_signal_hole") |>> fun () -> result in
     match sort with
     | `Everything ->
-      greedy_hole_parser () |>> fun id ->
+      everything_hole_parser () |>> fun id ->
       skip_signal (Hole (Everything (id, dimension)))
     | `Non_space ->
       non_space_hole_parser () |>> fun id ->
@@ -374,8 +370,8 @@ module Make (Syntax : Syntax.S) = struct
       blank_hole_parser () |>> fun id ->
       skip_signal (Hole (Blank (id, dimension)))
     | `Alphanum ->
-      single_hole_parser () |>> fun (id, including, until_char) ->
-      skip_signal (Hole (Alphanum (id, including, until_char, dimension)))
+      alphanum_hole_parser () |>> fun id ->
+      skip_signal (Hole (Alphanum (id, dimension)))
 
   let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter s =
     let p =

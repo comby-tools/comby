@@ -35,7 +35,7 @@ type posix =
 
 type hole =
   | Everything of (id * dimension)
-  | Alphanum of (id * including * until * dimension)
+  | Alphanum of (id * dimension)
   | Non_space of (id * dimension)
   | Line of (id * dimension)
   | Blank of (id * dimension)
