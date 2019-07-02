@@ -430,17 +430,18 @@ module Make (Syntax : Syntax.S) = struct
     (* string literals are handled specially because match semantics change inside string delimiters *)
     <|> (raw_string_literal_parser (generate_hole_for_literal Raw_string_literal))
     <|> (escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal))
-    (* whitespace is handled specially because we may change whether they are significant for matching *)
-    <|> (spaces1 |>> generate_spaces_parser)
     (* nested delimiters are handled specially for nestedness *)
     <|> (fun x ->
         (*Format.printf "@.Nested->@.";*)
         nested_delimiters_parser generate_outer_delimiter_parsers x)
+    (* whitespace is handled specially because we may change whether they are significant for matching. Only parse
+       whitespace if it isn't a prefix required for alphanumeric delimiters, which take priority.*)
+    <|> (spaces1 |>> generate_spaces_parser)
     (* everything else *)
     <|> (fun x ->
         (*Format.printf "@.Char sequence->@.";*)
         ((many1 (is_not reserved) >>= fun cl ->
-          Format.printf "<cl>%s</cl>" @@ String.of_char_list cl;
+          if debug then Format.printf "<cl>%s</cl>" @@ String.of_char_list cl;
           return @@ String.of_char_list cl)
          |>> generate_string_token_parser) x)
 
