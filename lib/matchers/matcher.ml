@@ -10,7 +10,10 @@ open Types
 let configuration_ref = ref (Configuration.create ())
 let weaken_delimiter_hole_matching = false
 
-let debug = false
+let debug =
+  match Sys.getenv "DEBUG" with
+  | Some _ -> true
+  | None -> false
 
 let f _ = return Unit
 
@@ -114,11 +117,22 @@ module Make (Syntax : Syntax.S) = struct
     List.fold plist ~init:(return Unit) ~f:(>>)
 
   let nested_delimiters_parser (f : 'a nested_delimiter_callback) =
+    let between p from until =
+      string from >>= fun from ->
+      if debug then Format.printf "<d>%s</d>%!" from;
+      p >>= fun p_result ->
+      string until >>= fun until ->
+      if debug then Format.printf "<d>%s</d>%!" until;
+      return p_result
+    in
     Syntax.user_defined_delimiters
     |> List.map ~f:(fun (left_delimiter, right_delimiter) ->
-        Parsers.Delimiters.between
+        between
           (f ~left_delimiter ~right_delimiter)
-          left_delimiter right_delimiter)
+          left_delimiter
+          right_delimiter
+      )
+    |> List.map ~f:attempt
     |> choice
 
   (** All code can have comments interpolated *)
@@ -405,7 +419,10 @@ module Make (Syntax : Syntax.S) = struct
     (* nested delimiters are handled specially for nestedness *)
     <|> (nested_delimiters_parser generate_outer_delimiter_parsers)
     (* everything else *)
-    <|> ((many1 (is_not reserved) |>> String.of_char_list) |>> generate_string_token_parser)
+    <|> ((many1 (is_not reserved) >>= fun cl ->
+          Format.printf "<cl>%s</cl>" @@ String.of_char_list cl;
+          return @@ String.of_char_list cl)
+         |>> generate_string_token_parser)
 
   and generate_outer_delimiter_parsers ~left_delimiter ~right_delimiter s =
     (generate_parsers s >>= fun p_list ->

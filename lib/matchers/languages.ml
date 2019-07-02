@@ -1,4 +1,4 @@
-let experimental = false
+let experimental = true
 
 module Text = struct
   module Syntax = struct
