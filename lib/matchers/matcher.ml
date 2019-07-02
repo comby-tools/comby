@@ -127,6 +127,8 @@ module Make (Syntax : Syntax.S) = struct
       if debug then Format.printf "<sp>";
       p >>= fun p_result ->
       string until >>= fun until ->
+      (if _is_alphanum until then eof <|> look_ahead (skip _whitespace) (* or hole? *) else return ())
+      >>= fun _ ->
       if debug then Format.printf "<d>%s</d>%!" until;
       return p_result
     in
@@ -190,7 +192,9 @@ module Make (Syntax : Syntax.S) = struct
                (* alphanum start must be followed by space or a non-alphanum delim *)
                look_ahead _whitespace >>= fun _ ->
                return from)
-            ; string until]
+            ; string until >>= fun until ->
+              eof <|> look_ahead (skip _whitespace) >>= fun _ ->
+              return until]
           else
             [ string from
             ; string until]
