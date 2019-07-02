@@ -117,9 +117,14 @@ module Make (Syntax : Syntax.S) = struct
     List.fold plist ~init:(return Unit) ~f:(>>)
 
   let nested_delimiters_parser (f : 'a nested_delimiter_callback) =
+    let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
+    let _whitespace = many1 space |>> String.of_char_list in
     let between p from until =
       string from >>= fun from ->
+      (if _is_alphanum from then look_ahead _whitespace (* or hole *) else return "")
+      >>= fun _ ->
       if debug then Format.printf "<d>%s</d>%!" from;
+      if debug then Format.printf "<sp>";
       p >>= fun p_result ->
       string until >>= fun until ->
       if debug then Format.printf "<d>%s</d>%!" until;
@@ -132,8 +137,9 @@ module Make (Syntax : Syntax.S) = struct
           left_delimiter
           right_delimiter
       )
-    |> List.map ~f:attempt
     |> choice
+    (* backtrack on failure, specifically for alphanum *)
+    |> attempt
 
   (** All code can have comments interpolated *)
   let generate_string_token_parser str : ('c, _) parser =
@@ -173,9 +179,19 @@ module Make (Syntax : Syntax.S) = struct
     ]
 
   let reserved_delimiters =
+    let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
+    let _whitespace = many1 space |>> String.of_char_list in
     let reserved_delimiters =
-      List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
-      |> List.map ~f:string
+      List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) ->
+          if _is_alphanum from then
+            [ (string from >>= fun from ->
+               look_ahead _whitespace >>= fun _ ->
+               return from)
+            ; string until]
+          else
+            [ string from
+            ; string until]
+        )
     in
     let reserved_escapable_strings =
       List.concat_map Syntax.escapable_string_literals ~f:(fun x -> [x])
@@ -417,12 +433,16 @@ module Make (Syntax : Syntax.S) = struct
     (* whitespace is handled specially because we may change whether they are significant for matching *)
     <|> (spaces1 |>> generate_spaces_parser)
     (* nested delimiters are handled specially for nestedness *)
-    <|> (nested_delimiters_parser generate_outer_delimiter_parsers)
+    <|> (fun x ->
+        (*Format.printf "@.Nested->@.";*)
+        nested_delimiters_parser generate_outer_delimiter_parsers x)
     (* everything else *)
-    <|> ((many1 (is_not reserved) >>= fun cl ->
+    <|> (fun x ->
+        (*Format.printf "@.Char sequence->@.";*)
+        ((many1 (is_not reserved) >>= fun cl ->
           Format.printf "<cl>%s</cl>" @@ String.of_char_list cl;
           return @@ String.of_char_list cl)
-         |>> generate_string_token_parser)
+         |>> generate_string_token_parser) x)
 
   and generate_outer_delimiter_parsers ~left_delimiter ~right_delimiter s =
     (generate_parsers s >>= fun p_list ->
