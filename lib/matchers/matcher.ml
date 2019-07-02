@@ -184,7 +184,10 @@ module Make (Syntax : Syntax.S) = struct
     let reserved_delimiters =
       List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) ->
           if _is_alphanum from then
-            [ (string from >>= fun from ->
+            [ ((_whitespace) >>= fun _ ->
+               (* alphanum start must be prefixed by space, non-alphanum delim, or nothing *)
+               string from >>= fun from ->
+               (* alphanum start must be followed by space or a non-alphanum delim *)
                look_ahead _whitespace >>= fun _ ->
                return from)
             ; string until]
