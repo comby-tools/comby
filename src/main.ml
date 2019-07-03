@@ -111,8 +111,8 @@ let process_single_source
       | Some (None, _)
       | None -> Nothing
   with
-  | _ ->
-    Nothing
+  | _e ->
+    failwith (Exn.to_string _e)
 
 let output_result output_printer source_path source_content result =
   match result with

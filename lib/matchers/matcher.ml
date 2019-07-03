@@ -222,7 +222,7 @@ module Make (Syntax : Syntax.S) = struct
                    string from >>= fun from ->
                    (* alphanum start must be followed by space or a non-alphanum delim *)
                    look_ahead _required_delimiter_terminal >>= fun _ ->
-                   Format.printf "PASSED: %s@." from;
+                   (*Format.printf "PASSED: %s@." from;*)
                    return from) s)
             ;
                 (*if _is_alphanum @@ Char.to_string @@ Option.value_exn x then
@@ -240,7 +240,7 @@ module Make (Syntax : Syntax.S) = struct
                         (Option.value_exn _prev)
                         (Option.value_exn _curr)
                         (Option.value_exn _next);*)
-                    if _is_alphanum (Char.to_string (Option.value_exn _prev)) then
+                    if Option.is_some _prev && _is_alphanum (Char.to_string (Option.value_exn _prev)) then
                       fail "no"
                     else
                       return until) s)
@@ -347,13 +347,14 @@ module Make (Syntax : Syntax.S) = struct
                  let _prev = prev_char s in
                  let _curr = read_char s in
                  let _next = next_char s in
-                 Format.printf "PASSED: %s@." until;
-                 if debug_hole then Format.printf "H_prev: %c H_curr: %c H_next: %c@."
+                 (*Format.printf "PASSED: %s@." until;
+                   if debug_hole then Format.printf "H_prev: %c H_curr: %c H_next: %c@."
                      (Option.value_exn _prev)
                      (Option.value_exn _curr)
                      (Option.value_exn _next);
+                 *)
                  (
-                   if _is_alphanum (Char.to_string (Option.value_exn _prev)) then
+                   if Option.is_some _prev && _is_alphanum (Char.to_string (Option.value_exn _prev)) then
                      (* if prev char is alphanum, this can't possibly be a delim *)
                      fail "no"
                    else
@@ -437,7 +438,7 @@ module Make (Syntax : Syntax.S) = struct
                      (Option.value_exn _next);
                  *)
                  (* if _prev is alphanum, this can't possibly be a reserved delimiter. just continue *)
-                 if _is_alphanum (Char.to_string (Option.value_exn _prev)) then
+                 if Option.is_some _prev && _is_alphanum (Char.to_string (Option.value_exn _prev)) then
                    (* if prev char is alphanum, this can't possibly be a delim *)
                    fail "no"
                  else
@@ -464,7 +465,7 @@ module Make (Syntax : Syntax.S) = struct
                    string from >>= fun _ -> look_ahead required_delimiter_terminal) s)
             ; (fun s -> (
                    let _prev = prev_char s in
-                   if _is_alphanum (Char.to_string (Option.value_exn _prev)) then
+                   if Option.is_some _prev && _is_alphanum (Char.to_string (Option.value_exn _prev)) then
                      (* if prev char is alphanum, this can't possibly be a delim *)
                      fail "no"
                    else
@@ -504,6 +505,7 @@ module Make (Syntax : Syntax.S) = struct
        <|>
        (* only consume if not reserved. because if it is reserved, we want to trigger the 'many'
           to continue below, in (many nested_grammar) *)
+       (* FIXME: skip space *)
        (is_not (reserved <|> (space >>= fun c -> return @@ Char.to_string c)) >>= fun c ->
         if debug_hole then Format.printf "<H_c>%c</H_c>@." c; return @@ String.of_char c))
         s
