@@ -15,6 +15,9 @@ let debug =
   | Some _ -> true
   | None -> false
 
+let debug_hole = true
+
+
 let f _ = return Unit
 
 let extract_matched_text source { offset = match_start; _ } { offset = match_end; _ } =
@@ -292,13 +295,69 @@ module Make (Syntax : Syntax.S) = struct
   let generate_everything_hole_parser
       ?priority_left_delimiter:left_delimiter
       ?priority_right_delimiter:right_delimiter =
-    let between_nested_delims p from =
-      let until = until_of_from from in
-      between (string from) (string until) p
-      |>> fun result -> (String.concat @@ [from] @ result @ [until])
-    in
+    let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
+    let _whitespace = many1 space |>> String.of_char_list in
     let between_nested_delims p =
-      let trigger_nested_parsing_prefix =
+      let capture_delimiter_result p ~from =
+        let until = until_of_from from in
+        let p =
+          if _is_alphanum from then
+            let required_delimiter_terminal =
+              many1 (is_not alphanum) >>= fun x -> return @@ String.of_char_list x in
+            (* Use attempt so that, e.g., 'struct' is tried after 'begin' delimiters under choice. *)
+            attempt @@
+            (fun s ->
+               (
+                 let _prev = prev_char s in
+                 let _curr = read_char s in
+                 let _next = next_char s in
+                 (*Format.printf "PASSED: %s@." until;
+                   if debug_hole then Format.printf "H_prev: %c H_curr: %c H_next: %c@."
+                     (Option.value_exn _prev)
+                     (Option.value_exn _curr)
+                     (Option.value_exn _next);*)
+                 (
+                   if _is_alphanum (Char.to_string (Option.value_exn _prev)) then
+                     (* if prev char is alphanum, this can't possibly be a delim *)
+                     fail "no"
+                   else
+                     (* try parse white space, and we want to cpature its
+                        length, in case this is a space between, like 'def def
+                        end end'. But in the case where there's no space, it
+                        means we have just entered the beginning of the hole
+                        which may start with the 'd' of 'def', but since we
+                        already know that the previous char is not alphanum in this branch (so
+                        it is a delimiter or whitespace) it is OK to
+                        continue: in this case, return "" *)
+                     required_delimiter_terminal
+                     <|> return ""
+                 ) >>= fun prefix_opening ->
+                 (*if debug_hole then Format.printf "Hole: Past required delim terminal <whitespace>. trying: %s@." from;*)
+                 string from >>= fun open_delimiter ->
+                 if debug_hole then Format.printf "Hole: Past string: <d>%s</d>@." open_delimiter;
+                 (* Use look_ahead to ensure that there is, e.g., whitespace after this
+                    possible delimiter, but without consuming input. Whitespace needs to
+                    not be consumed so that we can detect subsequent delimiters. *)
+                 look_ahead @@ required_delimiter_terminal >>= fun unconsumed_opening_suffix ->
+                 if debug_hole then Format.printf "Hole: Past required delimiter terminal: <%s>@." unconsumed_opening_suffix;
+                 p >>= fun in_between ->
+                 (* think whitespace needs to be tracked here, but p will swallow it, so can't :(. look behind? *)
+                 if debug_hole then Format.printf "Past in_between";
+                 string until >>= fun close_delimiter ->
+                 (* look_ahead untested *)
+                 look_ahead @@ required_delimiter_terminal >>= fun _unconsumed_closing_suffix ->
+                 if debug_hole then Format.printf "Past <d>%s</d>" close_delimiter;
+                 return
+                   ((prefix_opening^open_delimiter)
+                    ^(String.concat in_between)
+                    ^close_delimiter)) s)
+          else
+            between (string from) (string until) p
+            >>= fun result -> return (String.concat @@ [from] @ result @ [until])
+        in
+        p
+      in
+      let if_weaken =
         if weaken_delimiter_hole_matching then
           match left_delimiter, right_delimiter with
           | Some left_delimiter, Some right_delimiter ->
@@ -307,14 +366,14 @@ module Make (Syntax : Syntax.S) = struct
         else
           Syntax.user_defined_delimiters
       in
-      trigger_nested_parsing_prefix
-      |> List.map ~f:fst
-      |> List.map ~f:(between_nested_delims p)
+      if_weaken
+      |> List.map ~f:(fun pair -> capture_delimiter_result p ~from:(fst pair))
       |> choice
     in
-    (* applies looser delimiter constraints for matching *)
+    (* the cases for which we need to stop parsing just characters
+       and consider delimiters *)
     let reserved =
-      let trigger_nested_parsing_prefix =
+      let weaken =
         if weaken_delimiter_hole_matching then
           match left_delimiter, right_delimiter with
           | Some left_delimiter, Some right_delimiter ->
@@ -323,9 +382,46 @@ module Make (Syntax : Syntax.S) = struct
         else
           Syntax.user_defined_delimiters
       in
-      trigger_nested_parsing_prefix
-      |> List.concat_map ~f:(fun (from, until) -> [from; until])
-      |> List.map ~f:string
+      weaken
+      |> List.concat_map ~f:(fun (from, until) ->
+          if _is_alphanum from then
+            (* if it's alphanum, only consider it reserved if there is, say, whitespace after and so
+               handle alternatively. otherwise, return empty to indicate 'this sequence of characters
+               is not reserved' *)
+            [(fun s ->
+                (let _prev = prev_char s in
+                 let _curr = read_char s in
+                 let _next = next_char s in
+                 (*Format.printf "Considering reserved at...@.";
+                   if debug_hole then Format.printf "H_prev: %c H_curr: %c H_next: %c@."
+                     (Option.value_exn _prev)
+                     (Option.value_exn _curr)
+                     (Option.value_exn _next);
+                 *)
+                 (* if _prev is alphanum, this can't possibly be a reserved delimiter. just continue *)
+                 if _is_alphanum (Char.to_string (Option.value_exn _prev)) then
+                   (* if prev char is alphanum, this can't possibly be a delim *)
+                   fail "no"
+                 else
+                   (* under other conditions (not alphanum, so it was a ( or whitespace), just return it.
+                      might as well be skip.*)
+                   string from) s)
+            ;
+              (fun s -> (
+                   let _prev = prev_char s in
+                   if _is_alphanum (Char.to_string (Option.value_exn _prev)) then
+                     (* if prev char is alphanum, this can't possibly be a delim *)
+                     fail "no"
+                   else
+                     (* may as well be skip *)
+                     string until
+                 ) s)
+            ]
+          else
+            [string from; string until]
+        )
+      (* RVT: untested, but pretty sure this should be attempt *)
+      |> List.map ~f:attempt
       |> choice
     in
     (* a parser that understands the hole matching cut off points happen at
@@ -334,10 +430,16 @@ module Make (Syntax : Syntax.S) = struct
       (comment_parser
        <|> raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
        <|> escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
-       <|> delimsx
-       <|> (is_not reserved |>> String.of_char))
+       <|> (attempt @@ delims_over_holes >>= fun x -> if debug_hole then Format.printf "<H_d>%s<H_d>" x; return x)
+       <|> (many1 space >>= fun x -> if debug_hole then Format.printf "<H_sp>"; return @@ String.of_char_list x)
+       <|>
+       (* only consume if not reserved. because if it is reserved, we want to trigger the 'many'
+          to continue below, in (many nested_grammar) *)
+       (is_not (reserved <|> (space >>= fun c -> return @@ Char.to_string c)) >>= fun c ->
+        if debug_hole then Format.printf "<H_c>%c</H_c>@." c; return @@ String.of_char c))
         s
-    and delimsx s = (between_nested_delims (many nested_grammar)) s
+    and delims_over_holes s =
+      (between_nested_delims (many nested_grammar)) s
     in
     nested_grammar
 
@@ -473,9 +575,6 @@ module Make (Syntax : Syntax.S) = struct
     <|> (fun x -> (*Format.printf "attempt <sp.>%!"; *) (spaces1 |>> generate_spaces_parser) x)
     (* everything else *)
     <|> (fun x ->
-        (*Format.printf "@.Char sequence->@.";*)
-        (* is_not knows to not parse space. it will return control. The trouble is
-           we want to check " begin", when it already started spinning and sees ' bbegin' *)
         ((many1 (is_not (reserved _s)) >>= fun cl ->
           let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
           if debug then Format.printf "<cl>%s</cl>" @@ String.of_char_list cl;
