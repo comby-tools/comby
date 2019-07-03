@@ -15,7 +15,7 @@ let debug =
   | Some _ -> true
   | None -> false
 
-let debug_hole = true
+let debug_hole = false
 
 
 let f _ = return Unit
@@ -120,7 +120,7 @@ module Make (Syntax : Syntax.S) = struct
     List.fold plist ~init:(return Unit) ~f:(>>)
 
   let nested_delimiters_parser (f : 'a nested_delimiter_callback) =
-    let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
+    let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[0-9A-Za-z]+$") _delim) in
     let _whitespace = many1 space |>> String.of_char_list in
     let _required_delimiter_terminal =
       many1 (is_not alphanum) >>= fun x -> return @@ String.of_char_list x
@@ -208,7 +208,7 @@ module Make (Syntax : Syntax.S) = struct
     ]
 
   let reserved_delimiters _s =
-    let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
+    let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[0-9A-Za-z]+$") _delim) in
     let _whitespace = many1 space |>> String.of_char_list in
     let _required_delimiter_terminal =
       many1 (is_not alphanum) >>= fun x -> return @@ String.of_char_list x
@@ -315,7 +315,7 @@ module Make (Syntax : Syntax.S) = struct
   let generate_everything_hole_parser
       ?priority_left_delimiter:left_delimiter
       ?priority_right_delimiter:right_delimiter =
-    let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
+    let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[0-9A-Za-z]+$") _delim) in
     let _whitespace = many1 space |>> String.of_char_list in
     let between_nested_delims p =
       let capture_delimiter_result p ~from =
@@ -647,13 +647,14 @@ module Make (Syntax : Syntax.S) = struct
     (* everything else *)
     <|> (fun x ->
         ((many1 (is_not (reserved _s)) >>= fun cl ->
-          let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
+          let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[0-9A-Za-z]+$") _delim) in
           if debug then Format.printf "<cl>%s</cl>" @@ String.of_char_list cl;
           return @@ String.of_char_list cl)
          |>> generate_string_token_parser) x)
 
   and generate_outer_delimiter_parsers ~left_delimiter ~right_delimiter s =
-    let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
+    let _is_alphanum _delim =
+      Pcre.(pmatch ~rex:(regexp "^[0-9A-Za-z]+$") _delim) in
     let _whitespace = many1 space |>> String.of_char_list in
     let _required_delimiter_terminal =
       many1 (is_not alphanum) >>= fun x -> return @@ String.of_char_list x
@@ -670,7 +671,6 @@ module Make (Syntax : Syntax.S) = struct
                let _prev = prev_char s in
                let _curr = read_char s in
                let _next = next_char s in
-               (*
                let print_if = function
                  | Some s -> s
                  | None -> '?'
@@ -678,11 +678,12 @@ module Make (Syntax : Syntax.S) = struct
                if debug_hole then Format.printf "prev: %c curr: %c next: %c@."
                    (print_if _prev)
                    (print_if _curr)
-                   (print_if _next); *)
+                   (print_if _next);
                (if _is_alphanum left_delimiter then
                   (if Option.is_some _prev && _is_alphanum (Char.to_string (Option.value_exn _prev)) then
                      fail "no"
                    else
+                     (* why don't i check for after part here? dunno *)
                      string left_delimiter)
                 else
                   string left_delimiter
