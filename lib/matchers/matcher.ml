@@ -199,30 +199,29 @@ module Make (Syntax : Syntax.S) = struct
                string from >>= fun from ->
                (* alphanum start must be followed by space or a non-alphanum delim *)
                look_ahead _whitespace >>= fun _ ->
+               Format.printf "PASSED: %s@." from;
                return from)
             ;
               (*if _is_alphanum @@ Char.to_string @@ Option.value_exn x then
                 fail ""
                 else*)
-              (fun s4 ->
-                 Format.printf "A %s@." until;
-                 let x = next_char s4 in
-                 let curr = read_char s4 in
-                 if debug then Format.printf "curr: %c next: %c@." (Option.value_exn curr) (Option.value_exn x);
-                 (string until) s4) >>= fun until ->
-              (fun s3 ->
-                 Format.printf "X %s@." until;
-                 let x = next_char s3 in
-                 let curr = read_char s3 in
-                 if debug then Format.printf "curr: %c next: %c@." (Option.value_exn curr) (Option.value_exn x);
-                 (eof <|> look_ahead (skip _whitespace)) s3) >>= fun _ ->
-              (* if current char /next_char is alphanum, make unsat. *)
-              (fun s2 ->
-                 (Format.printf "PASSED: %s@." until;
-                  let x = next_char s2 in
-                  let curr = read_char s2 in
-                  if debug then Format.printf "curr: %c next: %c@." (Option.value_exn curr) (Option.value_exn x);
-                  return until) s2)]
+              (fun s ->
+                 let _prev = prev_char s in
+                 let _curr = read_char s in
+                 let _next = next_char s in
+                 (string until >>= fun until ->
+                  eof <|> look_ahead (skip _whitespace) >>= fun _ ->
+                  (* if current char /next_char is alphanum, make unsat. *)
+                  (*Format.printf "PASSED: %s@." until;
+                    if debug then Format.printf "prev: %c curr: %c next: %c@."
+                      (Option.value_exn _prev)
+                      (Option.value_exn _curr)
+                      (Option.value_exn _next);*)
+                  if _is_alphanum (Char.to_string (Option.value_exn _prev)) then
+                    fail "no"
+                  else
+                    return until) s)
+            ]
           else
             [ string from
             ; string until]
@@ -471,7 +470,7 @@ module Make (Syntax : Syntax.S) = struct
         nested_delimiters_parser generate_outer_delimiter_parsers x)
     (* whitespace is handled specially because we may change whether they are significant for matching. Only parse
        whitespace if it isn't a prefix required for alphanumeric delimiters, which take priority.*)
-    <|> (fun x -> Format.printf "<sp.>%!"; (spaces1 |>> generate_spaces_parser) x)
+    <|> (fun x -> (*Format.printf "attempt <sp.>%!"; *) (spaces1 |>> generate_spaces_parser) x)
     (* everything else *)
     <|> (fun x ->
         (*Format.printf "@.Char sequence->@.";*)
