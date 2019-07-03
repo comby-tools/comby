@@ -370,7 +370,7 @@ module Make (Syntax : Syntax.S) = struct
                      <|> return ""
                  ) >>= fun prefix_opening ->
                  if prefix_opening <> "" then
-                   Format.printf "Nabbed <cl>%s</cl>" prefix_opening;
+                   if debug_hole then Format.printf "Nabbed <cl>%s</cl>" prefix_opening;
                  (*if debug_hole then Format.printf "Hole: Past required delim terminal <whitespace>. trying: %s@." from;*)
                  string from >>= fun open_delimiter ->
                  if debug_hole then Format.printf "Hole: Past string: <d>%s</d>@." open_delimiter;
@@ -692,8 +692,9 @@ module Make (Syntax : Syntax.S) = struct
           @ [
             (* fixes the case for 'echo '(def body endly)' | ./comby 'def :[1] end' ':[1]' .rb -stdin' *)
             (if _is_alphanum right_delimiter then
-               string right_delimiter >>= fun _ ->
-               look_ahead @@ _required_delimiter_terminal
+               string right_delimiter >>= fun delim ->
+               look_ahead @@ (eof <|> skip (_required_delimiter_terminal)) >>= fun _ ->
+               return delim
              else
                string right_delimiter)
             >>= fun _ -> f [right_delimiter]])
