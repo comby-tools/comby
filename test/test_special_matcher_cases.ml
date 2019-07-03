@@ -111,7 +111,6 @@ let%expect_test "ocaml_complex_blocks_with_same_end" =
         end</1>
 |}]
 
-(* FIXME(#35): "before" triggers "for" block *)
 let%expect_test "ruby_blocks" =
   let source = {|
 class ActionController::Base
