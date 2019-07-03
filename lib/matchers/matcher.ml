@@ -452,6 +452,7 @@ module Make (Syntax : Syntax.S) = struct
                            else
                              None)
                        |> List.map ~f:string
+                       |> List.map ~f:attempt
                      in
                      (* needs to be not alphanum AND not non-alphanum delim. if it is
                         a paren, we need to fail and get out of this alphanum block
@@ -477,11 +478,12 @@ module Make (Syntax : Syntax.S) = struct
                              else
                                None)
                          |> List.map ~f:string
+                         |> List.map ~f:attempt
                        in
                        (* as above. get rid of copypasta *)
                        many1 (is_not (skip (choice reserved) <|> skip alphanum)) >>= fun x ->
                        return @@ String.of_char_list x in
-                     look_ahead required_delimiter_terminal >>= fun _ -> string until
+                     string until >>= fun _ -> look_ahead (required_delimiter_terminal)
                  ) s)
             ]
           else
