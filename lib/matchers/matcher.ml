@@ -322,6 +322,7 @@ module Make (Syntax : Syntax.S) = struct
         let until = until_of_from from in
         let p =
           if _is_alphanum from then
+            (* make this not so fucked *)
             let required_delimiter_terminal =
               let reserved =
                 Syntax.user_defined_delimiters
@@ -346,11 +347,11 @@ module Make (Syntax : Syntax.S) = struct
                  let _prev = prev_char s in
                  let _curr = read_char s in
                  let _next = next_char s in
-                 (*Format.printf "PASSED: %s@." until;
-                   if debug_hole then Format.printf "H_prev: %c H_curr: %c H_next: %c@."
+                 Format.printf "PASSED: %s@." until;
+                 if debug_hole then Format.printf "H_prev: %c H_curr: %c H_next: %c@."
                      (Option.value_exn _prev)
                      (Option.value_exn _curr)
-                     (Option.value_exn _next);*)
+                     (Option.value_exn _next);
                  (
                    if _is_alphanum (Char.to_string (Option.value_exn _prev)) then
                      (* if prev char is alphanum, this can't possibly be a delim *)
@@ -440,17 +441,47 @@ module Make (Syntax : Syntax.S) = struct
                    (* if prev char is alphanum, this can't possibly be a delim *)
                    fail "no"
                  else
-                   (* under other conditions (not alphanum, so it was a ( or whitespace), just return it.
-                      might as well be skip.*)
-                   string from) s)
+                   (* under other conditions :
+                      option1 : it is not alphanum, so it was a ( or whitespace): this is (almost) sat, so just return if so. it may *not* be sat if it is *not* followed by the expected 'whitespace', or rather, non-alphanum AND non alphanum delimiter. FIXME use skip. *)
+                   let required_delimiter_terminal =
+                     let reserved =
+                       Syntax.user_defined_delimiters
+                       |> List.filter_map ~f:(fun (from, _) ->
+                           if not (_is_alphanum from) then
+                             Some from
+                           else
+                             None)
+                       |> List.map ~f:string
+                     in
+                     (* needs to be not alphanum AND not non-alphanum delim. if it is
+                        a paren, we need to fail and get out of this alphanum block
+                        parser (but why did we end up in here? because we said that
+                        we'd accept anything as prefix to 'def', including '(', and
+                        so '(' is not handled as a delim. )*)
+                     many1 (is_not (skip (choice reserved) <|> skip alphanum)) >>= fun x ->
+                     return @@ String.of_char_list x in
+                   string from >>= fun _ -> look_ahead required_delimiter_terminal) s)
             ; (fun s -> (
                    let _prev = prev_char s in
                    if _is_alphanum (Char.to_string (Option.value_exn _prev)) then
                      (* if prev char is alphanum, this can't possibly be a delim *)
                      fail "no"
                    else
-                     (* may as well be skip *)
-                     string until
+                     (* similar case to above. FIXME use skip *)
+                     let required_delimiter_terminal =
+                       let reserved =
+                         Syntax.user_defined_delimiters
+                         |> List.filter_map ~f:(fun (from, _) ->
+                             if not (_is_alphanum from) then
+                               Some from
+                             else
+                               None)
+                         |> List.map ~f:string
+                       in
+                       (* as above. get rid of copypasta *)
+                       many1 (is_not (skip (choice reserved) <|> skip alphanum)) >>= fun x ->
+                       return @@ String.of_char_list x in
+                     look_ahead required_delimiter_terminal >>= fun _ -> string until
                  ) s)
             ]
           else
