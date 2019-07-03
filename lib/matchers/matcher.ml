@@ -120,17 +120,25 @@ module Make (Syntax : Syntax.S) = struct
     let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
     let _whitespace = many1 space |>> String.of_char_list in
     let between p from until =
-      string from >>= fun from ->
-      (if _is_alphanum from then look_ahead _whitespace (* or hole *) else return "")
-      >>= fun _ ->
-      if debug then Format.printf "<d>%s</d>%!" from;
-      if debug then Format.printf "<sp>";
-      p >>= fun p_result ->
-      string until >>= fun until ->
-      (if _is_alphanum until then eof <|> look_ahead (skip _whitespace) (* or hole? *) else return ())
-      >>= fun _ ->
-      if debug then Format.printf "<d>%s</d>%!" until;
-      return p_result
+      (fun s ->
+         begin
+           string from >>= fun from ->
+           (if _is_alphanum from then look_ahead _whitespace (* or hole *) else return "")
+           >>= fun _ ->
+           if debug then Format.printf "<d>%s</d>%!" from;
+           if debug then Format.printf "<sp>";
+           p >>= fun p_result ->
+           (* can't parse whitespace because p above already would. 'look_behind' needed? *)
+           (*(if _is_alphanum until then (skip _whitespace) else return ()) >>= fun _ ->*)
+
+           (* do not consider until valid unless current char/token is like whitespace or non-alphanum delim or hole *)
+           string until >>= fun until ->
+           (if _is_alphanum until then eof <|> look_ahead (skip _whitespace) (* or hole? *) else return ())
+           >>= fun _ ->
+           if debug then Format.printf "<d>%s</d>%!" until;
+           return p_result
+         end
+           s)
     in
     Syntax.user_defined_delimiters
     |> List.map ~f:(fun (left_delimiter, right_delimiter) ->
@@ -180,21 +188,41 @@ module Make (Syntax : Syntax.S) = struct
     ; everything
     ]
 
-  let reserved_delimiters =
+  let reserved_delimiters _s =
     let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
     let _whitespace = many1 space |>> String.of_char_list in
     let reserved_delimiters =
       List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) ->
-          if _is_alphanum from then
+          if _is_alphanum from && _is_alphanum until then
             [ ((_whitespace) >>= fun _ ->
                (* alphanum start must be prefixed by space, non-alphanum delim, or nothing *)
                string from >>= fun from ->
                (* alphanum start must be followed by space or a non-alphanum delim *)
                look_ahead _whitespace >>= fun _ ->
                return from)
-            ; string until >>= fun until ->
-              eof <|> look_ahead (skip _whitespace) >>= fun _ ->
-              return until]
+            ;
+              (*if _is_alphanum @@ Char.to_string @@ Option.value_exn x then
+                fail ""
+                else*)
+              (fun s4 ->
+                 Format.printf "A %s@." until;
+                 let x = next_char s4 in
+                 let curr = read_char s4 in
+                 if debug then Format.printf "curr: %c next: %c@." (Option.value_exn curr) (Option.value_exn x);
+                 (string until) s4) >>= fun until ->
+              (fun s3 ->
+                 Format.printf "X %s@." until;
+                 let x = next_char s3 in
+                 let curr = read_char s3 in
+                 if debug then Format.printf "curr: %c next: %c@." (Option.value_exn curr) (Option.value_exn x);
+                 (eof <|> look_ahead (skip _whitespace)) s3) >>= fun _ ->
+              (* if current char /next_char is alphanum, make unsat. *)
+              (fun s2 ->
+                 (Format.printf "PASSED: %s@." until;
+                  let x = next_char s2 in
+                  let curr = read_char s2 in
+                  if debug then Format.printf "curr: %c next: %c@." (Option.value_exn curr) (Option.value_exn x);
+                  return until) s2)]
           else
             [ string from
             ; string until]
@@ -218,8 +246,8 @@ module Make (Syntax : Syntax.S) = struct
     |> List.map ~f:attempt
     |> choice
 
-  let reserved =
-    reserved_delimiters
+  let reserved s =
+    reserved_delimiters s
     <|> skip (space |>> Char.to_string)
 
   let until_of_from from =
@@ -443,11 +471,14 @@ module Make (Syntax : Syntax.S) = struct
         nested_delimiters_parser generate_outer_delimiter_parsers x)
     (* whitespace is handled specially because we may change whether they are significant for matching. Only parse
        whitespace if it isn't a prefix required for alphanumeric delimiters, which take priority.*)
-    <|> (spaces1 |>> generate_spaces_parser)
+    <|> (fun x -> Format.printf "<sp.>%!"; (spaces1 |>> generate_spaces_parser) x)
     (* everything else *)
     <|> (fun x ->
         (*Format.printf "@.Char sequence->@.";*)
-        ((many1 (is_not reserved) >>= fun cl ->
+        (* is_not knows to not parse space. it will return control. The trouble is
+           we want to check " begin", when it already started spinning and sees ' bbegin' *)
+        ((many1 (is_not (reserved _s)) >>= fun cl ->
+          let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
           if debug then Format.printf "<cl>%s</cl>" @@ String.of_char_list cl;
           return @@ String.of_char_list cl)
          |>> generate_string_token_parser) x)
