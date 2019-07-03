@@ -122,9 +122,24 @@ module Make (Syntax : Syntax.S) = struct
   let nested_delimiters_parser (f : 'a nested_delimiter_callback) =
     let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
     let _whitespace = many1 space |>> String.of_char_list in
+    let _required_delimiter_terminal =
+      many1 (is_not alphanum) >>= fun x -> return @@ String.of_char_list x
+    in
     let between p from until =
       (fun s ->
          begin
+           let _prev = prev_char s in
+           let _curr = read_char s in
+           let _next = next_char s in
+           (*Format.printf "PASSED: %s@." until;
+             let print_if = function
+             | Some s -> s
+             | None -> '?'
+             in
+             if debug_hole then Format.printf "H_prev: %c H_curr: %c H_next: %c@."
+               (print_if _prev)
+               (print_if _curr)
+               (print_if _next);*)
            string from >>= fun from ->
            (if _is_alphanum from then look_ahead _whitespace (* or hole *) else return "")
            >>= fun _ ->
@@ -584,8 +599,10 @@ module Make (Syntax : Syntax.S) = struct
   and generate_outer_delimiter_parsers ~left_delimiter ~right_delimiter s =
     (generate_parsers s >>= fun p_list ->
      (turn_holes_into_matchers_for_this_level ~left_delimiter ~right_delimiter
-        ([ string left_delimiter
-           >>= fun _ -> f [left_delimiter]]
+        ([ (fun s ->
+             (* modification incoming: generate parser only if alphanum condition holds *)
+             (string left_delimiter
+              >>= fun _ -> f [left_delimiter]) s)]
          @ p_list
          @ [ string right_delimiter
              >>= fun _ -> f [right_delimiter]])
