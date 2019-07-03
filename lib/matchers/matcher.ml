@@ -141,6 +141,7 @@ module Make (Syntax : Syntax.S) = struct
                (print_if _curr)
                (print_if _next);*)
            string from >>= fun from ->
+           (* FIXME: not whitespace lookahead *)
            (if _is_alphanum from then look_ahead _whitespace (* or hole *) else return "")
            >>= fun _ ->
            if debug then Format.printf "<d>%s</d>%!" from;
@@ -212,6 +213,7 @@ module Make (Syntax : Syntax.S) = struct
     let reserved_delimiters =
       List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) ->
           if _is_alphanum from && _is_alphanum until then
+            (* FIXME *)
             [ ((_whitespace) >>= fun _ ->
                (* alphanum start must be prefixed by space, non-alphanum delim, or nothing *)
                string from >>= fun from ->
@@ -597,15 +599,49 @@ module Make (Syntax : Syntax.S) = struct
          |>> generate_string_token_parser) x)
 
   and generate_outer_delimiter_parsers ~left_delimiter ~right_delimiter s =
+    let _is_alphanum _delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]*$") _delim) in
+    let _whitespace = many1 space |>> String.of_char_list in
+    let _required_delimiter_terminal =
+      many1 (is_not alphanum) >>= fun x -> return @@ String.of_char_list x
+    in
     (generate_parsers s >>= fun p_list ->
      (turn_holes_into_matchers_for_this_level ~left_delimiter ~right_delimiter
-        ([ (fun s ->
+        ([
+          (fun s ->
              (* modification incoming: generate parser only if alphanum condition holds *)
-             (string left_delimiter
-              >>= fun _ -> f [left_delimiter]) s)]
-         @ p_list
-         @ [ string right_delimiter
-             >>= fun _ -> f [right_delimiter]])
+             (
+               (* this logic is needed for cases where we say 'def :[1] end' in the template,
+                  and don't match partially on 'adef body endq' in the underlying generated
+                  parser *)
+               let _prev = prev_char s in
+               let _curr = read_char s in
+               let _next = next_char s in
+               let print_if = function
+                 | Some s -> s
+                 | None -> '?'
+               in
+               if debug_hole then Format.printf "H_prev: %c H_curr: %c H_next: %c@."
+                   (print_if _prev)
+                   (print_if _curr)
+                   (print_if _next);
+               (if _is_alphanum left_delimiter then
+                  (if Option.is_some _prev && _is_alphanum (Char.to_string (Option.value_exn _prev)) then
+                     fail "no"
+                   else
+                     string left_delimiter)
+                else
+                  string left_delimiter
+               )
+               >>= fun _ -> f [left_delimiter]) s)]
+          @ p_list
+          @ [
+            (* fixes the case for 'echo '(def body endly)' | ./comby 'def :[1] end' ':[1]' .rb -stdin' *)
+            (if _is_alphanum right_delimiter then
+               string right_delimiter >>= fun _ ->
+               look_ahead @@ _required_delimiter_terminal
+             else
+               string right_delimiter)
+            >>= fun _ -> f [right_delimiter]])
       |> sequence_chain)
      |> return
     ) s
