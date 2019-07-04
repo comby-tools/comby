@@ -364,54 +364,57 @@ module Make (Syntax : Syntax.S) = struct
         Syntax.user_defined_delimiters
     in
     let handle_alphanum_delimiters from until p =
-      let mandatory_prefix =
-        (* needs to be not alphanum AND not non-alphanum delim. if it is
-           a paren, we need to fail and get out of this alphanum block
-           parser (but why did we end up in here? because we said that
-           we'd accept anything as prefix to 'def', including '(', and
-           so '(' is not handled as a delim. )*)
-        alphanum_delimiter_must_satisfy
+      (* mandatory_prefix: needs to be not alphanum AND not non-alphanum delim. if it is
+         a paren, we need to fail and get out of this alphanum block
+         parser (but why did we end up in here? because we said that
+         we'd accept anything as prefix to 'def', including '(', and
+         so '(' is not handled as a delim. )*)
+      let mandatory_prefix = alphanum_delimiter_must_satisfy in
+      (* mandatory_suffix: be more strict with suffix of pening delimiter: don't use
+         'any non-alphanum', but instead use whitespace. because 'def;' is garbage,
+         and 'def.foo' may be intentional. but end. or end; probably is a closing delim *)
+      let mandatory_suffix = choice reserved_alphanum_delimiter_must_satisfy <|> whitespace in
+      let satisfy_opening_delimiter prev =
+        (match prev with
+         | Some prev when is_alphanum (Char.to_string prev) -> fail "no"
+         (* try parse white space, and we want to cpature its
+            length, in case this is a space between, like 'def def
+            end end'. But in the case where there's no space, it
+            means we have just entered the beginning of the hole
+            which may start with the 'd' of 'def', but since we
+            already know that the previous char is not alphanum in this branch (so
+            it is a delimiter or whitespace) it is OK to
+            continue: in this case, return "" *)
+         | _ -> mandatory_prefix <|> return "")
+        >>= fun prefix ->
+        string from >>= fun open_delimiter ->
+        with_debug (`Checkpoint ("open_delimiter_<pre>"^prefix^"</pre>_sat_for", open_delimiter)) >>= fun _ ->
+        (* Use look_ahead to ensure that there is, e.g., whitespace after this
+           possible delimiter, but without consuming input. Whitespace needs to
+           not be consumed so that we can detect subsequent delimiters. *)
+        look_ahead @@ mandatory_suffix >>= fun suffix ->
+        with_debug (`Checkpoint ("open_delimiter_<suf>"^suffix^"</suf>_sat_for", open_delimiter)) >>= fun _ ->
+        return (prefix, open_delimiter)
       in
-      let mandatory_suffix =
-        (* be more strict with suffix of pening delimiter: don't use
-           'any non-alphanum', but instead use whitespace. because 'def;' is garbage,
-           and 'def.foo' may be intentional. but end. or end; probably is a closing delim *)
-        (choice reserved_alphanum_delimiter_must_satisfy <|> whitespace)
+      let satisfy_closing_delimiter =
+        string until >>= fun close_delimiter ->
+        (* look_ahead untested *)
+        look_ahead @@ mandatory_suffix >>= fun suffix ->
+        with_debug (`Checkpoint ("close_delimiter_<suf>"^suffix^"</suf>_sat_for", close_delimiter)) >>= fun _ ->
+        return close_delimiter
       in
-      (* Use attempt so that, e.g., 'struct' is tried after 'begin' delimiters under choice. *)
-      attempt @@
       (fun s ->
-         (
-           let prev = prev_char s in
-           (match prev with
-            | Some prev when is_alphanum (Char.to_string prev) -> fail "no"
-            (* try parse white space, and we want to cpature its
-               length, in case this is a space between, like 'def def
-               end end'. But in the case where there's no space, it
-               means we have just entered the beginning of the hole
-               which may start with the 'd' of 'def', but since we
-               already know that the previous char is not alphanum in this branch (so
-               it is a delimiter or whitespace) it is OK to
-               continue: in this case, return "" *)
-            | _ -> mandatory_prefix <|> return "")
-           >>= fun prefix ->
-           string from >>= fun open_delimiter ->
-           with_debug (`Checkpoint ("open_delimiter_<pre>"^prefix^"</pre>_sat_for", open_delimiter)) >>= fun _ ->
-           (* Use look_ahead to ensure that there is, e.g., whitespace after this
-              possible delimiter, but without consuming input. Whitespace needs to
-              not be consumed so that we can detect subsequent delimiters. *)
-           look_ahead @@ mandatory_suffix >>= fun suffix ->
-           with_debug (`Checkpoint ("open_delimiter_<suf>"^suffix^"</suf>_sat_for", open_delimiter)) >>= fun _ ->
-           p >>= fun in_between ->
-           with_debug (`Body in_between) >>= fun in_between ->
-           string until >>= fun close_delimiter ->
-           (* look_ahead untested *)
-           look_ahead @@ mandatory_suffix >>= fun suffix ->
-           with_debug (`Checkpoint ("close_delimiter_<suf>"^suffix^"</suf>_sat_for", close_delimiter)) >>= fun _ ->
-           return
-             ((prefix^open_delimiter)
-              ^in_between
-              ^close_delimiter)) s)
+         let prev = prev_char s in
+         (satisfy_opening_delimiter prev >>= fun (prefix, open_delimiter) ->
+          p >>= fun in_between ->
+          with_debug (`Body in_between) >>= fun in_between ->
+          satisfy_closing_delimiter >>= fun close_delimiter ->
+          return
+            ((prefix^open_delimiter)
+             ^in_between
+             ^close_delimiter)) s)
+      (* Use attempt so that, e.g., 'struct' is tried after 'begin' delimiters under choice. *)
+      |> attempt
     in
     let handle_alphanum_delimiters_reserved_trigger from until =
       (* if it's alphanum, only consider it reserved if there is, say, whitespace after and so
