@@ -144,11 +144,9 @@ module Make (Syntax : Syntax.S) = struct
 
   let is_alphanum delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]+$") delim)
   let whitespace : (id, Match.t) parser = many1 space |>> String.of_char_list
+  let not_alphanum = many1 (is_not alphanum) |>> String.of_char_list
 
   let nested_delimiters_parser (f : 'a nested_delimiter_callback) =
-    let _required_delimiter_terminal =
-      many1 (is_not alphanum) >>= fun x -> return @@ String.of_char_list x
-    in
     let between p from until =
       (fun s ->
          begin
@@ -156,7 +154,7 @@ module Make (Syntax : Syntax.S) = struct
            string from >>= fun from ->
            if debug then with_debug s (`Delimited from);
            (* lookahead should be anything except alphanum (that includes holes). *)
-           (if is_alphanum from then look_ahead _required_delimiter_terminal else return "")
+           (if is_alphanum from then look_ahead not_alphanum else return "")
            >>= fun suffix -> if debug then with_debug s (`Delimited suffix);
            p >>= fun p_result ->
            (* can't parse whitespace because p above already would. 'look_behind' needed? *)
@@ -220,9 +218,9 @@ module Make (Syntax : Syntax.S) = struct
     ]
 
   let reserved_delimiters _s =
-    let required_from_prefix = many1 (is_not alphanum) |>> String.of_char_list in
-    let required_from_suffix = many1 (is_not alphanum) |>> String.of_char_list in
-    let required_until_suffix = many1 (is_not alphanum) |>> String.of_char_list in
+    let required_from_prefix = not_alphanum in
+    let required_from_suffix = not_alphanum in
+    let required_until_suffix = not_alphanum in
     let reserved_delimiters =
       List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) ->
           if is_alphanum from && is_alphanum until then
@@ -235,7 +233,7 @@ module Make (Syntax : Syntax.S) = struct
                    (*Format.printf "PASSED: %s@." from;*)
                    return from) s)
             ;
-                (*if is_alphanum @@ Char.to_string @@ Option.value_exn x then
+                (*if is_alphanum @@ Char.to_string @@ Option.value.e.x.n x then
                   fail ""
                   else*)
                 (fun s ->
@@ -370,31 +368,21 @@ module Make (Syntax : Syntax.S) = struct
             attempt @@
             (fun s ->
                (
-                 let _prev = prev_char s in
-                 let _curr = read_char s in
-                 let _next = next_char s in
-                 (*Format.printf "PASSED: %s@." until;
-                   if debug_hole then Format.printf "H_prev: %c H_curr: %c H_next: %c@."
-                     (Option.value_exn _prev)
-                     (Option.value_exn _curr)
-                     (Option.value_exn _next);
-                 *)
-                 (
-                   if Option.is_some _prev && is_alphanum (Char.to_string (Option.value_exn _prev)) then
-                     (* if prev char is alphanum, this can't possibly be a delim *)
-                     fail "no"
-                   else
-                     (* try parse white space, and we want to cpature its
-                        length, in case this is a space between, like 'def def
-                        end end'. But in the case where there's no space, it
-                        means we have just entered the beginning of the hole
-                        which may start with the 'd' of 'def', but since we
-                        already know that the previous char is not alphanum in this branch (so
-                        it is a delimiter or whitespace) it is OK to
-                        continue: in this case, return "" *)
-                     mandatory_prefix
-                     <|> return ""
-                 ) >>= fun prefix_opening ->
+                 let prev = prev_char s in
+                 (match prev with
+                  | Some prev when is_alphanum (Char.to_string prev) -> fail "no"
+                  | _ ->
+                    (* try parse white space, and we want to cpature its
+                       length, in case this is a space between, like 'def def
+                       end end'. But in the case where there's no space, it
+                       means we have just entered the beginning of the hole
+                       which may start with the 'd' of 'def', but since we
+                       already know that the previous char is not alphanum in this branch (so
+                       it is a delimiter or whitespace) it is OK to
+                       continue: in this case, return "" *)
+                    mandatory_prefix
+                    <|> return "")
+                 >>= fun prefix_opening ->
                  if prefix_opening <> "" then
                    if debug_hole then Format.printf "Nabbed <cl>%s</cl>" prefix_opening;
                  (*if debug_hole then Format.printf "Hole: Past required delim terminal <whitespace>. trying: %s@." from;*)
@@ -457,17 +445,10 @@ module Make (Syntax : Syntax.S) = struct
                 (let _prev = prev_char s in
                  let _curr = read_char s in
                  let _next = next_char s in
-                 (*Format.printf "Considering reserved at...@.";
-                   if debug_hole then Format.printf "H_prev: %c H_curr: %c H_next: %c@."
-                     (Option.value_exn _prev)
-                     (Option.value_exn _curr)
-                     (Option.value_exn _next);
-                 *)
                  (* if _prev is alphanum, this can't possibly be a reserved delimiter. just continue *)
-                 if Option.is_some _prev && is_alphanum (Char.to_string (Option.value_exn _prev)) then
-                   (* if prev char is alphanum, this can't possibly be a delim *)
-                   fail "no"
-                 else
+                 match _prev with
+                 | Some prev when is_alphanum (Char.to_string prev) -> fail "no"
+                 | _ ->
                    (* under other conditions : option1 : it is not alphanum, so
                       it was a ( or whitespace): this is (almost) sat, so just
                       return if so. it may *not* be sat if it is *not* followed
@@ -494,11 +475,10 @@ module Make (Syntax : Syntax.S) = struct
                    (* the following is hacky; shouldn't it include whitespace? think more carefully about it. *)
                    string from >>= fun _ -> look_ahead required_delimiter_terminal) s)
             ; (fun s -> (
-                   let _prev = prev_char s in
-                   if Option.is_some _prev && is_alphanum (Char.to_string (Option.value_exn _prev)) then
-                     (* if prev char is alphanum, this can't possibly be a delim *)
-                     fail "no"
-                   else
+                   let prev = prev_char s in
+                   match prev with
+                   | Some prev when is_alphanum (Char.to_string prev) -> fail "no"
+                   | _ ->
                      (* similar case to above. FIXME use skip *)
                      let required_delimiter_terminal =
                        let reserved =
@@ -514,7 +494,7 @@ module Make (Syntax : Syntax.S) = struct
                        (* as above. get rid of copypasta *)
                        many1 (is_not (skip (choice reserved) <|> skip alphanum)) >>= fun x ->
                        return @@ String.of_char_list x in
-                     string until >>= fun _ -> look_ahead (required_delimiter_terminal)
+                     string until >>= fun _ -> look_ahead required_delimiter_terminal
                  ) s)
             ]
           else
@@ -692,10 +672,6 @@ module Make (Syntax : Syntax.S) = struct
          |>> generate_string_token_parser) x)
 
   and generate_outer_delimiter_parsers ~left_delimiter ~right_delimiter s =
-    let _whitespace = many1 space |>> String.of_char_list in
-    let _required_delimiter_terminal =
-      many1 (is_not alphanum) >>= fun x -> return @@ String.of_char_list x
-    in
     (generate_parsers s >>= fun p_list ->
      (turn_holes_into_matchers_for_this_level ~left_delimiter ~right_delimiter
         ([
@@ -720,7 +696,7 @@ module Make (Syntax : Syntax.S) = struct
             (* fixes the case for 'echo '(def body endly)' | ./comby 'def :[1] end' ':[1]' .rb -stdin' *)
             (if is_alphanum right_delimiter then
                string right_delimiter >>= fun delim ->
-               look_ahead @@ (eof <|> skip (_required_delimiter_terminal)) >>= fun _ ->
+               look_ahead @@ (eof <|> skip not_alphanum) >>= fun _ ->
                return delim
              else
                string right_delimiter)
