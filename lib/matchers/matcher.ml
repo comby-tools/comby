@@ -354,7 +354,7 @@ module Make (Syntax : Syntax.S) = struct
         return s
       | _ -> assert false
     in
-    let weaken =
+    let delimiters =
       if weaken_delimiter_hole_matching then
         match left_delimiter, right_delimiter with
         | Some left_delimiter, Some right_delimiter ->
@@ -363,112 +363,114 @@ module Make (Syntax : Syntax.S) = struct
       else
         Syntax.user_defined_delimiters
     in
+    let handle_alphanum_delimiters from until p =
+      let mandatory_prefix =
+        (* needs to be not alphanum AND not non-alphanum delim. if it is
+           a paren, we need to fail and get out of this alphanum block
+           parser (but why did we end up in here? because we said that
+           we'd accept anything as prefix to 'def', including '(', and
+           so '(' is not handled as a delim. )*)
+        alphanum_delimiter_must_satisfy
+      in
+      let mandatory_suffix =
+        (* be more strict with suffix of pening delimiter: don't use
+           'any non-alphanum', but instead use whitespace. because 'def;' is garbage,
+           and 'def.foo' may be intentional. but end. or end; probably is a closing delim *)
+        (choice reserved_alphanum_delimiter_must_satisfy <|> whitespace)
+      in
+      (* Use attempt so that, e.g., 'struct' is tried after 'begin' delimiters under choice. *)
+      attempt @@
+      (fun s ->
+         (
+           let prev = prev_char s in
+           (match prev with
+            | Some prev when is_alphanum (Char.to_string prev) -> fail "no"
+            (* try parse white space, and we want to cpature its
+               length, in case this is a space between, like 'def def
+               end end'. But in the case where there's no space, it
+               means we have just entered the beginning of the hole
+               which may start with the 'd' of 'def', but since we
+               already know that the previous char is not alphanum in this branch (so
+               it is a delimiter or whitespace) it is OK to
+               continue: in this case, return "" *)
+            | _ -> mandatory_prefix <|> return "")
+           >>= fun prefix ->
+           string from >>= fun open_delimiter ->
+           with_debug (`Checkpoint ("open_delimiter_<pre>"^prefix^"</pre>_sat_for", open_delimiter)) >>= fun _ ->
+           (* Use look_ahead to ensure that there is, e.g., whitespace after this
+              possible delimiter, but without consuming input. Whitespace needs to
+              not be consumed so that we can detect subsequent delimiters. *)
+           look_ahead @@ mandatory_suffix >>= fun suffix ->
+           with_debug (`Checkpoint ("open_delimiter_<suf>"^suffix^"</suf>_sat_for", open_delimiter)) >>= fun _ ->
+           p >>= fun in_between ->
+           with_debug (`Body in_between) >>= fun in_between ->
+           string until >>= fun close_delimiter ->
+           (* look_ahead untested *)
+           look_ahead @@ mandatory_suffix >>= fun suffix ->
+           with_debug (`Checkpoint ("close_delimiter_<suf>"^suffix^"</suf>_sat_for", close_delimiter)) >>= fun _ ->
+           return
+             ((prefix^open_delimiter)
+              ^in_between
+              ^close_delimiter)) s)
+    in
+    let handle_alphanum_delimiters_reserved_trigger from until =
+      (* if it's alphanum, only consider it reserved if there is, say, whitespace after and so
+         handle alternatively. otherwise, return empty to indicate 'this sequence of characters
+         is not reserved' *)
+      (* under other conditions : option1 : it is not alphanum, so
+         it was a ( or whitespace): this is (almost) sat, so just
+         return if so. it may *not* be sat if it is *not* followed
+         by the expected 'whitespace', or rather, non-alphanum AND
+         non alphanum delimiter. FIXME use skip. *)
+      let required_delimiter_terminal =
+        let reserved =
+          Syntax.user_defined_delimiters
+          |> List.filter_map ~f:(fun (from, _) ->
+              if not (is_alphanum from) then
+                Some from
+              else
+                None)
+          |> List.map ~f:string
+          |> List.map ~f:attempt
+        in
+        (* needs to be not alphanum AND not non-alphanum delim. if it is
+           a paren, we need to fail and get out of this alphanum block
+           parser (but why did we end up in here? because we said that
+           we'd accept anything as prefix to 'def', including '(', and
+           so '(' is not handled as a delim. )*)
+        many1 (is_not (skip (choice reserved) <|> skip alphanum)) >>= fun x ->
+        return @@ String.of_char_list x
+      in
+      (* the following is hacky; shouldn't it include whitespace? think more carefully about it. *)
+      [from; until]
+      |> List.map ~f:(fun delimiter ->
+          (fun s ->
+             (let prev = prev_char s in
+              (* if prev is alphanum, this can't possibly be a reserved delimiter. just continue *)
+              match prev with
+              | Some prev when is_alphanum (Char.to_string prev) -> fail "no"
+              | _ -> string delimiter >>= fun _ -> look_ahead required_delimiter_terminal) s))
+    in
     let between_nested_delims p =
       let capture_delimiter_result p ~from =
         let until = until_of_from from in
-        let p =
-          if is_alphanum from then
-            (* make this not so fucked *)
-            let mandatory_prefix =
-              (* needs to be not alphanum AND not non-alphanum delim. if it is
-                 a paren, we need to fail and get out of this alphanum block
-                 parser (but why did we end up in here? because we said that
-                 we'd accept anything as prefix to 'def', including '(', and
-                 so '(' is not handled as a delim. )*)
-              alphanum_delimiter_must_satisfy
-            in
-            let mandatory_suffix =
-              (* be more strict with suffix of pening delimiter: don't use
-                 'any non-alphanum', but instead use whitespace. because 'def;' is garbage,
-                 and 'def.foo' may be intentional. but end. or end; probably is a closing delim *)
-              (choice reserved_alphanum_delimiter_must_satisfy <|> whitespace)
-            in
-            (* Use attempt so that, e.g., 'struct' is tried after 'begin' delimiters under choice. *)
-            attempt @@
-            (fun s ->
-               (
-                 let prev = prev_char s in
-                 (match prev with
-                  | Some prev when is_alphanum (Char.to_string prev) -> fail "no"
-                  (* try parse white space, and we want to cpature its
-                     length, in case this is a space between, like 'def def
-                     end end'. But in the case where there's no space, it
-                     means we have just entered the beginning of the hole
-                     which may start with the 'd' of 'def', but since we
-                     already know that the previous char is not alphanum in this branch (so
-                     it is a delimiter or whitespace) it is OK to
-                     continue: in this case, return "" *)
-                  | _ -> mandatory_prefix <|> return "")
-                 >>= fun prefix ->
-                 string from >>= fun open_delimiter ->
-                 with_debug (`Checkpoint ("open_delimiter_<pre>"^prefix^"</pre>_sat_for", open_delimiter)) >>= fun _ ->
-                 (* Use look_ahead to ensure that there is, e.g., whitespace after this
-                    possible delimiter, but without consuming input. Whitespace needs to
-                    not be consumed so that we can detect subsequent delimiters. *)
-                 look_ahead @@ mandatory_suffix >>= fun suffix ->
-                 with_debug (`Checkpoint ("open_delimiter_<suf>"^suffix^"</suf>_sat_for", open_delimiter)) >>= fun _ ->
-                 p >>= fun in_between ->
-                 with_debug (`Body in_between) >>= fun in_between ->
-                 string until >>= fun close_delimiter ->
-                 (* look_ahead untested *)
-                 look_ahead @@ mandatory_suffix >>= fun suffix ->
-                 with_debug (`Checkpoint ("close_delimiter_<suf>"^suffix^"</suf>_sat_for", close_delimiter)) >>= fun _ ->
-                 return
-                   ((prefix^open_delimiter)
-                    ^in_between
-                    ^close_delimiter)) s)
-          else
-            between (string from) (string until) p
-            >>= fun result -> return (String.concat @@ [from] @ result @ [until])
-        in
-        p
+        if is_alphanum from then
+          handle_alphanum_delimiters from until p
+        else
+          between (string from) (string until) p
+          >>= fun result -> return (String.concat @@ [from] @ result @ [until])
       in
-      weaken
+      delimiters
       |> List.map ~f:(fun pair -> capture_delimiter_result p ~from:(fst pair))
       |> choice
     in
     (* the cases for which we need to stop parsing just characters
        and consider delimiters *)
     let reserved =
-      weaken
+      delimiters
       |> List.concat_map ~f:(fun (from, until) ->
           if is_alphanum from then
-            (* if it's alphanum, only consider it reserved if there is, say, whitespace after and so
-               handle alternatively. otherwise, return empty to indicate 'this sequence of characters
-               is not reserved' *)
-            (* under other conditions : option1 : it is not alphanum, so
-               it was a ( or whitespace): this is (almost) sat, so just
-               return if so. it may *not* be sat if it is *not* followed
-               by the expected 'whitespace', or rather, non-alphanum AND
-               non alphanum delimiter. FIXME use skip. *)
-            let required_delimiter_terminal =
-              let reserved =
-                Syntax.user_defined_delimiters
-                |> List.filter_map ~f:(fun (from, _) ->
-                    if not (is_alphanum from) then
-                      Some from
-                    else
-                      None)
-                |> List.map ~f:string
-                |> List.map ~f:attempt
-              in
-              (* needs to be not alphanum AND not non-alphanum delim. if it is
-                 a paren, we need to fail and get out of this alphanum block
-                 parser (but why did we end up in here? because we said that
-                 we'd accept anything as prefix to 'def', including '(', and
-                 so '(' is not handled as a delim. )*)
-              many1 (is_not (skip (choice reserved) <|> skip alphanum)) >>= fun x ->
-              return @@ String.of_char_list x
-            in
-            (* the following is hacky; shouldn't it include whitespace? think more carefully about it. *)
-            [from; until]
-            |> List.map ~f:(fun delimiter ->
-                (fun s ->
-                   (let prev = prev_char s in
-                    (* if prev is alphanum, this can't possibly be a reserved delimiter. just continue *)
-                    match prev with
-                    | Some prev when is_alphanum (Char.to_string prev) -> fail "no"
-                    | _ -> string delimiter >>= fun _ -> look_ahead required_delimiter_terminal) s))
+            handle_alphanum_delimiters_reserved_trigger from until
           else
             [string from; string until]
         )
