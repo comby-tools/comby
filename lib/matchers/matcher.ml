@@ -15,8 +15,10 @@ let debug =
   | Some _ -> true
   | None -> false
 
-let debug_hole = false
-
+let debug_hole =
+  match Sys.getenv "DEBUG" with
+  | Some _ -> true
+  | None -> false
 
 let f _ = return Unit
 
@@ -323,15 +325,18 @@ module Make (Syntax : Syntax.S) = struct
         let p =
           if _is_alphanum from then
             (* make this not so fucked *)
-            let required_delimiter_terminal =
+            let mandatory_prefix =
               let reserved =
                 Syntax.user_defined_delimiters
-                |> List.filter_map ~f:(fun (from, _) ->
+                |> List.filter_map ~f:(fun (from, until) ->
                     if not (_is_alphanum from) then
-                      Some from
+                      Some [from; until]
                     else
                       None)
+                |> List.concat
                 |> List.map ~f:string
+                (* not tested, this doesn't need to be attempt for (), etc. but if that ever changed... *)
+                |> List.map ~f:attempt
               in
               (* needs to be not alphanum AND not non-alphanum delim. if it is
                  a paren, we need to fail and get out of this alphanum block
@@ -339,7 +344,27 @@ module Make (Syntax : Syntax.S) = struct
                  we'd accept anything as prefix to 'def', including '(', and
                  so '(' is not handled as a delim. )*)
               many1 (is_not (skip (choice reserved) <|> skip alphanum)) >>= fun x ->
-              return @@ String.of_char_list x in
+              return @@ String.of_char_list x
+            in
+            let mandatory_suffix =
+              let reserved =
+                Syntax.user_defined_delimiters
+                |> List.filter_map ~f:(fun (from, until) ->
+                    if not (_is_alphanum from) then
+                      Some [from; until]
+                    else
+                      None)
+                |> List.concat
+                |> List.map ~f:string
+                |> List.map ~f:attempt
+              in
+              (* be more strict with suffix of pening delimiter: don't use
+                 'any non-alphanum', but instead use whitespace. because 'def;' is garbage,
+                 and 'def.foo' may be intentional. but end. or end; probably is a closing delim *)
+              (choice reserved
+               <|> _whitespace) >>= fun x ->
+              return x
+            in
             (* Use attempt so that, e.g., 'struct' is tried after 'begin' delimiters under choice. *)
             attempt @@
             (fun s ->
@@ -366,25 +391,25 @@ module Make (Syntax : Syntax.S) = struct
                         already know that the previous char is not alphanum in this branch (so
                         it is a delimiter or whitespace) it is OK to
                         continue: in this case, return "" *)
-                     required_delimiter_terminal
+                     mandatory_prefix
                      <|> return ""
                  ) >>= fun prefix_opening ->
                  if prefix_opening <> "" then
                    if debug_hole then Format.printf "Nabbed <cl>%s</cl>" prefix_opening;
                  (*if debug_hole then Format.printf "Hole: Past required delim terminal <whitespace>. trying: %s@." from;*)
                  string from >>= fun open_delimiter ->
-                 if debug_hole then Format.printf "Hole: Past string: <d>%s</d>@." open_delimiter;
+                 if debug_hole then Format.printf "Hole: Past string<3: <d>%s</d>@." open_delimiter;
                  (* Use look_ahead to ensure that there is, e.g., whitespace after this
                     possible delimiter, but without consuming input. Whitespace needs to
                     not be consumed so that we can detect subsequent delimiters. *)
-                 look_ahead @@ required_delimiter_terminal >>= fun _unconsumed_opening_suffix ->
-                 (*if debug_hole then Format.printf "Hole: Past required delimiter terminal: <%s>@." unconsumed_opening_suffix;*)
+                 look_ahead @@ mandatory_suffix >>= fun _unconsumed_opening_suffix ->
+                 (*if debug_hole then Format.printf "Hole: Past required delimiter terminal: <%s>@." _unconsumed_opening_suffix;*)
                  p >>= fun in_between ->
                  (* think whitespace needs to be tracked here, but p will swallow it, so can't :(. look behind? *)
                  if debug_hole then Format.printf "<body>%s</body>@." @@ String.concat in_between;
                  string until >>= fun close_delimiter ->
                  (* look_ahead untested *)
-                 look_ahead @@ required_delimiter_terminal >>= fun _unconsumed_closing_suffix ->
+                 look_ahead @@ mandatory_suffix >>= fun _unconsumed_closing_suffix ->
                  if debug_hole then Format.printf "Past ending<d>%s</d>" close_delimiter;
                  return
                    ((prefix_opening^open_delimiter)
@@ -462,6 +487,7 @@ module Make (Syntax : Syntax.S) = struct
                         so '(' is not handled as a delim. )*)
                      many1 (is_not (skip (choice reserved) <|> skip alphanum)) >>= fun x ->
                      return @@ String.of_char_list x in
+                   (* the following is hacky; shouldn't it include whitespace? think more carefully about it. *)
                    string from >>= fun _ -> look_ahead required_delimiter_terminal) s)
             ; (fun s -> (
                    let _prev = prev_char s in
