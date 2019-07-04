@@ -142,10 +142,10 @@ module Make (Syntax : Syntax.S) = struct
         Format.printf "<d_s>%s</d_s>%!" suffix
       | _ -> assert false
 
-  let is_alphanum delim = Pcre.(pmatch ~rex:(regexp "^[0-9A-Za-z]+$") delim)
+  let is_alphanum delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]+$") delim)
+  let whitespace : (id, Match.t) parser = many1 space |>> String.of_char_list
 
   let nested_delimiters_parser (f : 'a nested_delimiter_callback) =
-    let _whitespace = many1 space |>> String.of_char_list in
     let _required_delimiter_terminal =
       many1 (is_not alphanum) >>= fun x -> return @@ String.of_char_list x
     in
@@ -160,12 +160,12 @@ module Make (Syntax : Syntax.S) = struct
            >>= fun suffix -> if debug then with_debug s (`Delimited suffix);
            p >>= fun p_result ->
            (* can't parse whitespace because p above already would. 'look_behind' needed? *)
-           (*(if is_alphanum until then (skip _whitespace) else return ()) >>= fun _ ->*)
+           (*(if is_alphanum until then (skip whitespace) else return ()) >>= fun _ ->*)
            (* do not consider until valid unless current char/token is like
               whitespace or non-alphanum delim or hole *)
            string until >>= fun until ->
            if debug then with_debug s (`Delimited until);
-           (if is_alphanum until then eof <|> look_ahead (skip _whitespace) (* or hole? *) else return ())
+           (if is_alphanum until then eof <|> look_ahead (skip whitespace) (* or hole? *) else return ())
            >>= fun _suffix -> if debug then with_debug s (`Delimited "fixme suffix");
            return p_result
          end
@@ -220,7 +220,6 @@ module Make (Syntax : Syntax.S) = struct
     ]
 
   let reserved_delimiters _s =
-    let _whitespace = many1 space |>> String.of_char_list in
     let _required_delimiter_terminal =
       many1 (is_not alphanum) >>= fun x -> return @@ String.of_char_list x
     in
@@ -326,7 +325,6 @@ module Make (Syntax : Syntax.S) = struct
   let generate_everything_hole_parser
       ?priority_left_delimiter:left_delimiter
       ?priority_right_delimiter:right_delimiter =
-    let _whitespace = many1 space |>> String.of_char_list in
     let between_nested_delims p =
       let capture_delimiter_result p ~from =
         let until = until_of_from from in
@@ -370,7 +368,7 @@ module Make (Syntax : Syntax.S) = struct
                  'any non-alphanum', but instead use whitespace. because 'def;' is garbage,
                  and 'def.foo' may be intentional. but end. or end; probably is a closing delim *)
               (choice reserved
-               <|> _whitespace) >>= fun x ->
+               <|> whitespace) >>= fun x ->
               return x
             in
             (* Use attempt so that, e.g., 'struct' is tried after 'begin' delimiters under choice. *)
@@ -801,7 +799,8 @@ module Make (Syntax : Syntax.S) = struct
     outer_p s
 
   let to_template template : ('a, Match.t) MParser.t Or_error.t =
-    match parse_string general_parser_generator template 0 with
+    (* Use a match type for state so we can reuse parsers for inner and outer *)
+    match parse_string general_parser_generator template (Match.create ()) with
     | Success p -> Ok p
     | Failed (msg, _) -> Or_error.error_string msg
 
