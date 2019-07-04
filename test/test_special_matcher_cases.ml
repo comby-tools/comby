@@ -432,3 +432,11 @@ let%expect_test "ruby_blocks_5" =
 
   run (module Matchers.Ruby) source match_template rewrite_template;
   [%expect_exact {|No matches.|}]
+
+let%expect_test "ruby_blocks_5" =
+  let source = {|(def foo end)|} in
+  let match_template = {|(def :[1] end)|} in
+  let rewrite_template = {|<1>:[1]</1>|} in
+
+  run (module Matchers.Ruby) source match_template rewrite_template;
+  [%expect_exact {|<1>foo</1>|}]
