@@ -220,18 +220,18 @@ module Make (Syntax : Syntax.S) = struct
     ]
 
   let reserved_delimiters _s =
-    let _required_delimiter_terminal =
-      many1 (is_not alphanum) >>= fun x -> return @@ String.of_char_list x
-    in
+    let required_from_prefix = many1 (is_not alphanum) |>> String.of_char_list in
+    let required_from_suffix = many1 (is_not alphanum) |>> String.of_char_list in
+    let required_until_suffix = many1 (is_not alphanum) |>> String.of_char_list in
     let reserved_delimiters =
       List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) ->
           if is_alphanum from && is_alphanum until then
             [ (fun s ->
-                  (_required_delimiter_terminal >>= fun _ ->
+                  (required_from_prefix >>= fun _ ->
                    (* alphanum start must be prefixed non-alphanum delim, or nothing *)
                    string from >>= fun from ->
                    (* alphanum start must be followed by space or a non-alphanum delim *)
-                   look_ahead _required_delimiter_terminal >>= fun _ ->
+                   look_ahead required_from_suffix >>= fun _ ->
                    (*Format.printf "PASSED: %s@." from;*)
                    return from) s)
             ;
@@ -239,21 +239,16 @@ module Make (Syntax : Syntax.S) = struct
                   fail ""
                   else*)
                 (fun s ->
-                   let _prev = prev_char s in
-                   let _curr = read_char s in
-                   let _next = next_char s in
                    (string until >>= fun until ->
-                    eof <|> look_ahead (skip _required_delimiter_terminal) >>= fun _ ->
+                    eof <|> look_ahead (skip required_until_suffix) >>= fun _ ->
                     (* if current char /next_char is alphanum, make unsat. *)
-                    (*Format.printf "PASSED: %s@." until;
-                      if debug then Format.printf "prev: %c curr: %c next: %c@."
-                        (Option.value_exn _prev)
-                        (Option.value_exn _curr)
-                        (Option.value_exn _next);*)
-                    if Option.is_some _prev && is_alphanum (Char.to_string (Option.value_exn _prev)) then
-                      fail "no"
-                    else
-                      return until) s)
+                    let prev = prev_char s in
+                    if debug then with_debug s (`Position "reserved_delimiter_until");
+                    match prev with
+                    | Some prev when is_alphanum (Char.to_string prev) -> fail "no"
+                    | _ -> return until
+                   )
+                     s)
             ]
           else
             [ string from
@@ -697,8 +692,6 @@ module Make (Syntax : Syntax.S) = struct
          |>> generate_string_token_parser) x)
 
   and generate_outer_delimiter_parsers ~left_delimiter ~right_delimiter s =
-    let _is_alphanum _delim =
-      Pcre.(pmatch ~rex:(regexp "^[0-9A-Za-z]+$") _delim) in
     let _whitespace = many1 space |>> String.of_char_list in
     let _required_delimiter_terminal =
       many1 (is_not alphanum) >>= fun x -> return @@ String.of_char_list x
@@ -712,23 +705,12 @@ module Make (Syntax : Syntax.S) = struct
                (* this logic is needed for cases where we say 'def :[1] end' in the template,
                   and don't match partially on 'adef body endq' in the underlying generated
                   parser *)
-               let _prev = prev_char s in
-               let _curr = read_char s in
-               let _next = next_char s in
-               let print_if = function
-                 | Some s -> s
-                 | None -> '?'
-               in
-               if debug_hole then Format.printf "prev: %c curr: %c next: %c@."
-                   (print_if _prev)
-                   (print_if _curr)
-                   (print_if _next);
-               (if _is_alphanum left_delimiter then
-                  (if Option.is_some _prev && _is_alphanum (Char.to_string (Option.value_exn _prev)) then
-                     fail "no"
-                   else
-                     (* why don't i check for after part here? dunno *)
-                     string left_delimiter)
+               let prev = prev_char s in
+               if debug_hole then with_debug s (`Position "generate_outer_delimiter");
+               (if is_alphanum left_delimiter then
+                  match prev with
+                  | Some prev when is_alphanum (Char.to_string prev) -> fail "no"
+                  | _ -> string left_delimiter
                 else
                   string left_delimiter
                )
@@ -736,7 +718,7 @@ module Make (Syntax : Syntax.S) = struct
           @ p_list
           @ [
             (* fixes the case for 'echo '(def body endly)' | ./comby 'def :[1] end' ':[1]' .rb -stdin' *)
-            (if _is_alphanum right_delimiter then
+            (if is_alphanum right_delimiter then
                string right_delimiter >>= fun delim ->
                look_ahead @@ (eof <|> skip (_required_delimiter_terminal)) >>= fun _ ->
                return delim
