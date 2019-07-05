@@ -163,34 +163,15 @@ module Make (Syntax : Syntax.S) = struct
     |> List.map ~f:attempt
 
   let nested_delimiters_parser (f : 'a nested_delimiter_callback) =
+    (* all alphanum delimiter fixups happen in the generated parser, not here. *)
     let between p from until =
       (fun s ->
          begin
-           if debug then with_debug_matcher s (`Position "between_start");
            string from >>= fun from ->
            if debug then with_debug_matcher s (`Delimited from);
-           (* lookahead should be anything except alphanum (that includes holes). *)
-           (* TODO(RVT): don't think this should be only not_alphanum *)
-           (if is_alphanum from then look_ahead not_alphanum else return "")
-           >>= fun suffix ->
-           with_debug_matcher s (`Checkpoint ("open_delimiter_<suf>"^suffix^"</suf>_sat_for", from));
            p >>= fun p_result ->
-           (* can't parse whitespace because p above already would. 'look_behind' needed? *)
-           (*(if is_alphanum until then (skip whitespace) else return ()) >>= fun _ ->*)
-           (* do not consider until valid unless current char/token is like
-              whitespace or non-alphanum delim or hole *)
            string until >>= fun until ->
-           with_debug_matcher s (`Checkpoint ("passed_and_expect_suffix_for", until));
-           let mandatory_alphanum_suffix =
-             choice reserved_alphanum_delimiter_must_satisfy <|> whitespace
-           in
-           (if is_alphanum until then
-              (eof >>= fun () -> return "<eof>") <|> look_ahead mandatory_alphanum_suffix
-            else
-              return ""
-           )
-           >>= fun suffix ->
-           with_debug_matcher s (`Checkpoint ("close_delimiter_<suf>"^suffix^"</suf>_sat_for", until));
+           if debug then with_debug_matcher s (`Delimited until);
            return p_result
          end
            s)
@@ -466,19 +447,6 @@ module Make (Syntax : Syntax.S) = struct
               | _ -> string delimiter >>= fun _ ->
                 look_ahead required_delimiter_terminal) s))
     in
-    let between_nested_delims p =
-      let capture_delimiter_result p ~from =
-        let until = until_of_from from in
-        if is_alphanum from then
-          handle_alphanum_delimiters from until p
-        else
-          between (string from) (string until) p
-          >>= fun result -> return (String.concat @@ [from] @ result @ [until])
-      in
-      delimiters
-      |> List.map ~f:(fun pair -> capture_delimiter_result p ~from:(fst pair))
-      |> choice
-    in
     (* the cases for which we need to stop parsing just characters
        and consider delimiters *)
     let reserved =
@@ -504,6 +472,19 @@ module Make (Syntax : Syntax.S) = struct
        <|> (is_not (reserved <|> (space |>> Char.to_string)) >>= fun r -> with_debug_hole (`Character r)))
         s
     and delims_over_holes s =
+      let between_nested_delims p =
+        let capture_delimiter_result p ~from =
+          let until = until_of_from from in
+          if is_alphanum from then
+            handle_alphanum_delimiters from until p
+          else
+            between (string from) (string until) p
+            >>= fun result -> return (String.concat @@ [from] @ result @ [until])
+        in
+        delimiters
+        |> List.map ~f:(fun pair -> capture_delimiter_result p ~from:(fst pair))
+        |> choice
+      in
       (between_nested_delims (many nested_grammar)) s
     in
     nested_grammar
