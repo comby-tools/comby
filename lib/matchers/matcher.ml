@@ -213,21 +213,23 @@ module Make (Syntax : Syntax.S) = struct
     >> many comment_parser
     >>= fun result -> f result
 
+  let identifier () =
+    (many (alphanum <|> char '_') |>> String.of_char_list)
+
   let everything_hole_parser () =
-    string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
+    string ":[" >> identifier () << string "]"
 
   let non_space_hole_parser () =
-    string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string ".]"
+    string ":[" >> identifier () << string ".]"
 
   let line_hole_parser () =
-    string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "\\n]"
+    string ":[" >> identifier () << string "\\n]"
 
   let blank_hole_parser () =
-    string ":[" >> (many1 blank) >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
+    string ":[" >> (many1 blank) >> identifier () << string "]"
 
   let alphanum_hole_parser () =
-    string ":[[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]]"
-    >>= fun id -> return id
+    string ":[[" >> identifier () << string "]]"
 
   let reserved_holes () =
     let alphanum = alphanum_hole_parser () in
