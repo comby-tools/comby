@@ -10,7 +10,17 @@ open Types
 let configuration_ref = ref (Configuration.create ())
 let weaken_delimiter_hole_matching = false
 
-let debug = false
+let debug =
+  Sys.getenv "DEBUG_COMBY"
+  |> Option.is_some
+
+let debug_hole =
+  Sys.getenv "DEBUG_COMBY_HOLE"
+  |> Option.is_some
+
+let debug_position =
+  Sys.getenv "DEBUG_COMBY_POS"
+  |> Option.is_some
 
 let f _ = return Unit
 
@@ -40,7 +50,6 @@ module Make (Syntax : Syntax.S) = struct
         M.base_string_literal >>= fun contents ->
         return (f ~contents ~left_delimiter:delimiter ~right_delimiter:delimiter))
     |> choice
-
 
   let raw_string_literal_parser (f : 'a literal_parser_callback) =
     List.map Syntax.raw_string_literals ~f:(fun (left_delimiter, right_delimiter) ->
@@ -102,24 +111,77 @@ module Make (Syntax : Syntax.S) = struct
     is_not (string right_delimiter) |>> String.of_char
 
   let generate_spaces_parser () =
-    (* at least a space followed by comments and spaces *)
+    (* At least a space followed by comments and spaces. *)
     (spaces1
      >> many comment_parser << spaces
      >>= fun result -> f result)
     <|>
-    (* This case not covered by tests, may not be needed *)
+    (* This case not covered by tests, may not be needed. *)
     (many1 comment_parser << spaces >>= fun result -> f result)
 
   let sequence_chain (plist : ('c, Match.t) parser sexp_list) : ('c, Match.t) parser =
     List.fold plist ~init:(return Unit) ~f:(>>)
 
+  let with_debug_matcher s tag =
+    if debug then
+      match tag with
+      | `Position tag ->
+        if debug_position then
+          let prev = prev_char s in
+          let curr = read_char s in
+          let next = next_char s in
+          let print_if = function
+            | Some s -> s
+            | None -> '?'
+          in
+          Format.printf "Position Tag: %s@." tag;
+          Format.printf "H_prev: %c H_curr: %c H_next: %c@."
+            (print_if prev)
+            (print_if curr)
+            (print_if next)
+      | `Delimited delimited ->
+        Format.printf "<d>%s</d>%!" delimited
+      | `Delimited_suffix suffix ->
+        Format.printf "<d_s>%s</d_s>%!" suffix
+      | `Checkpoint (label, s) ->
+        Format.printf "Point(%s):<d>%s</d>" label s
+      | _ -> assert false
+
+  let is_alphanum delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]+$") delim)
+  let whitespace : (id, Match.t) parser = many1 space |>> String.of_char_list
+  let not_alphanum = many1 (is_not alphanum) |>> String.of_char_list
+  let reserved_alphanum_delimiter_must_satisfy =
+    Syntax.user_defined_delimiters
+    |> List.filter_map ~f:(fun (from, until) ->
+        if not (is_alphanum from) then
+          Some [from; until]
+        else
+          None)
+    |> List.concat
+    |> List.map ~f:string
+    |> List.map ~f:attempt
+
   let nested_delimiters_parser (f : 'a nested_delimiter_callback) =
+    (* All alphanum delimiter fixups happen in the generated parser, not here. *)
+    let between p from until s =
+      (string from >>= fun from ->
+       if debug then with_debug_matcher s (`Delimited from);
+       p >>= fun p_result ->
+       string until >>= fun until ->
+       if debug then with_debug_matcher s (`Delimited until);
+       return p_result)
+        s
+    in
     Syntax.user_defined_delimiters
     |> List.map ~f:(fun (left_delimiter, right_delimiter) ->
-        Parsers.Delimiters.between
+        between
           (f ~left_delimiter ~right_delimiter)
-          left_delimiter right_delimiter)
+          left_delimiter
+          right_delimiter
+      )
     |> choice
+    (* Backtrack on failure, specifically for alphanum. *)
+    |> attempt
 
   (** All code can have comments interpolated *)
   let generate_string_token_parser str : ('c, _) parser =
@@ -128,22 +190,23 @@ module Make (Syntax : Syntax.S) = struct
     >> many comment_parser
     >>= fun result -> f result
 
+  let identifier () =
+    (many (alphanum <|> char '_') |>> String.of_char_list)
+
   let everything_hole_parser () =
-    string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
+    string ":[" >> identifier () << string "]"
 
   let non_space_hole_parser () =
-    string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string ".]"
+    string ":[" >> identifier () << string ".]"
 
   let line_hole_parser () =
-    string ":[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "\\n]"
+    string ":[" >> identifier () << string "\\n]"
 
   let blank_hole_parser () =
-    string ":[" >> (many1 blank) >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]"
+    string ":[" >> (many1 blank) >> identifier () << string "]"
 
   let alphanum_hole_parser () =
-    string ":[[" >> (many (alphanum <|> char '_') |>> String.of_char_list) << string "]]"
-    >>= fun id ->
-    return id
+    string ":[[" >> identifier () << string "]]"
 
   let reserved_holes () =
     let alphanum = alphanum_hole_parser () in
@@ -158,10 +221,37 @@ module Make (Syntax : Syntax.S) = struct
     ; everything
     ]
 
-  let reserved_delimiters =
+  let reserved_delimiters _s =
+    let required_from_prefix = not_alphanum in
+    let required_from_suffix = not_alphanum in
+    let required_until_suffix = not_alphanum in
+    let handle_alphanum_delimiters_reserved_trigger from until =
+      let from_parser =
+        required_from_prefix >>= fun _ ->
+        string from >>= fun from ->
+        look_ahead required_from_suffix >>= fun _ ->
+        return from
+      in
+      let until_parser s =
+        (string until >>= fun until ->
+         eof <|> look_ahead (skip required_until_suffix) >>= fun _ ->
+         (* if current char/next_char is alphanum, make unsat. *)
+         let prev = prev_char s in
+         if debug then with_debug_matcher s (`Position "reserved_delimiter_until");
+         match prev with
+         | Some prev when is_alphanum (Char.to_string prev) -> fail "unsat"
+         | _ -> return until
+        )
+          s
+      in
+      [from_parser; until_parser]
+    in
     let reserved_delimiters =
-      List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
-      |> List.map ~f:string
+      List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) ->
+          if is_alphanum from && is_alphanum until then
+            handle_alphanum_delimiters_reserved_trigger from until
+          else
+            [ string from; string until])
     in
     let reserved_escapable_strings =
       List.concat_map Syntax.escapable_string_literals ~f:(fun x -> [x])
@@ -176,13 +266,13 @@ module Make (Syntax : Syntax.S) = struct
     @ reserved_escapable_strings
     @ reserved_raw_strings
     |> List.map ~f:skip
-    (* attempt the reserved: otherwise, if something passes partially,
-       it won't detect that single or greedy is reserved *)
+    (* Attempt the reserved: otherwise, if a parser partially succeeds,
+       it won't detect that single or greedy is reserved. *)
     |> List.map ~f:attempt
     |> choice
 
-  let reserved =
-    reserved_delimiters
+  let reserved s =
+    reserved_delimiters s
     <|> skip (space |>> Char.to_string)
 
   let until_of_from from =
@@ -225,55 +315,160 @@ module Make (Syntax : Syntax.S) = struct
          { result with environment })
     >>= fun () -> f matched
 
+  let alphanum_delimiter_must_satisfy =
+    many1 (is_not (skip (choice reserved_alphanum_delimiter_must_satisfy) <|> skip alphanum))
+    |>> String.of_char_list
+
   let generate_everything_hole_parser
       ?priority_left_delimiter:left_delimiter
       ?priority_right_delimiter:right_delimiter =
-    let between_nested_delims p from =
-      let until = until_of_from from in
-      between (string from) (string until) p
-      |>> fun result -> (String.concat @@ [from] @ result @ [until])
+    let with_debug_hole tag =
+      match tag with
+      | `Spaces chars ->
+        if debug_hole then Format.printf "<H_sp>";
+        return (String.of_char_list chars)
+      | `Delimited delimited ->
+        if debug_hole then Format.printf "<H_d>%s</H_d>" delimited;
+        return delimited
+      | `Character c ->
+        if debug_hole then Format.printf "<H_c>%c</H_c>" c;
+        return (String.of_char c)
+      | `Body body ->
+        let body = String.concat body in
+        if debug_hole then Format.printf "<H_body>%s</H_body>" body;
+        return body
+      | `Checkpoint (label, s) ->
+        if debug_hole then Format.printf "Point(%s):<d>%s</d>" label s;
+        return s
+      | _ -> assert false
     in
-    let between_nested_delims p =
-      let trigger_nested_parsing_prefix =
-        if weaken_delimiter_hole_matching then
-          match left_delimiter, right_delimiter with
-          | Some left_delimiter, Some right_delimiter ->
-            [ (left_delimiter, right_delimiter) ]
-          | _ -> Syntax.user_defined_delimiters
-        else
-          Syntax.user_defined_delimiters
+    let delimiters =
+      if weaken_delimiter_hole_matching then
+        match left_delimiter, right_delimiter with
+        | Some left_delimiter, Some right_delimiter ->
+          [ (left_delimiter, right_delimiter) ]
+        | _ -> Syntax.user_defined_delimiters
+      else
+        Syntax.user_defined_delimiters
+    in
+    let handle_alphanum_delimiters from until p =
+      (* mandatory_prefix: needs to be not alphanum AND not non-alphanum delim.
+         If it is a paren, we need to fail and get out of this alphanum block
+         parser (how did we end up in here? because we said that we'd accept
+         anything as prefix to 'def', including '(', and so '(' is not handled
+         as a delim.) *)
+      let mandatory_prefix = alphanum_delimiter_must_satisfy in
+      (* mandatory_suffix: be more strict with suffix of pening delimiter: don't
+         use 'any non-alphanum', but instead use whitespace. This since 'def;'
+         is undesirable, and 'def.foo' may be intentional. But 'end.' or 'end;'
+         probably still refer to a closing delim. *)
+      let mandatory_suffix = choice reserved_alphanum_delimiter_must_satisfy <|> whitespace in
+      let satisfy_opening_delimiter prev =
+        (match prev with
+         | Some prev when is_alphanum (Char.to_string prev) -> fail "unsat"
+         (* Try parse whitespace, and we want to cpature its length, in case
+            this is a space between, like 'def def end end'. But in the case
+            where there's no space, it means we have just entered the beginning
+            of the hole which may start with the 'd' of 'def', but since we
+            already know that the previous char is not alphanum in this branch
+            (so it is a delimiter or whitespace) it is OK to continue: in this
+            case, return "". *)
+         | _ -> mandatory_prefix <|> return "")
+        >>= fun prefix ->
+        string from >>= fun open_delimiter ->
+        with_debug_hole (`Checkpoint ("open_delimiter_<pre>"^prefix^"</pre>_sat_for", open_delimiter)) >>= fun _ ->
+        (* Use look_ahead to ensure that there is, e.g., whitespace after this
+           possible delimiter, but without consuming input. Whitespace needs to
+           not be consumed so that we can detect subsequent delimiters. *)
+        look_ahead mandatory_suffix >>= fun suffix ->
+        with_debug_hole (`Checkpoint ("open_delimiter_<suf>"^suffix^"</suf>_sat_for", open_delimiter)) >>= fun _ ->
+        return (prefix, open_delimiter)
       in
-      trigger_nested_parsing_prefix
-      |> List.map ~f:fst
-      |> List.map ~f:(between_nested_delims p)
-      |> choice
+      let satisfy_closing_delimiter =
+        string until >>= fun close_delimiter ->
+        look_ahead @@ mandatory_suffix >>= fun suffix ->
+        with_debug_hole (`Checkpoint ("close_delimiter_<suf>"^suffix^"</suf>_sat_for", close_delimiter)) >>= fun _ ->
+        return close_delimiter
+      in
+      (fun s ->
+         let prev = prev_char s in
+         (satisfy_opening_delimiter prev >>= fun (prefix, open_delimiter) ->
+          p >>= fun in_between ->
+          with_debug_hole (`Body in_between) >>= fun in_between ->
+          satisfy_closing_delimiter >>= fun close_delimiter ->
+          return
+            ((prefix^open_delimiter)
+             ^in_between
+             ^close_delimiter)) s)
+      (* Use attempt so that, e.g., 'struct' is tried after 'begin' delimiters under choice. *)
+      |> attempt
     in
-    (* applies looser delimiter constraints for matching *)
+    let handle_alphanum_delimiters_reserved_trigger from until =
+      (* If it's alphanum, only consider it reserved if there is, say, whitespace after and so
+         handle alternatively. Otherwise, return empty to indicate 'this sequence of characters
+         is not reserved'. *)
+      let reserved =
+        Syntax.user_defined_delimiters
+        |> List.filter_map ~f:(fun (from, _) ->
+            if not (is_alphanum from) then
+              Some from
+            else
+              None)
+        |> List.map ~f:string
+        |> List.map ~f:attempt
+      in
+      let required_delimiter_terminal =
+        many1 (is_not (skip (choice reserved) <|> skip alphanum)) |>> String.of_char_list
+      in
+      List.map [from; until] ~f:(fun delimiter ->
+          (fun s ->
+             let prev = prev_char s in
+             (match prev with
+              | Some prev when is_alphanum (Char.to_string prev) ->
+                (* If prev is alphanum, this can't possibly be a reserved delimiter. Just continue. *)
+                fail "unsat"
+              | _ -> string delimiter >>= fun _ ->
+                look_ahead required_delimiter_terminal) s))
+    in
+    (* The cases for which we need to stop parsing just characters
+       and consider delimiters. *)
     let reserved =
-      let trigger_nested_parsing_prefix =
-        if weaken_delimiter_hole_matching then
-          match left_delimiter, right_delimiter with
-          | Some left_delimiter, Some right_delimiter ->
-            [ (left_delimiter, right_delimiter) ]
-          | _ -> Syntax.user_defined_delimiters
-        else
-          Syntax.user_defined_delimiters
-      in
-      trigger_nested_parsing_prefix
-      |> List.concat_map ~f:(fun (from, until) -> [from; until])
-      |> List.map ~f:string
+      List.concat_map delimiters ~f:(fun (from, until) ->
+          if is_alphanum from then
+            handle_alphanum_delimiters_reserved_trigger from until
+          else
+            [string from; string until]
+        )
+      |> List.map ~f:attempt
       |> choice
     in
-    (* a parser that understands the hole matching cut off points happen at
-       delimiters *)
+    (* A parser that understands the hole matching cut off points happen at
+       delimiters. *)
     let rec nested_grammar s =
       (comment_parser
        <|> raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
        <|> escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
-       <|> delimsx
-       <|> (is_not reserved |>> String.of_char))
+       <|> (many1 space >>= fun r -> with_debug_hole (`Spaces r))
+       <|> (attempt @@ delims_over_holes >>= fun r -> with_debug_hole (`Delimited r))
+       (* Only consume if not reserved. If it is reserved, we want to trigger the 'many'
+          in (many nested_grammar) to continue. *)
+       <|> (is_not (reserved <|> (space |>> Char.to_string)) >>= fun r -> with_debug_hole (`Character r)))
         s
-    and delimsx s = (between_nested_delims (many nested_grammar)) s
+    and delims_over_holes s =
+      let between_nested_delims p =
+        let capture_delimiter_result p ~from =
+          let until = until_of_from from in
+          if is_alphanum from then
+            handle_alphanum_delimiters from until p
+          else
+            between (string from) (string until) p
+            >>= fun result -> return (String.concat @@ [from] @ result @ [until])
+        in
+        delimiters
+        |> List.map ~f:(fun pair -> capture_delimiter_result p ~from:(fst pair))
+        |> choice
+      in
+      (between_nested_delims (many nested_grammar)) s
     in
     nested_grammar
 
@@ -291,7 +486,6 @@ module Make (Syntax : Syntax.S) = struct
             match result with
             | Hole Alphanum (identifier, _) ->
               let allowed =  choice [alphanum; char '_'] |>> String.of_char in
-              (* if we collapse the not_followed_by part, we will disallow substring matching. *)
               let hole_semantics = many1 (not_followed_by rest "" >> allowed) in
               record_matches identifier hole_semantics
 
@@ -330,7 +524,7 @@ module Make (Syntax : Syntax.S) = struct
                   raw_literal_grammar ~right_delimiter
                 | Comment -> failwith "Unimplemented"
               in
-              (* continue until rest, but don't consume rest. *)
+              (* Continue until rest, but don't consume rest. *)
               let hole_semantics = many (not_followed_by rest "" >> matcher) in
               record_matches identifier hole_semantics
 
@@ -339,23 +533,25 @@ module Make (Syntax : Syntax.S) = struct
         process_hole::acc)
 
   let hole_parser sort dimension =
-    let skip_signal result = skip (string "_signal_hole") |>> fun () -> result in
+    let skip_signal hole =
+      skip (string "_signal_hole") |>> fun () -> Hole hole
+    in
     match sort with
     | `Everything ->
       everything_hole_parser () |>> fun id ->
-      skip_signal (Hole (Everything (id, dimension)))
+      skip_signal (Everything (id, dimension))
     | `Non_space ->
       non_space_hole_parser () |>> fun id ->
-      skip_signal (Hole (Non_space (id, dimension)))
+      skip_signal (Non_space (id, dimension))
     | `Line ->
       line_hole_parser () |>> fun id ->
-      skip_signal (Hole (Line (id, dimension)))
+      skip_signal (Line (id, dimension))
     | `Blank ->
       blank_hole_parser () |>> fun id ->
-      skip_signal (Hole (Blank (id, dimension)))
+      skip_signal (Blank (id, dimension))
     | `Alphanum ->
       alphanum_hole_parser () |>> fun id ->
-      skip_signal (Hole (Alphanum (id, dimension)))
+      skip_signal (Alphanum (id, dimension))
 
   let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter s =
     let holes =
@@ -397,24 +593,56 @@ module Make (Syntax : Syntax.S) = struct
       |> List.map ~f:(fun kind -> attempt (hole_parser kind Code))
     in
     choice holes
-    (* string literals are handled specially because match semantics change inside string delimiters *)
+    (* String literals are handled specially because match semantics change inside string delimiters. *)
     <|> (raw_string_literal_parser (generate_hole_for_literal Raw_string_literal))
     <|> (escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal))
-    (* whitespace is handled specially because we may change whether they are significant for matching *)
-    <|> (spaces1 |>> generate_spaces_parser)
-    (* nested delimiters are handled specially for nestedness *)
+    (* Nested delimiters are handled specially for nestedness. *)
     <|> (nested_delimiters_parser generate_outer_delimiter_parsers)
-    (* everything else *)
-    <|> ((many1 (is_not reserved) |>> String.of_char_list) |>> generate_string_token_parser)
+    (* Whitespace is handled specially because we may change whether they are significant for matching. *)
+    <|> (spaces1 |>> generate_spaces_parser)
+    (* Everything else. *)
+    <|>
+    ((many1 (is_not (reserved _s)) >>= fun cl ->
+      if debug then Format.printf "<cl>%s</cl>" @@ String.of_char_list cl;
+      return @@ String.of_char_list cl)
+     |>> generate_string_token_parser)
 
   and generate_outer_delimiter_parsers ~left_delimiter ~right_delimiter s =
+    let before s =
+      begin
+        if debug_hole then with_debug_matcher s (`Position "generate_outer_delimiter");
+        let p =
+          if is_alphanum left_delimiter then
+            (* This logic is needed for cases where we say 'def :[1] end' in the template,
+               and don't match partially on, say, 'adef body endq' in the underlying generated
+               parser. *)
+            let prev = prev_char s in
+            match prev with
+            | Some prev when is_alphanum (Char.to_string prev) -> fail "unsat"
+            | _ -> string left_delimiter
+          else
+            string left_delimiter
+        in
+        p >>= fun _ -> f [left_delimiter]
+      end s
+    in
+    let after =
+      let p =
+        if is_alphanum right_delimiter then
+          (* This handles the case for something like 'def body endly'. *)
+          string right_delimiter >>= fun delim ->
+          look_ahead @@ (eof <|> skip not_alphanum) >>= fun _ ->
+          return delim
+        else
+          string right_delimiter
+      in
+      p >>= fun _ -> f [right_delimiter]
+    in
     (generate_parsers s >>= fun p_list ->
-     (turn_holes_into_matchers_for_this_level ~left_delimiter ~right_delimiter
-        ([ string left_delimiter
-           >>= fun _ -> f [left_delimiter]]
-         @ p_list
-         @ [ string right_delimiter
-             >>= fun _ -> f [right_delimiter]])
+     (turn_holes_into_matchers_for_this_level
+        ~left_delimiter
+        ~right_delimiter
+        ([before] @ p_list @ [after])
       |> sequence_chain)
      |> return
     ) s
@@ -422,9 +650,9 @@ module Make (Syntax : Syntax.S) = struct
   let general_parser_generator s =
     let outer_p =
       generate_parsers s >>= fun p_list ->
-      (* eof of template is here *)
-      eof >> (* result is unit so ignore *)
-      (* customize the inner parser *)
+      (* EOF of template is here. *)
+      eof >> (* Result is unit so ignore. *)
+      (* Customize the inner parser. *)
       let inner_p =
         let matcher : ('a, Match.t) parser =
           turn_holes_into_matchers_for_this_level p_list
@@ -458,7 +686,7 @@ module Make (Syntax : Syntax.S) = struct
           many
             (not_followed_by matcher "" >>
              (
-               (* respect grammar but ignore contents up to a match *)
+               (* Respect grammar but ignore contents up to a match. *)
                skip comment_parser
                <|> skip (raw_string_literal_parser (fun ~contents:_ ~left_delimiter:_ ~right_delimiter:_ -> ()))
                <|> skip (escapable_string_literal_parser (fun ~contents:_ ~left_delimiter:_ ~right_delimiter:_ -> ()))
@@ -471,7 +699,8 @@ module Make (Syntax : Syntax.S) = struct
     outer_p s
 
   let to_template template : ('a, Match.t) MParser.t Or_error.t =
-    match parse_string general_parser_generator template 0 with
+    (* Use a match type for state so we can reuse parsers for inner and outer. *)
+    match parse_string general_parser_generator template (Match.create ()) with
     | Success p -> Ok p
     | Failed (msg, _) -> Or_error.error_string msg
 

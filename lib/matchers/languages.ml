@@ -1,4 +1,4 @@
-let experimental = false
+let enable_alphanum_delimiters = true
 
 module Text = struct
   module Syntax = struct
@@ -137,6 +137,9 @@ module Bash = struct
       Dyck.Syntax.user_defined_delimiters @
       [ "if ", "fi"
       ; "case ", "esac"
+      ; "for ", "done"
+      ; "until ", "done"
+      ; "while ", "done"
       ]
 
     let comment_parser =
@@ -153,7 +156,7 @@ module Ruby = struct
 
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
-      @ if experimental then
+      @ if enable_alphanum_delimiters then
         [ "class", "end"
         ; "def", "end"
         ; "do", "end"
@@ -189,7 +192,7 @@ module Elixir = struct
 
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
-      @ if experimental then
+      @ if enable_alphanum_delimiters then
         [ "fn", "end"
         ; "do", "end"
         ; "case", "end"
@@ -265,7 +268,7 @@ module Erlang = struct
 
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
-      @ if experimental then
+      @ if enable_alphanum_delimiters then
         [ "fun", "end"
         ; "case", "end"
         ; "if", "end"
@@ -385,7 +388,7 @@ module OCaml = struct
 
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
-      @ if experimental then
+      @ if enable_alphanum_delimiters then
         [ "begin", "end"
         ; "struct", "end"
         ; "sig", "end"

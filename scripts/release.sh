@@ -50,5 +50,5 @@ docker rmi -f comby-alpine-binary-build:latest
 ./build-docker-binary.sh
 docker tag comby-alpine-binary-build:latest comby/comby:$VERSION
 docker push comby/comby:$VERSION
-# docker pull comby/comby:$VERSION
-# docker run -it comby/comby:$VERSION -version
+echo "run: 'docker pull comby/comby:$VERSION'"
+echo "test: 'docker run -it comby/comby:$VERSION' -version"
