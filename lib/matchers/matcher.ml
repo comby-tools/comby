@@ -11,17 +11,16 @@ let configuration_ref = ref (Configuration.create ())
 let weaken_delimiter_hole_matching = false
 
 let debug =
-  match Sys.getenv "DEBUG" with
-  | Some _ -> true
-  | None -> false
+  Sys.getenv "DEBUG_COMBY"
+  |> Option.is_some
 
 let debug_hole =
-  match Sys.getenv "DEBUG" with
-  | Some _ -> true
-  | None -> false
+  Sys.getenv "DEBUG_COMBY_HOLE"
+  |> Option.is_some
 
-(* very verbose *)
-let position_debug = false
+let debug_position =
+  Sys.getenv "DEBUG_COMBY_POS"
+  |> Option.is_some
 
 let f _ = return Unit
 
@@ -127,7 +126,7 @@ module Make (Syntax : Syntax.S) = struct
     if debug then
       match tag with
       | `Position tag ->
-        if position_debug then
+        if debug_position then
           let prev = prev_char s in
           let curr = read_char s in
           let next = next_char s in
@@ -164,17 +163,14 @@ module Make (Syntax : Syntax.S) = struct
 
   let nested_delimiters_parser (f : 'a nested_delimiter_callback) =
     (* all alphanum delimiter fixups happen in the generated parser, not here. *)
-    let between p from until =
-      (fun s ->
-         begin
-           string from >>= fun from ->
-           if debug then with_debug_matcher s (`Delimited from);
-           p >>= fun p_result ->
-           string until >>= fun until ->
-           if debug then with_debug_matcher s (`Delimited until);
-           return p_result
-         end
-           s)
+    let between p from until s =
+      (string from >>= fun from ->
+       if debug then with_debug_matcher s (`Delimited from);
+       p >>= fun p_result ->
+       string until >>= fun until ->
+       if debug then with_debug_matcher s (`Delimited until);
+       return p_result)
+        s
     in
     Syntax.user_defined_delimiters
     |> List.map ~f:(fun (left_delimiter, right_delimiter) ->
@@ -627,34 +623,41 @@ module Make (Syntax : Syntax.S) = struct
      |>> generate_string_token_parser)
 
   and generate_outer_delimiter_parsers ~left_delimiter ~right_delimiter s =
+    let before s =
+      begin
+        if debug_hole then with_debug_matcher s (`Position "generate_outer_delimiter");
+        let p =
+          if is_alphanum left_delimiter then
+            (* this logic is needed for cases where we say 'def :[1] end' in the template,
+               and don't match partially on 'adef body endq' in the underlying generated
+               parser *)
+            let prev = prev_char s in
+            match prev with
+            | Some prev when is_alphanum (Char.to_string prev) -> fail "no"
+            | _ -> string left_delimiter
+          else
+            string left_delimiter
+        in
+        p >>= fun _ -> f [left_delimiter]
+      end s
+    in
+    let after =
+      let p =
+        if is_alphanum right_delimiter then
+          (* fixes the case for 'echo '(def body endly)' | ./comby 'def :[1] end' ':[1]' .rb -stdin' *)
+          string right_delimiter >>= fun delim ->
+          look_ahead @@ (eof <|> skip not_alphanum) >>= fun _ ->
+          return delim
+        else
+          string right_delimiter
+      in
+      p >>= fun _ -> f [right_delimiter]
+    in
     (generate_parsers s >>= fun p_list ->
-     (turn_holes_into_matchers_for_this_level ~left_delimiter ~right_delimiter
-        ([
-          (fun s ->
-             (
-               (* this logic is needed for cases where we say 'def :[1] end' in the template,
-                  and don't match partially on 'adef body endq' in the underlying generated
-                  parser *)
-               let prev = prev_char s in
-               if debug_hole then with_debug_matcher s (`Position "generate_outer_delimiter");
-               (if is_alphanum left_delimiter then
-                  match prev with
-                  | Some prev when is_alphanum (Char.to_string prev) -> fail "no"
-                  | _ -> string left_delimiter
-                else
-                  string left_delimiter
-               )
-               >>= fun _ -> f [left_delimiter]) s)]
-          @ p_list
-          @ [
-            (* fixes the case for 'echo '(def body endly)' | ./comby 'def :[1] end' ':[1]' .rb -stdin' *)
-            (if is_alphanum right_delimiter then
-               string right_delimiter >>= fun delim ->
-               look_ahead @@ (eof <|> skip not_alphanum) >>= fun _ ->
-               return delim
-             else
-               string right_delimiter)
-            >>= fun _ -> f [right_delimiter]])
+     (turn_holes_into_matchers_for_this_level
+        ~left_delimiter
+        ~right_delimiter
+        ([before] @ p_list @ [after])
       |> sequence_chain)
      |> return
     ) s

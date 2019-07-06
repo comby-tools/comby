@@ -111,8 +111,8 @@ let process_single_source
       | Some (None, _)
       | None -> Nothing
   with
-  | _e ->
-    failwith (Exn.to_string _e)
+  | _ ->
+    Nothing
 
 let output_result output_printer source_path source_content result =
   match result with
@@ -409,4 +409,4 @@ let default_command =
 let () =
   Scheduler.Daemon.check_entry_point ();
   default_command
-  |> Command.run ~version:"0.5.1"
+  |> Command.run ~version:"0.7.0"
