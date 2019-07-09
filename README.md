@@ -24,21 +24,13 @@ opam init
 opam switch create 4.07.0 4.07.0 
 ```
 
-- Install dependencies
+- Install OS dependencies:
 
-### Linux
+  - **Linux:** `sudo apt-get install pkg-config libpcre3-dev`
 
-```
-sudo apt-get install pkg-config libpcre3-dev
-```
+  - **Mac:** `brew install pkg-config pcre`
 
-### Mac
-
-```
-brew install pkg-config pcre
-```
-
-- Install opam libraries
+- Then install the following opam libraries:
 
 ```
 opam install ppx_deriving_yojson
