@@ -135,11 +135,11 @@ module Bash = struct
 
     let user_defined_delimiters =
       Dyck.Syntax.user_defined_delimiters @
-      [ "if ", "fi"
-      ; "case ", "esac"
-      ; "for ", "done"
-      ; "until ", "done"
-      ; "while ", "done"
+      [ "if", "fi"
+      ; "case", "esac"
+      ; "for", "done"
+      ; "until", "done"
+      ; "while", "done"
       ]
 
     let comment_parser =
