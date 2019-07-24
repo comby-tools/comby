@@ -17,11 +17,11 @@
 
 - Install [opam](https://opam.ocaml.org/doc/Install.html)
 
-- Create a new switch if you don't have OCaml installed
+- Create a new switch if you don't have OCaml installed:
 
 ```
 opam init
-opam switch create 4.07.0 4.07.0 
+opam switch create 4.08.0 4.08.0 
 ```
 
 - Install OS dependencies:
