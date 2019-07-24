@@ -21,7 +21,7 @@
 
 ```
 opam init
-opam switch create 4.08.0 4.08.0 
+opam switch create 4.07.0 4.07.0 
 ```
 
 - Install OS dependencies:
