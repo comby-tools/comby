@@ -4,6 +4,7 @@ type comment_kind =
   | Multiline of string * string
   | Nested_multiline of string * string
   | Until_newline of string
+[@@deriving yojson]
 
 module Syntax = struct
   module type S = sig
