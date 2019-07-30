@@ -530,3 +530,17 @@ let select_with_extension extension : (module Types.Matcher.S) =
   | ".tex" | ".bib" -> (module Latex)
   | ".txt" -> (module Text)
   | _ -> (module Generic)
+
+let create (t : Syntax_config.t) =
+  let module User_language = struct
+    let user_defined_delimiters = t.user_defined_delimiters
+
+    let escapable_string_literals = t.escapable_string_literals
+
+    let escape_char = t.escape_char
+
+    let raw_string_literals = t.raw_string_literals
+
+    let comment_parser = t.comment_parser
+  end in
+  (module Matcher.Make (User_language) : Types.Matcher.S)
