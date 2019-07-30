@@ -4,9 +4,8 @@ open Rewriter
 
 let configuration = Configuration.create ~match_kind:Fuzzy ()
 
-let run lang source match_template rewrite_template =
-  let module User_lang = (val lang : Matchers.Matcher) in
-  User_lang.first ~configuration match_template source
+let run (module M : Matchers.Matcher) source match_template rewrite_template =
+  M.first ~configuration match_template source
   |> function
   | Ok result ->
       Rewrite.all ~source ~rewrite_template [result]
