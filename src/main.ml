@@ -129,26 +129,32 @@ let output_result output_printer source_path source_content result =
 
 let select_matcher custom_matcher override_matcher configuration =
   if Option.is_some custom_matcher then
-    Yojson.Safe.from_file (Option.value_exn custom_matcher)
-    |> Matchers.Syntax_config.of_yojson
-    |> function
-    | Ok c -> Matchers.create c
-    | Error error ->
-      Format.eprintf "%s@." error;
+    let matcher_path = Option.value_exn custom_matcher in
+    match Sys.file_exists matcher_path with
+    | `No | `Unknown ->
+      Format.eprintf "Could not open file: %s@." matcher_path;
       exit 1
+    | `Yes ->
+      Yojson.Safe.from_file matcher_path
+      |> Matchers.Syntax_config.of_yojson
+      |> function
+      | Ok c -> Matchers.create c
+      | Error error ->
+        Format.eprintf "%s@." error;
+        exit 1
   else
-    if Option.is_some override_matcher then
-      Matchers.select_with_extension (Option.value_exn override_matcher)
-    else
-      match configuration.file_filters with
-      | None | Some [] ->
+  if Option.is_some override_matcher then
+    Matchers.select_with_extension (Option.value_exn override_matcher)
+  else
+    match configuration.file_filters with
+    | None | Some [] ->
+      Matchers.select_with_extension ".generic"
+    | Some (filter::_) ->
+      match Filename.split_extension filter with
+      | _, Some extension ->
+        Matchers.select_with_extension ("." ^ extension)
+      | _ ->
         Matchers.select_with_extension ".generic"
-      | Some (filter::_) ->
-        match Filename.split_extension filter with
-        | _, Some extension ->
-          Matchers.select_with_extension ("." ^ extension)
-        | _ ->
-          Matchers.select_with_extension ".generic"
 
 let write_statistics number_of_matches paths total_time dump_statistics =
   if dump_statistics then
