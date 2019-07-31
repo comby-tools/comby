@@ -127,6 +127,34 @@ let output_result output_printer source_path source_content result =
     in
     output_printer (Printer.Replacements { source_path; replacements; result; source_content })
 
+let select_matcher custom_matcher override_matcher configuration =
+  if Option.is_some custom_matcher then
+    let matcher_path = Option.value_exn custom_matcher in
+    match Sys.file_exists matcher_path with
+    | `No | `Unknown ->
+      Format.eprintf "Could not open file: %s@." matcher_path;
+      exit 1
+    | `Yes ->
+      Yojson.Safe.from_file matcher_path
+      |> Matchers.Syntax_config.of_yojson
+      |> function
+      | Ok c -> Matchers.create c
+      | Error error ->
+        Format.eprintf "%s@." error;
+        exit 1
+  else
+  if Option.is_some override_matcher then
+    Matchers.select_with_extension (Option.value_exn override_matcher)
+  else
+    match configuration.file_filters with
+    | None | Some [] ->
+      Matchers.select_with_extension ".generic"
+    | Some (filter::_) ->
+      match Filename.split_extension filter with
+      | _, Some extension ->
+        Matchers.select_with_extension ("." ^ extension)
+      | _ ->
+        Matchers.select_with_extension ".generic"
 
 let write_statistics number_of_matches paths total_time dump_statistics =
   if dump_statistics then
@@ -318,8 +346,9 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and target_directory = flag "directory" ~aliases:["d"; "r"; "recursive"] (optional_with_default (Sys.getcwd ()) string) ~doc:(Format.sprintf "path Run recursively on files in a directory. Default is current directory: %s" @@ Sys.getcwd ())
     and directory_depth = flag "depth" (optional int) ~doc:"n Depth to recursively descend into directories"
     and specification_directories = flag "templates" (optional (Arg_type.comma_separated string)) ~doc:"path CSV of directories containing templates"
-    and file_filters = flag "extensions" ~aliases:["e"; "file-extensions"; "f"] (optional (Arg_type.comma_separated string)) ~doc:"extensions Comma-separated extensions to include, like \".go\" or \".c,.h\". It is just a file suffix, so you can use it to filter file names like \"main.go\". The extension will be used to infer a matcher, unless --matcher is specified"
-    and override_matcher = flag "matcher" ~aliases:["m"] (optional string) ~doc:"extension Use this matcher on all files regardless of their file extension"
+    and file_filters = flag "extensions" ~aliases:["e"; "file-extensions"; "f"] (optional (Arg_type.comma_separated string)) ~doc:"extensions Comma-separated extensions to include, like \".go\" or \".c,.h\". It is just a file suffix, so you can use it to filter file names like \"main.go\". The extension will be used to infer a matcher, unless --custom-matcher or --matcher is specified"
+    and override_matcher = flag "matcher" ~aliases:["m"] (optional string) ~doc:"extension Use this matcher on all files regardless of their file extension, unless a --custom-matcher is specified"
+    and custom_matcher = flag "custom-matcher" (optional string) ~doc:"path Path to a JSON file that contains a custom matcher"
     and zip_file = flag "zip" ~aliases:["z"] (optional string) ~doc:"zipfile A zip file containing files to rewrite"
     and json_pretty = flag "json-pretty" no_arg ~doc:"Output pretty JSON format"
     and json_lines = flag "json-lines" no_arg ~doc:"Output JSON line format"
@@ -385,21 +414,9 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
         Format.eprintf "%s@." @@ Error.to_string_hum error;
         exit 1
     in
+    let matcher = select_matcher custom_matcher override_matcher configuration
+    in
     fun () ->
-      let matcher =
-        if Option.is_some override_matcher then
-          Matchers.select_with_extension (Option.value_exn override_matcher)
-        else
-          match configuration.file_filters with
-          | None | Some [] ->
-            Matchers.select_with_extension ".generic"
-          | Some (filter::_) ->
-            match Filename.split_extension filter with
-            | _, Some extension ->
-              Matchers.select_with_extension ("." ^ extension)
-            | _ ->
-              Matchers.select_with_extension ".generic"
-      in
       run matcher configuration
   ]
 
