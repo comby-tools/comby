@@ -210,9 +210,10 @@ let%expect_test "with_rewrite_rule_stdin_default_no_extension" =
     Format.sprintf "-sequential '%s' '%s' -rule '%s' -stdin" match_template rewrite_template rule
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  let result = read_source_from_stdin command source in
+  let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+  [%expect_exact {|WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension. Use something like '-matcher .go' (including the dot, '.') to force using the matcher for Go, and similarly '-matcher .java' for Java, and so on for other languages.
+[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;43;30m!|[0mhello[0;31m world[0m
@@ -226,9 +227,10 @@ let%expect_test "generic_matcher" =
     Format.sprintf "-stdin -sequential '%s' '%s' -f .generic" match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  let result = read_source_from_stdin command source in
+  let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+  [%expect_exact {|WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension. Use something like '-matcher .go' (including the dot, '.') to force using the matcher for Go, and similarly '-matcher .java' for Java, and so on for other languages.
+[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;41;30m-|[0m[0m[0;2m\footnote{[0m[0;31m\small[0m[0;2m \url{https://github.com}}[0m[0m
@@ -422,9 +424,7 @@ let%expect_test "nested_templates" =
   let template_dir = "example" ^/ "multiple-nested-templates" in
   let command_args = Format.sprintf "-stdin -sequential -f .c -templates %s -stdout" template_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  let result =
-    read_expect_stdin_and_stdout command source
-  in
+  let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect{|
     Warning: Could not read required match file in example/multiple-nested-templates/invalid-subdir
@@ -720,9 +720,10 @@ let%expect_test "infer_and_honor_extensions" =
   let src_dir = "example" ^/ "src" ^/ "honor-file-extensions" in
   let command_args = Format.sprintf "'foo()' 'bar()' .generic -sequential -d %s -diff" src_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  let result = read_source_from_stdin command source in
+  let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect{|
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension. Use something like '-matcher .go' (including the dot, '.') to force using the matcher for Go, and similarly '-matcher .java' for Java, and so on for other languages.
     --- example/src/honor-file-extensions/honor.pb.generic
     +++ example/src/honor-file-extensions/honor.pb.generic
     @@ -1,3 +1,3 @@
@@ -738,6 +739,8 @@ let%expect_test "diff_only" =
   let result = read_source_from_stdin command source in
   print_string result;
   [%expect{|
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension. Use something like '-matcher .go' (including the dot, '.') to force using the matcher for Go, and similarly '-matcher .java' for Java, and so on for other languages.
+
     {"uri":null,"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-hello world\n+world world"} |}];
 
   let source = "hello world" in
@@ -770,9 +773,10 @@ let%expect_test "zip_exclude_dir_no_extension" =
   let exclude_dir = "sample-repo/vendor" in
   let command_args = Format.sprintf "'main' 'pain' -zip %s -sequential -diff -exclude-dir %s" zip exclude_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  let result = read_source_from_stdin command source in
+  let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect{|
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension. Use something like '-matcher .go' (including the dot, '.') to force using the matcher for Go, and similarly '-matcher .java' for Java, and so on for other languages.
     --- sample-repo/src/main.go
     +++ sample-repo/src/main.go
     @@ -1,2 +1,2 @@

@@ -1,4 +1,4 @@
-let enable_alphanum_delimiters = true
+open Syntax_config
 
 module Text = struct
   module Syntax = struct
@@ -156,21 +156,19 @@ module Ruby = struct
 
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
-      @ if enable_alphanum_delimiters then
-        [ "class", "end"
-        ; "def", "end"
-        ; "do", "end"
-        ; "if", "end"
-        ; "case", "end"
-        ; "unless", "end"
-        ; "while", "end"
-        ; "until", "end"
-        ; "for", "end"
-        ; "begin", "end"
-        ; "module", "end"
-        ]
-      else
-        []
+      @
+      [ "class", "end"
+      ; "def", "end"
+      ; "do", "end"
+      ; "if", "end"
+      ; "case", "end"
+      ; "unless", "end"
+      ; "while", "end"
+      ; "until", "end"
+      ; "for", "end"
+      ; "begin", "end"
+      ; "module", "end"
+      ]
 
     let raw_string_literals =
       [ ({|"|}, {|"|})
@@ -192,16 +190,14 @@ module Elixir = struct
 
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
-      @ if enable_alphanum_delimiters then
-        [ "fn", "end"
-        ; "do", "end"
-        ; "case", "end"
-        ; "cond", "end"
-        ; "if", "end"
-        ; "<", ">"
-        ]
-      else
-        []
+      @
+      [ "fn", "end"
+      ; "do", "end"
+      ; "case", "end"
+      ; "cond", "end"
+      ; "if", "end"
+      ; "<", ">"
+      ]
 
     let raw_string_literals =
       [ ({|"""|}, {|"""|})
@@ -268,13 +264,11 @@ module Erlang = struct
 
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
-      @ if enable_alphanum_delimiters then
-        [ "fun", "end"
-        ; "case", "end"
-        ; "if", "end"
-        ]
-      else
-        []
+      @
+      [ "fun", "end"
+      ; "case", "end"
+      ; "if", "end"
+      ]
 
     let comment_parser =
       [ Until_newline "%"
@@ -388,13 +382,11 @@ module OCaml = struct
 
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
-      @ if enable_alphanum_delimiters then
-        [ "begin", "end"
-        ; "struct", "end"
-        ; "sig", "end"
-        ]
-      else
-        []
+      @
+      [ "begin", "end"
+      ; "struct", "end"
+      ; "sig", "end"
+      ]
 
 
     (* Override ' as escapable string literal, since
@@ -531,16 +523,19 @@ let select_with_extension extension : (module Types.Matcher.S) =
   | ".txt" -> (module Text)
   | _ -> (module Generic)
 
-let create (t : Syntax_config.t) =
+let create
+    { user_defined_delimiters
+    ; escapable_string_literals
+    ; escape_char
+    ; raw_string_literals
+    ; comment_parser
+    } =
   let module User_language = struct
-    let user_defined_delimiters = t.user_defined_delimiters
-
-    let escapable_string_literals = t.escapable_string_literals
-
-    let escape_char = t.escape_char
-
-    let raw_string_literals = t.raw_string_literals
-
-    let comment_parser = t.comment_parser
-  end in
+    let user_defined_delimiters = user_defined_delimiters
+    let escapable_string_literals = escapable_string_literals
+    let escape_char = escape_char
+    let raw_string_literals = raw_string_literals
+    let comment_parser = comment_parser
+  end
+  in
   (module Matcher.Make (User_language) : Types.Matcher.S)
