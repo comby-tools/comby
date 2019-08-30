@@ -42,10 +42,10 @@ derp
   let rewrite_template = {|{:[x]}|} in
   run source match_template rewrite_template;
   [%expect_exact {|
-{foo.}
-{foo.bar.quux}
-{derp}
-|}]
+{foo.
+}{foo.bar.quux
+}{derp
+}|}]
 
 let%expect_test "leading_indentation" =
   let run = run_all in
@@ -79,3 +79,36 @@ let%expect_test "alphanum_partial_match" =
   let rewrite_template = {|{:[x]}|} in
   run source match_template rewrite_template;
   [%expect_exact {|   foo.     {a} derp|}]
+
+let%expect_test "newline_matcher_should_not_be_sat_on_space" =
+  let run = run_all in
+  let source =
+    {|a b c d
+ e f g h|} in
+  let match_template = {|:[line\n] |} in
+  let rewrite_template = {|{:[line]}|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|{a b c d
+}e f g h|}];
+
+  let run = run_all in
+  let source =
+    {|a b c d
+ e f g h|} in
+  let match_template = {|:[line\n]:[next]|} in
+  let rewrite_template = {|{:[line]}|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|{a b c d
+}|}];
+
+  let run = run_all in
+  let source =
+    {|a b c d
+e f g h
+|} in
+  let match_template = {|:[line1\n]:[next\n]|} in
+  let rewrite_template = {|{:[line1]|:[next]}|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|{a b c d
+|e f g h
+}|}]
