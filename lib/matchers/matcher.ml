@@ -496,12 +496,10 @@ module Make (Syntax : Syntax.S) = struct
 
             | Hole Line (identifier, _dimension) ->
               let allowed =
-                let until_char = '\n' in
-                let allowed = any_char |>> String.of_char in
-                let allowed = (not_followed_by (char until_char) "" >> allowed) in
-                allowed
+                let allowed = many1 (is_not (char '\n')) in
+                allowed >>= fun x -> return [(String.of_char_list x)^"\n"]
               in
-              let hole_semantics = many1 (not_followed_by rest "" >> allowed) in
+              let hole_semantics = allowed << char '\n' in
               record_matches identifier hole_semantics
 
             | Hole Blank (identifier, _dimension) ->
