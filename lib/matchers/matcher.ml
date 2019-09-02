@@ -486,7 +486,7 @@ module Make (Syntax : Syntax.S) = struct
             match result with
             | Hole Alphanum (identifier, _) ->
               let allowed =  choice [alphanum; char '_'] |>> String.of_char in
-              let hole_semantics = many1 (not_followed_by rest "" >> allowed) in
+              let hole_semantics = many1 allowed in
               record_matches identifier hole_semantics
 
             | Hole Non_space (identifier, _dimension) ->
