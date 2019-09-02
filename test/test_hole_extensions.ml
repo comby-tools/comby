@@ -72,6 +72,14 @@ let%expect_test "non_space_partial_match" =
   run source match_template rewrite_template;
   [%expect_exact {|   foo.     {bar.qu} derp|}]
 
+let%expect_test "non_space_does_not_match_reserved_delimiters" =
+  let run = run_all in
+  let source = {|fo.o(x)|} in
+  let match_template = {|:[f.]|} in
+  let rewrite_template = {|{:[f]}|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|{fo.o}({x})|}]
+
 let%expect_test "alphanum_partial_match" =
   let run = run_all in
   let source = {|   foo.     foo.bar.quux derp|} in
