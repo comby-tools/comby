@@ -491,12 +491,10 @@ module Make (Syntax : Syntax.S) = struct
 
             | Hole Non_space (identifier, _dimension) ->
               let allowed =
-                is_not
-                  (
-                    [" "; "\t"; "\r"; "\n"]
-                    |> List.map ~f:(fun c -> skip (string c))
-                    |> fun l -> choice (l @ [reserved_delimiters ()]))
-                >>= fun x -> return (Char.to_string x)
+                [skip space; reserved_delimiters ()]
+                |> choice
+                |> is_not
+                |>> Char.to_string
               in
               let hole_semantics = many1 (not_followed_by rest "" >> allowed) in
               record_matches identifier hole_semantics
