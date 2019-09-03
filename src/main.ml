@@ -376,8 +376,18 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
       Option.map anonymous_arguments ~f:(fun (match_template, rewrite_template, file_filters) ->
           let file_filters =
             match file_filters with
-            | [] -> None
-            | l -> Some l
+            | [] ->
+              (* FIXME: only OK if zip or stdin is specified *)
+              (*Format.eprintf "Specify paths or path suffixes on the command line.@.";
+                exit 1 *)
+              None
+            | l ->
+              let l = List.filter_map l ~f:(fun pattern ->
+                  match String.prefix pattern 2 with
+                  | "./" -> Some (Filename.realpath pattern)
+                  | _ -> None)
+              in
+              Some l
           in
           { match_template; rewrite_template; file_filters })
     in
