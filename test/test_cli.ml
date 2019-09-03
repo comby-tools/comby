@@ -91,7 +91,7 @@ let%expect_test "error_on_zip_and_stdin" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_source_from_stdin command "none" in
   print_string result;
-  [%expect_exact {|No templates specified. Either on the command line, or using -templates <directory-containing-templates>
+  [%expect_exact {|No templates specified. See -h to specify on the command line, or use -templates <directory-containing-templates>
 Next error: -zip may not be used with stdin.
 |}]
 
@@ -118,7 +118,7 @@ let%expect_test "warn_on_anonymous_and_templates_flag" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_source_from_stdin command source in
   print_string result;
-  [%expect_exact {|Warning: Templates specified on the command line AND using -templates. Ignoring match
+  [%expect_exact {|WARNING: Templates specified on the command line AND using -templates. Ignoring match
       and rewrite templates on the command line and only using those in directories.
 |}]
 
@@ -133,7 +133,7 @@ let%expect_test "warn_json_lines_and_json_pretty" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_source_from_stdin command source in
   print_string result;
-  [%expect_exact {|Warning: Both -json-lines and -json-pretty specified. Using -json-pretty.
+  [%expect_exact {|WARNING: Both -json-lines and -json-pretty specified. Using -json-pretty.
 |}]
 
 let%expect_test "stdin_command" =
@@ -396,7 +396,7 @@ let%expect_test "template_parsing_no_match_template" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_source_from_stdin command source in
   print_string result;
-  [%expect_exact {|Warning: Could not read required match file in example/templates/parse-no-match-template
+  [%expect_exact {|WARNING: Could not read required match file in example/templates/parse-no-match-template
 |}]
 
 let%expect_test "template_parsing_with_trailing_newline" =
@@ -427,7 +427,7 @@ let%expect_test "nested_templates" =
   in
   print_string result;
   [%expect{|
-    Warning: Could not read required match file in example/multiple-nested-templates/invalid-subdir
+    WARNING: Could not read required match file in example/multiple-nested-templates/invalid-subdir
     +1 +2 +3 |}]
 
 let%expect_test "diff_is_default" =

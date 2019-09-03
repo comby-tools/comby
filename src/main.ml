@@ -368,12 +368,17 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
            (t3
               ("MATCH_TEMPLATE" %: string)
               ("REWRITE_TEMPLATE" %: string)
-              (maybe ("COMMA_SEPARATED_FILE_FILTERS" %: (Arg_type.comma_separated string)))
+              (sequence ("FULL_FILE_PATHS_OR_FILE_SUFFIXES" %: string))
            )
         )
     in
     let anonymous_arguments =
       Option.map anonymous_arguments ~f:(fun (match_template, rewrite_template, file_filters) ->
+          let file_filters =
+            match file_filters with
+            | [] -> None
+            | l -> Some l
+          in
           { match_template; rewrite_template; file_filters })
     in
     let configuration =
