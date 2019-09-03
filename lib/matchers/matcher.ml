@@ -221,7 +221,7 @@ module Make (Syntax : Syntax.S) = struct
     ; everything
     ]
 
-  let reserved_delimiters _s =
+  let reserved_delimiters () =
     let required_from_prefix = not_alphanum in
     let required_from_suffix = not_alphanum in
     let required_until_suffix = not_alphanum in
@@ -271,8 +271,8 @@ module Make (Syntax : Syntax.S) = struct
     |> List.map ~f:attempt
     |> choice
 
-  let reserved s =
-    reserved_delimiters s
+  let reserved _s =
+    reserved_delimiters ()
     <|> skip (space |>> Char.to_string)
 
   let until_of_from from =
@@ -486,11 +486,16 @@ module Make (Syntax : Syntax.S) = struct
             match result with
             | Hole Alphanum (identifier, _) ->
               let allowed =  choice [alphanum; char '_'] |>> String.of_char in
-              let hole_semantics = many1 (not_followed_by rest "" >> allowed) in
+              let hole_semantics = many1 allowed in
               record_matches identifier hole_semantics
 
             | Hole Non_space (identifier, _dimension) ->
-              let allowed = non_space |>> String.of_char in
+              let allowed =
+                [skip space; reserved_delimiters ()]
+                |> choice
+                |> is_not
+                |>> Char.to_string
+              in
               let hole_semantics = many1 (not_followed_by rest "" >> allowed) in
               record_matches identifier hole_semantics
 
