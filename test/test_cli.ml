@@ -395,7 +395,42 @@ let%expect_test "list_languages" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_output command in
   print_string result;
-  [%expect_exact {||}]
+  [%expect_exact {|Option              Language  
+ -matcher .s        Assembly  
+ -matcher .sh       Bash      
+ -matcher .c        C         
+ -matcher .cs       C#        
+ -matcher .css      CSS       
+ -matcher .dart     Dart      
+ -matcher .dyck     Dyck      
+ -matcher .clj      Clojure   
+ -matcher .elm      Elm       
+ -matcher .erl      Erlang    
+ -matcher .ex       Elixir    
+ -matcher .f        Fortran   
+ -matcher .fsx      F#        
+ -matcher .html     HTML      
+ -matcher .hs       Haskell   
+ -matcher .go       Go        
+ -matcher .java     Java      
+ -matcher .js       Javascript/Typescript
+ -matcher .json     JSON      
+ -matcher .jl       Julia     
+ -matcher .tex      LaTeX     
+ -matcher .ml       OCaml     
+ -matcher .paren    Paren     
+ -matcher .pas      Pascal    
+ -matcher .php      PHP       
+ -matcher .py       Python    
+ -matcher .rb       Ruby      
+ -matcher .rs       Rust      
+ -matcher .scala    Scala     
+ -matcher .sql      SQL       
+ -matcher .swift    Swift     
+ -matcher .txt      Text      
+ -matcher .xml      XML       
+ -matcher .generic  Generic   
+|}]
 
 
 let%expect_test "patdiff_and_zip" =
