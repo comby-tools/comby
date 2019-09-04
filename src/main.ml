@@ -380,7 +380,16 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             | l ->
               List.map l ~f:(fun pattern ->
                   if String.contains pattern '/' then
-                    Filename.realpath pattern
+                    match Filename.realpath pattern with
+                    | exception Unix.Unix_error _ ->
+                      Format.eprintf
+                        "No such file or directory: %s. Comby interprets \
+                         patterns containing '/' as file paths. If a pattern \
+                         does not contain '/' (like '.ml'), it is considered a \
+                         pattern where file endings must match the pattern. \
+                         Please supply only valid file paths or patterns.@." pattern;
+                      exit 1
+                    | path -> path
                   else
                     pattern)
               |> Option.some

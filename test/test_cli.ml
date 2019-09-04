@@ -778,4 +778,13 @@ let%expect_test "zip_exclude_dir_no_extension" =
     @@ -1,2 +1,2 @@
      // src
     -func main() {}
-    +func pain() {} |}];
+    +func pain() {} |}]
+
+let%expect_test "invalid_path_with_error_message" =
+  let source = "doesn't matter" in
+  let command_args = Format.sprintf "'a' 'b' ./invalid/path" in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_source_from_stdin command source in
+  print_string result;
+  [%expect{|
+    No such file or directory: ./invalid/path. Comby interprets patterns containing '/' as file paths. If a pattern does not contain '/' (like '.ml'), it is considered a pattern where file endings must match the pattern. Please supply only valid file paths or patterns. |}]
