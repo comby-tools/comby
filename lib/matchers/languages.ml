@@ -1,6 +1,12 @@
-let enable_alphanum_delimiters = true
+open Core
+open Syntax_config
 
 module Text = struct
+  module Info = struct
+    let name = "Text"
+    let extensions = [".txt"]
+  end
+
   module Syntax = struct
     let user_defined_delimiters = []
     let escapable_string_literals = []
@@ -13,20 +19,30 @@ module Text = struct
     let comment_parser = []
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Paren = struct
+  module Info = struct
+    let name = "Paren"
+    let extensions = [".paren"]
+  end
+
   module Syntax = struct
     include Text.Syntax
     let user_defined_delimiters =
       [ "(", ")"
       ]
   end
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Dyck = struct
+  module Info = struct
+    let name = "Dyck"
+    let extensions = [".dyck"]
+  end
+
   module Syntax = struct
     let user_defined_delimiters =
       [ "(", ")"
@@ -45,12 +61,24 @@ module Dyck = struct
     let comment_parser = []
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
-module Json = Dyck
+module Json = struct
+  module Info = struct
+    let name = "JSON"
+    let extensions = [".json"]
+  end
+
+  include Matcher.Make (Dyck.Syntax) (Info)
+end
 
 module Latex = struct
+  module Info = struct
+    let name = "LaTeX"
+    let extensions = [".tex"; ".bib"]
+  end
+
   module Syntax = struct
     open Types
     include Dyck.Syntax
@@ -65,10 +93,15 @@ module Latex = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Assembly = struct
+  module Info = struct
+    let name = "Assembly"
+    let extensions = [".s"; ".asm"]
+  end
+
   module Syntax = struct
     open Types
     include Dyck.Syntax
@@ -78,10 +111,15 @@ module Assembly = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Clojure = struct
+  module Info = struct
+    let name = "Clojure"
+    let extensions = [".clj"]
+  end
+
   module Syntax = struct
     open Types
     include Dyck.Syntax
@@ -95,10 +133,15 @@ module Clojure = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Lisp = struct
+  module Info = struct
+    let name = "Lisp"
+    let extensions = [".lisp"]
+  end
+
   module Syntax = struct
     include Clojure.Syntax
     open Types
@@ -109,10 +152,15 @@ module Lisp = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Generic = struct
+  module Info = struct
+    let name = "Generic"
+    let extensions = [".generic"]
+  end
+
   module Syntax = struct
     include Dyck.Syntax
 
@@ -125,10 +173,15 @@ module Generic = struct
       '\\'
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Bash = struct
+  module Info = struct
+    let name = "Bash"
+    let extensions = [".sh"]
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
@@ -146,31 +199,34 @@ module Bash = struct
       [ Until_newline "#" ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Ruby = struct
+  module Info = struct
+    let name = "Ruby"
+    let extensions = [".rb"]
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
-      @ if enable_alphanum_delimiters then
-        [ "class", "end"
-        ; "def", "end"
-        ; "do", "end"
-        ; "if", "end"
-        ; "case", "end"
-        ; "unless", "end"
-        ; "while", "end"
-        ; "until", "end"
-        ; "for", "end"
-        ; "begin", "end"
-        ; "module", "end"
-        ]
-      else
-        []
+      @
+      [ "class", "end"
+      ; "def", "end"
+      ; "do", "end"
+      ; "if", "end"
+      ; "case", "end"
+      ; "unless", "end"
+      ; "while", "end"
+      ; "until", "end"
+      ; "for", "end"
+      ; "begin", "end"
+      ; "module", "end"
+      ]
 
     let raw_string_literals =
       [ ({|"|}, {|"|})
@@ -182,26 +238,29 @@ module Ruby = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Elixir = struct
+  module Info = struct
+    let name = "Elixir"
+    let extensions = [".ex"]
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
-      @ if enable_alphanum_delimiters then
-        [ "fn", "end"
-        ; "do", "end"
-        ; "case", "end"
-        ; "cond", "end"
-        ; "if", "end"
-        ; "<", ">"
-        ]
-      else
-        []
+      @
+      [ "fn", "end"
+      ; "do", "end"
+      ; "case", "end"
+      ; "cond", "end"
+      ; "if", "end"
+      ; "<", ">"
+      ]
 
     let raw_string_literals =
       [ ({|"""|}, {|"""|})
@@ -212,11 +271,16 @@ module Elixir = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 
 module Python = struct
+  module Info = struct
+    let name = "Python"
+    let extensions = [".py"; ".pyi"]
+  end
+
   module Syntax = struct
     include Elixir.Syntax
 
@@ -226,10 +290,15 @@ module Python = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Html = struct
+  module Info = struct
+    let name = "HTML"
+    let extensions = [".html"]
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
@@ -244,10 +313,24 @@ module Html = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
+end
+
+module Xml = struct
+  module Info = struct
+    let name = "XML"
+    let extensions = [".xml"]
+  end
+
+  include Matcher.Make (Html.Syntax) (Info)
 end
 
 module SQL = struct
+  module Info = struct
+    let name = "SQL"
+    let extensions = [".sql"]
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
@@ -258,33 +341,47 @@ module SQL = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Erlang = struct
+  module Info = struct
+    let name = "Erlang"
+    let extensions = [".erl"]
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
-      @ if enable_alphanum_delimiters then
-        [ "fun", "end"
-        ; "case", "end"
-        ; "if", "end"
-        ]
-      else
-        []
+      @
+      [ "fun", "end"
+      ; "case", "end"
+      ; "if", "end"
+      ]
 
     let comment_parser =
       [ Until_newline "%"
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module C = struct
+  module Info = struct
+    let name = "C"
+    let extensions =
+      [ ".c"
+      ; ".h"
+      ; ".cc"
+      ; ".cpp"
+      ; ".hpp"
+      ]
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
@@ -295,20 +392,60 @@ module C = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
-module Csharp = C
+module Csharp = struct
+  module Info = struct
+    let name = "C#"
+    let extensions = [".cs"]
+  end
 
-module Java = C
+  include Matcher.Make (C.Syntax) (Info)
+end
 
-module CSS = C
+module Java = struct
+  module Info = struct
+    let name = "Java"
+    let extensions = [".java"]
+  end
 
-module Kotlin = C
+  include Matcher.Make (C.Syntax) (Info)
+end
 
-module Scala = C
+module CSS = struct
+  module Info = struct
+    let name = "CSS"
+    let extensions = [".css"]
+  end
+
+  include Matcher.Make (C.Syntax) (Info)
+end
+
+module Kotlin = struct
+  module Info = struct
+    let name = "Kotlin"
+    let extensions = [".kt"; ".kts"]
+  end
+
+  include Matcher.Make (C.Syntax) (Info)
+end
+
+module Scala = struct
+  module Info = struct
+    let name = "Scala"
+    let extensions = [".scala"]
+  end
+
+  include Matcher.Make (C.Syntax) (Info)
+end
 
 module Dart = struct
+  module Info = struct
+    let name = "Dart"
+    let extensions = [".dart"]
+  end
+
   module Syntax = struct
     include C.Syntax
 
@@ -318,10 +455,15 @@ module Dart = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Php = struct
+  module Info = struct
+    let name = "PHP"
+    let extensions = [".php"]
+  end
+
   module Syntax = struct
     include C.Syntax
     open Types
@@ -332,10 +474,15 @@ module Php = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Go = struct
+  module Info = struct
+    let name = "Go"
+    let extensions = [".go"]
+  end
+
   module Syntax = struct
     include C.Syntax
 
@@ -344,12 +491,24 @@ module Go = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
-module Javascript = Go
+module Javascript = struct
+  module Info = struct
+    let name = "Javascript/Typescript"
+    let extensions = [".js"; ".ts"]
+  end
+
+  include Matcher.Make (Go.Syntax) (Info)
+end
 
 module Swift = struct
+  module Info = struct
+    let name = "Swift"
+    let extensions = [".swift"]
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
@@ -360,10 +519,15 @@ module Swift = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Rust = struct
+  module Info = struct
+    let name = "Rust"
+    let extensions = [".rs"]
+  end
+
   module Syntax = struct
     include Swift.Syntax
 
@@ -378,23 +542,26 @@ module Rust = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module OCaml = struct
+  module Info = struct
+    let name = "OCaml"
+    let extensions = [".ml"; ".mli"]
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
-      @ if enable_alphanum_delimiters then
-        [ "begin", "end"
-        ; "struct", "end"
-        ; "sig", "end"
-        ]
-      else
-        []
+      @
+      [ "begin", "end"
+      ; "struct", "end"
+      ; "sig", "end"
+      ]
 
 
     (* Override ' as escapable string literal, since
@@ -412,13 +579,25 @@ module OCaml = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
-module Fsharp = OCaml
+module Fsharp = struct
+  module Info = struct
+    let name = "F#"
+    let extensions = [".fsx"]
+  end
+
+  include Matcher.Make (OCaml.Syntax) (Info)
+end
 
 (** Follow Free Pascal that allows nested comments, although Rosetta takes the opposite view. *)
 module Pascal = struct
+  module Info = struct
+    let name = "Pascal"
+    let extensions = [".pas"]
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
@@ -430,10 +609,15 @@ module Pascal = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Julia = struct
+  module Info = struct
+    let name = "Julia"
+    let extensions = [".jl"]
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
@@ -444,10 +628,24 @@ module Julia = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Fortran = struct
+  module Info = struct
+    let name = "Fortran"
+    let extensions =
+      [ ".f"
+      ; ".for"
+      ; ".f90"
+      ; ".f95"
+      ; ".f03"
+      ; ".f08"
+      ; ".F"
+      ; ".F90"
+      ]
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
@@ -457,10 +655,15 @@ module Fortran = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
 module Haskell = struct
+  module Info = struct
+    let name = "Haskell"
+    let extensions = [".hs"]
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
@@ -475,13 +678,25 @@ module Haskell = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
-module Elm = Haskell
+module Elm = struct
+  module Info = struct
+    let name = "Elm"
+    let extensions = [".elm"]
+  end
+
+  include Matcher.Make (Haskell.Syntax) (Info)
+end
 
 (** For testing *)
 module C_nested_comments = struct
+  module Info = struct
+    let name = "C_with_nested_comments"
+    let extensions = []
+  end
+
   module Syntax = struct
     open Types
     include Generic.Syntax
@@ -491,56 +706,72 @@ module C_nested_comments = struct
       ]
   end
 
-  include Matcher.Make(Syntax)
+  include Matcher.Make (Syntax) (Info)
 end
 
+let all : (module Types.Matcher.S) list =
+  [ (module Assembly)
+  ; (module Bash)
+  ; (module C)
+  ; (module Csharp)
+  ; (module CSS)
+  ; (module Dart)
+  ; (module Dyck)
+  ; (module Clojure)
+  ; (module Elm)
+  ; (module Erlang)
+  ; (module Elixir)
+  ; (module Fortran)
+  ; (module Fsharp)
+  ; (module Go)
+  ; (module Html)
+  ; (module Haskell)
+  ; (module Java)
+  ; (module Javascript)
+  ; (module Json)
+  ; (module Julia)
+  ; (module Kotlin)
+  ; (module Latex)
+  ; (module Lisp)
+  ; (module OCaml)
+  ; (module Paren)
+  ; (module Pascal)
+  ; (module Php)
+  ; (module Python)
+  ; (module Ruby)
+  ; (module Rust)
+  ; (module Scala)
+  ; (module SQL)
+  ; (module Swift)
+  ; (module Text)
+  ; (module Xml)
+  ; (module Generic)
+  ]
+
 let select_with_extension extension : (module Types.Matcher.S) =
-  match extension with
-  | ".c" | ".h" | ".cc" | ".cpp" | ".hpp" -> (module C)
-  | ".clj" -> (module Clojure)
-  | ".cs" -> (module Csharp)
-  | ".css" -> (module CSS)
-  | ".dart" -> (module Dart)
-  | ".dyck" -> (module Dyck)
-  | ".elm" -> (module Elm)
-  | ".erl" -> (module Erlang)
-  | ".ex" -> (module Elixir)
-  | ".f" | ".for" | ".f90"
-  | ".f95" | ".f03" | ".f08" | ".F" | ".F90" -> (module Fortran)
-  | ".fsx" -> (module Fsharp)
-  | ".html" | ".xml" -> (module Html)
-  | ".hs" -> (module Haskell)
-  | ".go" -> (module Go)
-  | ".java" -> (module Java)
-  | ".jl" -> (module Julia)
-  | ".js" | ".ts" | ".jsx" | ".tsx" -> (module Javascript)
-  | ".json" -> (module Json)
-  | ".ml" | ".mli" -> (module OCaml)
-  | ".paren" -> (module Paren)
-  | ".pas" -> (module Pascal)
-  | ".php" -> (module Php)
-  | ".py" -> (module Python)
-  | ".rb" -> (module Ruby)
-  | ".rs" -> (module Rust)
-  | ".s" | ".asm" -> (module Assembly)
-  | ".scala" -> (module Scala)
-  | ".sql" -> (module SQL)
-  | ".sh" -> (module Bash)
-  | ".swift" -> (module Swift)
-  | ".tex" | ".bib" -> (module Latex)
-  | ".txt" -> (module Text)
-  | _ -> (module Generic)
+  List.find all ~f:(fun (module M) -> List.exists M.extensions ~f:((=) extension))
+  |> function
+  | Some matcher -> matcher
+  | None -> (module Generic)
 
-let create (t : Syntax_config.t) =
+let create
+    { user_defined_delimiters
+    ; escapable_string_literals
+    ; escape_char
+    ; raw_string_literals
+    ; comment_parser
+    } =
+  let module Info = struct
+    let name = "User_defined_language"
+    let extensions = []
+  end
+  in
   let module User_language = struct
-    let user_defined_delimiters = t.user_defined_delimiters
-
-    let escapable_string_literals = t.escapable_string_literals
-
-    let escape_char = t.escape_char
-
-    let raw_string_literals = t.raw_string_literals
-
-    let comment_parser = t.comment_parser
-  end in
-  (module Matcher.Make (User_language) : Types.Matcher.S)
+    let user_defined_delimiters = user_defined_delimiters
+    let escapable_string_literals = escapable_string_literals
+    let escape_char = escape_char
+    let raw_string_literals = raw_string_literals
+    let comment_parser = comment_parser
+  end
+  in
+  (module Matcher.Make (User_language) (Info) : Types.Matcher.S)

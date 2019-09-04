@@ -22,6 +22,10 @@ type processed_source_result =
   | Replacement of (Replacement.t list * string * int)
   | Nothing
 
+let debug =
+  Sys.getenv "DEBUG_COMBY"
+  |> Option.is_some
+
 let verbose_out_file = "/tmp/comby.out"
 
 let get_matches (module Matcher : Matchers.Matcher) configuration match_template match_rule source =
@@ -138,23 +142,22 @@ let select_matcher custom_matcher override_matcher configuration =
       Yojson.Safe.from_file matcher_path
       |> Matchers.Syntax_config.of_yojson
       |> function
-      | Ok c -> Matchers.create c
+      | Ok c -> Matchers.create c, None
       | Error error ->
         Format.eprintf "%s@." error;
         exit 1
+  else if Option.is_some override_matcher then
+    Matchers.select_with_extension (Option.value_exn override_matcher), None
   else
-  if Option.is_some override_matcher then
-    Matchers.select_with_extension (Option.value_exn override_matcher)
-  else
-    match configuration.file_filters with
-    | None | Some [] ->
-      Matchers.select_with_extension ".generic"
-    | Some (filter::_) ->
-      match Filename.split_extension filter with
-      | _, Some extension ->
-        Matchers.select_with_extension ("." ^ extension)
-      | _ ->
-        Matchers.select_with_extension ".generic"
+    let extension =
+      match configuration.file_filters with
+      | None | Some [] -> ".generic"
+      | Some (filter::_) ->
+        match Filename.split_extension filter with
+        | _, Some extension -> "." ^ extension
+        | extension, None -> "." ^ extension
+    in
+    Matchers.select_with_extension extension, Some extension
 
 let write_statistics number_of_matches paths total_time dump_statistics =
   if dump_statistics then
@@ -172,7 +175,7 @@ let write_statistics number_of_matches paths total_time dump_statistics =
       ; total_time = total_time
       }
     in
-    Format.eprintf "%s%!"
+    Format.eprintf "%s@."
     @@ Yojson.Safe.pretty_to_string
     @@ Statistics.to_yojson statistics
   else
@@ -335,6 +338,18 @@ let run
       write_statistics number_of_matches [] total_time dump_statistics
   | _ -> failwith "No single path handled here"
 
+let list_supported_languages_and_exit () =
+  let list =
+    List.map Matchers.all ~f:(fun (module M) ->
+        let ext = List.hd_exn M.extensions in
+        Format.sprintf " -matcher %-10s%-10s\n" ext M.name)
+    |> String.concat
+  in
+  Format.printf "%-20s%-10s@." "Option" "Language";
+  Format.printf "%s%!" list;
+  exit 0
+
+
 let base_command_parameters : (unit -> 'result) Command.Param.t =
   [%map_open
      (* flags. *)
@@ -361,6 +376,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and diff = flag "diff" no_arg ~doc:"Output diff"
     and color = flag "color" no_arg ~doc:"Color matches or replacements (patience diff)."
     and count = flag "count" no_arg ~doc:"Display a count of matches in a file."
+    and list = flag "list" no_arg ~doc:"Display supported languages and extensions"
     and exclude_directory_prefix = flag "exclude-dir" (optional_with_default "." string) ~doc:"prefix of directories to exclude. Default: '.'"
     and anonymous_arguments =
       anon
@@ -396,6 +412,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           in
           { match_template; rewrite_template; file_filters })
     in
+    if list then list_supported_languages_and_exit ();
     let configuration =
       Command_configuration.create
         { input_options =
@@ -434,10 +451,17 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
         Format.eprintf "%s@." @@ Error.to_string_hum error;
         exit 1
     in
-    let matcher = select_matcher custom_matcher override_matcher configuration
-    in
+    let (module M) as matcher, extension = select_matcher custom_matcher override_matcher configuration in
     fun () ->
-      run matcher configuration
+      run matcher configuration;
+      match extension with
+      | Some ".generic" ->
+        Format.eprintf "@.WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning.@."
+      | Some extension ->
+        if M.name = "Generic" then
+          Format.eprintf "@.WARNING: the GENERIC matcher was used because I'm unable to guess what language to use for the file extension %s. The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning.@." extension
+        else if debug then Format.eprintf "@.NOTE: the %s matcher was inferred from extension %s. See '-list' to set a matcher for a specific language.@." M.name extension
+      | None -> ()
   ]
 
 let default_command =

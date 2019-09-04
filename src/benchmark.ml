@@ -140,7 +140,7 @@ let zip_bench () =
   let rewrite_template = "derp" in
   let go baseline_binary new_binary zip_file =
     let command_args =
-      Format.sprintf "'%s' '%s' .ml,.mli -sequential -stats -zip %s > /dev/null"
+      Format.sprintf "'%s' '%s' .ml,.mli -matcher .ml -sequential -stats -zip %s > /dev/null"
         match_template
         rewrite_template
         zip_file
