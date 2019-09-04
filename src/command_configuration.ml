@@ -327,8 +327,8 @@ let validate_errors { input_options; run_options = _; output_options } =
       (input_options.specification_directories = None
        || input_options.specification_directories = Some [])
     , "No templates specified. \
-       Either on the command line, or \
-       using -templates \
+       See -h to specify on the command line, or \
+       use -templates \
        <directory-containing-templates>"
     ; Option.is_some input_options.directory_depth
       && Option.value_exn (input_options.directory_depth) < 0

@@ -384,12 +384,32 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
            (t3
               ("MATCH_TEMPLATE" %: string)
               ("REWRITE_TEMPLATE" %: string)
-              (maybe ("COMMA_SEPARATED_FILE_FILTERS" %: (Arg_type.comma_separated string)))
+              (sequence ("FULL_FILE_PATHS_OR_FILE_SUFFIXES" %: string))
            )
         )
     in
     let anonymous_arguments =
       Option.map anonymous_arguments ~f:(fun (match_template, rewrite_template, file_filters) ->
+          let file_filters =
+            match file_filters with
+            | [] -> None
+            | l ->
+              List.map l ~f:(fun pattern ->
+                  if String.contains pattern '/' then
+                    match Filename.realpath pattern with
+                    | exception Unix.Unix_error _ ->
+                      Format.eprintf
+                        "No such file or directory: %s. Comby interprets \
+                         patterns containing '/' as file paths. If a pattern \
+                         does not contain '/' (like '.ml'), it is considered a \
+                         pattern where file endings must match the pattern. \
+                         Please supply only valid file paths or patterns.@." pattern;
+                      exit 1
+                    | path -> path
+                  else
+                    pattern)
+              |> Option.some
+          in
           { match_template; rewrite_template; file_filters })
     in
     if list then list_supported_languages_and_exit ();

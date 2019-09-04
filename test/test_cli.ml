@@ -83,7 +83,7 @@ let%expect_test "error_on_zip_and_stdin" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command "none" in
   print_string result;
-  [%expect_exact {|No templates specified. Either on the command line, or using -templates <directory-containing-templates>
+  [%expect_exact {|No templates specified. See -h to specify on the command line, or use -templates <directory-containing-templates>
 Next error: -zip may not be used with stdin.
 |}]
 
@@ -862,4 +862,13 @@ let%expect_test "zip_exclude_dir_no_extension" =
     -func main() {}
     +func pain() {}
 
-    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}];
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}]
+
+let%expect_test "invalid_path_with_error_message" =
+  let source = "doesn't matter" in
+  let command_args = Format.sprintf "'a' 'b' ./invalid/path" in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|
+    No such file or directory: ./invalid/path. Comby interprets patterns containing '/' as file paths. If a pattern does not contain '/' (like '.ml'), it is considered a pattern where file endings must match the pattern. Please supply only valid file paths or patterns. |}]
