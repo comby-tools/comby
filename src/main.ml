@@ -22,6 +22,10 @@ type processed_source_result =
   | Replacement of (Replacement.t list * string * int)
   | Nothing
 
+let debug =
+  Sys.getenv "DEBUG_COMBY"
+  |> Option.is_some
+
 let verbose_out_file = "/tmp/comby.out"
 
 let get_matches (module Matcher : Matchers.Matcher) configuration match_template match_rule source =
@@ -436,8 +440,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
       | Some extension ->
         if M.name = "Generic" then
           Format.eprintf "@.WARNING: the GENERIC matcher was used because I'm unable to guess what language to use for the file extension %s. The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning.@." extension
-        else
-          Format.eprintf "@.NOTE: the %s matcher was inferred from extension %s. See '-list' to set a matcher for a specific language.@." M.name extension
+        else if debug then Format.eprintf "@.NOTE: the %s matcher was inferred from extension %s. See '-list' to set a matcher for a specific language.@." M.name extension
       | None -> ()
   ]
 

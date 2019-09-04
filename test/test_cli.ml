@@ -52,8 +52,6 @@ let%expect_test "json_lines_separates_by_line" =
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect_exact {|{"uri":null,"rewritten_source":"helli wirld","in_place_substitutions":[{"range":{"start":{"offset":7,"line":-1,"column":-1},"end":{"offset":8,"line":-1,"column":-1}},"replacement_content":"i","environment":[]},{"range":{"start":{"offset":4,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}},"replacement_content":"i","environment":[]}],"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-hello world\n+helli wirld"}
-
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
 |}]
 
 let%expect_test "json_lines_json_pretty_do_not_output_when_diff_null" =
@@ -66,7 +64,7 @@ let%expect_test "json_lines_json_pretty_do_not_output_when_diff_null" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{| NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language. |}]
+  [%expect{| |}]
 
 let%expect_test "json_lines_do_not_output_when_diff_null" =
   let source = "hello world" in
@@ -78,7 +76,7 @@ let%expect_test "json_lines_do_not_output_when_diff_null" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{| NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language. |}]
+  [%expect{| |}]
 
 let%expect_test "error_on_zip_and_stdin" =
   let command_args = "-zip x -stdin" in
@@ -112,10 +110,8 @@ let%expect_test "warn_on_anonymous_and_templates_flag" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|Warning: Templates specified on the command line AND using -templates. Ignoring match
+  [%expect_exact {|WARNING: Templates specified on the command line AND using -templates. Ignoring match
       and rewrite templates on the command line and only using those in directories.
-
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
 |}]
 
 
@@ -154,9 +150,7 @@ let%expect_test "warn_json_lines_and_json_pretty" =
   "diff":
     "--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-hello world\n+world"
 }
-Warning: Both -json-lines and -json-pretty specified. Using -json-pretty.
-
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
+WARNING: Both -json-lines and -json-pretty specified. Using -json-pretty.
 |}]
 
 let%expect_test "stdin_command" =
@@ -173,8 +167,6 @@ let%expect_test "stdin_command" =
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;43;30m!|[0m[0;31mhello [0mworld
-
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
 |}]
 
 let%expect_test "with_match_rule" =
@@ -193,8 +185,6 @@ let%expect_test "with_match_rule" =
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;43;30m!|[0m[0;31mhello [0mworld
-
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
 |}];
 
   let source = "hello world" in
@@ -209,8 +199,7 @@ NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect{|
-    hello world
-    NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language. |}]
+    hello world |}]
 
 let%expect_test "with_rewrite_rule" =
   let source = "hello world" in
@@ -228,8 +217,6 @@ let%expect_test "with_rewrite_rule" =
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;43;30m!|[0mhello[0;31m world[0m
-
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
 |}]
 
 let%expect_test "with_rewrite_rule_stdin_default_no_extension" =
@@ -324,8 +311,6 @@ let%expect_test "json_output_option" =
   "diff":
     "--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-a X c a Y c\n+c X a c Y a"
 }
-
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
 |}];
 
   let source = "a X c a Y c" in
@@ -376,9 +361,7 @@ NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher
       "matched": "a Y c"
     }
   ]
-}
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
-|}]
+}|}]
 
 let with_zip f =
   let file = Filename.temp_file "comby_" ".zip" in
@@ -468,8 +451,6 @@ let%expect_test "patdiff_and_zip" =
   ],
   "diff": "--- main.ml\n+++ main.ml\n@@ -1,1 +1,1 @@\n-hello world\n+world"
 }
-
-NOTE: the OCaml matcher was inferred from extension .ml. See '-list' to set a matcher for a specific language.
 |}]
     )
 
@@ -480,9 +461,7 @@ let%expect_test "template_parsing_no_match_template" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|Warning: Could not read required match file in example/templates/parse-no-match-template
-
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
+  [%expect_exact {|WARNING: Could not read required match file in example/templates/parse-no-match-template
 |}]
 
 let%expect_test "template_parsing_with_trailing_newline" =
@@ -493,8 +472,7 @@ let%expect_test "template_parsing_with_trailing_newline" =
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect{|
-    hello world
-    NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language. |}]
+    hello world |}]
 
 let%expect_test "template_parsing_with_trailing_newline" =
   let source = "hello world" in
@@ -504,8 +482,7 @@ let%expect_test "template_parsing_with_trailing_newline" =
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect{|
-    hello world
-    NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language. |}]
+    hello world |}]
 
 let%expect_test "nested_templates" =
   let source = "1 2 3" in
@@ -515,9 +492,7 @@ let%expect_test "nested_templates" =
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect{|
-    +1 +2 +3Warning: Could not read required match file in example/multiple-nested-templates/invalid-subdir
-
-    NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language. |}]
+    +1 +2 +3WARNING: Could not read required match file in example/multiple-nested-templates/invalid-subdir |}]
 
 let%expect_test "diff_is_default" =
   let source = "a X c a Y c" in
@@ -535,8 +510,6 @@ let%expect_test "diff_is_default" =
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
 [0;42;30m+|[0m[0m[0;32mc[0m X [0;32ma c[0m Y [0;32ma[0m[0m
-
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
 |}]
 
 let%expect_test "diff_option" =
@@ -555,8 +528,6 @@ let%expect_test "diff_option" =
 @@ -1,1 +1,1 @@
 -a X c a Y c
 +c X a c Y a
-
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
 |}]
 
 let%expect_test "stdout_option" =
@@ -570,9 +541,7 @@ let%expect_test "stdout_option" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_expect_stdin_and_stdout command source
   |> print_string;
-  [%expect_exact {|c X a c Y a
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
-|}]
+  [%expect_exact {|c X a c Y a|}]
 
 let%expect_test "only_color_prints_colored_diff" =
   let source = "a X c a Y c" in
@@ -590,8 +559,6 @@ let%expect_test "only_color_prints_colored_diff" =
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
 [0;42;30m+|[0m[0m[0;32mc[0m X [0;32ma c[0m Y [0;32ma[0m[0m
-
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
 |}]
 
 let%expect_test "diff_explicit_color" =
@@ -610,8 +577,6 @@ let%expect_test "diff_explicit_color" =
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
 [0;42;30m+|[0m[0m[0;32mc[0m X [0;32ma c[0m Y [0;32ma[0m[0m
-
-NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language.
 |}]
 
 let%expect_test "is_real_directory" =
@@ -808,7 +773,7 @@ let%expect_test "matcher_override" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{| NOTE: the C matcher was inferred from extension .c. See '-list' to set a matcher for a specific language. |}]
+  [%expect{| |}]
 
 let%expect_test "infer_and_honor_extensions" =
   let source = "doesn't matter" in
@@ -825,9 +790,7 @@ let%expect_test "infer_and_honor_extensions" =
      // in a comment foo()
     -foo()
     +bar()
-     }
-
-    NOTE: the Go matcher was inferred from extension .go. See '-list' to set a matcher for a specific language. |}];
+     } |}];
 
   let source = "doesn't matter" in
   let src_dir = "example" ^/ "src" ^/ "honor-file-extensions" in
@@ -879,9 +842,7 @@ let%expect_test "zip_exclude_dir_with_extension" =
     @@ -1,2 +1,2 @@
      // src
     -func main() {}
-    +func pain() {}
-
-    NOTE: the Go matcher was inferred from extension .go. See '-list' to set a matcher for a specific language. |}]
+    +func pain() {} |}]
 
 let%expect_test "zip_exclude_dir_no_extension" =
   let source = "doesn't matter" in

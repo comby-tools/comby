@@ -74,7 +74,7 @@ let parse_template_directories match_only paths =
     in
     match read_optional (path ^/ "match") with
     | None ->
-      Format.eprintf "Warning: Could not read required match file in %s@." path;
+      Format.eprintf "WARNING: Could not read required match file in %s@." path;
       None
     | Some match_template ->
       let match_rule = read_optional (path ^/ "match_rule") in
@@ -392,7 +392,7 @@ let emit_warnings { input_options; output_options; _ } =
     ]
   in
   List.iter warn_on ~f:(function
-      | true, message -> Format.eprintf "Warning: %s@." message
+      | true, message -> Format.eprintf "WARNING: %s@." message
       | _ -> ());
   Ok ()
 
