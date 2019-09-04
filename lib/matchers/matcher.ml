@@ -38,7 +38,9 @@ let is_not p s =
 type 'a literal_parser_callback = contents:string -> left_delimiter:string -> right_delimiter:string -> 'a
 type 'a nested_delimiter_callback = left_delimiter:string -> right_delimiter:string -> 'a
 
-module Make (Syntax : Syntax.S) = struct
+module Make (Syntax : Syntax.S) (Info : Info.S) = struct
+  include Info
+
   let escapable_string_literal_parser (f : 'a literal_parser_callback) =
     List.map Syntax.escapable_string_literals ~f:(fun delimiter ->
         let module M =

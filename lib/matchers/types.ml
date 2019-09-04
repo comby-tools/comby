@@ -16,6 +16,13 @@ module Syntax = struct
   end
 end
 
+module Info = struct
+  module type S = sig
+    val name : string
+    val extensions : string list
+  end
+end
+
 type dimension =
   | Code
   | Escapable_string_literal
@@ -41,6 +48,8 @@ type production =
 
 module Matcher = struct
   module type S = sig
+    include Info.S
+
     val first
       :  ?configuration:Configuration.t
       -> ?shift:int
