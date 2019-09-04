@@ -392,14 +392,16 @@ let%expect_test "list_languages" =
  -matcher .ex       Elixir    
  -matcher .f        Fortran   
  -matcher .fsx      F#        
+ -matcher .go       Go        
  -matcher .html     HTML      
  -matcher .hs       Haskell   
- -matcher .go       Go        
  -matcher .java     Java      
  -matcher .js       Javascript/Typescript
  -matcher .json     JSON      
  -matcher .jl       Julia     
+ -matcher .kt       Kotlin    
  -matcher .tex      LaTeX     
+ -matcher .lisp     Lisp      
  -matcher .ml       OCaml     
  -matcher .paren    Paren     
  -matcher .pas      Pascal    
