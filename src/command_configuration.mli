@@ -25,6 +25,7 @@ type output_options =
   ; in_place : bool
   ; diff : bool
   ; stdout : bool
+  ; newline_separated : bool
   ; count : bool
   }
 
