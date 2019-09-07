@@ -106,6 +106,7 @@ type output_options =
   ; in_place : bool
   ; diff : bool
   ; stdout : bool
+  ; newline_separated : bool
   ; count : bool
   }
 
@@ -208,21 +209,30 @@ module Printer = struct
 
   module Rewrite : sig
 
+    type json_kind =
+      | Everything
+      | Only_diff
+
+    type substitution_kind =
+      | Newline_separated
+      | In_place
+
     type diff_kind =
       | Plain
       | Colored
 
-    type json_kind =
-      | Everything
-      | Diff
-
-    type replacement_output =
-      | In_place
+    type output_format =
+      | Overwrite_file
       | Stdout
+      | Diff of diff_kind
       | Json_lines of json_kind
       | Json_pretty of json_kind
-      | Diff of diff_kind
       | Match_only
+
+    type replacement_output =
+      { output_format : output_format
+      ; substitution_kind : substitution_kind
+      }
 
     val convert : output_options -> replacement_output
 
@@ -236,69 +246,100 @@ module Printer = struct
 
     type json_kind =
       | Everything
-      | Diff
+      | Only_diff
 
-    type replacement_output =
+    type substitution_kind =
+      | Newline_separated
       | In_place
+
+    type output_format =
+      | Overwrite_file
       | Stdout
+      | Diff of diff_kind
       | Json_lines of json_kind
       | Json_pretty of json_kind
-      | Diff of diff_kind
       | Match_only
 
-    let convert output_options : replacement_output =
-      match output_options with
-      | { in_place = true; _ } -> In_place
-      | { json_pretty = true; in_place = false; _ } ->
-        if output_options.json_only_diff then
-          Json_pretty Diff
-        else
-          Json_pretty Everything
-      | { json_lines = true; in_place = false; _ } ->
-        if output_options.json_only_diff then
-          Json_lines Diff
-        else
-          Json_lines Everything
-      | { stdout = true; _ } -> Stdout
-      | { diff = true; color = false; _ } -> Diff Plain
-      | { color = true; _ }
-      | _ -> Diff Colored
+    type replacement_output =
+      { output_format : output_format
+      ; substitution_kind : substitution_kind
+      }
 
-    let print replacement_output path replacements replacement_content source_content =
+    let convert output_options : replacement_output =
+      let output_format =
+        match output_options with
+        | { in_place = true; _ } -> Overwrite_file
+        | { stdout = true; _ } -> Stdout
+        | { json_pretty = true; in_place = false; json_only_diff; _ } ->
+          if json_only_diff then
+            Json_pretty Only_diff
+          else
+            Json_pretty Everything
+        | { json_lines = true; in_place = false; json_only_diff; _ } ->
+          if json_only_diff then
+            Json_lines Only_diff
+          else
+            Json_lines Everything
+        | { diff = true; color = false; newline_separated; _ } ->
+          if newline_separated then
+            Diff Plain
+          else
+            Diff Plain
+        | { color = true; _ }
+        | _ -> Diff Colored
+      in
+      if output_options.newline_separated then
+        { output_format; substitution_kind = Newline_separated }
+      else
+        { output_format; substitution_kind = In_place }
+
+    let print { output_format; substitution_kind } path replacements replacement_content source_content =
+      let open Replacement in
       let ppf = Format.std_formatter in
-      match replacement_output with
+      let output_string =
+        match substitution_kind with
+        | Newline_separated ->
+          List.rev_map replacements ~f:(fun { replacement_content; _ } -> replacement_content)
+          |> String.concat ~sep:"\n"
+          |> Format.sprintf "%s\n"
+        | In_place ->
+          replacement_content
+      in
+      match output_format with
       | Stdout ->
-        Format.fprintf ppf "%s" replacement_content
+        Format.fprintf ppf "%s" output_string
+      | Overwrite_file ->
+        begin
+          match path with
+          | Some path -> Out_channel.write_all path ~data:output_string
+          (* This should be impossible since we checked in validate_errors. Leaving the code path explicit. *)
+          | None -> failwith "Error: could not write to file."
+        end
       | Json_pretty Everything ->
-        let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
+        let diff = Diff_configuration.get_diff Plain path source_content output_string in
         let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_pretty (path, replacements, replacement_content, diff, false) in
         Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
-      | Json_pretty Diff ->
-        let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
-        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_pretty (path, replacements, replacement_content, diff, true) in
+      | Json_pretty Only_diff ->
+        let diff = Diff_configuration.get_diff Plain path source_content output_string in
+        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_pretty (path, replacements, output_string, diff, true) in
         Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
       | Json_lines Everything ->
-        let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
-        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_line (path, replacements, replacement_content, diff, false) in
+        let diff = Diff_configuration.get_diff Plain path source_content output_string in
+        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_line (path, replacements, output_string, diff, false) in
         Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
-      | Json_lines Diff ->
-        let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
-        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_line (path, replacements, replacement_content, diff, true) in
+      | Json_lines Only_diff ->
+        let diff = Diff_configuration.get_diff Plain path source_content output_string in
+        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_line (path, replacements, output_string, diff, true) in
         Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
       | Diff Plain ->
-        let diff = Diff_configuration.get_diff Plain path source_content replacement_content in
+        let diff = Diff_configuration.get_diff Plain path source_content output_string in
         Option.value_map diff ~default:() ~f:(fun diff -> Format.fprintf ppf "%s@." diff)
       | Diff Colored ->
-        let diff = Diff_configuration.get_diff Colored path source_content replacement_content in
+        let diff = Diff_configuration.get_diff Colored path source_content output_string in
         Option.value_map diff ~default:() ~f:(fun diff -> Format.fprintf ppf "%s@." diff)
       | Match_only ->
-        let diff = Diff_configuration.get_diff Match_only path replacement_content source_content in
+        let diff = Diff_configuration.get_diff Match_only path output_string source_content in
         Option.value_map diff ~default:() ~f:(fun diff -> Format.fprintf ppf "%s@." diff)
-      | In_place ->
-        match path with
-        | Some path -> Out_channel.write_all path ~data:replacement_content
-        (* This should be impossible since we checked in validate_errors. Leaving the code path explicit. *)
-        | None -> failwith "Error: could not write to file."
   end
 end
 
@@ -338,9 +379,7 @@ let validate_errors { input_options; run_options = _; output_options } =
     ; Option.is_some input_options.specification_directories
       && List.exists
         (Option.value_exn input_options.specification_directories)
-        ~f:(fun dir ->
-            (*Format.printf "checking %s %b@." dir (Sys.is_directory dir = `No);*)
-            not (Sys.is_directory dir = `Yes))
+        ~f:(fun dir -> not (Sys.is_directory dir = `Yes))
     , "One or more directories specified with -templates is not a directory"
     ; output_options.json_only_diff && (not output_options.json_lines && not output_options.json_pretty)
     , "-json-only-diff can only be supplied with -json-lines or -json-pretty."
@@ -478,7 +517,7 @@ let create
       Printer.Rewrite.convert output_options
       |> fun replacement_output ->
       if match_only && color then
-        Printer.Rewrite.print Match_only source_path replacements result source_content
+        Printer.Rewrite.print { replacement_output with output_format = Match_only } source_path replacements result source_content
       else
         Printer.Rewrite.print replacement_output source_path replacements result source_content
   in

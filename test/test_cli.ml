@@ -872,3 +872,19 @@ let%expect_test "invalid_path_with_error_message" =
   print_string result;
   [%expect{|
     No such file or directory: ./invalid/path. Comby interprets patterns containing '/' as file paths. If a pattern does not contain '/' (like '.ml'), it is considered a pattern where file endings must match the pattern. Please supply only valid file paths or patterns. |}]
+
+let%expect_test "newline_separated_output"=
+  let source = "a b c" in
+  let match_template = ":[[1]]" in
+  let rewrite_template = ":[[1]]" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -stdout '%s' '%s' -n -matcher .generic"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_expect_stdin_and_stdout command source
+  |> print_string;
+  [%expect_exact {|a
+b
+c
+|}]

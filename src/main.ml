@@ -372,9 +372,10 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and number_of_workers = flag "jobs" (optional_with_default 4 int) ~doc:"n Number of worker processes. Default: 4"
     and dump_statistics = flag "statistics" ~aliases:["stats"] no_arg ~doc:"Dump statistics to stderr"
     and stdin = flag "stdin" no_arg ~doc:"Read source from stdin"
-    and stdout = flag "stdout" no_arg ~doc:"Print changed content to stdout. This option basically exists so editors can read in changed content."
+    and stdout = flag "stdout" no_arg ~doc:"Print changed content to stdout. Useful to editors for reading in changed content."
     and diff = flag "diff" no_arg ~doc:"Output diff"
     and color = flag "color" no_arg ~doc:"Color matches or replacements (patience diff)."
+    and newline_separated = flag "newline-separated" no_arg ~doc:"Instead of rewriting in place, output rewrites separated by newlines."
     and count = flag "count" no_arg ~doc:"Display a count of matches in a file."
     and list = flag "list" no_arg ~doc:"Display supported languages and extensions"
     and exclude_directory_prefix = flag "exclude-dir" (optional_with_default "." string) ~doc:"prefix of directories to exclude. Default: '.'"
@@ -443,6 +444,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; in_place
             ; diff
             ; stdout
+            ; newline_separated
             }
         }
       |> function
