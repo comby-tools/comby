@@ -170,9 +170,12 @@ module Printer = struct
       | Colored
       | Count
 
+    type json_kind =
+      | Lines
+      | Pretty
+
     type match_output =
-      | Json_lines
-      | Json_pretty
+      | Json of json_kind
       | Match_only of match_only_kind
 
     val convert : output_options -> match_output
@@ -185,33 +188,43 @@ module Printer = struct
       | Colored
       | Count
 
+    type json_kind =
+      | Lines
+      | Pretty
+
     type match_output =
-      | Json_lines
-      | Json_pretty
+      | Json of json_kind
       | Match_only of match_only_kind
 
     let convert output_options =
       match output_options with
       | { json_pretty = true; json_lines = true; _ }
-      | { json_pretty = true; json_lines = false; _ } -> Json_pretty
-      | { json_pretty = false; json_lines = true; _ } -> Json_lines
+      | { json_pretty = true; json_lines = false; _ } -> Json Pretty
+      | { json_pretty = false; json_lines = true; _ } -> Json Lines
       | { count = true; _ } -> Match_only Count
       | _ -> Match_only Colored
 
     let print (match_output : match_output) source_path matches =
       let ppf = Format.std_formatter in
-      match match_output with
-      | Json_lines -> Format.fprintf ppf "%a" Match.pp_json_lines (source_path, matches)
-      | Json_pretty -> Format.fprintf ppf "%a" Match.pp_json_pretty (source_path, matches)
-      | Match_only _ -> Format.fprintf ppf "%a" Match.pp_match_count (source_path, matches)
+      let pp =
+        match match_output with
+        | Match_only _ -> Match.pp_match_count
+        | Json Lines -> Match.pp_json_lines
+        | Json Pretty -> Match.pp_json_pretty
+      in
+      Format.fprintf ppf "%a" pp (source_path, matches)
 
   end
 
   module Rewrite : sig
 
-    type json_kind =
+    type json_data =
       | Everything
       | Only_diff
+
+    type json_kind =
+      | Lines
+      | Pretty
 
     type substitution_kind =
       | Newline_separated
@@ -225,8 +238,7 @@ module Printer = struct
       | Overwrite_file
       | Stdout
       | Diff of diff_kind
-      | Json_lines of json_kind
-      | Json_pretty of json_kind
+      | Json of json_kind * json_data
       | Match_only
 
     type replacement_output =
@@ -240,24 +252,27 @@ module Printer = struct
 
   end = struct
 
-    type diff_kind =
-      | Plain
-      | Colored
-
-    type json_kind =
+    type json_data =
       | Everything
       | Only_diff
+
+    type json_kind =
+      | Lines
+      | Pretty
 
     type substitution_kind =
       | Newline_separated
       | In_place
 
+    type diff_kind =
+      | Plain
+      | Colored
+
     type output_format =
       | Overwrite_file
       | Stdout
       | Diff of diff_kind
-      | Json_lines of json_kind
-      | Json_pretty of json_kind
+      | Json of json_kind * json_data
       | Match_only
 
     type replacement_output =
@@ -272,14 +287,14 @@ module Printer = struct
         | { stdout = true; _ } -> Stdout
         | { json_pretty = true; in_place = false; json_only_diff; _ } ->
           if json_only_diff then
-            Json_pretty Only_diff
+            Json (Pretty, Only_diff)
           else
-            Json_pretty Everything
+            Json (Pretty, Everything)
         | { json_lines = true; in_place = false; json_only_diff; _ } ->
           if json_only_diff then
-            Json_lines Only_diff
+            Json (Lines, Only_diff)
           else
-            Json_lines Everything
+            Json (Lines, Everything)
         | { diff = true; color = false; newline_separated; _ } ->
           if newline_separated then
             Diff Plain
@@ -305,9 +320,17 @@ module Printer = struct
         | In_place ->
           replacement_content
       in
+      let make_diff variant =
+        let diff_configuration_kind =
+          match variant with
+          | Plain -> Diff_configuration.Plain
+          | Colored -> Diff_configuration.Colored
+        in
+        Diff_configuration.get_diff diff_configuration_kind path source_content output_string
+      in
+      let print_if_some output = Option.value_map output ~default:() ~f:(Format.fprintf ppf "%s@.") in
       match output_format with
-      | Stdout ->
-        Format.fprintf ppf "%s" output_string
+      | Stdout -> Format.fprintf ppf "%s" output_string
       | Overwrite_file ->
         begin
           match path with
@@ -315,31 +338,28 @@ module Printer = struct
           (* This should be impossible since we checked in validate_errors. Leaving the code path explicit. *)
           | None -> failwith "Error: could not write to file."
         end
-      | Json_pretty Everything ->
-        let diff = Diff_configuration.get_diff Plain path source_content output_string in
-        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_pretty (path, replacements, replacement_content, diff, false) in
-        Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
-      | Json_pretty Only_diff ->
-        let diff = Diff_configuration.get_diff Plain path source_content output_string in
-        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_pretty (path, replacements, output_string, diff, true) in
-        Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
-      | Json_lines Everything ->
-        let diff = Diff_configuration.get_diff Plain path source_content output_string in
-        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_line (path, replacements, output_string, diff, false) in
-        Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
-      | Json_lines Only_diff ->
-        let diff = Diff_configuration.get_diff Plain path source_content output_string in
-        let print diff = Format.fprintf ppf "%a@." Replacement.pp_json_line (path, replacements, output_string, diff, true) in
-        Option.value_map diff ~default:() ~f:(fun diff -> print (Some diff))
-      | Diff Plain ->
-        let diff = Diff_configuration.get_diff Plain path source_content output_string in
-        Option.value_map diff ~default:() ~f:(fun diff -> Format.fprintf ppf "%s@." diff)
-      | Diff Colored ->
-        let diff = Diff_configuration.get_diff Colored path source_content output_string in
-        Option.value_map diff ~default:() ~f:(fun diff -> Format.fprintf ppf "%s@." diff)
+      | Json (json_kind, json_data) ->
+        let diff = make_diff Plain in
+        let only_diff =
+          match json_data with
+          | Only_diff -> true
+          | Everything -> false
+        in
+        let pp =
+          match json_kind with
+          | Lines -> Replacement.pp_json_line
+          | Pretty -> Replacement.pp_json_pretty
+        in
+        if Option.is_some diff then begin
+          let result = Format.asprintf "%a" pp (path, replacements, output_string, diff, only_diff) in
+          print_if_some (Some result)
+        end
+      | Diff diff_kind ->
+        make_diff diff_kind
+        |> print_if_some
       | Match_only ->
-        let diff = Diff_configuration.get_diff Match_only path output_string source_content in
-        Option.value_map diff ~default:() ~f:(fun diff -> Format.fprintf ppf "%s@." diff)
+        Diff_configuration.get_diff Match_only path output_string source_content
+        |> print_if_some
   end
 end
 
