@@ -33,7 +33,11 @@ let merge_match_environments matches environment' =
 type rewrite_context =
   { variable : string }
 
-let rec apply ?(matcher = (module Matchers.Generic : Matchers.Matcher)) predicates env =
+let rec apply
+    ?(matcher = (module Matchers.Generic : Matchers.Matcher))
+    ?(newline_separated = false)
+    predicates
+    env =
   let open Option in
   let module Matcher = (val matcher : Matchers.Matcher) in
 
@@ -123,9 +127,12 @@ let rec apply ?(matcher = (module Matchers.Generic : Matchers.Matcher)) predicat
             Environment.lookup env variable >>= fun source ->
             let configuration = Configuration.create ~match_kind:Fuzzy () in
             let matches = Matcher.all ~configuration ~template ~source in
-            let result = Rewrite.all ~source ~rewrite_template matches in
+            let source = if newline_separated then None else Some source in
+            let result = Rewrite.all ?source ~rewrite_template matches in
             match result with
-            | Some { rewritten_source; in_place_substitutions = _ } ->
+            | Some { rewritten_source; _ } ->
+              (* substitute for variables that are in the outside scope *)
+              let rewritten_source, _ = Rewrite_template.substitute rewritten_source env in
               let env = Environment.update env variable rewritten_source in
               return (true, Some env)
             | None ->
