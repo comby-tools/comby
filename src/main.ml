@@ -48,9 +48,6 @@ let apply_rewrite_rule matcher rewrite_rule matches =
       | Error _ -> []
     end
 
-let rewrite rewrite_template _rewrite_rule source matches =
-  Rewrite.all ~source ~rewrite_template matches
-
 let process_single_source
     ((module Matcher : Matchers.Matcher) as matcher)
     configuration
@@ -99,7 +96,7 @@ let process_single_source
               (* If there are no matches, return the original source (for editor support). *)
               Some (Some (Replacement.{ rewritten_source = input_text; in_place_substitutions = [] }), [])
             else
-              Some (rewrite rewrite_template rule input_text matches, matches)
+              Some (Rewrite.all ~source:input_text ~rewrite_template matches, matches)
           in
           Statistics.Time.time_out ~after:match_timeout f ();
         with Statistics__Time.Time_out ->

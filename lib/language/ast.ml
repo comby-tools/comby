@@ -15,7 +15,7 @@ type expression =
   | Not_equal of atom * atom
   | Match of atom * (antecedent * consequent) list
   | RewriteTemplate of string
-  | Rewrite of atom * (antecedent * consequent) list
+  | Rewrite of atom * (antecedent * expression)
 and consequent = expression list
 [@@deriving sexp]
 

@@ -111,42 +111,30 @@ let rec apply ?(matcher = (module Matchers.Generic : Matchers.Matcher)) predicat
           in
           true, env
       end
-    | Rewrite (Variable variable, cases) ->
-      let result =
-        Environment.lookup env variable >>= fun source ->
-        List.find_map cases ~f:(fun (template, case_expression) ->
-            match template with
-            | String template ->
-              begin
-                let configuration = match_configuration_of_syntax template in
-                let matches = Matcher.all ~configuration ~template ~source in
-                if List.is_empty matches then
-                  None
-                else
-                  let fold_cases (sat, out) predicate =
-                    if sat then
-                      let env =
-                        match out with
-                        | Some out -> Environment.merge out env
-                        | None -> env
-                      in
-                      match matches with
-                      | { environment; _ } :: _ ->
-                        let env = Environment.merge env environment in
-                        rule_match ~rewrite_context:{ variable } env predicate
-                      | _ ->
-                        sat, out
-                    else
-                      (sat, out)
-                  in
-                  List.fold case_expression ~init:(true, None) ~f:fold_cases
-                  |> Option.some
-              end
-            | Variable _ ->
-              failwith "| :[hole] is invalid. Maybe you meant to put quotes")
-      in
-      Option.value_map result ~f:ident ~default:(false, Some env)
-    | Rewrite _ -> failwith "TODO"
+    | Rewrite (Variable variable, (match_template, rewrite_expression)) ->
+      begin match rewrite_expression with
+        | RewriteTemplate rewrite_template ->
+          let template =
+            match match_template with
+            | Variable _ -> failwith "Invalid syntax in rewrite LHS"
+            | String template -> template
+          in
+          let result =
+            Environment.lookup env variable >>= fun source ->
+            let configuration = Configuration.create ~match_kind:Fuzzy () in
+            let matches = Matcher.all ~configuration ~template ~source in
+            let result = Rewrite.all ~source ~rewrite_template matches in
+            match result with
+            | Some { rewritten_source; in_place_substitutions = _ } ->
+              let env = Environment.update env variable rewritten_source in
+              return (true, Some env)
+            | None ->
+              return (true, Some env)
+          in
+          Option.value_map result ~f:ident ~default:(false, Some env)
+        | _ -> failwith "Not implemented yet"
+      end
+    | Rewrite _ -> failwith "TODO/Invalid: Have not decided whether rewrite \":[x]\" is useful."
   in
   List.fold predicates ~init:(true, None) ~f:(fun (sat, out) predicate ->
       if sat then
@@ -186,38 +174,43 @@ let create rule =
   let false' = spaces >> string Syntax.false' << spaces |>> fun _ -> False in
   let rec expression_parser s =
     choice
-      [ pattern_parser
+      [ match_pattern_parser
+      ; rewrite_pattern_parser
       (* string literals are ambiguous, so attempt to parse operator first *)
       ; attempt operator_parser
-      ; rewrite_template_parser
       ; true'
       ; false'
       ]
       s
-  and pattern_parser s =
+  and match_pattern_parser s =
     let case_parser : (atom * expression list, unit) parser =
       spaces >> string Syntax.pipe_operator >>
       spaces >> atom_parser << spaces << string Syntax.arrow << spaces >>= fun antecedent ->
       spaces >> comma_sep expression_parser << spaces |>> fun consequent ->
       antecedent, consequent
     in
-    let pattern keyword =
-      string keyword << spaces >> atom_parser << spaces << char '{' << spaces
-      >>= fun atom ->
-      many1 case_parser
-      << char '}' << spaces
-      >>= fun cases -> return (atom, cases)
-    in
     let match_pattern =
+      let pattern keyword =
+        string keyword << spaces >> atom_parser << spaces << char '{' << spaces
+        >>= fun atom ->
+        many1 case_parser
+        << char '}' << spaces
+        >>= fun cases -> return (atom, cases)
+      in
       pattern Syntax.start_match_pattern |>> fun (atom, cases) ->
-      (Match (atom, cases))
+      Match (atom, cases)
     in
+    match_pattern s
+  and rewrite_pattern_parser s =
     let rewrite_pattern =
-      pattern Syntax.start_rewrite_pattern |>> fun (atom, cases) ->
-      (Rewrite (atom, cases))
+      string Syntax.start_rewrite_pattern << spaces >> atom_parser << spaces << char '{' << spaces
+      >>= fun atom ->
+      atom_parser << spaces << string Syntax.arrow << spaces >>= fun match_template ->
+      spaces >> rewrite_template_parser << char '}' << spaces
+      |>> fun rewrite_template ->
+      Rewrite (atom, (match_template, rewrite_template))
     in
-    choice [ match_pattern; rewrite_pattern ]
-      s
+    rewrite_pattern s
   in
   let rule_parser s =
     (spaces
