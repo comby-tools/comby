@@ -28,8 +28,8 @@ let debug =
 
 let verbose_out_file = "/tmp/comby.out"
 
-let get_matches (module Matcher : Matchers.Matcher) configuration match_template match_rule source =
-  let rule = Rule.create match_rule |> Or_error.ok_exn in
+let get_matches (module Matcher : Matchers.Matcher) configuration match_template rule source =
+  let rule = Rule.create rule |> Or_error.ok_exn in
   Matcher.all ~configuration ~template:match_template ~source
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule ~matcher:(module Matcher) environment))
 
@@ -52,8 +52,8 @@ let rewrite rewrite_template _rewrite_rule source matches =
   Rewrite.all ~source ~rewrite_template matches
 
 let process_single_source
-    matcher
-    match_configuration
+    ((module Matcher : Matchers.Matcher) as matcher)
+    configuration
     source
     specification
     verbose
@@ -70,12 +70,12 @@ let process_single_source
         In_channel.read_all path
     in
     match specification with
-    | { match_specification = { match_template; match_rule }
+    | { match_specification = { match_template; rule }
       ; rewrite_specification = None
       } ->
       let matches =
         try
-          let f () = get_matches matcher match_configuration match_template match_rule input_text in
+          let f () = get_matches matcher configuration match_template rule input_text in
           Statistics.Time.time_out ~after:match_timeout f ();
         with Statistics.Time.Time_out ->
           Format.eprintf "Timeout for input: %s!@." (show_input_kind source);
@@ -84,22 +84,22 @@ let process_single_source
           []
       in
       Matches (matches, List.length matches)
-    | { match_specification = { match_template; match_rule }
-      ; rewrite_specification = Some { rewrite_template; rewrite_rule }
+    | { match_specification = { match_template; _ }
+      ; rewrite_specification = Some { rewrite_template; rule }
       } ->
       let result =
         try
           let f () =
-            get_matches matcher match_configuration match_template match_rule input_text
+            Matcher.all ~configuration ~template:match_template ~source:input_text
             |> fun matches ->
             (* TODO(RVT): merge match and rewrite rule application. *)
-            apply_rewrite_rule matcher rewrite_rule matches
+            apply_rewrite_rule matcher rule matches
             |> fun matches ->
             if matches = [] then
               (* If there are no matches, return the original source (for editor support). *)
               Some (Some (Replacement.{ rewritten_source = input_text; in_place_substitutions = [] }), [])
             else
-              Some (rewrite rewrite_template rewrite_rule input_text matches, matches)
+              Some (rewrite rewrite_template rule input_text matches, matches)
           in
           Statistics.Time.time_out ~after:match_timeout f ();
         with Statistics__Time.Time_out ->

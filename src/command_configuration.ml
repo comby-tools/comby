@@ -65,7 +65,7 @@ let read filename =
   String.chop_suffix template ~suffix:"\n"
   |> Option.value ~default:template
 
-let parse_template_directories match_only paths =
+let parse_template_directories paths =
   let parse_directory path =
     let read_optional filename =
       match read filename with
@@ -77,10 +77,9 @@ let parse_template_directories match_only paths =
       Format.eprintf "WARNING: Could not read required match file in %s@." path;
       None
     | Some match_template ->
-      let match_rule = read_optional (path ^/ "match_rule") in
+      let rule = read_optional (path ^/ "rule") in
       let rewrite_template = read_optional (path ^/ "rewrite") in
-      let rewrite_rule = if match_only then None else read_optional (path ^/ "rewrite_rule") in
-      Specification.create ~match_template ?match_rule ?rewrite_template ?rewrite_rule ()
+      Specification.create ~match_template ?rule ?rewrite_template ()
       |> Option.some
   in
   let f acc ~depth:_ ~absolute_path ~is_file =
@@ -471,13 +470,13 @@ let create
       if match_only then
         if color then
           (* Fake a replacement with empty to get a nice colored match output. More expensive though. *)
-          [ Specification.create ~match_template ~match_rule:rule ~rewrite_template:"" () ]
+          [ Specification.create ~match_template ~rule ~rewrite_template:"" () ]
         else
-          [ Specification.create ~match_template ~match_rule:rule () ]
+          [ Specification.create ~match_template ~rule () ]
       else
-        [ Specification.create ~match_template ~rewrite_template ~match_rule:rule ~rewrite_rule:rule () ]
+        [ Specification.create ~match_template ~rewrite_template ~rule () ]
     | Some specification_directories, _ ->
-      parse_template_directories match_only specification_directories
+      parse_template_directories specification_directories
     | _ -> assert false
   in
   let file_filters =
