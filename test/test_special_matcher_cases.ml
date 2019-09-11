@@ -440,3 +440,19 @@ let%expect_test "ruby_blocks_5" =
 
   run (module Matchers.Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>foo</1>|}]
+
+let%expect_test "ocaml_struct_end" =
+  let source = {|= struct Something end|} in
+  let match_template = {|= struct :[1] end|} in
+  let rewrite_template = {|<1>:[1]</1>|} in
+
+  run (module Matchers.OCaml) source match_template rewrite_template;
+  [%expect_exact {|<1>Something</1>|}]
+
+let%expect_test "ocaml_struct_end_2" =
+  let source = {|= struct include Something end|} in
+  let match_template = {|= struct :[1] end|} in
+  let rewrite_template = {|<1>:[1]</1>|} in
+
+  run (module Matchers.OCaml) source match_template rewrite_template;
+  [%expect_exact {|<1>include Something</1>|}]
