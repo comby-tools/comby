@@ -224,15 +224,18 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     ]
 
   let reserved_delimiters () =
-    let required_from_prefix = not_alphanum in
+    let _required_from_prefix = not_alphanum in
     let required_from_suffix = not_alphanum in
     let required_until_suffix = not_alphanum in
     let handle_alphanum_delimiters_reserved_trigger from until =
       let from_parser =
-        required_from_prefix >>= fun _ ->
-        string from >>= fun from ->
-        look_ahead required_from_suffix >>= fun _ ->
-        return from
+        fun s ->
+          (match prev_char s with
+           | Some prev when is_alphanum (Char.to_string prev) -> fail "unsat"
+           | _ ->
+             string from >>= fun from ->
+             look_ahead required_from_suffix >>= fun _ ->
+             return from) s
       in
       let until_parser s =
         (string until >>= fun until ->
