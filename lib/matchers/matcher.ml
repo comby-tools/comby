@@ -224,7 +224,6 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     ]
 
   let reserved_delimiters () =
-    let _required_from_prefix = not_alphanum in
     let required_from_suffix = not_alphanum in
     let required_until_suffix = not_alphanum in
     let handle_alphanum_delimiters_reserved_trigger from until =
