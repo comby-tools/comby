@@ -64,6 +64,9 @@ let copy env =
   fold env ~init:(create ()) ~f:(fun ~key ~data:{ value; range } env' ->
       add ~range env' key value)
 
+let exists env key =
+  Option.is_some (lookup env key)
+
 let to_yojson env : Yojson.Safe.json =
   let s =
     Map.fold_right env ~init:[] ~f:(fun ~key:variable ~data:{value; range} acc ->
