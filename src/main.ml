@@ -43,8 +43,6 @@ let apply_rewrite_rule matcher rewrite_rule matches =
                   if String.is_prefix var ~prefix:"equal_" then
                     match String.split var ~on:'_' with
                     | _equal :: target :: _uuid ->
-                      Format.printf "Rule: %s == %s@." var target;
-                      Format.printf "Env:@.%s@." @@ Environment.to_string environment;
                       let expression = Language.Ast.Equal (Variable var, Variable target) in
                       expression::acc
                     | _ -> assert false

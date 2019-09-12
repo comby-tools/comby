@@ -318,8 +318,8 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
              let fresh_hole_id =
                Format.sprintf "equal_%s_%s" identifier Uuid_unix.(Fn.compose Uuid.to_string create ())
              in
-             (Format.printf "Generating %s@." fresh_hole_id;
-              Environment.add ~range environment fresh_hole_id (String.concat matched))
+             (
+               Environment.add ~range environment fresh_hole_id (String.concat matched))
            else
              Environment.add ~range environment identifier (String.concat matched)
          in
