@@ -41,7 +41,19 @@ let apply_rewrite_rule newline_separated matcher rewrite_rule matches =
     match Rule.create rewrite_rule with
     | Ok rule ->
       List.filter_map matches ~f:(fun ({ environment; _ } as match_) ->
-          let sat, env = Rule.apply ~newline_separated rule ~matcher environment in
+          let inferred_equality_constraints =
+            let vars = Environment.vars environment in
+            List.fold vars ~init:[] ~f:(fun acc var ->
+                if String.is_prefix var ~prefix:"equal_" then
+                  match String.split var ~on:'_' with
+                  | _equal :: target :: _uuid ->
+                    let expression = Language.Ast.Equal (Variable var, Variable target) in
+                    expression::acc
+                  | _ -> assert false
+                else
+                  acc)
+          in
+          let sat, env = Rule.apply (rule @ inferred_equality_constraints) ~newline_separated ~matcher environment in
           (if sat then env else None)
           >>| fun environment -> { match_ with environment })
     | Error _ -> []
@@ -71,7 +83,27 @@ let process_single_source
       } ->
       let matches =
         try
-          let f () = get_matches matcher configuration match_template rule input_text in
+          let f () =
+            let get_matches (module Matcher : Matchers.Matcher) configuration match_template rule source =
+              let rule = Rule.create rule |> Or_error.ok_exn in
+              Matcher.all ~configuration ~template:match_template ~source
+              |> List.filter ~f:(fun { environment; _ } ->
+                  let inferred_equality_constraints =
+                    let vars = Environment.vars environment in
+                    List.fold vars ~init:[] ~f:(fun acc var ->
+                        if String.is_prefix var ~prefix:"equal_" then
+                          match String.split var ~on:'_' with
+                          | _equal :: target :: _uuid ->
+                            let expression = Language.Ast.Equal (Variable var, Variable target) in
+                            expression::acc
+                          | _ -> assert false
+                        else
+                          acc)
+                  in
+                  Rule.(sat @@ apply (rule @ inferred_equality_constraints) ~matcher:(module Matcher) environment))
+            in
+            get_matches matcher configuration match_template rule input_text
+          in
           Statistics.Time.time_out ~after:match_timeout f ();
         with Statistics.Time.Time_out ->
           Format.eprintf "Timeout for input: %s!@." (show_input_kind source);

@@ -52,6 +52,8 @@ module Environment : sig
   val merge : t -> t -> t
 
   val to_string : t -> string
+
+  val exists : t -> string -> bool
 end
 
 type environment = Environment.t

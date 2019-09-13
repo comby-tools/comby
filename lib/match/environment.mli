@@ -23,4 +23,6 @@ val merge : t -> t -> t
 
 val copy : t -> t
 
+val exists : t -> string -> bool
+
 val to_string : t -> string
