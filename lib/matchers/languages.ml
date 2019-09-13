@@ -255,7 +255,6 @@ module Elixir = struct
       Generic.Syntax.user_defined_delimiters
       @ [ "fn", "end"
         ; "do", "end"
-        ; "<", ">"
         ]
 
     let raw_string_literals =
