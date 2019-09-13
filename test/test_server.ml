@@ -122,7 +122,7 @@ let%expect_test "post_request" =
     Error in line 1, column 7:
     where :[1] = "world"
           ^
-    Expecting "false", "match" or "true"
+    Expecting "false", "match", "rewrite" or "true"
     Backtracking occurred after:
       Error in line 1, column 12:
       where :[1] = "world"
@@ -203,6 +203,6 @@ let%expect_test "post_request" =
     Error in line 1, column 7:
     where
           ^
-    Expecting ":[", "false", "match", "true" or string literal |}]
+    Expecting ":[", "false", "match", "rewrite", "true" or string literal |}]
 
 let () = kill ()

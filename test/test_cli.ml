@@ -205,7 +205,7 @@ let%expect_test "with_rewrite_rule" =
   let source = "hello world" in
   let match_template = ":[2] :[1]" in
   let rewrite_template = ":[1]" in
-  let rule = {|where rewrite :[1] { | ":[_]" -> ":[2]" }|} in
+  let rule = {|where rewrite :[1] { ":[_]" -> ":[2]" }|} in
   let command_args =
     Format.sprintf "-stdin -sequential '%s' '%s' -rule '%s' -f .c "
       match_template rewrite_template rule
@@ -223,7 +223,7 @@ let%expect_test "with_rewrite_rule_stdin_default_no_extension" =
   let source = "hello world" in
   let match_template = ":[2] :[1]" in
   let rewrite_template = ":[1]" in
-  let rule = {|where rewrite :[1] { | ":[_]" -> ":[2]" }|} in
+  let rule = {|where rewrite :[1] { ":[_]" -> ":[2]" }|} in
   let command_args =
     Format.sprintf "-sequential '%s' '%s' -rule '%s' -stdin" match_template rewrite_template rule
   in
