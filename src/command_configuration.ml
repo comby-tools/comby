@@ -102,7 +102,7 @@ type output_options =
   ; json_pretty : bool
   ; json_lines : bool
   ; json_only_diff : bool
-  ; in_place : bool
+  ; file_in_place : bool
   ; diff : bool
   ; stdout : bool
   ; newline_separated : bool
@@ -134,6 +134,7 @@ type run_options =
   ; match_timeout : int
   ; number_of_workers : int
   ; dump_statistics : bool
+  ; newline_separate_rewrites : bool
   }
 
 type user_input =
@@ -267,14 +268,14 @@ module Printer = struct
     let convert output_options : replacement_output =
       let output_format =
         match output_options with
-        | { in_place = true; _ } -> Overwrite_file
+        | { file_in_place = true; _ } -> Overwrite_file
         | { stdout = true; _ } -> Stdout
-        | { json_pretty = true; in_place = false; json_only_diff; _ } ->
+        | { json_pretty = true; file_in_place = false; json_only_diff; _ } ->
           if json_only_diff then
             Json_pretty Only_diff
           else
             Json_pretty Everything
-        | { json_lines = true; in_place = false; json_only_diff; _ } ->
+        | { json_lines = true; file_in_place = false; json_only_diff; _ } ->
           if json_only_diff then
             Json_lines Only_diff
           else
@@ -355,13 +356,13 @@ let validate_errors { input_options; run_options = _; output_options } =
   let violations =
     [ input_options.stdin && Option.is_some input_options.zip_file
     , "-zip may not be used with stdin."
-    ; output_options.in_place && is_some input_options.zip_file
+    ; output_options.file_in_place && is_some input_options.zip_file
     , "-in-place may not be used with -zip"
-    ; output_options.in_place && output_options.stdout
+    ; output_options.file_in_place && output_options.stdout
     , "-in-place may not be used with stdout."
-    ; output_options.in_place && output_options.diff
+    ; output_options.file_in_place && output_options.diff
     , "-in-place may not be used with -diff"
-    ; output_options.in_place && (output_options.json_lines || output_options.json_pretty)
+    ; output_options.file_in_place && (output_options.json_lines || output_options.json_pretty)
     , "-in-place may not be used with -json-lines or -json-pretty"
     ; input_options.anonymous_arguments = None &&
       (input_options.specification_directories = None
@@ -423,7 +424,7 @@ let emit_warnings { input_options; output_options; _ } =
       && (output_options.stdout
           || output_options.json_pretty
           || output_options.json_lines
-          || output_options.in_place)
+          || output_options.file_in_place)
     , "-color only works with -diff or -match-only"
     ; output_options.count && not input_options.match_only
     , "-count only works with -match-only. Ignoring -count."
@@ -453,9 +454,10 @@ let create
          ; match_timeout
          ; number_of_workers
          ; dump_statistics
+         ; newline_separate_rewrites
          }
      ; output_options =
-         ({ in_place
+         ({ file_in_place
           ; color
           ; _
           } as output_options)
@@ -503,8 +505,8 @@ let create
     | Zip -> `Zip (Option.value_exn zip_file)
     | Directory -> `Paths (parse_source_directories ?file_filters exclude_directory_prefix target_directory directory_depth)
   in
-  let in_place = if input_source = Zip || input_source = Stdin then false else in_place in
-  let output_options = { output_options with in_place } in
+  let file_in_place = if input_source = Zip || input_source = Stdin then false else file_in_place in
+  let output_options = { output_options with file_in_place } in
   let output_printer printable =
     let open Printer in
     match printable with
@@ -531,6 +533,7 @@ let create
         ; match_timeout
         ; number_of_workers
         ; dump_statistics
+        ; newline_separate_rewrites
         }
     ; output_printer
     }

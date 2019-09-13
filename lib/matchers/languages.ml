@@ -253,14 +253,10 @@ module Elixir = struct
 
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
-      @
-      [ "fn", "end"
-      ; "do", "end"
-      ; "case", "end"
-      ; "cond", "end"
-      ; "if", "end"
-      ; "<", ">"
-      ]
+      @ [ "fn", "end"
+        ; "do", "end"
+        ; "<", ">"
+        ]
 
     let raw_string_literals =
       [ ({|"""|}, {|"""|})
@@ -282,11 +278,16 @@ module Python = struct
   end
 
   module Syntax = struct
-    include Elixir.Syntax
+    open Types
+    include Generic.Syntax
 
     let raw_string_literals =
-      Elixir.Syntax.raw_string_literals @
       [ ({|'''|}, {|'''|})
+      ; ({|"""|}, {|"""|})
+      ]
+
+    let comment_parser =
+      [ Until_newline "#"
       ]
   end
 

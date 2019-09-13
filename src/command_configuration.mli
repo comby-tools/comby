@@ -22,7 +22,7 @@ type output_options =
   ; json_pretty : bool
   ; json_lines : bool
   ; json_only_diff : bool
-  ; in_place : bool
+  ; file_in_place : bool
   ; diff : bool
   ; stdout : bool
   ; newline_separated : bool
@@ -54,6 +54,7 @@ type run_options =
   ; match_timeout : int
   ; number_of_workers : int
   ; dump_statistics : bool
+  ; newline_separate_rewrites : bool
   }
 
 type user_input =
