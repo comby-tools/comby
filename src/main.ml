@@ -33,26 +33,22 @@ let get_matches (module Matcher : Matchers.Matcher) configuration match_template
   Matcher.all ~configuration ~template:match_template ~source
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule ~matcher:(module Matcher) environment))
 
-let apply_rewrite_rule matcher rewrite_rule matches =
+let apply_rewrite_rule newline_separated matcher rewrite_rule matches =
   let open Option in
   match rewrite_rule with
   | "" -> matches
   | rewrite_rule ->
-    begin
-      match Rule.create rewrite_rule with
-      | Ok rule ->
-        List.filter_map matches ~f:(fun ({ environment; _ } as match_) ->
-            let sat, env = Rule.apply rule ~matcher environment in
-            (if sat then env else None)
-            >>| fun environment -> { match_ with environment })
-      | Error _ -> []
-    end
-
-let rewrite rewrite_template _rewrite_rule source matches =
-  Rewrite.all ~source ~rewrite_template matches
+    match Rule.create rewrite_rule with
+    | Ok rule ->
+      List.filter_map matches ~f:(fun ({ environment; _ } as match_) ->
+          let sat, env = Rule.apply ~newline_separated rule ~matcher environment in
+          (if sat then env else None)
+          >>| fun environment -> { match_ with environment })
+    | Error _ -> []
 
 let process_single_source
     ((module Matcher : Matchers.Matcher) as matcher)
+    newline_separate_rule_rewrites
     configuration
     source
     specification
@@ -93,13 +89,13 @@ let process_single_source
             Matcher.all ~configuration ~template:match_template ~source:input_text
             |> fun matches ->
             (* TODO(RVT): merge match and rewrite rule application. *)
-            apply_rewrite_rule matcher rule matches
+            apply_rewrite_rule newline_separate_rule_rewrites matcher rule matches
             |> fun matches ->
             if matches = [] then
               (* If there are no matches, return the original source (for editor support). *)
               Some (Some (Replacement.{ rewritten_source = input_text; in_place_substitutions = [] }), [])
             else
-              Some (rewrite rewrite_template rule input_text matches, matches)
+              Some (Rewrite.all ~source:input_text ~rewrite_template matches, matches)
           in
           Statistics.Time.time_out ~after:match_timeout f ();
         with Statistics__Time.Time_out ->
@@ -205,6 +201,7 @@ let run
         ; match_timeout
         ; number_of_workers
         ; dump_statistics
+        ; newline_separate_rewrites
         }
     ; output_printer
     }
@@ -222,7 +219,7 @@ let run
             | Nothing | Matches _ -> input
             | Replacement (_, content, _) -> `String content
           in
-          process_single_source matcher match_configuration input specification verbose match_timeout
+          process_single_source matcher newline_separate_rewrites match_configuration input specification verbose match_timeout
           |> function
           | Nothing -> Nothing, count
           | Matches (x, number_of_matches) ->
@@ -368,7 +365,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and json_pretty = flag "json-pretty" no_arg ~doc:"Output pretty JSON format"
     and json_lines = flag "json-lines" no_arg ~doc:"Output JSON line format"
     and json_only_diff = flag "json-only-diff" no_arg ~doc:"Output only the URI and diff in JSON line format"
-    and in_place = flag "in-place" no_arg ~doc:"Rewrite files on disk, in place"
+    and file_in_place = flag "in-place" no_arg ~doc:"Rewrite files on disk, in place"
     and number_of_workers = flag "jobs" (optional_with_default 4 int) ~doc:"n Number of worker processes. Default: 4"
     and dump_statistics = flag "statistics" ~aliases:["stats"] no_arg ~doc:"Dump statistics to stderr"
     and stdin = flag "stdin" no_arg ~doc:"Read source from stdin"
@@ -414,6 +411,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           { match_template; rewrite_template; file_filters })
     in
     if list then list_supported_languages_and_exit ();
+    let newline_separate_rewrites = newline_separated in
     let configuration =
       Command_configuration.create
         { input_options =
@@ -434,6 +432,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; match_timeout
             ; number_of_workers
             ; dump_statistics
+            ; newline_separate_rewrites
             }
         ; output_options =
             { color
@@ -441,7 +440,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; json_pretty
             ; json_lines
             ; json_only_diff
-            ; in_place
+            ; file_in_place
             ; diff
             ; stdout
             ; newline_separated
@@ -471,5 +470,4 @@ let default_command =
 
 let () =
   Scheduler.Daemon.check_entry_point ();
-  default_command
-  |> Command.run ~version:"0.7.0"
+  Command.run default_command ~version:"0.7.0"
