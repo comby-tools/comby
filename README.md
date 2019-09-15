@@ -11,10 +11,16 @@
 
 
 ## Install the binary: `bash <(curl -sL get.comby.dev)`
+## See the [usage docs](https://comby.dev) or [try it live](https://comby.live/).
 
-## See the [usage docs](https://comby.dev)
+## Install with docker: `docker pull comby/comby`
 
-### Or [try it live](https://comby.live/).
+Running with docker with `stdin`:
+
+`echo '(👋 hi)' | docker run -a stdin -a stdout -i comby/comby '(:[emoji] hi)' 'bye :[emoji]' lisp -stdin`
+
+<img width="819" alt="Screen Shot 2019-09-15 at 12 31 07 PM" src="https://user-images.githubusercontent.com/888624/64924630-c1fa4400-d7b4-11e9-8b6c-b2d357be6a2b.png">
+
 
 ## Build from source
 
