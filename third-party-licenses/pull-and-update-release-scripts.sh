@@ -45,9 +45,9 @@ wget -P ocaml-tls https://raw.githubusercontent.com/mirleft/ocaml-tls/master/LIC
 mkdir camlzip && \
 wget -P camlzip https://raw.githubusercontent.com/xavierleroy/camlzip/master/LICENSE
 
-# Mozilla PL
+# MIT
 mkdir bisect_ppx && \
-wget -P bisect_ppx https://raw.githubusercontent.com/aantron/bisect_ppx/master/LICENSE
+wget -P bisect_ppx https://raw.githubusercontent.com/aantron/bisect_ppx/master/LICENSE.md
 
 # LGPL
 mkdir mparser && \
