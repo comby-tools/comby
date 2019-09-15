@@ -113,7 +113,7 @@ printf "${GREEN}[+]${NORMAL} ${YELLOW}comby${NORMAL} is installed!\n"
 printf "${GREEN}[+]${NORMAL} The licenses for this distribution are included in this script. Licenses are also available at https://github.com/comby-tools/comby/tree/master/third-party-licenses\n"
 printf "${GREEN}[+]${NORMAL} Running example command:\n"
 echo "${YELLOW}------------------------------------------------------------"
-printf "${YELLOW}comby${NORMAL} 'printf(\"${GREEN}:[1] :[2]${NORMAL}!\")' 'printf(\"comby, ${GREEN}:[1]${NORMAL}!\")' -stdin << EOF\n"
+printf "${YELLOW}comby${NORMAL} 'printf(\"${GREEN}:[1] :[2]${NORMAL}!\")' 'printf(\"comby, ${GREEN}:[1]${NORMAL}!\")' .c -stdin << EOF\n"
 printf "int main(void) {\n"
 printf "  printf(\"hello world!\");\n"
 printf "}\n"
@@ -121,7 +121,7 @@ printf "EOF\n"
 echo "${YELLOW}------------------------------------------------------------"
 printf "${GREEN}[+]${NORMAL} Output:\n"
 echo "${GREEN}------------------------------------------------------------${NORMAL}"
-comby 'printf(":[1] :[2]!")' 'printf("comby, :[1]!")' -stdin << EOF
+comby 'printf(":[1] :[2]!")' 'printf("comby, :[1]!")' .c -stdin << EOF
 int main(void) {
   printf("hello world!");
 }
