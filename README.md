@@ -7,7 +7,7 @@
 [![Commit](https://img.shields.io/github/last-commit/comby-tools/comby.svg)](Commit)
 [![Gitter](https://img.shields.io/gitter/room/comby-tools/comby.svg?color=teal)](https://gitter.im/comby-tools/community)
 
-![high-quality-bigger-crop-lets-go-final](https://user-images.githubusercontent.com/888624/64916761-0b657780-d752-11e9-96e2-cd81a2681139.gif)
+![](https://user-images.githubusercontent.com/888624/64916761-0b657780-d752-11e9-96e2-cd81a2681139.gif)
 
 ## See the [usage documentation](https://comby.dev)
 
@@ -22,7 +22,7 @@ Running with docker on `stdin`:
 echo '(👋 hi)' | docker run -a stdin -a stdout -i comby/comby '(:[emoji] hi)' 'bye :[emoji]' lisp -stdin
 ```
 
-<img width="500" alt="Screen Shot 2019-09-15 at 12 31 07 PM" src="https://user-images.githubusercontent.com/888624/64924630-c1fa4400-d7b4-11e9-8b6c-b2d357be6a2b.png">
+<img width="500" src="https://user-images.githubusercontent.com/888624/64924862-0edf1a00-d7b7-11e9-9c2e-cfeafde5bb4b.png">
 
 ### Or [try it live](https://comby.live/).
 
