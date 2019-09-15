@@ -134,7 +134,7 @@ let perform_rewrite request =
     in
     let run ?rule () =
       let configuration = Configuration.create ~match_kind:Fuzzy () in
-      Pipeline.run matcher ?rule ~newline_separated:(not substitute_in_place) configuration match_template source
+      Pipeline.run matcher ?rule ~substitute_in_place configuration match_template source
       |> Rewrite.all ?source:source_substitution ~rewrite_template
       |> Option.value_map ~default ~f:(rewrite_to_json id)
     in

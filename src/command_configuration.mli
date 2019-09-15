@@ -25,7 +25,7 @@ type output_options =
   ; file_in_place : bool
   ; diff : bool
   ; stdout : bool
-  ; newline_separated : bool
+  ; substitute_in_place : bool
   ; count : bool
   }
 
@@ -54,7 +54,7 @@ type run_options =
   ; match_timeout : int
   ; number_of_workers : int
   ; dump_statistics : bool
-  ; newline_separate_rewrites : bool
+  ; substitute_in_place : bool
   }
 
 type user_input =
