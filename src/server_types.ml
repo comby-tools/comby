@@ -43,7 +43,7 @@ module Out = struct
     [@@deriving yojson]
 
     let to_string =
-      Fn.compose Yojson.Safe.to_string to_yojson
+      Fn.compose Yojson.Safe.pretty_to_string to_yojson
 
   end
 
@@ -56,7 +56,7 @@ module Out = struct
     [@@deriving yojson]
 
     let to_string =
-      Fn.compose Yojson.Safe.to_string to_yojson
+      Fn.compose Yojson.Safe.pretty_to_string to_yojson
 
   end
 
@@ -69,7 +69,7 @@ module Out = struct
     [@@deriving yojson]
 
     let to_string =
-      Fn.compose Yojson.Safe.to_string to_yojson
+      Fn.compose Yojson.Safe.pretty_to_string to_yojson
 
   end
 end
