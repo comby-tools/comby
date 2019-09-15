@@ -9,18 +9,22 @@
 
 ![high-quality-bigger-crop-lets-go-final](https://user-images.githubusercontent.com/888624/64916761-0b657780-d752-11e9-96e2-cd81a2681139.gif)
 
+## See the [usage documentation](https://comby.dev)
 
-## Install the binary: `bash <(curl -sL get.comby.dev)`
-## See the [usage docs](https://comby.dev) or [try it live](https://comby.live/).
+## Install
 
-## Install with docker: `docker pull comby/comby`
+### Binary: `bash <(curl -sL get.comby.dev)`
+### With docker: `docker pull comby/comby`
 
-Running with docker with `stdin`:
+Running with docker on `stdin`:
 
-`echo '(👋 hi)' | docker run -a stdin -a stdout -i comby/comby '(:[emoji] hi)' 'bye :[emoji]' lisp -stdin`
+```bash
+echo '(👋 hi)' | docker run -a stdin -a stdout -i comby/comby '(:[emoji] hi)' 'bye :[emoji]' lisp -stdin
+```
 
-<img width="819" alt="Screen Shot 2019-09-15 at 12 31 07 PM" src="https://user-images.githubusercontent.com/888624/64924630-c1fa4400-d7b4-11e9-8b6c-b2d357be6a2b.png">
+<img width="500" alt="Screen Shot 2019-09-15 at 12 31 07 PM" src="https://user-images.githubusercontent.com/888624/64924630-c1fa4400-d7b4-11e9-8b6c-b2d357be6a2b.png">
 
+### Or [try it live](https://comby.live/).
 
 ## Build from source
 
