@@ -199,6 +199,6 @@ let%expect_test "post_substitute" =
   |> post `Substitute
   |> print_string;
 
-  [%expect {||}]
+  [%expect {| { "result": "oh hi there", "id": 0 } |}]
 
 let () = kill ()
