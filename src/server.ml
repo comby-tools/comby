@@ -52,39 +52,9 @@ type json_rewrite_result =
   }
 [@@deriving yojson]
 
-let get_matches (module Matcher : Matchers.Matcher) source match_template =
-  let configuration = Configuration.create ~match_kind:Fuzzy () in
-  Matcher.all ~configuration ~template:match_template ~source
-
 let matches_to_json source id matches =
   Format.sprintf "%s"
     (Yojson.Safe.pretty_to_string (json_match_result_to_yojson { matches; source; id }))
-
-let apply_rule substitute_in_place matcher rule =
-  let open Option in
-  let open Match in
-  List.filter_map ~f:(fun ({ environment; _ } as matched) ->
-      let inferred_equality_constraints =
-        let vars = Environment.vars environment in
-        List.fold vars ~init:[] ~f:(fun acc var ->
-            if String.is_prefix var ~prefix:"equal_" then
-              match String.split var ~on:'_' with
-              | _equal :: target :: _uuid ->
-                let expression = Language.Ast.Equal (Variable var, Variable target) in
-                expression::acc
-              | _ -> assert false
-            else
-              acc)
-      in
-      let sat, env =
-        Rule.apply
-          ~newline_separated:(not substitute_in_place)
-          (rule @ inferred_equality_constraints)
-          ~matcher
-          environment
-      in
-      (if sat then env else None)
-      >>| fun environment -> { matched with environment })
 
 let check_too_long s =
   let n = String.length s in
@@ -111,8 +81,8 @@ let perform_match request =
     if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (match_request_to_yojson request));
     let matcher = Matchers.select_with_extension language in
     let run ?rule () =
-      get_matches matcher source match_template
-      |> Option.value_map rule ~default:ident ~f:(apply_rule false matcher)
+      let configuration = Configuration.create ~match_kind:Fuzzy () in
+      Pipeline.run matcher ?rule configuration match_template source
       |> matches_to_json source id
     in
     let code, result =
@@ -163,8 +133,8 @@ let perform_rewrite request =
       |> Yojson.Safe.pretty_to_string
     in
     let run ?rule () =
-      get_matches matcher source match_template
-      |> Option.value_map rule ~default:ident ~f:(apply_rule substitute_in_place matcher)
+      let configuration = Configuration.create ~match_kind:Fuzzy () in
+      Pipeline.run matcher ?rule ~newline_separated:(not substitute_in_place) configuration match_template source
       |> Rewrite.all ?source:source_substitution ~rewrite_template
       |> Option.value_map ~default ~f:(rewrite_to_json id)
     in
@@ -202,7 +172,7 @@ let () =
   Lwt.async_exception_hook := (function
       | Unix.Unix_error (error, func, arg) ->
         Logs.warn (fun m ->
-            m  "Client connection error %s: %s(%S)"
+            m "Client connection error %s: %s(%S)"
               (Unix.error_message error) func arg
           )
       | exn -> Logs.err (fun m -> m "Unhandled exception: %a" Fmt.exn exn)

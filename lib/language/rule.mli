@@ -5,6 +5,8 @@ open Match
 
 open Ast
 
+type t = Ast.t
+
 type result = bool * environment option
 
 val sat : result -> bool

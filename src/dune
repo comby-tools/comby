@@ -5,13 +5,13 @@
  (names main))
 
 (executables
- (libraries core opium comby ppx_deriving_yojson ppx_deriving_yojson.runtime hack_parallel)
+ (libraries comby core opium ppx_deriving_yojson ppx_deriving_yojson.runtime hack_parallel)
  (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show))
  (modules server)
  (names server))
 
 (executables
- (libraries core opium comby ppx_deriving_yojson ppx_deriving_yojson.runtime hack_parallel)
+ (libraries comby core opium ppx_deriving_yojson ppx_deriving_yojson.runtime hack_parallel)
  (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show))
  (modules benchmark)
  (names benchmark))

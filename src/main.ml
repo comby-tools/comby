@@ -6,8 +6,6 @@ open Hack_parallel
 open Command_configuration
 open Command_input
 open Matchers
-open Match
-open Language
 open Rewriter
 open Statistics
 
@@ -27,36 +25,6 @@ let debug =
   |> Option.is_some
 
 let verbose_out_file = "/tmp/comby.out"
-
-let get_matches (module Matcher : Matchers.Matcher) configuration match_template rule source =
-  let rule = Rule.create rule |> Or_error.ok_exn in
-  Matcher.all ~configuration ~template:match_template ~source
-  |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule ~matcher:(module Matcher) environment))
-
-let apply_rewrite_rule newline_separated matcher rewrite_rule matches =
-  let open Option in
-  match rewrite_rule with
-  | "" -> matches
-  | rewrite_rule ->
-    match Rule.create rewrite_rule with
-    | Ok rule ->
-      List.filter_map matches ~f:(fun ({ environment; _ } as match_) ->
-          let inferred_equality_constraints =
-            let vars = Environment.vars environment in
-            List.fold vars ~init:[] ~f:(fun acc var ->
-                if String.is_prefix var ~prefix:"equal_" then
-                  match String.split var ~on:'_' with
-                  | _equal :: target :: _uuid ->
-                    let expression = Language.Ast.Equal (Variable var, Variable target) in
-                    expression::acc
-                  | _ -> assert false
-                else
-                  acc)
-          in
-          let sat, env = Rule.apply (rule @ inferred_equality_constraints) ~newline_separated ~matcher environment in
-          (if sat then env else None)
-          >>| fun environment -> { match_ with environment })
-    | Error _ -> []
 
 let process_single_source
     ((module Matcher : Matchers.Matcher) as matcher)
@@ -83,27 +51,7 @@ let process_single_source
       } ->
       let matches =
         try
-          let f () =
-            let get_matches (module Matcher : Matchers.Matcher) configuration match_template rule source =
-              let rule = Rule.create rule |> Or_error.ok_exn in
-              Matcher.all ~configuration ~template:match_template ~source
-              |> List.filter ~f:(fun { environment; _ } ->
-                  let inferred_equality_constraints =
-                    let vars = Environment.vars environment in
-                    List.fold vars ~init:[] ~f:(fun acc var ->
-                        if String.is_prefix var ~prefix:"equal_" then
-                          match String.split var ~on:'_' with
-                          | _equal :: target :: _uuid ->
-                            let expression = Language.Ast.Equal (Variable var, Variable target) in
-                            expression::acc
-                          | _ -> assert false
-                        else
-                          acc)
-                  in
-                  Rule.(sat @@ apply (rule @ inferred_equality_constraints) ~matcher:(module Matcher) environment))
-            in
-            get_matches matcher configuration match_template rule input_text
-          in
+          let f () = Pipeline.run ?rule matcher configuration match_template input_text in
           Statistics.Time.time_out ~after:match_timeout f ();
         with Statistics.Time.Time_out ->
           Format.eprintf "Timeout for input: %s!@." (show_input_kind source);
@@ -118,11 +66,9 @@ let process_single_source
       let result =
         try
           let f () =
-            Matcher.all ~configuration ~template:match_template ~source:input_text
-            |> fun matches ->
-            (* TODO(RVT): merge match and rewrite rule application. *)
-            apply_rewrite_rule newline_separate_rule_rewrites matcher rule matches
-            |> fun matches ->
+            let matches =
+              Pipeline.run ?rule matcher ~newline_separated:newline_separate_rule_rewrites configuration match_template input_text
+            in
             if matches = [] then
               (* If there are no matches, return the original source (for editor support). *)
               Some (Some (Replacement.{ rewritten_source = input_text; in_place_substitutions = [] }), [])
@@ -130,7 +76,7 @@ let process_single_source
               Some (Rewrite.all ~source:input_text ~rewrite_template matches, matches)
           in
           Statistics.Time.time_out ~after:match_timeout f ();
-        with Statistics__Time.Time_out ->
+        with Statistics.Time.Time_out ->
           Format.eprintf "Timeout for input: %s!@." (show_input_kind source);
           Out_channel.with_file ~append:true verbose_out_file ~f:(fun out_channel ->
               Out_channel.output_lines out_channel [Format.sprintf "TIMEOUT: FOR %s@." (show_input_kind source) ]);

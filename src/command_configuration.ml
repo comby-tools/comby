@@ -78,6 +78,14 @@ let parse_template_directories paths =
       None
     | Some match_template ->
       let rule = read_optional (path ^/ "rule") in
+      let rule =
+        match Option.map rule ~f:Rule.create with
+        | None -> None
+        | Some Ok rule -> Some rule
+        | Some Error error ->
+          Format.eprintf "Rule parse error: %s@." (Error.to_string_hum error);
+          exit 1
+      in
       let rewrite_template = read_optional (path ^/ "rewrite") in
       Specification.create ~match_template ?rule ?rewrite_template ()
       |> Option.some
@@ -466,6 +474,7 @@ let create
   let open Or_error in
   validate_errors configuration >>= fun () ->
   emit_warnings configuration >>= fun () ->
+  let rule = Rule.create rule |> Or_error.ok_exn in
   let specifications =
     match specification_directories, anonymous_arguments with
     | None, Some { match_template; rewrite_template; _ } ->

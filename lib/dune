@@ -7,9 +7,10 @@
    core 
    mparser 
    mparser.pcre 
+   comby.language
+   comby.match
    comby.matchers
+   comby.pipeline
    comby.replacement
    comby.rewriter
-   comby.match
-   comby.language
    comby.statistics))
