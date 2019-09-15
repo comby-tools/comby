@@ -7,13 +7,16 @@
 [![Commit](https://img.shields.io/github/last-commit/comby-tools/comby.svg)](Commit)
 [![Gitter](https://img.shields.io/gitter/room/comby-tools/comby.svg?color=teal)](https://gitter.im/comby-tools/community)
 
-## `bash <(curl -sL get.comby.dev)`
+![high-quality-bigger-crop-lets-go-final](https://user-images.githubusercontent.com/888624/64916761-0b657780-d752-11e9-96e2-cd81a2681139.gif)
+
+
+## Install the binary: `bash <(curl -sL get.comby.dev)`
 
 ## See the [usage docs](https://comby.dev)
 
 ### Or [try it live](https://comby.live/).
 
-## Source Build
+## Build from source
 
 - Install [opam](https://opam.ocaml.org/doc/Install.html)
 
