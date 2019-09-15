@@ -51,7 +51,7 @@ let process_single_source
       } ->
       let matches =
         try
-          let f () = Pipeline.run matcher configuration match_template input_text rule in
+          let f () = Pipeline.run ?rule matcher configuration match_template input_text in
           Statistics.Time.time_out ~after:match_timeout f ();
         with Statistics.Time.Time_out ->
           Format.eprintf "Timeout for input: %s!@." (show_input_kind source);
@@ -67,13 +67,7 @@ let process_single_source
         try
           let f () =
             let matches =
-              Pipeline.run
-                matcher
-                ~newline_separated:newline_separate_rule_rewrites
-                configuration
-                match_template
-                input_text
-                rule
+              Pipeline.run ?rule matcher ~newline_separated:newline_separate_rule_rewrites configuration match_template input_text
             in
             if matches = [] then
               (* If there are no matches, return the original source (for editor support). *)

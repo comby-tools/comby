@@ -17,18 +17,16 @@ let infer_equality_constraints environment =
 
 let apply_rule ?(newline_separated = false) matcher rule matches =
   let open Option in
-  match rule with
-  | "" -> matches
-  | rule ->
-    let rule = Rule.create rule |> Or_error.ok_exn in
-    List.filter_map matches ~f:(fun ({ environment; _ } as matched) ->
-        let rule = rule @ infer_equality_constraints environment in
-        let sat, env =  Rule.apply ~newline_separated ~matcher rule environment in
-        (if sat then env else None)
-        >>| fun environment -> { matched with environment })
+  List.filter_map matches ~f:(fun ({ environment; _ } as matched) ->
+      let rule = rule @ infer_equality_constraints environment in
+      let sat, env =  Rule.apply ~newline_separated ~matcher rule environment in
+      (if sat then env else None)
+      >>| fun environment -> { matched with environment })
 
 let run
     ((module Matcher : Matchers.Matcher) as matcher)
-    ?newline_separated configuration template source rule =
+    ?newline_separated ?rule configuration template source =
   let matches = Matcher.all ~configuration ~template ~source in
-  apply_rule ?newline_separated matcher rule matches
+  match rule with
+  | Some rule -> apply_rule ?newline_separated matcher rule matches
+  | None -> matches

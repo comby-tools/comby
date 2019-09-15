@@ -10,6 +10,8 @@ open Rewriter
 open Ast
 open Parser
 
+type t = Ast.t
+
 type result = bool * environment option
 
 let sat = fst
