@@ -5,7 +5,6 @@ open Comby
 open Language
 open Matchers
 open Rewriter
-
 open Server_types
 
 let (>>|) = Lwt.Infix.(>|=)

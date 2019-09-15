@@ -2,25 +2,8 @@ open Core
 
 open Lwt.Infix
 
-type match_request =
-  { source : string
-  ; match_template : string [@key "match"]
-  ; rule : string option [@default None]
-  ; language : string [@default "generic"]
-  ; id : int
-  }
-[@@deriving yojson]
-
-type rewrite_request =
-  { source : string
-  ; match_template : string [@key "match"]
-  ; rewrite_template : string [@key "rewrite"]
-  ; rule : string option [@default None]
-  ; language : string [@default "generic"]
-  ; substitution_kind : string [@default "in_place"]
-  ; id : int
-  }
-[@@deriving yojson]
+open Match
+open Server_types
 
 let binary_path = "../../../comby-server"
 
@@ -40,6 +23,7 @@ let post endpoint json =
     match endpoint with
     | `Match -> uri "match"
     | `Rewrite -> uri "rewrite"
+    | `Substitute -> uri "substitute"
   in
   let thread =
     Cohttp_lwt_unix.Client.post ~body:(`String json) uri >>= fun (_, response) ->
@@ -73,14 +57,12 @@ let%expect_test "post_request" =
   let rule = Some {|where :[1] == "world"|} in
   let language = "generic" in
 
-  let request = { source; match_template; rule; language; id = 0 } in
-  let json = match_request_to_yojson request |> Yojson.Safe.to_string in
+  In.{ source; match_template; rule; language; id = 0 }
+  |> In.match_request_to_yojson
+  |> Yojson.Safe.to_string
+  |> post `Match
+  |> print_string;
 
-  let result = post `Match json in
-
-  print_string json;
-  [%expect "{\"source\":\"hello world\",\"match\":\"hello :[1]\",\"rule\":\"where :[1] == \\\"world\\\"\",\"id\":0}"];
-  print_string result;
   [%expect {|
     {
       "matches": [
@@ -112,12 +94,12 @@ let%expect_test "post_request" =
   let rule = Some {|where :[1] = "world"|} in
   let language = "generic" in
 
-  let request = { source; match_template; rule; language; id = 0 } in
-  let json = match_request_to_yojson request |> Yojson.Safe.to_string in
+  In.{ source; match_template; rule; language; id = 0 }
+  |> In.match_request_to_yojson
+  |> Yojson.Safe.to_string
+  |> post `Match
+  |> print_string;
 
-  let result = post `Match json in
-
-  print_string result;
   [%expect {|
     Error in line 1, column 7:
     where :[1] = "world"
@@ -136,12 +118,12 @@ let%expect_test "post_request" =
   let rewrite_template = ":[1], hello" in
   let language = "generic" in
 
-  let request = { source; match_template; rewrite_template; rule; language; substitution_kind; id = 0 } in
-  let json = rewrite_request_to_yojson request |> Yojson.Safe.to_string in
+  In.{ source; match_template; rewrite_template; rule; language; substitution_kind; id = 0}
+  |> In.rewrite_request_to_yojson
+  |> Yojson.Safe.to_string
+  |> post `Rewrite
+  |> print_string;
 
-  let result = post `Rewrite json in
-
-  print_string result;
   [%expect {|
       {
         "rewritten_source": "world, hello",
@@ -174,12 +156,12 @@ let%expect_test "post_request" =
   let rewrite_template = ":[1], hello" in
   let language = "generic" in
 
-  let request = { source; match_template; rewrite_template; rule; language; substitution_kind; id = 0} in
-  let json = rewrite_request_to_yojson request |> Yojson.Safe.to_string in
+  In.{ source; match_template; rewrite_template; rule; language; substitution_kind; id = 0}
+  |> In.rewrite_request_to_yojson
+  |> Yojson.Safe.to_string
+  |> post `Rewrite
+  |> print_string;
 
-  let result = post `Rewrite json in
-
-  print_string result;
   [%expect {|
       {
         "rewritten_source": "world, hello\nworld, hello",
@@ -193,9 +175,8 @@ let%expect_test "post_request" =
   let rule = Some {|where |} in
   let language = "generic" in
 
-  let request = { source; match_template; rule; language; id = 0 } in
-  let json = match_request_to_yojson request |> Yojson.Safe.to_string in
-
+  let request = In.{ source; match_template; rule; language; id = 0 } in
+  let json = In.match_request_to_yojson request |> Yojson.Safe.to_string in
   let result = post `Match json in
 
   print_string result;
@@ -204,5 +185,20 @@ let%expect_test "post_request" =
     where
           ^
     Expecting ":[", "false", "match", "rewrite", "true" or string literal |}]
+
+let%expect_test "post_substitute" =
+
+  let rewrite_template = ":[1] hi :[2]" in
+  let environment = Environment.create () in
+  let environment = Environment.add environment "1" "oh" in
+  let environment = Environment.add environment "2" "there" in
+
+  In.{ rewrite_template; environment; id = 0 }
+  |> In.substitution_request_to_yojson
+  |> Yojson.Safe.to_string
+  |> post `Substitute
+  |> print_string;
+
+  [%expect {||}]
 
 let () = kill ()
