@@ -1,19 +1,34 @@
 open Core
 
-type comment_kind =
-  | Multiline of string * string
-  | Nested_multiline of string * string
-  | Until_newline of string
-[@@deriving yojson]
-
 module Syntax = struct
+
+  type escapable_string_literals =
+    { delimiters : string list
+    ; escape_character: char
+    }
+  [@@deriving yojson]
+
+  type comment_kind =
+    | Multiline of string * string
+    | Nested_multiline of string * string
+    | Until_newline of string
+  [@@deriving yojson]
+
+  type t = {
+    user_defined_delimiters : (string * string) list;
+    escapable_string_literals : escapable_string_literals option; [@default None]
+    raw_string_literals : (string * string) list;
+    comments : comment_kind list;
+  }
+  [@@deriving yojson]
+
   module type S = sig
     val user_defined_delimiters : (string * string) list
-    val escapable_string_literals : string list
-    val escape_char : char
+    val escapable_string_literals : escapable_string_literals option
     val raw_string_literals : (string * string) list
-    val comment_parser : comment_kind list
+    val comments : comment_kind list
   end
+
 end
 
 module Info = struct

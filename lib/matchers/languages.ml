@@ -1,5 +1,8 @@
 open Core
-open Syntax_config
+
+open Types.Syntax
+
+let ordinary_string = Some { delimiters = [{|"|}]; escape_character = '\\' }
 
 module Text = struct
   module Info = struct
@@ -9,14 +12,9 @@ module Text = struct
 
   module Syntax = struct
     let user_defined_delimiters = []
-    let escapable_string_literals = []
-
-    let escape_char =
-      '\\'
-
+    let escapable_string_literals = None
     let raw_string_literals = []
-
-    let comment_parser = []
+    let comments = []
   end
 
   include Matcher.Make (Syntax) (Info)
@@ -50,15 +48,11 @@ module Dyck = struct
       ; "[", "]"
       ]
 
-    let escapable_string_literals = []
-
-    (* This is ignored since there are no literals *)
-    let escape_char =
-      '\\'
+    let escapable_string_literals = None
 
     let raw_string_literals = []
 
-    let comment_parser = []
+    let comments = []
   end
 
   include Matcher.Make (Syntax) (Info)
@@ -80,7 +74,6 @@ module Latex = struct
   end
 
   module Syntax = struct
-    open Types
     include Dyck.Syntax
 
     let user_defined_delimiters =
@@ -88,7 +81,7 @@ module Latex = struct
       [ {|\if|}, {|\fi|}
       ]
 
-    let comment_parser =
+    let comments =
       [ Until_newline "%"
       ]
   end
@@ -103,10 +96,9 @@ module Assembly = struct
   end
 
   module Syntax = struct
-    open Types
     include Dyck.Syntax
 
-    let comment_parser =
+    let comments =
       [ Until_newline ";"
       ]
   end
@@ -121,14 +113,11 @@ module Clojure = struct
   end
 
   module Syntax = struct
-    open Types
     include Dyck.Syntax
 
-    let escapable_string_literals =
-      [ {|"|}
-      ]
+    let escapable_string_literals = ordinary_string
 
-    let comment_parser =
+    let comments =
       [ Until_newline ";"
       ]
   end
@@ -144,10 +133,9 @@ module Lisp = struct
 
   module Syntax = struct
     include Clojure.Syntax
-    open Types
 
-    let comment_parser =
-      Clojure.Syntax.comment_parser @
+    let comments =
+      Clojure.Syntax.comments @
       [ Nested_multiline ("#|", "|#")
       ]
   end
@@ -165,12 +153,11 @@ module Generic = struct
     include Dyck.Syntax
 
     let escapable_string_literals =
-      [ {|"|}
-      ; {|'|}
-      ]
+      Some
+        { delimiters = [{|"|}; {|'|}]
+        ; escape_character = '\\'
+        }
 
-    let escape_char =
-      '\\'
   end
 
   include Matcher.Make (Syntax) (Info)
@@ -183,7 +170,6 @@ module Bash = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
@@ -195,7 +181,7 @@ module Bash = struct
       ; "while", "done"
       ]
 
-    let comment_parser =
+    let comments =
       [ Until_newline "#" ]
   end
 
@@ -209,7 +195,6 @@ module Ruby = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
@@ -232,7 +217,7 @@ module Ruby = struct
       [ ({|"|}, {|"|})
       ]
 
-    let comment_parser =
+    let comments =
       [ Multiline ("=begin", "=end")
       ; Until_newline "#"
       ]
@@ -248,7 +233,6 @@ module Elixir = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
@@ -261,7 +245,7 @@ module Elixir = struct
       [ ({|"""|}, {|"""|})
       ]
 
-    let comment_parser =
+    let comments =
       [ Until_newline "#"
       ]
   end
@@ -277,7 +261,6 @@ module Python = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let raw_string_literals =
@@ -285,7 +268,7 @@ module Python = struct
       ; ({|"""|}, {|"""|})
       ]
 
-    let comment_parser =
+    let comments =
       [ Until_newline "#"
       ]
   end
@@ -300,7 +283,6 @@ module Html = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
@@ -308,7 +290,7 @@ module Html = struct
       [ "<", ">"
       ]
 
-    let comment_parser =
+    let comments =
       [ Multiline ("<!--", "-->")
       ]
   end
@@ -332,10 +314,9 @@ module SQL = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
-    let comment_parser =
+    let comments =
       [ Multiline ("/*", "*/")
       ; Until_newline "--"
       ]
@@ -351,7 +332,6 @@ module Erlang = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
@@ -362,7 +342,7 @@ module Erlang = struct
       ; "if", "end"
       ]
 
-    let comment_parser =
+    let comments =
       [ Until_newline "%"
       ]
   end
@@ -383,10 +363,9 @@ module C = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
-    let comment_parser =
+    let comments =
       [ Multiline ("/*", "*/")
       ; Until_newline "//"
       ]
@@ -466,10 +445,9 @@ module Php = struct
 
   module Syntax = struct
     include C.Syntax
-    open Types
 
-    let comment_parser =
-      C.Syntax.comment_parser @
+    let comments =
+      C.Syntax.comments @
       [ Until_newline "#"
       ]
   end
@@ -510,10 +488,9 @@ module Swift = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
-    let comment_parser =
+    let comments =
       [ Nested_multiline ("/*", "*/")
       ; Until_newline "//"
       ]
@@ -531,14 +508,12 @@ module Rust = struct
   module Syntax = struct
     include Swift.Syntax
 
-    (* Override ' as escapable string literal, since
-       these can be used in typing *)
-    let escapable_string_literals =
-      [ {|"|}
-      ]
+    (* Excludes ' as escapable string literal, since these can be used in
+       typing. *)
+    let escapable_string_literals = ordinary_string
 
     let raw_string_literals =
-      [ ({|r#|}, {|#|})
+      [ {|r#|}, {|#|}
       ]
   end
 
@@ -552,7 +527,6 @@ module OCaml = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
@@ -564,11 +538,9 @@ module OCaml = struct
       ]
 
 
-    (* Override ' as escapable string literal, since
-       these can be used in typing *)
-    let escapable_string_literals =
-      [ {|"|}
-      ]
+    (* Excludes ' as escapable string literal, since these can be used in
+       typing. *)
+    let escapable_string_literals = ordinary_string
 
     let raw_string_literals =
       [ ("{|", "|}")
@@ -599,7 +571,6 @@ module Pascal = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let comments =
@@ -619,7 +590,6 @@ module Julia = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let comments =
@@ -647,7 +617,6 @@ module Fortran = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let comments =
@@ -665,7 +634,6 @@ module Haskell = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let raw_string_literals =
@@ -698,7 +666,6 @@ module C_nested_comments = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let comments =
@@ -755,12 +722,12 @@ let select_with_extension extension : (module Types.Matcher.S) =
   | None -> (module Generic)
 
 let create
-    { user_defined_delimiters
-    ; escapable_string_literals
-    ; escape_char
-    ; raw_string_literals
-    ; comment_parser
-    } =
+    Types.Syntax.
+      { user_defined_delimiters
+      ; escapable_string_literals
+      ; raw_string_literals
+      ; comments
+      } =
   let module Info = struct
     let name = "User_defined_language"
     let extensions = []
@@ -769,9 +736,8 @@ let create
   let module User_language = struct
     let user_defined_delimiters = user_defined_delimiters
     let escapable_string_literals = escapable_string_literals
-    let escape_char = escape_char
     let raw_string_literals = raw_string_literals
-    let comment_parser = comment_parser
+    let comments = comments
   end
   in
   (module Matcher.Make (User_language) (Info) : Types.Matcher.S)
