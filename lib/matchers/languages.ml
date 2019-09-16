@@ -16,7 +16,7 @@ module Text = struct
 
     let raw_string_literals = []
 
-    let comment_parser = []
+    let comments = []
   end
 
   include Matcher.Make (Syntax) (Info)
@@ -58,7 +58,7 @@ module Dyck = struct
 
     let raw_string_literals = []
 
-    let comment_parser = []
+    let comments = []
   end
 
   include Matcher.Make (Syntax) (Info)
@@ -88,7 +88,7 @@ module Latex = struct
       [ {|\if|}, {|\fi|}
       ]
 
-    let comment_parser =
+    let comments =
       [ Until_newline "%"
       ]
   end
@@ -106,7 +106,7 @@ module Assembly = struct
     open Types
     include Dyck.Syntax
 
-    let comment_parser =
+    let comments =
       [ Until_newline ";"
       ]
   end
@@ -128,7 +128,7 @@ module Clojure = struct
       [ {|"|}
       ]
 
-    let comment_parser =
+    let comments =
       [ Until_newline ";"
       ]
   end
@@ -146,8 +146,8 @@ module Lisp = struct
     include Clojure.Syntax
     open Types
 
-    let comment_parser =
-      Clojure.Syntax.comment_parser @
+    let comments =
+      Clojure.Syntax.comments @
       [ Nested_multiline ("#|", "|#")
       ]
   end
@@ -195,7 +195,7 @@ module Bash = struct
       ; "while", "done"
       ]
 
-    let comment_parser =
+    let comments =
       [ Until_newline "#" ]
   end
 
@@ -232,7 +232,7 @@ module Ruby = struct
       [ ({|"|}, {|"|})
       ]
 
-    let comment_parser =
+    let comments =
       [ Multiline ("=begin", "=end")
       ; Until_newline "#"
       ]
@@ -261,7 +261,7 @@ module Elixir = struct
       [ ({|"""|}, {|"""|})
       ]
 
-    let comment_parser =
+    let comments =
       [ Until_newline "#"
       ]
   end
@@ -285,7 +285,7 @@ module Python = struct
       ; ({|"""|}, {|"""|})
       ]
 
-    let comment_parser =
+    let comments =
       [ Until_newline "#"
       ]
   end
@@ -308,7 +308,7 @@ module Html = struct
       [ "<", ">"
       ]
 
-    let comment_parser =
+    let comments =
       [ Multiline ("<!--", "-->")
       ]
   end
@@ -335,7 +335,7 @@ module SQL = struct
     open Types
     include Generic.Syntax
 
-    let comment_parser =
+    let comments =
       [ Multiline ("/*", "*/")
       ; Until_newline "--"
       ]
@@ -362,7 +362,7 @@ module Erlang = struct
       ; "if", "end"
       ]
 
-    let comment_parser =
+    let comments =
       [ Until_newline "%"
       ]
   end
@@ -386,7 +386,7 @@ module C = struct
     open Types
     include Generic.Syntax
 
-    let comment_parser =
+    let comments =
       [ Multiline ("/*", "*/")
       ; Until_newline "//"
       ]
@@ -468,8 +468,8 @@ module Php = struct
     include C.Syntax
     open Types
 
-    let comment_parser =
-      C.Syntax.comment_parser @
+    let comments =
+      C.Syntax.comments @
       [ Until_newline "#"
       ]
   end
@@ -513,7 +513,7 @@ module Swift = struct
     open Types
     include Generic.Syntax
 
-    let comment_parser =
+    let comments =
       [ Nested_multiline ("/*", "*/")
       ; Until_newline "//"
       ]
@@ -759,7 +759,7 @@ let create
     ; escapable_string_literals
     ; escape_char
     ; raw_string_literals
-    ; comment_parser
+    ; comments
     } =
   let module Info = struct
     let name = "User_defined_language"
@@ -771,7 +771,7 @@ let create
     let escapable_string_literals = escapable_string_literals
     let escape_char = escape_char
     let raw_string_literals = raw_string_literals
-    let comment_parser = comment_parser
+    let comments = comments
   end
   in
   (module Matcher.Make (User_language) (Info) : Types.Matcher.S)

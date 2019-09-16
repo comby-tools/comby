@@ -66,7 +66,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     |> choice
 
   let comment_parser =
-    match Syntax.comment_parser with
+    match Syntax.comments with
     | [] -> MParser.zero
     | syntax ->
       List.map syntax ~f:(function
