@@ -74,7 +74,6 @@ module Latex = struct
   end
 
   module Syntax = struct
-    open Types
     include Dyck.Syntax
 
     let user_defined_delimiters =
@@ -97,7 +96,6 @@ module Assembly = struct
   end
 
   module Syntax = struct
-    open Types
     include Dyck.Syntax
 
     let comments =
@@ -115,7 +113,6 @@ module Clojure = struct
   end
 
   module Syntax = struct
-    open Types
     include Dyck.Syntax
 
     let escapable_string_literals = ordinary_string
@@ -136,7 +133,6 @@ module Lisp = struct
 
   module Syntax = struct
     include Clojure.Syntax
-    open Types
 
     let comments =
       Clojure.Syntax.comments @
@@ -174,7 +170,6 @@ module Bash = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
@@ -200,7 +195,6 @@ module Ruby = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
@@ -239,7 +233,6 @@ module Elixir = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
@@ -268,7 +261,6 @@ module Python = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let raw_string_literals =
@@ -291,7 +283,6 @@ module Html = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
@@ -323,7 +314,6 @@ module SQL = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let comments =
@@ -342,7 +332,6 @@ module Erlang = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
@@ -374,7 +363,6 @@ module C = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let comments =
@@ -457,7 +445,6 @@ module Php = struct
 
   module Syntax = struct
     include C.Syntax
-    open Types
 
     let comments =
       C.Syntax.comments @
@@ -501,7 +488,6 @@ module Swift = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let comments =
@@ -541,7 +527,6 @@ module OCaml = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let user_defined_delimiters =
@@ -586,7 +571,6 @@ module Pascal = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let comments =
@@ -606,7 +590,6 @@ module Julia = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let comments =
@@ -634,7 +617,6 @@ module Fortran = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let comments =
@@ -652,7 +634,6 @@ module Haskell = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let raw_string_literals =
@@ -685,7 +666,6 @@ module C_nested_comments = struct
   end
 
   module Syntax = struct
-    open Types
     include Generic.Syntax
 
     let comments =
