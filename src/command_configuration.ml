@@ -361,32 +361,32 @@ type t =
 let validate_errors { input_options; run_options = _; output_options } =
   let violations =
     [ input_options.stdin && Option.is_some input_options.zip_file
-    , "-zip may not be used with stdin."
+    , "-zip may not be used with -stdin."
     ; output_options.file_in_place && is_some input_options.zip_file
-    , "-in-place may not be used with -zip"
+    , "-in-place may not be used with -zip."
     ; output_options.file_in_place && output_options.stdout
-    , "-in-place may not be used with stdout."
+    , "-in-place may not be used with -stdout."
     ; output_options.file_in_place && output_options.diff
-    , "-in-place may not be used with -diff"
+    , "-in-place may not be used with -diff."
     ; output_options.file_in_place && (output_options.json_lines || output_options.json_pretty)
-    , "-in-place may not be used with -json-lines or -json-pretty"
+    , "-in-place may not be used with -json-lines or -json-pretty."
     ; input_options.anonymous_arguments = None &&
       (input_options.specification_directories = None
        || input_options.specification_directories = Some [])
     , "No templates specified. \
        See -h to specify on the command line, or \
        use -templates \
-       <directory-containing-templates>"
+       <directory-containing-templates>."
     ; Option.is_some input_options.directory_depth
       && Option.value_exn (input_options.directory_depth) < 0
-    , "-depth must be 0 or greater"
+    , "-depth must be 0 or greater."
     ; Sys.is_directory input_options.target_directory = `No
-    , "Directory specified with -d or -r or -directory is not a directory"
+    , "Directory specified with -d or -r or -directory is not a directory."
     ; Option.is_some input_options.specification_directories
       && List.exists
         (Option.value_exn input_options.specification_directories)
         ~f:(fun dir -> not (Sys.is_directory dir = `Yes))
-    , "One or more directories specified with -templates is not a directory"
+    , "One or more directories specified with -templates is not a directory."
     ; output_options.json_only_diff && (not output_options.json_lines && not output_options.json_pretty)
     , "-json-only-diff can only be supplied with -json-lines or -json-pretty."
     ; let result = Rule.create input_options.rule in
@@ -431,9 +431,11 @@ let emit_warnings { input_options; output_options; _ } =
           || output_options.json_pretty
           || output_options.json_lines
           || output_options.file_in_place)
-    , "-color only works with -diff or -match-only"
+    , "-color only works with -diff or -match-only."
     ; output_options.count && not input_options.match_only
     , "-count only works with -match-only. Ignoring -count."
+    ; input_options.stdin && output_options.file_in_place
+    , "-in-place has no effect when -stdin is used. Ignoring -in-place."
     ]
   in
   List.iter warn_on ~f:(function

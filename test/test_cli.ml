@@ -83,8 +83,8 @@ let%expect_test "error_on_zip_and_stdin" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command "none" in
   print_string result;
-  [%expect_exact {|No templates specified. See -h to specify on the command line, or use -templates <directory-containing-templates>
-Next error: -zip may not be used with stdin.
+  [%expect_exact {|No templates specified. See -h to specify on the command line, or use -templates <directory-containing-templates>.
+Next error: -zip may not be used with -stdin.
 |}]
 
 let%expect_test "error_on_invalid_templates_dir" =
@@ -97,7 +97,7 @@ let%expect_test "error_on_invalid_templates_dir" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|One or more directories specified with -templates is not a directory
+  [%expect_exact {|One or more directories specified with -templates is not a directory.
 |}]
 
 let%expect_test "warn_on_anonymous_and_templates_flag" =
@@ -589,7 +589,7 @@ let%expect_test "is_real_directory" =
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect{|
-    Directory specified with -d or -r or -directory is not a directory |}]
+    Directory specified with -d or -r or -directory is not a directory. |}]
 
 let%expect_test "exclude_dir_option" =
   let source = "hello world" in
@@ -663,7 +663,7 @@ let%expect_test "dir_depth_option" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{| -depth must be 0 or greater |}];
+  [%expect{| -depth must be 0 or greater. |}];
 
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
@@ -887,4 +887,18 @@ let%expect_test "newline_separated_output"=
   [%expect_exact {|a
 b
 c
+|}]
+
+let%expect_test "warn_on_stdin_and_in_place_flags" =
+  let source = "a b c" in
+  let match_template = ":[[1]]" in
+  let rewrite_template = ":[[1]]" in
+  let command_args =
+    Format.sprintf "-stdin -in-place '%s' '%s' -matcher .generic"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_expect_stdin_and_stdout command source
+  |> print_string;
+  [%expect_exact {|WARNING: -in-place has no effect when -stdin is used. Ignoring -in-place.
 |}]
