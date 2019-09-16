@@ -3,12 +3,13 @@ open MParser
 open MParser_PCRE.Tokens
 
 open Match
-open Matchers
-
 open Rewriter
 
 open Ast
 open Parser
+
+module Configuration = Matchers.Configuration
+
 
 type t = Ast.t
 

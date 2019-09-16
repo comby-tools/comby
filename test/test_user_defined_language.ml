@@ -17,7 +17,7 @@ let run (module M : Matchers.Matcher) source match_template rewrite_template =
 
 let%expect_test "user_defined_language" =
   let c =
-    Syntax_config.
+    Syntax.
       { user_defined_delimiters= [("case", "esac")]
       ; escapable_string_literals= []
       ; escape_char= '\\'

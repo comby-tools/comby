@@ -114,7 +114,7 @@ let select_matcher custom_matcher override_matcher configuration =
       exit 1
     | `Yes ->
       Yojson.Safe.from_file matcher_path
-      |> Matchers.Syntax_config.of_yojson
+      |> Matchers.Syntax.of_yojson
       |> function
       | Ok c -> Matchers.create c, None
       | Error error ->

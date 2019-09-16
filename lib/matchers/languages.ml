@@ -1,5 +1,4 @@
 open Core
-open Syntax_config
 
 module Text = struct
   module Info = struct
@@ -755,12 +754,13 @@ let select_with_extension extension : (module Types.Matcher.S) =
   | None -> (module Generic)
 
 let create
-    { user_defined_delimiters
-    ; escapable_string_literals
-    ; escape_char
-    ; raw_string_literals
-    ; comments
-    } =
+    Types.Syntax.
+      { user_defined_delimiters
+      ; escapable_string_literals
+      ; escape_char
+      ; raw_string_literals
+      ; comments
+      } =
   let module Info = struct
     let name = "User_defined_language"
     let extensions = []

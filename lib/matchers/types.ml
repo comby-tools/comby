@@ -7,6 +7,7 @@ type comment_kind =
 [@@deriving yojson]
 
 module Syntax = struct
+
   module type S = sig
     val user_defined_delimiters : (string * string) list
     val escapable_string_literals : string list
@@ -14,6 +15,16 @@ module Syntax = struct
     val raw_string_literals : (string * string) list
     val comments : comment_kind list
   end
+
+  type t = {
+    user_defined_delimiters : (string * string) list;
+    escapable_string_literals : string list;
+    escape_char : char;
+    raw_string_literals : (string * string) list;
+    comments : comment_kind list;
+  }
+  [@@deriving yojson]
+
 end
 
 module Info = struct
