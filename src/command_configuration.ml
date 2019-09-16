@@ -113,7 +113,7 @@ type output_options =
   ; file_in_place : bool
   ; diff : bool
   ; stdout : bool
-  ; newline_separated : bool
+  ; substitute_in_place : bool
   ; count : bool
   }
 
@@ -142,7 +142,7 @@ type run_options =
   ; match_timeout : int
   ; number_of_workers : int
   ; dump_statistics : bool
-  ; newline_separate_rewrites : bool
+  ; substitute_in_place : bool
   }
 
 type user_input =
@@ -288,18 +288,16 @@ module Printer = struct
             Json_lines Only_diff
           else
             Json_lines Everything
-        | { diff = true; color = false; newline_separated; _ } ->
-          if newline_separated then
-            Diff Plain
-          else
-            Diff Plain
+        | { diff = true; color = false; _ } ->
+          Diff Plain
         | { color = true; _ }
-        | _ -> Diff Colored
+        | _ ->
+          Diff Colored
       in
-      if output_options.newline_separated then
-        { output_format; substitution_kind = Newline_separated }
-      else
+      if output_options.substitute_in_place then
         { output_format; substitution_kind = In_place }
+      else
+        { output_format; substitution_kind = Newline_separated }
 
     let print { output_format; substitution_kind } path replacements replacement_content source_content =
       let open Replacement in
@@ -462,7 +460,7 @@ let create
          ; match_timeout
          ; number_of_workers
          ; dump_statistics
-         ; newline_separate_rewrites
+         ; substitute_in_place
          }
      ; output_options =
          ({ file_in_place
@@ -542,7 +540,7 @@ let create
         ; match_timeout
         ; number_of_workers
         ; dump_statistics
-        ; newline_separate_rewrites
+        ; substitute_in_place
         }
     ; output_printer
     }

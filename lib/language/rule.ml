@@ -37,7 +37,7 @@ type rewrite_context =
 
 let rec apply
     ?(matcher = (module Matchers.Generic : Matchers.Matcher))
-    ?(newline_separated = false)
+    ?(substitute_in_place = true)
     predicates
     env =
   let open Option in
@@ -129,7 +129,7 @@ let rec apply
             Environment.lookup env variable >>= fun source ->
             let configuration = Configuration.create ~match_kind:Fuzzy () in
             let matches = Matcher.all ~configuration ~template ~source in
-            let source = if newline_separated then None else Some source in
+            let source = if substitute_in_place then Some source else None in
             let result = Rewrite.all ?source ~rewrite_template matches in
             match result with
             | Some { rewritten_source; _ } ->

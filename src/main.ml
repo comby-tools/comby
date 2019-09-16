@@ -28,7 +28,7 @@ let verbose_out_file = "/tmp/comby.out"
 
 let process_single_source
     ((module Matcher : Matchers.Matcher) as matcher)
-    newline_separate_rule_rewrites
+    substitute_in_place
     configuration
     source
     specification
@@ -67,7 +67,7 @@ let process_single_source
         try
           let f () =
             let matches =
-              Pipeline.run ?rule matcher ~newline_separated:newline_separate_rule_rewrites configuration match_template input_text
+              Pipeline.run ?rule matcher ~substitute_in_place configuration match_template input_text
             in
             if matches = [] then
               (* If there are no matches, return the original source (for editor support). *)
@@ -179,7 +179,7 @@ let run
         ; match_timeout
         ; number_of_workers
         ; dump_statistics
-        ; newline_separate_rewrites
+        ; substitute_in_place
         }
     ; output_printer
     }
@@ -197,7 +197,7 @@ let run
             | Nothing | Matches _ -> input
             | Replacement (_, content, _) -> `String content
           in
-          process_single_source matcher newline_separate_rewrites match_configuration input specification verbose match_timeout
+          process_single_source matcher substitute_in_place match_configuration input specification verbose match_timeout
           |> function
           | Nothing -> Nothing, count
           | Matches (x, number_of_matches) ->
@@ -350,7 +350,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and stdout = flag "stdout" no_arg ~doc:"Print changed content to stdout. Useful to editors for reading in changed content."
     and diff = flag "diff" no_arg ~doc:"Output diff"
     and color = flag "color" no_arg ~doc:"Color matches or replacements (patience diff)."
-    and newline_separated = flag "newline-separated" no_arg ~doc:"Instead of rewriting in place, output rewrites separated by newlines."
+    and newline_separated_rewrites = flag "newline-separated" no_arg ~doc:"Instead of rewriting in place, output rewrites separated by newlines."
     and count = flag "count" no_arg ~doc:"Display a count of matches in a file."
     and list = flag "list" no_arg ~doc:"Display supported languages and extensions"
     and exclude_directory_prefix = flag "exclude-dir" (optional_with_default "." string) ~doc:"prefix of directories to exclude. Default: '.'"
@@ -389,7 +389,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           { match_template; rewrite_template; file_filters })
     in
     if list then list_supported_languages_and_exit ();
-    let newline_separate_rewrites = newline_separated in
+    let substitute_in_place = not newline_separated_rewrites in
     let configuration =
       Command_configuration.create
         { input_options =
@@ -410,7 +410,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; match_timeout
             ; number_of_workers
             ; dump_statistics
-            ; newline_separate_rewrites
+            ; substitute_in_place
             }
         ; output_options =
             { color
@@ -421,7 +421,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; file_in_place
             ; diff
             ; stdout
-            ; newline_separated
+            ; substitute_in_place
             }
         }
       |> function
