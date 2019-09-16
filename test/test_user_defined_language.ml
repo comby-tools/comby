@@ -19,8 +19,7 @@ let%expect_test "user_defined_language" =
   let c =
     Syntax.
       { user_defined_delimiters = [("case", "esac")]
-      ; escapable_string_literals = []
-      ; escape_char = '\\'
+      ; escapable_string_literals = None
       ; raw_string_literals = []
       ; comments = [Multiline ("/*", "*/"); Until_newline "//"]
       }
@@ -68,9 +67,36 @@ let%expect_test "user_defined_language_from_json" =
       "user_defined_delimiters": [
         ["case", "esac"]
       ],
-      "escapable_string_literals": [
+      "escapable_string_literals": {
+        "delimiters": ["\""],
+        "escape_character": "\\"
+      },
+      "raw_string_literals": [],
+      "comments": [
+        [ "Multiline", "/*", "*/" ],
+        [ "Until_newline", "//" ]
+      ]
+      }
+    |}
+  in
+  let user_lang =
+    Yojson.Safe.from_string json
+    |> Matchers.Syntax.of_yojson
+    |> Result.ok_or_failwith
+    |> Matchers.create
+  in
+  let source = "" in
+  let match_template = {|""|} in
+  let rewrite_template = {|""|} in
+  run user_lang source match_template rewrite_template ;
+  [%expect_exact {|""|}]
+
+let%expect_test "user_defined_language_from_json_optional_escapable" =
+  let json =
+    {|{
+      "user_defined_delimiters": [
+        ["case", "esac"]
       ],
-      "escape_char": "\\",
       "raw_string_literals": [],
       "comments": [
         [ "Multiline", "/*", "*/" ],

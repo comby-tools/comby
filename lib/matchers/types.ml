@@ -8,22 +8,26 @@ type comment_kind =
 
 module Syntax = struct
 
-  module type S = sig
-    val user_defined_delimiters : (string * string) list
-    val escapable_string_literals : string list
-    val escape_char : char
-    val raw_string_literals : (string * string) list
-    val comments : comment_kind list
-  end
+  type escapable_string_literals =
+    { delimiters : string list
+    ; escape_character: char
+    }
+  [@@deriving yojson]
 
   type t = {
     user_defined_delimiters : (string * string) list;
-    escapable_string_literals : string list;
-    escape_char : char;
+    escapable_string_literals : escapable_string_literals option; [@default None]
     raw_string_literals : (string * string) list;
     comments : comment_kind list;
   }
   [@@deriving yojson]
+
+  module type S = sig
+    val user_defined_delimiters : (string * string) list
+    val escapable_string_literals : escapable_string_literals option
+    val raw_string_literals : (string * string) list
+    val comments : comment_kind list
+  end
 
 end
 

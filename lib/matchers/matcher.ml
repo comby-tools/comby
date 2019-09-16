@@ -42,15 +42,18 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   include Info
 
   let escapable_string_literal_parser (f : 'a literal_parser_callback) =
-    List.map Syntax.escapable_string_literals ~f:(fun delimiter ->
-        let module M =
-          Parsers.String_literals.Escapable.Make(struct
-            let delimiter = delimiter
-            let escape = Syntax.escape_char
-          end)
-        in
-        M.base_string_literal >>= fun contents ->
-        return (f ~contents ~left_delimiter:delimiter ~right_delimiter:delimiter))
+    (match Syntax.escapable_string_literals with
+     | None -> []
+     | Some { delimiters; escape_character } ->
+       List.map delimiters ~f:(fun delimiter ->
+           let module M =
+             Parsers.String_literals.Escapable.Make(struct
+               let delimiter = delimiter
+               let escape = escape_character
+             end)
+           in
+           M.base_string_literal >>= fun contents ->
+           return (f ~contents ~left_delimiter:delimiter ~right_delimiter:delimiter)))
     |> choice
 
   let raw_string_literal_parser (f : 'a literal_parser_callback) =
@@ -96,18 +99,21 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       |> choice
 
   let escapable_literal_grammar ~right_delimiter =
-    (attempt
-       (char Syntax.escape_char
-        >> string right_delimiter
-        >>= fun s -> return (Format.sprintf "%c%s" Syntax.escape_char s))
-    )
-    <|>
-    (attempt
-       (char Syntax.escape_char
-        >> char Syntax.escape_char
-        >> return (Format.sprintf "%c%c" Syntax.escape_char Syntax.escape_char))
-    )
-    <|> (is_not (string right_delimiter) |>> String.of_char)
+    match Syntax.escapable_string_literals with
+    | None -> zero
+    | Some { escape_character; _ } ->
+      (attempt
+         (char escape_character
+          >> string right_delimiter
+          >>= fun s -> return (Format.sprintf "%c%s" escape_character s))
+      )
+      <|>
+      (attempt
+         (char escape_character
+          >> char escape_character
+          >> return (Format.sprintf "%c%c" escape_character escape_character))
+      )
+      <|> (is_not (string right_delimiter) |>> String.of_char)
 
   let raw_literal_grammar ~right_delimiter =
     is_not (string right_delimiter) |>> String.of_char
@@ -258,8 +264,11 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
             [ string from; string until])
     in
     let reserved_escapable_strings =
-      List.concat_map Syntax.escapable_string_literals ~f:(fun x -> [x])
-      |> List.map ~f:string
+      match Syntax.escapable_string_literals with
+      | Some { delimiters; _ } ->
+        List.concat_map delimiters ~f:(fun delimiter -> [delimiter])
+        |> List.map ~f:string
+      | None -> []
     in
     let reserved_raw_strings =
       List.concat_map Syntax.raw_string_literals ~f:(fun (from, until) -> [from; until])

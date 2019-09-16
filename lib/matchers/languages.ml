@@ -1,5 +1,9 @@
 open Core
 
+open Types.Syntax
+
+let ordinary_string = Some { delimiters = [{|"|}]; escape_character = '\\' }
+
 module Text = struct
   module Info = struct
     let name = "Text"
@@ -8,13 +12,8 @@ module Text = struct
 
   module Syntax = struct
     let user_defined_delimiters = []
-    let escapable_string_literals = []
-
-    let escape_char =
-      '\\'
-
+    let escapable_string_literals = None
     let raw_string_literals = []
-
     let comments = []
   end
 
@@ -49,11 +48,7 @@ module Dyck = struct
       ; "[", "]"
       ]
 
-    let escapable_string_literals = []
-
-    (* This is ignored since there are no literals *)
-    let escape_char =
-      '\\'
+    let escapable_string_literals = None
 
     let raw_string_literals = []
 
@@ -123,9 +118,7 @@ module Clojure = struct
     open Types
     include Dyck.Syntax
 
-    let escapable_string_literals =
-      [ {|"|}
-      ]
+    let escapable_string_literals = ordinary_string
 
     let comments =
       [ Until_newline ";"
@@ -164,12 +157,11 @@ module Generic = struct
     include Dyck.Syntax
 
     let escapable_string_literals =
-      [ {|"|}
-      ; {|'|}
-      ]
+      Some
+        { delimiters = [{|"|}; {|'|}]
+        ; escape_character = '\\'
+        }
 
-    let escape_char =
-      '\\'
   end
 
   include Matcher.Make (Syntax) (Info)
@@ -530,14 +522,12 @@ module Rust = struct
   module Syntax = struct
     include Swift.Syntax
 
-    (* Override ' as escapable string literal, since
-       these can be used in typing *)
-    let escapable_string_literals =
-      [ {|"|}
-      ]
+    (* Excludes ' as escapable string literal, since these can be used in
+       typing. *)
+    let escapable_string_literals = ordinary_string
 
     let raw_string_literals =
-      [ ({|r#|}, {|#|})
+      [ {|r#|}, {|#|}
       ]
   end
 
@@ -563,11 +553,9 @@ module OCaml = struct
       ]
 
 
-    (* Override ' as escapable string literal, since
-       these can be used in typing *)
-    let escapable_string_literals =
-      [ {|"|}
-      ]
+    (* Excludes ' as escapable string literal, since these can be used in
+       typing. *)
+    let escapable_string_literals = ordinary_string
 
     let raw_string_literals =
       [ ("{|", "|}")
@@ -757,7 +745,6 @@ let create
     Types.Syntax.
       { user_defined_delimiters
       ; escapable_string_literals
-      ; escape_char
       ; raw_string_literals
       ; comments
       } =
@@ -769,7 +756,6 @@ let create
   let module User_language = struct
     let user_defined_delimiters = user_defined_delimiters
     let escapable_string_literals = escapable_string_literals
-    let escape_char = escape_char
     let raw_string_literals = raw_string_literals
     let comments = comments
   end
