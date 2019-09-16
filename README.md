@@ -24,7 +24,7 @@ echo '(👋 hi)' | docker run -a stdin -a stdout -i comby/comby '(:[emoji] hi)' 
 
 <img width="500" src="https://user-images.githubusercontent.com/888624/64924862-0edf1a00-d7b7-11e9-9c2e-cfeafde5bb4b.png">
 
-### Or [try it live](https://comby.live/).
+### Or [try it live](https://bit.ly/2UXkonD).
 
 ## Build from source
 
