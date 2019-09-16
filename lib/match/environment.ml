@@ -81,4 +81,28 @@ let to_yojson env : Yojson.Safe.json =
   in
   `List s
 
-let of_yojson _ = assert false
+let of_yojson (json : Yojson.Safe.json) =
+  let open Yojson.Safe.Util in
+  let env = create () in
+  match json with
+  | `List l ->
+    List.fold l ~init:env ~f:(fun env json ->
+        let variable = member "variable" json |> to_string_option in
+        let value = member "value" json |> to_string_option in
+        let range =
+          member "range" json
+          |> function
+          | `Null -> Some Range.default
+          | json ->
+            Range.of_yojson json
+            |> function
+            | Ok range -> Some range
+            | Error _ -> None
+        in
+        match variable, value with
+        | Some variable, Some value ->
+          add env ?range variable value
+        | _ ->
+          env)
+    |> Result.return
+  | _ -> Error "Invalid JSON for environment"

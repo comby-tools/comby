@@ -13,4 +13,5 @@
    comby.pipeline
    comby.replacement
    comby.rewriter
+   comby.server_types
    comby.statistics))

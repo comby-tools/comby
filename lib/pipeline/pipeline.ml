@@ -15,18 +15,17 @@ let infer_equality_constraints environment =
       else
         acc)
 
-let apply_rule ?(newline_separated = false) matcher rule matches =
+let apply_rule ?(substitute_in_place = true) matcher rule matches =
   let open Option in
   List.filter_map matches ~f:(fun ({ environment; _ } as matched) ->
       let rule = rule @ infer_equality_constraints environment in
-      let sat, env =  Rule.apply ~newline_separated ~matcher rule environment in
+      let sat, env =  Rule.apply ~substitute_in_place ~matcher rule environment in
       (if sat then env else None)
       >>| fun environment -> { matched with environment })
 
-let run
-    ((module Matcher : Matchers.Matcher) as matcher)
-    ?newline_separated ?rule configuration template source =
+let run matcher ?substitute_in_place ?rule configuration template source =
+  let module Matcher = (val matcher : Matchers.Matcher) in
   let matches = Matcher.all ~configuration ~template ~source in
   match rule with
-  | Some rule -> apply_rule ?newline_separated matcher rule matches
+  | Some rule -> apply_rule ?substitute_in_place matcher rule matches
   | None -> matches
