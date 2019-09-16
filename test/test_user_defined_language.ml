@@ -85,38 +85,8 @@ let%expect_test "user_defined_language_from_json" =
     |> Result.ok_or_failwith
     |> Matchers.create
   in
-  let source =
-    {|
-      case
-        case
-          block 1
-        esac
-
-        case
-          block 2
-        esac
-      esac
-      /*
-      case
-        ignore this
-      esac
-      */
-      // case
-      //   ignore this
-      // esac
-    |}
-  in
-  let match_template = {|case :[1] esac|} in
-  let rewrite_template = {|case nuked blocks esac|} in
+  let source = "" in
+  let match_template = {|""|} in
+  let rewrite_template = {|""|} in
   run user_lang source match_template rewrite_template ;
-  [%expect_exact {|
-      case nuked blocks esac
-      /*
-      case
-        ignore this
-      esac
-      */
-      // case
-      //   ignore this
-      // esac
-    |}]
+  [%expect_exact {|""|}]
