@@ -37,7 +37,7 @@ opam init
 opam switch create 4.07.0 4.07.0 
 ```
 
-- Install OS dependencies:
+- [Install OS dependencies:](#os-dependencies)
 
   - **Linux:** `sudo apt-get install pkg-config libpcre3-dev`
 
@@ -46,19 +46,20 @@ opam switch create 4.07.0 4.07.0
 - Then install the following opam libraries:
 
 ```
-opam install ppx_deriving_yojson
-opam install core
-opam install ppxlib
-opam install ppx_deriving
-opam install angstrom
-opam install hack_parallel
-opam install opium
-opam install pcre
-opam install oasis
-opam install tls
-opam install camlzip
-opam install bisect_ppx 
-opam install patdiff
+opam install -y \
+ppx_deriving_yojson \
+core \
+ppxlib \
+ppx_deriving \
+angstrom \
+hack_parallel \
+opium \
+pcre \
+oasis \
+tls \
+camlzip \
+bisect_ppx \
+patdiff
 ```
 
 - Install [mparser](https://github.com/comby-tools/mparser)
