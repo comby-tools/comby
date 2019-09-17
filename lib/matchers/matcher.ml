@@ -522,8 +522,8 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
 
             | Hole Line (identifier, _dimension) ->
               let allowed =
-                let allowed = many (is_not (char '\n')) in
-                allowed >>= fun x -> return [(String.of_char_list x)^"\n"]
+                many (is_not (char '\n'))
+                |>> fun x -> [(String.of_char_list x)^"\n"]
               in
               let hole_semantics = allowed << char '\n' in
               record_matches identifier hole_semantics
