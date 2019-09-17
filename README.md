@@ -13,7 +13,22 @@
 
 ## Install
 
-### Binary: `bash <(curl -sL get.comby.dev)`
+### Binary (Mac OS X and Ubuntu Linux) `bash <(curl -sL get.comby.dev)`
+
+- Arch and other Linux: The PCRE library is dynamically linked in the Ubuntu binary. For other distributions, like Arch, a fixup is needed: `ln -s /usr/lib/libpcre.so /usr/lib/libpcre.so.3`. Alternatively, consider [building from source](https://github.com/comby-tools/comby#build-from-source).
+
+- Mac OS X: If you run into `dyld: Library not loaded: /usr/local/opt/pcre/lib/libpcre.1.dylib`, try run this fixup:
+
+<details>
+  <summary>click to expand</summary>
+  
+```
+install_name_tool -change /usr/local/opt/pcre/lib/libpcre.1.dylib /usr/local/brew/lib/libpcre.1.dylib /usr/local/bin/comby`
+```
+
+</details>
+
+
 ### With docker: `docker pull comby/comby`
 
 Running with docker on `stdin`:
