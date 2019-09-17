@@ -41,11 +41,24 @@ derp
   let match_template = {|:[x\n]|} in
   let rewrite_template = {|{:[x]}|} in
   run source match_template rewrite_template;
-  [%expect_exact {|
-{foo.
+  [%expect_exact {|{
+}{foo.
 }{foo.bar.quux
 }{derp
 }|}]
+
+let%expect_test "match_empty_in_newline_hole" =
+  let run = run_all in
+  let source =
+    {|stuff
+after
+|} in
+  let match_template = {|stuff:[x\n]|} in
+  let rewrite_template = {|{->:[x]<-}|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|{->
+<-}after
+|}]
 
 let%expect_test "leading_indentation" =
   let run = run_all in
