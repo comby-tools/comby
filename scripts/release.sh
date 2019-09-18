@@ -17,9 +17,9 @@ VERSION=$1
 rm -rf $VERSION
 mkdir -p $VERSION $VERSION/0 $VERSION/get
 
-cd ../third-party-licenses
+cd ../docs/third-party-licenses
 ./pull-and-update-release-scripts.sh
-cd ..
+cd ../..
 
 comby '"0.x.0"' "\"$VERSION\"" .ml -d src -i
 
