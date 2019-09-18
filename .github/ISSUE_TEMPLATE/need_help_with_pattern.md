@@ -1,6 +1,6 @@
 ---
-name: I need help writing a pattern, or have questions.
-about: Please head over to Gitter for questions about usage.
+name: I need help writing a pattern, or have questions
+about: Please see the description and head over to Gitter for questions about usage
 title: ''
 labels: ''
 assignees: ''
