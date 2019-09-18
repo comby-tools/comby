@@ -9,7 +9,7 @@
 
 ![](https://user-images.githubusercontent.com/888624/64916761-0b657780-d752-11e9-96e2-cd81a2681139.gif)
 
-## See the [usage documentation](https://comby.dev)
+### See the [usage documentation](https://comby.dev).
 
 ## Install
 
@@ -37,9 +37,11 @@ Running with docker on `stdin`:
 echo '(👋 hi)' | docker run -a stdin -a stdout -i comby/comby '(:[emoji] hi)' 'bye :[emoji]' lisp -stdin
 ```
 
-<img width="500" src="https://user-images.githubusercontent.com/888624/64924862-0edf1a00-d7b7-11e9-9c2e-cfeafde5bb4b.png">
+<!--<img width="500" src="https://user-images.githubusercontent.com/888624/64924862-0edf1a00-d7b7-11e9-9c2e-cfeafde5bb4b.png">-->
 
 ### Or [try it live](https://bit.ly/2UXkonD).
+
+**Need help writing patterns or have other problems? Consider posting in [Gitter](https://gitter.im/comby-tools/community).**
 
 ## Build from source
 
@@ -92,4 +94,10 @@ ocaml setup.ml -install
 ```
 make
 make test
+```
+
+- If you want to install `comby` on your `PATH`, run
+
+```
+make install
 ```
