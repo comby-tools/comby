@@ -133,3 +133,11 @@ e f g h
   [%expect_exact {|{a b c d
 |e f g h
 }|}]
+
+let%expect_test "implicit_equals" =
+  let run = run_all in
+  let source = {|a b a|} in
+  let match_template = {|:[[x]] :[[m]] :[[x]]|} in
+  let rewrite_template = {|:[m]|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|{fo.o}({x})|}]

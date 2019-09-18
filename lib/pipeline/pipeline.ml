@@ -6,8 +6,8 @@ open Language
 let infer_equality_constraints environment =
   let vars = Environment.vars environment in
   List.fold vars ~init:[] ~f:(fun acc var ->
-      if String.is_prefix var ~prefix:"equal~" then
-        match String.split var ~on:'~' with
+      if String.is_prefix var ~prefix:"equal_" then
+        match String.split var ~on:'_' with
         | _equal :: target :: _uuid ->
           let expression = Language.Ast.Equal (Variable var, Variable target) in
           expression::acc
