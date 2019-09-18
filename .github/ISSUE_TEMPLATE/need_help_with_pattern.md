@@ -1,6 +1,6 @@
 ---
 name: I need help writing a pattern, or have questions.
-about: Please head over to Gitter for questions about usage: https://gitter.im/comby-tools/community
+about: Please head over to Gitter for questions about usage.
 title: ''
 labels: ''
 assignees: ''
