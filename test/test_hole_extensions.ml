@@ -140,4 +140,4 @@ let%expect_test "implicit_equals" =
   let match_template = {|:[[x]] :[[m]] :[[x]]|} in
   let rewrite_template = {|:[m]|} in
   run source match_template rewrite_template;
-  [%expect_exact {|{fo.o}({x})|}]
+  [%expect_exact {|b|}]
