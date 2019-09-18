@@ -22,6 +22,9 @@ be patient to discuss such changes.
 
 ### Comby syntax rationale and proposal guidelines
 
+*If you are proposing a change to do with Comby metasyntax, like `:[hole]`,
+please read this section. Otherwise, feel free to ignore it.*
+
 This section discusses choices in the metasyntax of Comby (like `:[hole]`,
 i.e., syntax that does not refer to concrete source code), and things to
 consider if you are thinking of proposing a change.
