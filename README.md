@@ -43,6 +43,20 @@ echo '(👋 hi)' | docker run -a stdin -a stdout -i comby/comby '(:[emoji] hi)' 
 
 **Need help writing patterns or have other problems? Consider posting in [Gitter](https://gitter.im/comby-tools/community).**
 
+## Aren't regex approaches like sed good enough?
+
+Sometimes, yes. But often, small changes and refactorings are complicated by nested expressions, comments, or strings. Consider the following C-like snippet. Say the challenge is to rewrite the two `if` conditions to the value `1`. Can you write a regular expression that matches the contents of the two if condition expressions, and only those two? Feel free to share your pattern with [@rvtond](https://twitter.com/rvtond) on Twitter.
+
+```c
+if (fgets(line, 128, file_pointer) == Null) // 1) if (...) returns 0
+      return 0;
+...
+if (scanf("%d) %d", &x, &y) == 2) // 2) if (scanf("%d) %d", &x, &y) == 2) returns 0
+      return 0; 
+```
+
+To match these with comby, all you need to write is `if (:[condition])`, and specify one flag that this language is C-like. The replacement is `if (1)`. See the [live example](https://bit.ly/30935ou).
+
 ## Build from source
 
 - Install [opam](https://opam.ocaml.org/doc/Install.html)
