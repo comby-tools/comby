@@ -10,6 +10,7 @@
 ![](https://user-images.githubusercontent.com/888624/64916761-0b657780-d752-11e9-96e2-cd81a2681139.gif)
 
 ### See the [usage documentation](https://comby.dev).
+[A short example below](https://github.com/comby-tools/comby#arent-regex-approaches-like-sed-good-enough) shows how comby simplifies matching and rewriting compared to regex approaches like `sed`.
 
 ## Install
 
