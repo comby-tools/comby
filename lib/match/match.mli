@@ -68,6 +68,8 @@ type t =
 
 val create : unit -> t
 
+val pp : Format.formatter -> string option * t list -> unit
+
 val pp_json_lines : Format.formatter -> string option * t list -> unit
 
 val pp_match_count : Format.formatter -> string option * t list -> unit
