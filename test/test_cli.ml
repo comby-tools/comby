@@ -59,7 +59,7 @@ let%expect_test "json_lines_json_pretty_do_not_output_when_diff_null" =
   let match_template = "asdf" in
   let rewrite_template = "asdf" in
   let command_args =
-    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -json-pretty" match_template rewrite_template
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -json-lines" match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
@@ -114,44 +114,6 @@ let%expect_test "warn_on_anonymous_and_templates_flag" =
       and rewrite templates on the command line and only using those in directories.
 |}]
 
-
-let%expect_test "warn_json_lines_and_json_pretty" =
-  let source = "hello world" in
-  let match_template = "hello :[1]" in
-  let rewrite_template = ":[1]" in
-  let command_args =
-    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -json-lines -json-pretty" match_template rewrite_template
-  in
-  let command = Format.sprintf "%s %s" binary_path command_args in
-  let result = read_expect_stdin_and_stdout command source in
-  print_string result;
-  [%expect_exact {|{
-  "uri": null,
-  "rewritten_source": "world",
-  "in_place_substitutions": [
-    {
-      "range": {
-        "start": { "offset": 0, "line": -1, "column": -1 },
-        "end": { "offset": 5, "line": -1, "column": -1 }
-      },
-      "replacement_content": "world",
-      "environment": [
-        {
-          "variable": "1",
-          "value": "world",
-          "range": {
-            "start": { "offset": 0, "line": -1, "column": -1 },
-            "end": { "offset": 5, "line": -1, "column": -1 }
-          }
-        }
-      ]
-    }
-  ],
-  "diff":
-    "--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-hello world\n+world"
-}
-WARNING: Both -json-lines and -json-pretty specified. Using -json-pretty.
-|}]
 
 let%expect_test "stdin_command" =
   let source = "hello world" in
@@ -263,105 +225,26 @@ let%expect_test "json_output_option" =
   let match_template = "a :[1] c" in
   let rewrite_template = "c :[1] a" in
   let command_args =
-    Format.sprintf "-stdin -sequential -json-pretty '%s' '%s' -f .c "
+    Format.sprintf "-stdin -sequential -json-lines '%s' '%s' -f .c "
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|{
-  "uri": null,
-  "rewritten_source": "c X a c Y a",
-  "in_place_substitutions": [
-    {
-      "range": {
-        "start": { "offset": 6, "line": -1, "column": -1 },
-        "end": { "offset": 11, "line": -1, "column": -1 }
-      },
-      "replacement_content": "c Y a",
-      "environment": [
-        {
-          "variable": "1",
-          "value": "Y",
-          "range": {
-            "start": { "offset": 2, "line": -1, "column": -1 },
-            "end": { "offset": 3, "line": -1, "column": -1 }
-          }
-        }
-      ]
-    },
-    {
-      "range": {
-        "start": { "offset": 0, "line": -1, "column": -1 },
-        "end": { "offset": 5, "line": -1, "column": -1 }
-      },
-      "replacement_content": "c X a",
-      "environment": [
-        {
-          "variable": "1",
-          "value": "X",
-          "range": {
-            "start": { "offset": 2, "line": -1, "column": -1 },
-            "end": { "offset": 3, "line": -1, "column": -1 }
-          }
-        }
-      ]
-    }
-  ],
-  "diff":
-    "--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-a X c a Y c\n+c X a c Y a"
-}
+  [%expect_exact {|{"uri":null,"rewritten_source":"c X a c Y a","in_place_substitutions":[{"range":{"start":{"offset":6,"line":-1,"column":-1},"end":{"offset":11,"line":-1,"column":-1}},"replacement_content":"c Y a","environment":[{"variable":"1","value":"Y","range":{"start":{"offset":2,"line":-1,"column":-1},"end":{"offset":3,"line":-1,"column":-1}}}]},{"range":{"start":{"offset":0,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}},"replacement_content":"c X a","environment":[{"variable":"1","value":"X","range":{"start":{"offset":2,"line":-1,"column":-1},"end":{"offset":3,"line":-1,"column":-1}}}]}],"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-a X c a Y c\n+c X a c Y a"}
 |}];
 
   let source = "a X c a Y c" in
   let match_template = "a :[1] c" in
   let rewrite_template = "c :[1] a" in
   let command_args =
-    Format.sprintf "-stdin -sequential -json-pretty -match-only '%s' '%s' -f .c "
+    Format.sprintf "-stdin -sequential -json-lines -match-only '%s' '%s' -f .c "
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|{
-  "uri": null,
-  "matches": [
-    {
-      "range": {
-        "start": { "offset": 0, "line": 1, "column": 1 },
-        "end": { "offset": 5, "line": 1, "column": 6 }
-      },
-      "environment": [
-        {
-          "variable": "1",
-          "value": "X",
-          "range": {
-            "start": { "offset": 2, "line": 1, "column": 3 },
-            "end": { "offset": 3, "line": 1, "column": 4 }
-          }
-        }
-      ],
-      "matched": "a X c"
-    },
-    {
-      "range": {
-        "start": { "offset": 6, "line": 1, "column": 7 },
-        "end": { "offset": 11, "line": 1, "column": 12 }
-      },
-      "environment": [
-        {
-          "variable": "1",
-          "value": "Y",
-          "range": {
-            "start": { "offset": 8, "line": 1, "column": 9 },
-            "end": { "offset": 9, "line": 1, "column": 10 }
-          }
-        }
-      ],
-      "matched": "a Y c"
-    }
-  ]
-}|}]
+  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":5,"line":1,"column":6}},"environment":[{"variable":"1","value":"X","range":{"start":{"offset":2,"line":1,"column":3},"end":{"offset":3,"line":1,"column":4}}}],"matched":"a X c"},{"range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"1","value":"Y","range":{"start":{"offset":8,"line":1,"column":9},"end":{"offset":9,"line":1,"column":10}}}],"matched":"a Y c"}]}|}]
 
 let with_zip f =
   let file = Filename.temp_file "comby_" ".zip" in
@@ -423,36 +306,13 @@ let%expect_test "patdiff_and_zip" =
       let match_template = ":[2] :[1]" in
       let rewrite_template = ":[1]" in
       let command_args =
-        Format.sprintf "'%s' '%s' .ml -sequential -json-pretty -zip %s"
+        Format.sprintf "'%s' '%s' .ml -sequential -json-lines -zip %s"
           match_template rewrite_template file
       in
       let command = Format.sprintf "%s %s" binary_path command_args in
       let result = read_output command in
       print_string result;
-      [%expect_exact {|{
-  "uri": "main.ml",
-  "rewritten_source": "world",
-  "in_place_substitutions": [
-    {
-      "range": {
-        "start": { "offset": 0, "line": -1, "column": -1 },
-        "end": { "offset": 5, "line": -1, "column": -1 }
-      },
-      "replacement_content": "world",
-      "environment": [
-        {
-          "variable": "1",
-          "value": "world",
-          "range": {
-            "start": { "offset": 0, "line": -1, "column": -1 },
-            "end": { "offset": 5, "line": -1, "column": -1 }
-          }
-        }
-      ]
-    }
-  ],
-  "diff": "--- main.ml\n+++ main.ml\n@@ -1,1 +1,1 @@\n-hello world\n+world"
-}
+      [%expect_exact {|{"uri":"main.ml","rewritten_source":"world","in_place_substitutions":[{"range":{"start":{"offset":0,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}},"replacement_content":"world","environment":[{"variable":"1","value":"world","range":{"start":{"offset":0,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}}}]}],"diff":"--- main.ml\n+++ main.ml\n@@ -1,1 +1,1 @@\n-hello world\n+world"}
 |}]
     )
 
@@ -828,7 +688,7 @@ let%expect_test "diff_only" =
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect{|
-    -json-only-diff can only be supplied with -json-lines or -json-pretty. |}]
+    -json-only-diff can only be supplied with -json-lines. |}]
 
 let%expect_test "zip_exclude_dir_with_extension" =
   let source = "doesn't matter" in

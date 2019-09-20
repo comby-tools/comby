@@ -19,10 +19,9 @@ end
 
 type output_options =
   { color : bool
-  ; json_pretty : bool
   ; json_lines : bool
   ; json_only_diff : bool
-  ; file_in_place : bool
+  ; overwrite_file_in_place : bool
   ; diff : bool
   ; stdout : bool
   ; substitute_in_place : bool
