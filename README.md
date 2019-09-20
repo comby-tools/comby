@@ -2,7 +2,7 @@
 
 [![Apache-2.0](https://img.shields.io/badge/license-Apache-blue.svg)](LICENSE)
 [![Build Status](https://travis-ci.com/comby-tools/comby.svg?branch=master)](https://travis-ci.com/comby-tools/comby)
-[![Coverage Status](https://coveralls.io/repos/github/comby-tools/comby/badge.svg?branch=master)](https://coveralls.io/github/comby-tools/comby?branch=master)
+<a href='https://coveralls.io/github/comby-tools/comby'><img src='https://coveralls.io/repos/github/comby-tools/comby/badge.svg' alt='Coverage Status' /></a>
 [![Downloads](https://img.shields.io/github/downloads/comby-tools/comby/total.svg?color=orange)](Downloads)
 [![Commit](https://img.shields.io/github/last-commit/comby-tools/comby.svg)](Commit)
 [![Gitter](https://img.shields.io/gitter/room/comby-tools/comby.svg?color=teal)](https://gitter.im/comby-tools/community)
