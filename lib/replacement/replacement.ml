@@ -21,41 +21,22 @@ let empty_result =
   }
 [@@deriving yojson]
 
-let to_json diff_only replacements path diff result =
-  let value = `List (List.map ~f:to_yojson replacements) in
+let to_json ?path ?replacements ?rewritten_source ~diff () =
   let uri =
     match path with
     | Some path -> `String path
     | None -> `Null
   in
-  let diff =
-    match diff with
-    | Some diff -> `String diff
-    | None -> `Null
-  in
-  if diff_only then
+  match replacements, rewritten_source with
+  | Some replacements, Some rewritten_source ->
     `Assoc
-      [ ("uri", uri)
-      ; ("diff", diff)
+      [ "uri", uri
+      ; "rewritten_source", `String rewritten_source
+      ; "in_place_substitutions", `List (List.map ~f:to_yojson replacements)
+      ; "diff", `String diff
       ]
-  else
+  | _ ->
     `Assoc
-      [ ("uri", uri)
-      ; ("rewritten_source", `String result)
-      ; ("in_place_substitutions", value)
-      ; ("diff", diff)
+      [ "uri", uri
+      ; "diff", `String diff
       ]
-
-let yojson_to_string kind json =
-  match kind with
-  | `Pretty -> Yojson.Safe.pretty_to_string json
-  | `Lines -> Yojson.Safe.to_string json
-
-let pp_json_pretty ppf (source_path, replacements, replacement_content, diff, diff_only) =
-  Format.fprintf ppf "%s" @@ yojson_to_string `Pretty @@ to_json diff_only replacements source_path diff replacement_content
-
-let pp_json_pretty_diff_only ppf (source_path, replacements, replacement_content, diff, diff_only) =
-  Format.fprintf ppf "%s" @@ yojson_to_string `Pretty @@ to_json diff_only replacements source_path diff replacement_content
-
-let pp_json_line ppf (source_path, replacements, replacement_content, diff, diff_only) =
-  Format.fprintf ppf "%s" @@ Yojson.Safe.to_string @@ to_json diff_only replacements source_path diff replacement_content

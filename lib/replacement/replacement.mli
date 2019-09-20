@@ -13,8 +13,12 @@ type result =
   }
 [@@deriving yojson]
 
+val to_json
+  :  ?path:string
+  -> ?replacements:t list
+  -> ?rewritten_source:string
+  -> diff:string
+  -> unit
+  -> Yojson.Safe.json
+
 val empty_result : result
-
-val pp_json_pretty : Format.formatter -> string option * t list * string * string option * bool -> unit
-
-val pp_json_line : Format.formatter -> string option * t list * string * string option * bool -> unit

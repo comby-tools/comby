@@ -340,10 +340,9 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and override_matcher = flag "matcher" ~aliases:["m"] (optional string) ~doc:"extension Use this matcher on all files regardless of their file extension, unless a --custom-matcher is specified"
     and custom_matcher = flag "custom-matcher" (optional string) ~doc:"path Path to a JSON file that contains a custom matcher"
     and zip_file = flag "zip" ~aliases:["z"] (optional string) ~doc:"zipfile A zip file containing files to rewrite"
-    and json_pretty = flag "json-pretty" no_arg ~doc:"Output pretty JSON format"
     and json_lines = flag "json-lines" no_arg ~doc:"Output JSON line format"
     and json_only_diff = flag "json-only-diff" no_arg ~doc:"Output only the URI and diff in JSON line format"
-    and file_in_place = flag "in-place" no_arg ~doc:"Rewrite files on disk, in place"
+    and overwrite_file_in_place = flag "in-place" no_arg ~doc:"Rewrite files on disk, in place"
     and number_of_workers = flag "jobs" (optional_with_default 4 int) ~doc:"n Number of worker processes. Default: 4"
     and dump_statistics = flag "statistics" ~aliases:["stats"] no_arg ~doc:"Dump statistics to stderr"
     and stdin = flag "stdin" no_arg ~doc:"Read source from stdin"
@@ -415,10 +414,9 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
         ; output_options =
             { color
             ; count
-            ; json_pretty
             ; json_lines
             ; json_only_diff
-            ; file_in_place
+            ; overwrite_file_in_place
             ; diff
             ; stdout
             ; substitute_in_place
