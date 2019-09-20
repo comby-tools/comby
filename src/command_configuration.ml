@@ -174,7 +174,7 @@ module Printer = struct
   module Match : sig
 
     type match_only_kind =
-      | Colored
+      | Contents
       | Count
 
     type match_output =
@@ -188,7 +188,7 @@ module Printer = struct
   end = struct
 
     type match_only_kind =
-      | Colored
+      | Contents
       | Count
 
     type match_output =
@@ -199,14 +199,15 @@ module Printer = struct
       match output_options with
       | { json_lines = true; _ } -> Json_lines
       | { count = true; _ } -> Match_only Count
-      | _ -> Match_only Colored
+      | _ -> Match_only Contents
 
     let print (match_output : match_output) source_path matches =
       let ppf = Format.std_formatter in
       let pp =
         match match_output with
+        | Match_only Contents -> Match.pp
+        | Match_only Count -> Match.pp_match_count
         | Json_lines -> Match.pp_json_lines
-        | Match_only _ -> Match.pp_match_count
       in
       Format.fprintf ppf "%a" pp (source_path, matches)
 
@@ -397,9 +398,11 @@ let emit_warnings { input_options; output_options; _ } =
           || output_options.overwrite_file_in_place)
     , "-color only works with -diff or -match-only."
     ; output_options.count && not input_options.match_only
-    , "-count only works with -match-only. Ignoring -count."
+    , "-count only works with -match-only. Performing -match-only -count."
     ; input_options.stdin && output_options.overwrite_file_in_place
     , "-in-place has no effect when -stdin is used. Ignoring -in-place."
+    ; output_options.count && output_options.json_lines
+    , "-count and -json-lines is specified. Ignoring -count."
     ]
   in
   List.iter warn_on ~f:(function

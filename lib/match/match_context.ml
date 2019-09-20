@@ -25,13 +25,29 @@ let to_json source_path matches =
     ; ("matches", json_matches matches)
     ]
 
-let pp_json_lines ppf (source_path, matches) =
-  Format.fprintf ppf "%s" @@ Yojson.Safe.to_string @@ to_json source_path matches
+let pp_source_path ppf source_path =
+  match source_path with
+  | Some path -> Format.fprintf ppf "%s:" path
+  | None -> Format.fprintf ppf ""
+
+let pp ppf (source_path, matches) =
+  if matches = [] then
+    ()
+  else
+    let matched =
+      List.map matches ~f:(fun { matched; _ } ->
+          let matched = String.substr_replace_all matched ~pattern:"\n" ~with_:"\\n" in
+          Format.asprintf "%a%s" pp_source_path source_path matched)
+      |> String.concat ~sep:"\n"
+    in
+    Format.fprintf ppf "%s@." matched
 
 let pp_match_count ppf (source_path, matches) =
-  let pp_source_path ppf source_path =
-    match source_path with
-    | Some path -> Format.fprintf ppf "%s:" path
-    | None -> Format.fprintf ppf ""
-  in
-  Format.fprintf ppf "%a%d matches\n" pp_source_path source_path (List.length matches)
+  let l = List.length matches in
+  if l > 1 then
+    Format.fprintf ppf "%a%d matches\n" pp_source_path source_path (List.length matches)
+  else if l = 1 then
+    Format.fprintf ppf "%a%d match\n" pp_source_path source_path (List.length matches)
+
+let pp_json_lines ppf (source_path, matches) =
+  Format.fprintf ppf "%s" @@ Yojson.Safe.to_string @@ to_json source_path matches

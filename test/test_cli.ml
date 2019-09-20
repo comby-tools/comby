@@ -762,3 +762,66 @@ let%expect_test "warn_on_stdin_and_in_place_flags" =
   |> print_string;
   [%expect_exact {|WARNING: -in-place has no effect when -stdin is used. Ignoring -in-place.
 |}]
+
+let%expect_test "print_single_line_matches" =
+  let source = {|
+    let () = x in
+    let () = y in
+  |}
+  in
+  let match_template = "let ()" in
+  let rewrite_template = "dont care" in
+  let command_args =
+    Format.sprintf "-stdin '%s' '%s' -match-only -matcher .generic"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_expect_stdin_and_stdout command source
+  |> print_string;
+  [%expect_exact {|let ()
+let ()
+|}]
+
+let%expect_test "print_multi_line_matches" =
+  let source = {|
+    let () = x in
+    let
+
+    ()
+in
+    let () = y in
+  |}
+  in
+  let match_template = "let ()" in
+  let rewrite_template = "dont care" in
+  let command_args =
+    Format.sprintf "-stdin '%s' '%s' -match-only -matcher .generic"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_expect_stdin_and_stdout command source
+  |> print_string;
+  [%expect_exact {|let ()
+let\n\n    ()
+let ()
+|}];
+
+  let command_args =
+    Format.sprintf "-stdin '%s' '%s' -match-only -count -matcher .generic"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_expect_stdin_and_stdout command source
+  |> print_string;
+  [%expect_exact {|3 matches
+|}];
+
+  let command_args =
+    Format.sprintf "-stdin '%s' '%s' -match-only -count -json-lines -matcher .generic"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_expect_stdin_and_stdout command source
+  |> print_string;
+  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":5,"line":1,"column":6},"end":{"offset":11,"line":1,"column":12}},"environment":[],"matched":"let ()"},{"range":{"start":{"offset":23,"line":1,"column":24},"end":{"offset":34,"line":3,"column":7}},"environment":[],"matched":"let\n\n    ()"},{"range":{"start":{"offset":42,"line":1,"column":43},"end":{"offset":48,"line":1,"column":49}},"environment":[],"matched":"let ()"}]}WARNING: -count and -json-lines is specified. Ignoring -count.
+|}]
