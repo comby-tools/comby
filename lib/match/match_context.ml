@@ -25,27 +25,13 @@ let to_json source_path matches =
     ; ("matches", json_matches matches)
     ]
 
-let yojson_to_string kind json =
-  match kind with
-  | `Pretty -> Yojson.Safe.pretty_to_string json
-  | `Lines -> Yojson.Safe.to_string json
-
-let pp_json_pretty ppf (source_path, matches) =
-  Format.fprintf ppf "%s" @@ yojson_to_string `Pretty @@ to_json source_path matches
-
 let pp_json_lines ppf (source_path, matches) =
-  Format.fprintf ppf "%s" @@ yojson_to_string `Lines @@ to_json source_path matches
+  Format.fprintf ppf "%s" @@ Yojson.Safe.to_string @@ to_json source_path matches
 
 let pp_match_count ppf (source_path, matches) =
   let pp_source_path ppf source_path =
     match source_path with
-    | Some path -> Format.fprintf ppf " in %s " path
-    | None -> Format.fprintf ppf "%s" " "
+    | Some path -> Format.fprintf ppf "%s:" path
+    | None -> Format.fprintf ppf ""
   in
-  (* FIXME *)
-  let spec_number = 0 in
-  Format.fprintf ppf
-    "%d matches%afor spec %d (use -json-pretty for json format)\n"
-    (List.length matches)
-    pp_source_path source_path
-    (spec_number + 1)
+  Format.fprintf ppf "%a%d matches\n" pp_source_path source_path (List.length matches)
