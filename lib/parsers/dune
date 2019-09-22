@@ -1,5 +1,5 @@
 (library
   (name parsers)
   (public_name comby.parsers)
-  (preprocess (pps ppx_deriving.show ppx_sexp_conv bisect_ppx -conditional -no-comment-parsing))
+  (preprocess (pps ppx_deriving.show ppx_sexp_conv bisect_ppx --conditional))
   (libraries ppxlib core mparser mparser.pcre))

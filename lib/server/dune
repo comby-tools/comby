@@ -1,5 +1,5 @@
 (library
   (name server_types)
   (public_name comby.server_types)
-  (preprocess (pps ppx_deriving.show ppx_sexp_conv ppx_sexp_message ppx_deriving_yojson bisect_ppx -conditional -no-comment-parsing))
+  (preprocess (pps ppx_deriving.show ppx_sexp_conv ppx_sexp_message ppx_deriving_yojson bisect_ppx --conditional))
   (libraries comby.match comby.replacement ppxlib core yojson ppx_deriving_yojson ppx_deriving_yojson.runtime))
