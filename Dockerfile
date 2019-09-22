@@ -1,4 +1,4 @@
-FROM comby/base-dependencies-alpine:master
+FROM comby/base-dependencies-alpine-3.10:latest
 
 WORKDIR /tmp/comby
 
