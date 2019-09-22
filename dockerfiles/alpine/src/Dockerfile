@@ -14,13 +14,12 @@ RUN opam update
 
 RUN eval $(opam env) \
     && git clone https://github.com/comby-tools/comby.git \
-    && opam install comby --deps-only
+    && cd comby \
+    && opam install . --deps-only -y
 
 ARG CACHEBUST=1
 
 RUN eval $(opam env) \
-    && git clone https://github.com/comby-tools/comby.git \
-    && cd comby \
     && make release \
     && make test \
     && cd ..
