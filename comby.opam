@@ -1,13 +1,47 @@
 opam-version: "2.0"
-version: "0.1.0"
+version: "dev"
 maintainer: "rvantonder@gmail.com"
-authors: ["Rijnard van Tonder"]
+authors: "Rijnard van Tonder"
 homepage: "https://github.com/comby-tools/comby"
 bug-reports: "https://github.com/comby-tools/comby/issues"
 dev-repo: "git+https://github.com/comby-tools/comby.git"
 license: "Apache-2.0"
-build: [["jbuilder" "build" "-p" name "-j" jobs "@install"]]
-depends: [
-  "mparser"
-  "core"
+build: [
+    ["jbuilder" "build" "-p" name "-j" jobs "@install"]
 ]
+depends: [
+  "ocaml" {>= "4.07.0"}
+  "core" {>= "0.12.2"}
+  "lwt" {>= "4.3.0"}
+  "mparser-comby"
+  "ppxlib"
+  "ppx_deriving"
+  "angstrom"
+  "hack_parallel"
+  "opium"
+  "pcre"
+  "oasis"
+  "tls"
+  "camlzip"
+  "patdiff"
+  "ppx_deriving_yojson"
+  "ppx_tools_versioned" {>= "5.2.3"}
+  "bisect_ppx" {dev & >= "2.0.0"}
+]
+pin-depends: [
+  ["bisect_ppx.git" "git+https://github.com/aantron/bisect_ppx.git"]
+  ["mparser-comby.git" "git+https://github.com/comby-tools/mparser.git"]
+  ["lwt.git" "git+https://github.com/rvantonder/lwt.git#4.3.0-with-captain"]
+]
+depexts: [
+    [
+      "pkg-config"
+      "libpcre3-dev"
+    ] {os-distribution = "ubuntu"}
+    [
+      "pkg-config"
+      "pcre"
+    ] {os-distribution = "macos"}
+]
+synopsis: "A tool for changing code across many languages"
+description: ""
