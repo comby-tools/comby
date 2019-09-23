@@ -79,7 +79,7 @@ opam switch create 4.07.0 4.07.0
 
 ```
 git clone https://github.com/comby-tools/comby
-cd comby && opam install . --deps-only
+cd comby && opam install . --deps-only -y
 ```
 
 - Build and test
