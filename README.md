@@ -75,33 +75,11 @@ opam switch create 4.07.0 4.07.0
 
   - **Mac:** `brew install pkg-config pcre`
 
-- Then install the following opam libraries:
+- Then install the library dependencies:
 
 ```
-opam install -y \
-ppx_deriving_yojson \
-core \
-ppxlib \
-ppx_deriving \
-angstrom \
-hack_parallel \
-opium \
-pcre \
-oasis \
-tls \
-camlzip \
-bisect_ppx \
-patdiff
-```
-
-- Install [mparser](https://github.com/comby-tools/mparser)
-
-```
-git clone https://github.com/comby-tools/mparser
-oasis setup
-ocaml setup.ml -configure --enable-pcre --enable-re
-ocaml setup.ml -build
-ocaml setup.ml -install
+git clone https://github.com/comby-tools/comby
+cd comby && opam install . --deps-only -y
 ```
 
 - Build and test
