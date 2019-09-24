@@ -1,6 +1,6 @@
 #!/bin/bash
 
-LIBS="ppx_deriving_yojson core ppxlib ppx_deriving hack_parallel opium pcre-ocaml ocaml-tls camlzip bisect_ppx mparser ocaml-ci-scripts patdiff"
+LIBS="ppx_deriving_yojson core ppxlib ppx_deriving hack_parallel opium pcre-ocaml ocaml-tls camlzip bisect_ppx mparser ocaml-ci-scripts patdiff lambda-term lwt"
 
 rm ALL.txt 2> /dev/null
 for l in $LIBS; do rm -rf $l; done
@@ -57,6 +57,14 @@ wget -P mparser https://raw.githubusercontent.com/comby-tools/mparser/master/LIC
 mkdir ocaml-ci-scripts && \
 wget -P ocaml-ci-scripts https://raw.githubusercontent.com/ocaml/ocaml-ci-scripts/master/LICENSE.md
 
+# MIT
+mkdir lwt && \
+wget -P lwt https://github.com/ocsigen/lwt/blob/master/LICENSE.md
+
+# BSD-3
+mkdir lambda-term && \
+wget -P lambda-term  https://github.com/ocaml-community/lambda-term/blob/master/LICENSE
+
 
 # ALL.txt
 for l in $LIBS; do 
@@ -68,11 +76,11 @@ for l in $LIBS; do
 done
 
 # update release script
-cp ../scripts/install.sh .
+cp ../../scripts/install.sh .
 printf "\n\n# comby license\n" >> install.sh
 echo "#" >>  install.sh
-sed 's/^/# /' ../LICENSE >> install.sh
+sed 's/^/# /' ../../LICENSE >> install.sh
 echo "" >> install.sh
 printf "# Begin third party licenses\n\n" >> install.sh
 sed 's/^/# /' ALL.txt >> install.sh
-mv install.sh ../scripts/install-with-licenses.sh
+mv install.sh ../../scripts/install-with-licenses.sh
