@@ -361,7 +361,7 @@ let validate_errors { input_options; run_options = _; output_options } =
       && Option.value_exn (input_options.directory_depth) < 0
     , "-depth must be 0 or greater."
     ; Sys.is_directory input_options.target_directory = `No
-    , "Directory specified with -d or -r or -directory is not a directory."
+    , "Directory specified with -d or -directory is not a directory."
     ; Option.is_some input_options.specification_directories
       && List.exists
         (Option.value_exn input_options.specification_directories)
@@ -408,7 +408,7 @@ let emit_warnings { input_options; output_options; _ } =
       && (output_options.stdout
           || output_options.json_lines
           || output_options.overwrite_file_in_place)
-    , "-color only works with -diff or -match-only."
+    , "-color only works with -diff."
     ; output_options.count && not input_options.match_only
     , "-count only works with -match-only. Performing -match-only -count."
     ; input_options.stdin && output_options.overwrite_file_in_place
@@ -446,6 +446,7 @@ let create
      ; output_options =
          ({ overwrite_file_in_place
           ; color
+          ; count
           ; interactive_review
           ; _
           } as output_options)
@@ -458,12 +459,8 @@ let create
   let specifications =
     match specification_directories, anonymous_arguments with
     | None, Some { match_template; rewrite_template; _ } ->
-      if match_only then
-        if color then
-          (* Fake a replacement with empty to get a nice colored match output. More expensive though. *)
-          [ Specification.create ~match_template ~rule ~rewrite_template:"" () ]
-        else
-          [ Specification.create ~match_template ~rule () ]
+      if match_only || count then
+        [ Specification.create ~match_template ~rule () ]
       else
         [ Specification.create ~match_template ~rewrite_template ~rule () ]
     | Some specification_directories, _ ->
@@ -492,7 +489,21 @@ let create
     | Stdin -> `String (In_channel.input_all In_channel.stdin)
     (* TODO(RVT): Unify exclude-dir handling. Currently exclude-dir option must be done while processing zip file in main.ml. *)
     | Zip -> `Zip (Option.value_exn zip_file)
-    | Directory -> `Paths (parse_source_directories ?file_filters exclude_directory_prefix target_directory directory_depth)
+    | Directory ->
+      let target_directory =
+        if target_directory = "." then
+          Filename.realpath target_directory
+        else
+          target_directory
+      in
+      let paths =
+        parse_source_directories
+          ?file_filters
+          exclude_directory_prefix
+          target_directory
+          directory_depth
+      in
+      `Paths paths
   in
   let overwrite_file_in_place =
     if input_source = Zip || input_source = Stdin then

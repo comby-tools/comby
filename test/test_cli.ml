@@ -449,7 +449,7 @@ let%expect_test "is_real_directory" =
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect{|
-    Directory specified with -d or -r or -directory is not a directory. |}]
+    Directory specified with -d or -directory is not a directory. |}]
 
 let%expect_test "exclude_dir_option" =
   let source = "hello world" in
@@ -824,4 +824,15 @@ let ()
   read_expect_stdin_and_stdout command source
   |> print_string;
   [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":5,"line":1,"column":6},"end":{"offset":11,"line":1,"column":12}},"environment":[],"matched":"let ()"},{"range":{"start":{"offset":23,"line":1,"column":24},"end":{"offset":34,"line":3,"column":7}},"environment":[],"matched":"let\n\n    ()"},{"range":{"start":{"offset":42,"line":1,"column":43},"end":{"offset":48,"line":1,"column":49}},"environment":[],"matched":"let ()"}]}WARNING: -count and -json-lines is specified. Ignoring -count.
+|}];
+
+  let command_args =
+    Format.sprintf "-stdin '%s' '%s' -count -matcher .generic"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_expect_stdin_and_stdout command source
+  |> print_string;
+  [%expect_exact {|3 matches
+WARNING: -count only works with -match-only. Performing -match-only -count.
 |}]
