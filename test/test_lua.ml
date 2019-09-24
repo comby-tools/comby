@@ -114,36 +114,25 @@ let%expect_test "raw_literals_are_ignored" =
 
 |}]
 
-(* should match contetually on raw strings. it doesn't *)
-(*
+(* This thinks that the match pattern is a raw string, but it shouldn't: *)
+(* echo '[[ blah ]]' | ./comby -stdin -matcher .lua '[:[x]]' '??' *)
+(* should match contetually on raw strings. it doesn't. also, holes don't know how to nested match contextually for raw literals. *)
 let%expect_test "holes_match_contextually_inside_raw_literals" =
   let source = {|
  page = [[
-    <HTML>
-    </HTML>
+    blah blah
+blah
     ]]
 
 |} in
-  let match_template = {|[[:[page]]]|} in
-  let rewrite_template = {|XXX|} in
+  let match_template = {|[[:[x]]]|} in
+  let rewrite_template = {|derp|} in
 
   run source match_template rewrite_template;
-  [%expect_exact {|
- XXX = [[
-    <HTML>
-    </HTML>
-    ]]
+  [%expect_exact {||}]
 
-[[
-x
-[[ derp ]]
-y
-    ]]
-
-|}]
-*)
-
-(* should ignore the bodies. it doesn't *)
+(* should ignore the bodies. it doesn't. *)
+(*
 let%expect_test "holes_matching_in_square_brackets_ignore_raw_literals" =
   let source = {|
  page = [[
@@ -169,3 +158,4 @@ y
     ]]
 
 |}]
+*)

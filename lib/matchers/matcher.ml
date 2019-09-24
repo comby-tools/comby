@@ -77,6 +77,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
           M.base_string_literal >>= fun contents ->
           return (f ~contents ~left_delimiter ~right_delimiter)
       )
+    |> List.map ~f:attempt
     |> choice
 
   let comment_parser =
