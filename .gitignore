@@ -5,3 +5,5 @@ _build
 \#*
 .\#*
 scripts/0.*
+scripts/1.*
+*.swp

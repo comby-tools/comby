@@ -26,6 +26,7 @@ type output_options =
   ; stdout : bool
   ; substitute_in_place : bool
   ; count : bool
+  ; interactive_review : string option
   }
 
 type anonymous_arguments =
@@ -69,6 +70,7 @@ type t =
   ; exclude_directory_prefix : string
   ; run_options : run_options
   ; output_printer : Printer.t
+  ; interactive_review : string option
   }
 
 val create : user_input -> t Or_error.t

@@ -154,6 +154,7 @@ let get_diff kind source_path source_content result =
   in
   let prev = Patdiff_core.{ name = source_path; text = source_content } in
   let next = Patdiff_core.{ name = source_path; text = result } in
+
   Compare_core.diff_strings ~print_global_header:true configuration ~prev ~next
   |> function
   | `Different diff -> Some diff
