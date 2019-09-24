@@ -3,16 +3,25 @@ open Core
 open Match
 
 let substitute template env =
+  let substitution_formats =
+    [ ":[ ", "]"
+    ; ":[", ".]"
+    ; ":[", "\n]"
+    ; ":[[", "]]"
+    ; ":[", "]"
+    ]
+  in
   Environment.vars env
   |> List.fold ~init:(template, []) ~f:(fun (acc, vars) variable ->
       match Environment.lookup env variable with
       | Some value ->
-        if Option.is_some (String.substr_index template ~pattern:(":["^variable^"]")) then
-          (String.substr_replace_all acc ~pattern:(":["^variable^"]") ~with_:value, variable::vars)
-        else if Option.is_some (String.substr_index template ~pattern:(":[["^variable^"]]")) then
-          (String.substr_replace_all acc ~pattern:(":[["^variable^"]]") ~with_:value, variable::vars)
-        else
-          acc, vars
+        List.find_map substitution_formats ~f:(fun (left,right) ->
+            let pattern = left^variable^right in
+            if Option.is_some (String.substr_index template ~pattern) then
+              Some (String.substr_replace_all acc ~pattern ~with_:value, variable::vars)
+            else
+              None)
+        |> Option.value ~default:(acc,vars)
       | None -> acc, vars)
 
 let of_match_context
