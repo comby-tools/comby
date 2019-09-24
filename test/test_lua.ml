@@ -114,7 +114,6 @@ let%expect_test "raw_literals_are_ignored" =
 
 |}]
 
-(* This thinks that the match pattern is a raw string, but it shouldn't: *)
 (* echo '[[ blah ]]' | ./comby -stdin -matcher .lua '[:[x]]' '??' *)
 (* should match contetually on raw strings. it doesn't. also, holes don't know how to nested match contextually for raw literals. *)
 let%expect_test "holes_match_contextually_inside_raw_literals" =
