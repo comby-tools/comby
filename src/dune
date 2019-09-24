@@ -1,18 +1,18 @@
 (executables
- (libraries comby core ppx_deriving_yojson ppx_deriving_yojson.runtime hack_parallel camlzip patdiff.lib)
- (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show))
- (modules main specification command_configuration command_input diff_configuration)
+ (libraries comby core ppx_deriving_yojson ppx_deriving_yojson.runtime hack_parallel camlzip patdiff.lib) 
+ (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show ppx_sexp_conv))
+ (modules main)
  (names main))
 
 (executables
  (libraries comby core opium ppx_deriving_yojson ppx_deriving_yojson.runtime hack_parallel)
- (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show))
+ (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show ppx_sexp_conv))
  (modules server)
  (names server))
 
 (executables
  (libraries comby core opium ppx_deriving_yojson ppx_deriving_yojson.runtime hack_parallel)
- (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show))
+ (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show ppx_sexp_conv))
  (modules benchmark)
  (names benchmark))
 

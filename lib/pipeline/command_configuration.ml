@@ -2,6 +2,10 @@ open Core
 
 open Language
 
+let debug =
+  Sys.getenv "DEBUG_COMBY"
+  |> Option.is_some
+
 (* skip or continue directory descent *)
 type 'a next =
   | Skip of 'a
@@ -114,6 +118,7 @@ type output_options =
   ; stdout : bool
   ; substitute_in_place : bool
   ; count : bool
+  ; interactive_review : string option
   }
 
 type anonymous_arguments =
@@ -226,6 +231,7 @@ module Printer = struct
     type diff_kind = Diff_configuration.kind
 
     type output_format =
+      | Interactive_review of string option
       | Overwrite_file
       | Stdout
       | Diff of diff_kind
@@ -254,6 +260,7 @@ module Printer = struct
       | In_place
 
     type output_format =
+      | Interactive_review of string option
       | Overwrite_file
       | Stdout
       | Diff of diff_kind
@@ -268,6 +275,7 @@ module Printer = struct
     let convert output_options : replacement_output =
       let output_format =
         match output_options with
+        | { interactive_review = Some editor; _ } -> Interactive_review (Some editor)
         | { overwrite_file_in_place = true; _ } -> Overwrite_file
         | { stdout = true; _ } -> Stdout
         | { json_lines = true; overwrite_file_in_place = false; json_only_diff; _ } ->
@@ -300,9 +308,8 @@ module Printer = struct
       let print_if_some output = Option.value_map output ~default:() ~f:(Format.fprintf ppf "%s@.") in
       match output_format with
       | Stdout -> Format.fprintf ppf "%s" rewritten_source
-      | Overwrite_file ->
-        (* Exn OK because we checked in validate_errors. *)
-        Out_channel.write_all ~data:rewritten_source (Option.value_exn path )
+      | Overwrite_file -> Out_channel.write_all ~data:rewritten_source (Option.value path ~default:"/dev/null")
+      | Interactive_review _ -> () (* Handled after (potentially parallel) processing *)
       | Diff kind -> print_if_some @@ Diff_configuration.get_diff kind path source_content rewritten_source
       | Match_only -> print_if_some @@ Diff_configuration.get_diff Match_only path rewritten_source source_content
       | Json_lines kind ->
@@ -326,6 +333,7 @@ type t =
   ; exclude_directory_prefix : string
   ; run_options : run_options
   ; output_printer : Printer.t
+  ; interactive_review : string option
   }
 
 let validate_errors { input_options; run_options = _; output_options } =
@@ -338,6 +346,10 @@ let validate_errors { input_options; run_options = _; output_options } =
     , "-in-place may not be used with -stdout."
     ; output_options.overwrite_file_in_place && output_options.diff
     , "-in-place may not be used with -diff."
+    ; Option.is_some output_options.interactive_review && (input_options.stdin || Option.is_some input_options.zip_file || input_options.match_only)
+    , "-review cannot be used with one or more of the following input flags: -stdin, -zip, -match-only."
+    ; Option.is_some output_options.interactive_review && (output_options.json_lines || output_options.json_only_diff || output_options.stdout || output_options.diff || output_options.overwrite_file_in_place || output_options.count)
+    , "-review cannot be used with one or more of the following output flags: -json-lines, -json-only-diff, -stdout, -in-place, -count"
     ; input_options.anonymous_arguments = None &&
       (input_options.specification_directories = None
        || input_options.specification_directories = Some [])
@@ -434,6 +446,7 @@ let create
      ; output_options =
          ({ overwrite_file_in_place
           ; color
+          ; interactive_review
           ; _
           } as output_options)
      } as configuration)
@@ -484,7 +497,8 @@ let create
   let overwrite_file_in_place =
     if input_source = Zip || input_source = Stdin then
       false
-    else overwrite_file_in_place
+    else
+      overwrite_file_in_place
   in
   let output_options = { output_options with overwrite_file_in_place } in
   let output_printer printable =
@@ -516,4 +530,5 @@ let create
         ; substitute_in_place
         }
     ; output_printer
+    ; interactive_review
     }

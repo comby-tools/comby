@@ -41,7 +41,7 @@ let perform_match request =
     let matcher = Matchers.select_with_extension language in
     let run ?rule () =
       let configuration = Configuration.create ~match_kind:Fuzzy () in
-      Pipeline.run matcher ?rule configuration match_template source
+      Pipeline.timed_run matcher ?rule ~configuration ~template:match_template ~source ()
       |> fun matches -> Out.Matches.to_string { matches; source; id }
     in
     let code, result =
@@ -79,7 +79,7 @@ let perform_rewrite request =
     in
     let run ?rule () =
       let configuration = Configuration.create ~match_kind:Fuzzy () in
-      Pipeline.run matcher ?rule ~substitute_in_place configuration match_template source
+      Pipeline.timed_run matcher ?rule ~substitute_in_place ~configuration ~template:match_template ~source ()
       |> Rewrite.all ?source:source_substitution ~rewrite_template
       |> Option.value_map ~default ~f:(fun Replacement.{ rewritten_source; in_place_substitutions } ->
           Out.Rewrite.to_string

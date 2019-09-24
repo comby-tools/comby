@@ -1,13 +1,8 @@
 open Core
 open Command.Let_syntax
-
 open Hack_parallel
 
-open Command_configuration
-open Command_input
-open Matchers
-open Rewriter
-open Statistics
+open Pipeline.Command_configuration
 
 type json_result =
   { matches : Match.t list
@@ -15,95 +10,11 @@ type json_result =
   }
 [@@deriving yojson]
 
-type processed_source_result =
-  | Matches of (Match.t list * int)
-  | Replacement of (Replacement.t list * string * int)
-  | Nothing
+let verbose_out_file = "/tmp/comby.out"
 
 let debug =
   Sys.getenv "DEBUG_COMBY"
   |> Option.is_some
-
-let verbose_out_file = "/tmp/comby.out"
-
-let process_single_source
-    ((module Matcher : Matchers.Matcher) as matcher)
-    substitute_in_place
-    configuration
-    source
-    specification
-    verbose
-    match_timeout =
-  let open Specification in
-  try
-    let input_text =
-      match source with
-      | `String input_text -> input_text
-      | `Path path ->
-        if verbose then
-          Out_channel.with_file ~append:true verbose_out_file ~f:(fun out_channel ->
-              Out_channel.output_lines out_channel [Format.sprintf "Processing %s%!" path]);
-        In_channel.read_all path
-    in
-    match specification with
-    | { match_specification = { match_template; rule }
-      ; rewrite_specification = None
-      } ->
-      let matches =
-        try
-          let f () = Pipeline.run ?rule matcher configuration match_template input_text in
-          Statistics.Time.time_out ~after:match_timeout f ();
-        with Statistics.Time.Time_out ->
-          Format.eprintf "Timeout for input: %s!@." (show_input_kind source);
-          Out_channel.with_file ~append:true verbose_out_file ~f:(fun out_channel ->
-              Out_channel.output_lines out_channel [Format.sprintf "TIMEOUT: %s@." (show_input_kind source) ]);
-          []
-      in
-      Matches (matches, List.length matches)
-    | { match_specification = { match_template; _ }
-      ; rewrite_specification = Some { rewrite_template; rule }
-      } ->
-      let result =
-        try
-          let f () =
-            let matches =
-              Pipeline.run ?rule matcher ~substitute_in_place configuration match_template input_text
-            in
-            if matches = [] then
-              (* If there are no matches, return the original source (for editor support). *)
-              Some (Some (Replacement.{ rewritten_source = input_text; in_place_substitutions = [] }), [])
-            else
-              Some (Rewrite.all ~source:input_text ~rewrite_template matches, matches)
-          in
-          Statistics.Time.time_out ~after:match_timeout f ();
-        with Statistics.Time.Time_out ->
-          Format.eprintf "Timeout for input: %s!@." (show_input_kind source);
-          Out_channel.with_file ~append:true verbose_out_file ~f:(fun out_channel ->
-              Out_channel.output_lines out_channel [Format.sprintf "TIMEOUT: FOR %s@." (show_input_kind source) ]);
-          None
-      in
-      result
-      |> function
-      | Some (Some { rewritten_source; in_place_substitutions }, matches) ->
-        Replacement (in_place_substitutions, rewritten_source, List.length matches)
-      | Some (None, _)
-      | None -> Nothing
-  with
-  | _ ->
-    Nothing
-
-let output_result output_printer source_path source_content result =
-  match result with
-  | Nothing -> ()
-  | Matches (matches, _) ->
-    output_printer (Printer.Matches { source_path; matches })
-  | Replacement (replacements, result, _) ->
-    let source_content =
-      match source_content with
-      | `String content -> content
-      | `Path path -> In_channel.read_all path
-    in
-    output_printer (Printer.Replacements { source_path; replacements; result; source_content })
 
 let select_matcher custom_matcher override_matcher configuration =
   if Option.is_some custom_matcher then
@@ -133,28 +44,6 @@ let select_matcher custom_matcher override_matcher configuration =
     in
     Matchers.select_with_extension extension, Some extension
 
-let write_statistics number_of_matches paths total_time dump_statistics =
-  if dump_statistics then
-    let total_time = Statistics.Time.stop total_time in
-    let lines_of_code =
-      List.fold paths ~init:0 ~f:(fun acc paths ->
-          In_channel.read_lines paths
-          |> List.length
-          |> (+) acc)
-    in
-    let statistics =
-      { number_of_files = List.length paths
-      ; lines_of_code
-      ; number_of_matches
-      ; total_time = total_time
-      }
-    in
-    Format.eprintf "%s@."
-    @@ Yojson.Safe.pretty_to_string
-    @@ Statistics.to_yojson statistics
-  else
-    ()
-
 let paths_with_file_size paths =
   List.map paths ~f:(fun path ->
       let length =
@@ -167,152 +56,6 @@ let paths_with_file_size paths =
       in
       (path, length))
 
-let run
-    matcher
-    { sources
-    ; specifications
-    ; file_filters
-    ; exclude_directory_prefix
-    ; run_options =
-        { sequential
-        ; verbose
-        ; match_timeout
-        ; number_of_workers
-        ; dump_statistics
-        ; substitute_in_place
-        }
-    ; output_printer
-    }
-  =
-  let number_of_workers = if sequential then 0 else number_of_workers in
-  let scheduler = Scheduler.create ~number_of_workers () in
-  let match_configuration = Configuration.create ~match_kind:Fuzzy () in
-  let total_time = Statistics.Time.start () in
-
-  let run_on_specifications input output_file =
-    let result, count =
-      List.fold specifications ~init:(Nothing,0) ~f:(fun (result, count) specification ->
-          let input =
-            match result with
-            | Nothing | Matches _ -> input
-            | Replacement (_, content, _) -> `String content
-          in
-          process_single_source matcher substitute_in_place match_configuration input specification verbose match_timeout
-          |> function
-          | Nothing -> Nothing, count
-          | Matches (x, number_of_matches) ->
-            Matches (x, number_of_matches), count + number_of_matches
-          | Replacement (x, content, number_of_matches) ->
-            Replacement (x, content, number_of_matches),
-            count + number_of_matches)
-    in
-    output_result output_printer output_file input result;
-    count
-  in
-
-  match sources with
-  | `String source ->
-    let number_of_matches = run_on_specifications (`String source) None in
-    (* FIXME(RVT): statistics for single source text doesn't output LOC *)
-    write_statistics number_of_matches [] total_time dump_statistics
-  | `Paths paths ->
-    if sequential then
-      let number_of_matches =
-        List.fold ~init:0 paths ~f:(fun acc path ->
-            let matches = run_on_specifications (`Path path) (Some path) in
-            acc + matches)
-      in
-      write_statistics number_of_matches paths total_time dump_statistics
-    else
-      let map init paths =
-        List.fold
-          paths
-          ~init
-          ~f:(fun count path -> count + run_on_specifications (`Path path) (Some path))
-      in
-      let number_of_matches =
-        try Scheduler.map_reduce scheduler ~init:0 ~map ~reduce:(+) paths
-        with End_of_file -> 0
-      in
-      begin
-        try Scheduler.destroy scheduler
-        with Unix.Unix_error (_,"kill",_) ->
-          (* No kill command on Mac OS X *)
-          ()
-      end;
-      write_statistics number_of_matches paths total_time dump_statistics
-  | `Zip zip_file ->
-    if sequential then
-      let zip_in = Zip.open_in zip_file in
-      let not_in_an_exclude_directory filename =
-        not (String.is_prefix ~prefix:exclude_directory_prefix filename)
-      in
-      let entries =
-        match file_filters with
-        | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
-            not is_directory && not_in_an_exclude_directory filename)
-        | Some suffixes ->
-          let has_acceptable_suffix filename =
-            List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename)
-          in
-          let not_in_an_exclude_directory filename =
-            not (String.is_prefix ~prefix:exclude_directory_prefix filename)
-          in
-          List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
-              not is_directory && not_in_an_exclude_directory filename && has_acceptable_suffix filename)
-      in
-      let number_of_matches =
-        List.fold ~init:0 entries ~f:(fun acc ({ filename; _ } as entry) ->
-            let source = Zip.read_entry zip_in entry in
-            let matches = run_on_specifications (`String source) (Some filename) in
-            acc + matches)
-      in
-      Zip.close_in zip_in;
-      write_statistics number_of_matches [] total_time dump_statistics
-    else
-      let map init (paths : Zip.entry list) =
-        let zip_in = Zip.open_in zip_file in
-        let result =
-          List.fold
-            paths
-            ~init
-            ~f:(fun count ({ filename; _ } as entry) ->
-                let source = Zip.read_entry zip_in entry in
-                let matches = run_on_specifications (`String source) (Some filename) in
-                count + matches)
-        in
-        Zip.close_in zip_in;
-        result
-      in
-      let number_of_matches =
-        let zip_in = Zip.open_in zip_file in
-        let not_in_an_exclude_directory filename =
-          not (String.is_prefix ~prefix:exclude_directory_prefix filename)
-        in
-        let entries =
-          match file_filters with
-          | Some [] | None -> List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
-              not is_directory && not_in_an_exclude_directory filename)
-          | Some suffixes ->
-            let has_acceptable_suffix filename =
-              List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename)
-            in
-            List.filter (Zip.entries zip_in) ~f:(fun { is_directory; filename; _ } ->
-                not is_directory && not_in_an_exclude_directory filename && has_acceptable_suffix filename)
-        in
-        Zip.close_in zip_in;
-        try Scheduler.map_reduce scheduler ~init:0 ~map ~reduce:(+) entries
-        with End_of_file -> 0
-      in
-      begin
-        try Scheduler.destroy scheduler
-        with Unix.Unix_error (_,"kill",_) ->
-          (* No kill command on Mac OS X *)
-          ()
-      end;
-      write_statistics number_of_matches [] total_time dump_statistics
-  | _ -> failwith "No single path handled here"
-
 let list_supported_languages_and_exit () =
   let list =
     List.map Matchers.all ~f:(fun (module M) ->
@@ -324,7 +67,6 @@ let list_supported_languages_and_exit () =
   Format.printf "%s%!" list;
   exit 0
 
-
 let base_command_parameters : (unit -> 'result) Command.Param.t =
   [%map_open
      (* flags. *)
@@ -333,7 +75,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and verbose = flag "verbose" no_arg ~doc:(Format.sprintf "Log to %s" verbose_out_file)
     and rule = flag "rule" (optional_with_default "where true" string) ~doc:"rule Apply rules to matches."
     and match_timeout = flag "timeout" (optional_with_default 3 int) ~doc:"seconds Set match timeout on a source. Default: 3 seconds"
-    and target_directory = flag "directory" ~aliases:["d"; "r"; "recursive"] (optional_with_default (Sys.getcwd ()) string) ~doc:(Format.sprintf "path Run recursively on files in a directory. Default is current directory: %s" @@ Sys.getcwd ())
+    and target_directory = flag "directory" ~aliases:["d"] (optional_with_default (Sys.getcwd ()) string) ~doc:(Format.sprintf "path Run recursively on files in a directory. Default is current directory: %s" @@ Sys.getcwd ())
     and directory_depth = flag "depth" (optional int) ~doc:"n Depth to recursively descend into directories"
     and specification_directories = flag "templates" (optional (Arg_type.comma_separated string)) ~doc:"path CSV of directories containing templates"
     and file_filters = flag "extensions" ~aliases:["e"; "file-extensions"; "f"] (optional (Arg_type.comma_separated string)) ~doc:"extensions Comma-separated extensions to include, like \".go\" or \".c,.h\". It is just a file suffix, so you can use it to filter file names like \"main.go\". The extension will be used to infer a matcher, unless -custom-matcher or -matcher is specified"
@@ -353,6 +95,8 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and count = flag "count" no_arg ~doc:"Display a count of matches in a file."
     and list = flag "list" no_arg ~doc:"Display supported languages and extensions"
     and exclude_directory_prefix = flag "exclude-dir" (optional_with_default "." string) ~doc:"prefix of directories to exclude. Default: '.'"
+    and interactive_review = flag "review" ~aliases:["r"] no_arg ~doc:"Review each patch and accept, reject, or modify it with your editor of choice. Defaults to $EDITOR. If $EDITOR is unset, defaults to \"vim\". Override $EDITOR with the -editor flag."
+    and editor = flag "editor" (optional string) ~doc:"editor Perform manual review with [editor]. This activates -review mode."
     and anonymous_arguments =
       anon
         (maybe
@@ -388,9 +132,20 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           { match_template; rewrite_template; file_filters })
     in
     if list then list_supported_languages_and_exit ();
+    let interactive_review =
+      if Option.is_some editor then
+        editor
+      else if interactive_review then
+        let f = Option.some in
+        let default = Some "vim" in
+        let default = Option.value_map (Sys.getenv "EDITOR") ~default ~f in
+        Option.value_map editor ~default ~f
+      else
+        None
+    in
     let substitute_in_place = not newline_separated_rewrites in
     let configuration =
-      Command_configuration.create
+      Pipeline.Command_configuration.create
         { input_options =
             { rule
             ; specification_directories
@@ -420,6 +175,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; diff
             ; stdout
             ; substitute_in_place
+            ; interactive_review
             }
         }
       |> function
@@ -430,7 +186,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     in
     let (module M) as matcher, extension = select_matcher custom_matcher override_matcher configuration in
     fun () ->
-      run matcher configuration;
+      Pipeline.run matcher configuration;
       match extension with
       | Some ".generic" ->
         Format.eprintf "@.WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning.@."

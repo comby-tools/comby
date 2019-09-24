@@ -321,19 +321,21 @@ fi
 opam --version
 opam --git-version
 
-opam install ppx_deriving_yojson
-opam install core
-opam install ppxlib
-opam install ppx_deriving
-opam install tls
-opam install angstrom
-opam install hack_parallel
-opam install opium
-opam install pcre
-opam install oasis
-opam install camlzip
-opam install bisect_ppx
-opam install patdiff
+opam install -y \
+ppx_deriving_yojson \
+core \
+ppxlib \
+ppx_deriving \
+angstrom \
+hack_parallel \
+opium \
+pcre \
+oasis \
+tls \
+camlzip \
+bisect_ppx \
+patdiff \
+lambda-term
 
 git clone https://github.com/comby-tools/mparser
 cd mparser
