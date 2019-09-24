@@ -162,6 +162,41 @@ let%expect_test "single_token_match_inside_paren_no_succeeding_whitespace" =
   |> print_string;
   [%expect_exact "foo : bar"]
 
+let%expect_test "whitespace_hole_rewrite" =
+  let template = {|:[ w]this|} in
+  let rewrite_template = "space:[ w]here" in
+  let source = {|      this|} in
+  all template source
+  |> (fun matches -> Option.value_exn (Rewrite.all ~source ~rewrite_template matches))
+  |> (fun { rewritten_source; _ } -> rewritten_source)
+  |> print_string;
+  [%expect_exact "space      here"]
+
+let%expect_test "punctuation_hole_rewrite" =
+  let template = {|:[x.]|} in
+  let rewrite_template = "->:[x.]<-" in
+  let source = {|now.this. is,pod|racing|} in
+  all template source
+  |> (fun matches -> Option.value_exn (Rewrite.all ~source ~rewrite_template matches))
+  |> (fun { rewritten_source; _ } -> rewritten_source)
+  |> print_string;
+  [%expect_exact "->now.this.<- ->is,pod|racing<-"]
+
+let%expect_test "newline_hole_rewrite" =
+  let template = {|:[x\n]|} in
+  let rewrite_template = "->:[x\n]<-" in
+  let source = {|now.this.
+is,pod|racing
+|} in
+  all template source
+  |> (fun matches -> Option.value_exn (Rewrite.all ~source ~rewrite_template matches))
+  |> (fun { rewritten_source; _ } -> rewritten_source)
+  |> print_string;
+  [%expect_exact "->now.this.
+<-->is,pod|racing
+<-"]
+
+
 
 let%expect_test "shift_or_at_least_dont_get_stuck" =
   let template = ":[1]" in
