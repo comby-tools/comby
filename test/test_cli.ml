@@ -285,6 +285,7 @@ let%expect_test "list_languages" =
  -matcher .kt       Kotlin    
  -matcher .tex      LaTeX     
  -matcher .lisp     Lisp      
+ -matcher .lua      Lua       
  -matcher .ml       OCaml     
  -matcher .paren    Paren     
  -matcher .pas      Pascal    

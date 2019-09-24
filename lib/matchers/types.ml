@@ -14,10 +14,15 @@ module Syntax = struct
     | Until_newline of string
   [@@deriving yojson]
 
+  type raw_literal_kind =
+    | Raw of (string * string)
+    | Nested_raw of (string * string)
+  [@@deriving yojson]
+
   type t = {
     user_defined_delimiters : (string * string) list;
     escapable_string_literals : escapable_string_literals option; [@default None]
-    raw_string_literals : (string * string) list;
+    raw_string_literals : raw_literal_kind list;
     comments : comment_kind list;
   }
   [@@deriving yojson]
@@ -25,7 +30,7 @@ module Syntax = struct
   module type S = sig
     val user_defined_delimiters : (string * string) list
     val escapable_string_literals : escapable_string_literals option
-    val raw_string_literals : (string * string) list
+    val raw_string_literals : raw_literal_kind list
     val comments : comment_kind list
   end
 

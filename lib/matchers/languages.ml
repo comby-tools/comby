@@ -163,6 +163,32 @@ module Generic = struct
   include Matcher.Make (Syntax) (Info)
 end
 
+module Lua = struct
+  module Info = struct
+    let name = "Lua"
+    let extensions = [".lua"]
+  end
+
+  module Syntax = struct
+    include Dyck.Syntax
+
+    let raw_string_literals =
+      [ Nested_raw ("[[", "]]")
+      ]
+
+    (* Note: order is significant. We first try a block comment. If that fails,
+       try a newline comment. That's because block comments can be turned into normal comments by
+       prefixing `--` (https://www.lua.org/pil/1.3.html). *)
+    let comments =
+      [ Multiline ("--[[", "--]]")
+      ; Until_newline "--"
+      ]
+
+  end
+
+  include Matcher.Make (Syntax) (Info)
+end
+
 module Bash = struct
   module Info = struct
     let name = "Bash"
@@ -214,7 +240,7 @@ module Ruby = struct
       ]
 
     let raw_string_literals =
-      [ ({|"|}, {|"|})
+      [ Raw ({|"|}, {|"|})
       ]
 
     let comments =
@@ -242,7 +268,7 @@ module Elixir = struct
         ]
 
     let raw_string_literals =
-      [ ({|"""|}, {|"""|})
+      [ Raw ({|"""|}, {|"""|})
       ]
 
     let comments =
@@ -264,8 +290,8 @@ module Python = struct
     include Generic.Syntax
 
     let raw_string_literals =
-      [ ({|'''|}, {|'''|})
-      ; ({|"""|}, {|"""|})
+      [ Raw ({|'''|}, {|'''|})
+      ; Raw ({|"""|}, {|"""|})
       ]
 
     let comments =
@@ -429,8 +455,8 @@ module Dart = struct
     include C.Syntax
 
     let raw_string_literals =
-      [ ({|"""|}, {|"""|})
-      ; ({|'''|}, {|'''|})
+      [ Raw ({|"""|}, {|"""|})
+      ; Raw ({|'''|}, {|'''|})
       ]
   end
 
@@ -465,7 +491,7 @@ module Go = struct
     include C.Syntax
 
     let raw_string_literals =
-      [ ({|`|}, {|`|})
+      [ Raw ({|`|}, {|`|})
       ]
   end
 
@@ -513,7 +539,7 @@ module Rust = struct
     let escapable_string_literals = ordinary_string
 
     let raw_string_literals =
-      [ {|r#|}, {|#|}
+      [ Raw ({|r#|}, {|#|})
       ]
   end
 
@@ -543,7 +569,7 @@ module OCaml = struct
     let escapable_string_literals = ordinary_string
 
     let raw_string_literals =
-      [ ("{|", "|}")
+      [ Raw ("{|", "|}")
       ]
 
     let comments =
@@ -637,7 +663,7 @@ module Haskell = struct
     include Generic.Syntax
 
     let raw_string_literals =
-      [ ({|"""|}, {|"""|})
+      [ Raw ({|"""|}, {|"""|})
       ]
 
     let comments =
@@ -700,6 +726,7 @@ let all : (module Types.Matcher.S) list =
   ; (module Kotlin)
   ; (module Latex)
   ; (module Lisp)
+  ; (module Lua)
   ; (module OCaml)
   ; (module Paren)
   ; (module Pascal)

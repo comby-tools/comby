@@ -55,3 +55,43 @@ module Raw = struct
         s
   end
 end
+
+let is_not p s =
+  if is_ok (p s) then
+    Empty_failed (unknown_error s)
+  else
+    match read_char s with
+    | Some c ->
+      Consumed_ok (c, advance_state s 1, No_error)
+    | None ->
+      Empty_failed (unknown_error s)
+
+(** Basically only because Lua exists. Nested raw literals look like [[...]]. *)
+module Nested_raw = struct
+  module type S = sig
+    val left_delimiter : string
+    val right_delimiter : string
+  end
+
+  module Make (M : S) = struct
+
+    let base_string_literal s =
+      let reserved = skip ((string M.left_delimiter) <|> (string M.right_delimiter)) in
+      let rec grammar s =
+        ((base_string_literal_aux >>= fun string -> return string)
+         <|>
+         (is_not reserved >>= fun c -> return (Char.to_string c)))
+          s
+
+      and base_string_literal_aux s =
+        (between
+           (string M.left_delimiter)
+           (string M.right_delimiter)
+           ((many grammar) >>= fun result ->
+            return (String.concat result)))
+          s
+      in
+      (base_string_literal_aux |>> fun content ->
+       M.left_delimiter ^ content ^ M.right_delimiter) s
+  end
+end

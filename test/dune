@@ -8,6 +8,7 @@
   test_integration
   test_statistics
   test_c
+  test_lua
   test_cli
   test_bash
   test_go

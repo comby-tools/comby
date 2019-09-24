@@ -57,15 +57,26 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     |> choice
 
   let raw_string_literal_parser (f : 'a literal_parser_callback) =
-    List.map Syntax.raw_string_literals ~f:(fun (left_delimiter, right_delimiter) ->
-        let module M =
-          Parsers.String_literals.Raw.Make(struct
-            let left_delimiter = left_delimiter
-            let right_delimiter = right_delimiter
-          end)
-        in
-        M.base_string_literal >>= fun contents ->
-        return (f ~contents ~left_delimiter ~right_delimiter))
+    List.map Syntax.raw_string_literals ~f:(function
+        | Raw (left_delimiter, right_delimiter) ->
+          let module M =
+            Parsers.String_literals.Raw.Make(struct
+              let left_delimiter = left_delimiter
+              let right_delimiter = right_delimiter
+            end)
+          in
+          M.base_string_literal >>= fun contents ->
+          return (f ~contents ~left_delimiter ~right_delimiter)
+        | Nested_raw (left_delimiter, right_delimiter) ->
+          let module M =
+            Parsers.String_literals.Nested_raw.Make(struct
+              let left_delimiter = left_delimiter
+              let right_delimiter = right_delimiter
+            end)
+          in
+          M.base_string_literal >>= fun contents ->
+          return (f ~contents ~left_delimiter ~right_delimiter)
+      )
     |> choice
 
   let comment_parser =
@@ -271,7 +282,9 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       | None -> []
     in
     let reserved_raw_strings =
-      List.concat_map Syntax.raw_string_literals ~f:(fun (from, until) -> [from; until])
+      List.concat_map Syntax.raw_string_literals ~f:(function
+          | Raw (from, until) -> [from; until]
+          | Nested_raw (from, until) -> [from; until])
       |> List.map ~f:string
     in
     reserved_holes ()
