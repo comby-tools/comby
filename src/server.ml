@@ -38,7 +38,11 @@ let perform_match request =
   >>| function
   | Ok ({ source; match_template; rule; language; id } as request) ->
     if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (In.match_request_to_yojson request));
-    let matcher = Matchers.select_with_extension language in
+    let matcher =
+      match Matchers.select_with_extension language with
+      | Some matcher -> matcher
+      | None -> (module Matchers.Generic)
+    in
     let run ?rule () =
       let configuration = Configuration.create ~match_kind:Fuzzy () in
       Pipeline.timed_run matcher ?rule ~configuration ~template:match_template ~source ()
@@ -64,7 +68,11 @@ let perform_rewrite request =
   >>| function
   | Ok ({ source; match_template; rewrite_template; rule; language; substitution_kind; id } as request) ->
     if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (In.rewrite_request_to_yojson request));
-    let matcher = Matchers.select_with_extension language in
+    let matcher =
+      match Matchers.select_with_extension language with
+      | Some matcher -> matcher
+      | None -> (module Matchers.Generic)
+    in
     let source_substitution, substitute_in_place =
       match substitution_kind with
       | "newline_separated" -> None, false

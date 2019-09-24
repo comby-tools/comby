@@ -836,3 +836,35 @@ let ()
   [%expect_exact {|3 matches
 WARNING: -count only works with -match-only. Performing -match-only -count.
 |}]
+
+let%expect_test "unrecognized_matcher" =
+  let source = {|dont care|} in
+  let match_template = "dont care" in
+  let rewrite_template = "dont care" in
+  let command_args =
+    Format.sprintf "-stdin '%s' '%s' -matcher invalid"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_expect_stdin_and_stdout command source
+  |> print_string;
+  [%expect_exact {|The matcher "invalid" is not supported. See -list for supported matchers
+|}]
+
+let%expect_test "generic_matcher_ok" =
+  let source = {|dont care|} in
+  let match_template = "dont care" in
+  let rewrite_template = "blah" in
+  let command_args =
+    Format.sprintf "-stdin '%s' '%s' -matcher .generic"
+      match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_expect_stdin_and_stdout command source
+  |> print_string;
+  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+[0;32m++++++ [0m[0;1m/dev/null[0m
+[0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
+[0;41;30m-|[0m[0m[0;31mdont care[0m[0m
+[0;42;30m+|[0m[0m[0;32mblah[0m[0m
+|}]

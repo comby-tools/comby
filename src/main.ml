@@ -4,12 +4,6 @@ open Hack_parallel
 
 open Pipeline.Command_configuration
 
-type json_result =
-  { matches : Match.t list
-  ; source : string
-  }
-[@@deriving yojson]
-
 let verbose_out_file = "/tmp/comby.out"
 
 let debug =
@@ -32,7 +26,16 @@ let select_matcher custom_matcher override_matcher configuration =
         Format.eprintf "%s@." error;
         exit 1
   else if Option.is_some override_matcher then
-    Matchers.select_with_extension (Option.value_exn override_matcher), None
+    let matcher_override = Option.value_exn override_matcher in
+    let matcher =
+      match Matchers.select_with_extension matcher_override with
+      | Some matcher -> matcher
+      | None when matcher_override <> ".generic" ->
+        Format.eprintf "The matcher %S is not supported. See -list for supported matchers@." matcher_override;
+        exit 1
+      | None -> (module Matchers.Generic)
+    in
+    matcher, None
   else
     let extension =
       match configuration.file_filters with
@@ -42,7 +45,9 @@ let select_matcher custom_matcher override_matcher configuration =
         | _, Some extension -> "." ^ extension
         | extension, None -> "." ^ extension
     in
-    Matchers.select_with_extension extension, Some extension
+    match Matchers.select_with_extension extension with
+    | Some matcher -> matcher, Some extension
+    | None -> (module Matchers.Generic), Some extension
 
 let paths_with_file_size paths =
   List.map paths ~f:(fun path ->

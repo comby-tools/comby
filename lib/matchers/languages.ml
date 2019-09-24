@@ -715,11 +715,8 @@ let all : (module Types.Matcher.S) list =
   ; (module Generic)
   ]
 
-let select_with_extension extension : (module Types.Matcher.S) =
+let select_with_extension extension : (module Types.Matcher.S) option =
   List.find all ~f:(fun (module M) -> List.exists M.extensions ~f:((=) extension))
-  |> function
-  | Some matcher -> matcher
-  | None -> (module Generic)
 
 let create
     Types.Syntax.
