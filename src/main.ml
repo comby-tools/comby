@@ -102,6 +102,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and exclude_directory_prefix = flag "exclude-dir" (optional_with_default "." string) ~doc:"prefix of directories to exclude. Default: '.'"
     and interactive_review = flag "review" ~aliases:["r"] no_arg ~doc:"Review each patch and accept, reject, or modify it with your editor of choice. Defaults to $EDITOR. If $EDITOR is unset, defaults to \"vim\". Override $EDITOR with the -editor flag."
     and editor = flag "editor" (optional string) ~doc:"editor Perform manual review with [editor]. This activates -review mode."
+    and editor_default_is_reject = flag "default-no" no_arg ~doc:"If set, the default action in review (pressing return) will NOT apply the change. Setting this option activates -review mode."
     and anonymous_arguments =
       anon
         (maybe
@@ -138,15 +139,28 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     in
     if list then list_supported_languages_and_exit ();
     let interactive_review =
-      if Option.is_some editor then
-        editor
-      else if interactive_review then
+      let default_editor =
         let f = Option.some in
         let default = Some "vim" in
         let default = Option.value_map (Sys.getenv "EDITOR") ~default ~f in
         Option.value_map editor ~default ~f
-      else
-        None
+      in
+      let editor =
+        if Option.is_some editor then
+          editor
+        else if interactive_review then
+          default_editor
+        else
+          None
+      in
+      match editor with
+      | Some editor ->
+        Some { editor; default_is_accept = not editor_default_is_reject }
+      | None when editor_default_is_reject ->
+        Some { editor = (Option.value_exn default_editor)
+             ; default_is_accept = false
+             }
+      | None -> None
     in
     let substitute_in_place = not newline_separated_rewrites in
     let configuration =

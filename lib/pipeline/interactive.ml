@@ -140,8 +140,19 @@ let clear_screen terminal =
   LTerm.with_context terminal (fun context ->
       Lwt_io.write (LTerm.context_oc context) "\027[H")
 
+let handle_editor_errors terminal = function
+  | Lwt_unix.WEXITED 0 -> return `Ok
+  | WEXITED e | WSIGNALED e | WSTOPPED e ->
+    clear_screen terminal >>= fun () ->
+    let prompt =
+      Format.sprintf
+        "Error opening editor (error code %d)\n.
+         Press any key to continue, or exit now (Ctrl-C).\n" e in
+    (new M.read_line terminal prompt)#run >>= fun _ ->
+    return `Ok
+
 let handle_patch_errors terminal = function
-  | Lwt_unix.WEXITED 0 -> return `Not_ok
+  | Lwt_unix.WEXITED 0 -> return `Ok
   | WEXITED e
   | WSIGNALED e
   | WSTOPPED e ->
@@ -172,38 +183,55 @@ let apply_patch hunk_patch =
 
 let drop_into_editor editor path ~at_line =
   let command = Format.sprintf "%s +%d %s" editor at_line path in
-  Lwt_unix.system command >>= fun _ -> return ()
+  Lwt_unix.system command
 
-let process_input hunk_patch prev_start next_start terminal editor path ~continue =
+let process_input default_is_accept hunk_patch prev_start next_start terminal editor path ~continue =
+  let prompt =
+    let open LTerm_style in
+    let open LTerm_text in
+    if default_is_accept then
+      [ S"Accept change ("
+      ; B_fg green; S"y = yes"; E_fg; S" [default], "
+      ; B_fg red; S"n = no"; E_fg; S", "
+      ; B_fg yellow; S"e = edit original"; E_fg; S", "
+      ; B_fg yellow; S"E = apply+edit"; E_fg; S", "
+      ; S"q = quit)?"
+      ]
+    else
+      [ S"Accept change ("
+      ; B_fg green; S"y = yes"; E_fg; S", "
+      ; B_fg red; S"n = no"; E_fg; S" [default], "
+      ; B_fg yellow; S"e = edit original"; E_fg; S", "
+      ; B_fg yellow; S"E = apply+edit"; E_fg; S", "
+      ; S"q = quit)?"
+      ]
+  in
+  LTerm.printls (LTerm_text.(eval prompt)) >>= fun () ->
   let rec try_again () =
-    let prompt =
-      "Accept change (\
-       y = yes, \
-       n = no [default], \
-       e = edit original, \
-       E = apply+edit, \
-       q = quit)?\n"
-    in
-    (new M.read_line terminal prompt)#run >>= fun key_pressed ->
+    (new M.read_line terminal "")#run >>= fun key_pressed ->
     match Zed_string.to_utf8 key_pressed with
-    | "n" | "" ->
-      continue ()
-    | "e" ->
-      drop_into_editor editor path ~at_line:prev_start
-      >>= continue
     | "y" ->
       apply_patch hunk_patch
       >>= handle_patch_errors terminal
       >>= fun _ -> continue ()
+    | "" when default_is_accept ->
+      apply_patch hunk_patch
+      >>= handle_patch_errors terminal
+      >>= fun _ -> continue ()
+    | "n" ->
+      continue ()
+    | "" when not default_is_accept ->
+      continue ()
+    | "e" ->
+      drop_into_editor editor path ~at_line:prev_start
+      >>= handle_editor_errors terminal
+      >>= fun _ -> continue ()
     | "E" ->
       apply_patch hunk_patch
       >>= handle_patch_errors terminal
-      >>= begin function
-        | `Not_ok -> continue ()
-        | `Ok ->
-          drop_into_editor editor path ~at_line:next_start
-          >>= continue
-      end
+      >>= fun _ -> drop_into_editor editor path ~at_line:next_start
+      >>= handle_editor_errors terminal
+      >>= fun _ -> continue ()
     | "q" ->
       raise Sys.Break
     | _ ->
@@ -217,7 +245,7 @@ type input =
   ; rewritten_source : string
   }
 
-let run editor count rewrites =
+let run editor default_is_accept count rewrites =
   let thread () =
     Lazy.force LTerm.stdout >>= fun terminal ->
     let size = List.length rewrites in
@@ -261,6 +289,7 @@ let run editor count rewrites =
           let prev_start = hunk.prev_start + context in
           let next_start = hunk.next_start + context in
           process_input
+            default_is_accept
             ~continue:(fun () -> next_hunk hunks)
             hunk_patch
             prev_start

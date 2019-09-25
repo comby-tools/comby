@@ -109,6 +109,11 @@ let parse_template_directories paths =
   in
   List.concat_map paths ~f:(fun path -> fold_directory path ~sorted:true ~init:[] ~f)
 
+type interactive_review =
+  { editor : string
+  ; default_is_accept : bool
+  }
+
 type output_options =
   { color : bool
   ; json_lines : bool
@@ -118,7 +123,7 @@ type output_options =
   ; stdout : bool
   ; substitute_in_place : bool
   ; count : bool
-  ; interactive_review : string option
+  ; interactive_review : interactive_review option
   }
 
 type anonymous_arguments =
@@ -231,7 +236,7 @@ module Printer = struct
     type diff_kind = Diff_configuration.kind
 
     type output_format =
-      | Interactive_review of string option
+      | Interactive_review
       | Overwrite_file
       | Stdout
       | Diff of diff_kind
@@ -260,7 +265,7 @@ module Printer = struct
       | In_place
 
     type output_format =
-      | Interactive_review of string option
+      | Interactive_review
       | Overwrite_file
       | Stdout
       | Diff of diff_kind
@@ -275,7 +280,7 @@ module Printer = struct
     let convert output_options : replacement_output =
       let output_format =
         match output_options with
-        | { interactive_review = Some editor; _ } -> Interactive_review (Some editor)
+        | { interactive_review = Some _; _ } -> Interactive_review
         | { overwrite_file_in_place = true; _ } -> Overwrite_file
         | { stdout = true; _ } -> Stdout
         | { json_lines = true; overwrite_file_in_place = false; json_only_diff; _ } ->
@@ -309,7 +314,7 @@ module Printer = struct
       match output_format with
       | Stdout -> Format.fprintf ppf "%s" rewritten_source
       | Overwrite_file -> Out_channel.write_all ~data:rewritten_source (Option.value path ~default:"/dev/null")
-      | Interactive_review _ -> () (* Handled after (potentially parallel) processing *)
+      | Interactive_review -> () (* Handled after (potentially parallel) processing *)
       | Diff kind -> print_if_some @@ Diff_configuration.get_diff kind path source_content rewritten_source
       | Match_only -> print_if_some @@ Diff_configuration.get_diff Match_only path rewritten_source source_content
       | Json_lines kind ->
@@ -333,7 +338,7 @@ type t =
   ; exclude_directory_prefix : string
   ; run_options : run_options
   ; output_printer : Printer.t
-  ; interactive_review : string option
+  ; interactive_review : interactive_review option
   }
 
 let validate_errors { input_options; run_options = _; output_options } =
