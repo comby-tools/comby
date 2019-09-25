@@ -60,24 +60,31 @@ if [ "$OS" = "Darwin" ]; then
   OS=macos
 fi
 
+if [ "$OS" = "Linux" ]; then
+  OS=linux
+fi
+
 RELEASE_BIN="comby-${RELEASE_TAG}-${ARCH}-${OS}"
-RELEASE_URL="https://github.com/comby-tools/comby/releases/download/${RELEASE_TAG}/${RELEASE_BIN}"
+RELEASE_TAR="$RELEASE_BIN.tar.gz"
+RELEASE_URL="https://github.com/comby-tools/comby/releases/download/${RELEASE_TAG}/${RELEASE_TAR}"
 
 
-if [ ! -e "$TMP/$RELEASE_BIN" ]; then
+if [ ! -e "$TMP/$RELEASE_TAR" ]; then
     printf "${GREEN}[+]${NORMAL} Downloading ${YELLOW}comby $RELEASE_VERSION${NORMAL}\n"
 
-    SUCCESS=$(curl -s -L -o "$TMP/$RELEASE_BIN" "$RELEASE_URL" --write-out "%{http_code}")
+    SUCCESS=$(curl -s -L -o "$TMP/$RELEASE_TAR" "$RELEASE_URL" --write-out "%{http_code}")
 
     if [ "$SUCCESS" == "404" ]; then
         printf "${RED}[-]${NORMAL} No binary release available for your system.\n"
-        rm -f $TMP/$RELEASE_BIN
+        rm -f $TMP/$RELEASE_TAR
         exit 1
     fi
 	printf "${GREEN}[+]${NORMAL} Download complete.\n"
 fi
 
+cd "$TMP" && tar -xzf "$RELEASE_TAR"
 chmod 755 "$TMP/$RELEASE_BIN"
+
 echo "${GREEN}[+]${NORMAL} Installing comby to $INSTALL_DIR"
 if [ ! $OS == "macos" ]; then
     sudo cp "$TMP/$RELEASE_BIN" "$INSTALL_DIR/comby"
@@ -89,6 +96,7 @@ SUCCESS_IN_PATH=$(command -v comby || echo notinpath)
 
 if [ $SUCCESS_IN_PATH == "notinpath" ]; then
     printf "${BOLD}[*]${NORMAL} Comby is not in your PATH. You should add $INSTALL_DIR to your PATH.\n"
+    rm -f $TMP/$RELEASE_TAR
     rm -f $TMP/$RELEASE_BIN
     exit 1
 fi
@@ -104,10 +112,12 @@ if [ "$CHECK"  == "broken" ]; then
         printf "${YELLOW}[*]${NORMAL} ${BOLD}sudo apt-get install libpcre3-dev && bash <(curl -sL get.comby.dev)${NORMAL}\n"
     fi
     rm -f $TMP/$RELEASE_BIN
+    rm -f $TMP/$RELEASE_TAR
     exit 1
 fi
 
 rm -f $TMP/$RELEASE_BIN
+rm -f $TMP/$RELEASE_TAR
 
 printf "${GREEN}[+]${NORMAL} ${YELLOW}comby${NORMAL} is installed!\n"
 printf "${GREEN}[+]${NORMAL} The licenses for this distribution are included in this script. Licenses are also available at https://github.com/comby-tools/comby/tree/master/docs/third-party-licenses\n"

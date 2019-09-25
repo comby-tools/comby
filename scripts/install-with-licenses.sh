@@ -60,24 +60,31 @@ if [ "$OS" = "Darwin" ]; then
   OS=macos
 fi
 
+if [ "$OS" = "Linux" ]; then
+  OS=linux
+fi
+
 RELEASE_BIN="comby-${RELEASE_TAG}-${ARCH}-${OS}"
-RELEASE_URL="https://github.com/comby-tools/comby/releases/download/${RELEASE_TAG}/${RELEASE_BIN}"
+RELEASE_TAR="$RELEASE_BIN.tar.gz"
+RELEASE_URL="https://github.com/comby-tools/comby/releases/download/${RELEASE_TAG}/${RELEASE_TAR}"
 
 
-if [ ! -e "$TMP/$RELEASE_BIN" ]; then
+if [ ! -e "$TMP/$RELEASE_TAR" ]; then
     printf "${GREEN}[+]${NORMAL} Downloading ${YELLOW}comby $RELEASE_VERSION${NORMAL}\n"
 
-    SUCCESS=$(curl -s -L -o "$TMP/$RELEASE_BIN" "$RELEASE_URL" --write-out "%{http_code}")
+    SUCCESS=$(curl -s -L -o "$TMP/$RELEASE_TAR" "$RELEASE_URL" --write-out "%{http_code}")
 
     if [ "$SUCCESS" == "404" ]; then
         printf "${RED}[-]${NORMAL} No binary release available for your system.\n"
-        rm -f $TMP/$RELEASE_BIN
+        rm -f $TMP/$RELEASE_TAR
         exit 1
     fi
 	printf "${GREEN}[+]${NORMAL} Download complete.\n"
 fi
 
+cd "$TMP" && tar -xzf "$RELEASE_TAR"
 chmod 755 "$TMP/$RELEASE_BIN"
+
 echo "${GREEN}[+]${NORMAL} Installing comby to $INSTALL_DIR"
 if [ ! $OS == "macos" ]; then
     sudo cp "$TMP/$RELEASE_BIN" "$INSTALL_DIR/comby"
@@ -89,12 +96,13 @@ SUCCESS_IN_PATH=$(command -v comby || echo notinpath)
 
 if [ $SUCCESS_IN_PATH == "notinpath" ]; then
     printf "${BOLD}[*]${NORMAL} Comby is not in your PATH. You should add $INSTALL_DIR to your PATH.\n"
+    rm -f $TMP/$RELEASE_TAR
     rm -f $TMP/$RELEASE_BIN
     exit 1
 fi
 
 
-CHECK=$(printf 'printf("hello world!\\\n");' | $INSTALL_DIR/comby 'printf("hello :[1]!\\n");' 'printf("hello comby!\\n");' .c -stdin || echo broken)
+CHECK=$(printf 'printf("hello world!\\\n");' | $INSTALL_DIR/comby 'printf("hello :[1]!\\n");' 'printf("hello comby!\\n");' -stdin || echo broken)
 if [ "$CHECK"  == "broken" ]; then
     printf "${RED}[-]${NORMAL} ${YELLOW}comby${NORMAL} did not install correctly.\n"
     printf "${YELLOW}[-]${NORMAL} My guess is that you need to install the pcre library on your system. Try:\n"
@@ -104,10 +112,12 @@ if [ "$CHECK"  == "broken" ]; then
         printf "${YELLOW}[*]${NORMAL} ${BOLD}sudo apt-get install libpcre3-dev && bash <(curl -sL get.comby.dev)${NORMAL}\n"
     fi
     rm -f $TMP/$RELEASE_BIN
+    rm -f $TMP/$RELEASE_TAR
     exit 1
 fi
 
 rm -f $TMP/$RELEASE_BIN
+rm -f $TMP/$RELEASE_TAR
 
 printf "${GREEN}[+]${NORMAL} ${YELLOW}comby${NORMAL} is installed!\n"
 printf "${GREEN}[+]${NORMAL} The licenses for this distribution are included in this script. Licenses are also available at https://github.com/comby-tools/comby/tree/master/docs/third-party-licenses\n"
@@ -2159,6 +2169,55 @@ echo "${GREEN}------------------------------------------------------------${NORM
 # The MIT License
 # 
 # Copyright (c) 2005--2019 Jane Street Group, LLC <opensource@janestreet.com>
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+# 
+# LICENSE FOR lambda-term:
+# 
+# Copyright (c) 2011, Jeremie Dimino <jeremie@dimino.org>
+# All rights reserved.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 
+#     * Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#     * Neither the name of Jeremie Dimino nor the names of his
+#       contributors may be used to endorse or promote products derived
+#       from this software without specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE AUTHOR AND CONTRIBUTORS BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# 
+# LICENSE FOR lwt:
+# 
+# Copyright (c) 1999-2019, the Authors of Lwt (docs/AUTHORS)
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal

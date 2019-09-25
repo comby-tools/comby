@@ -184,7 +184,7 @@ let%expect_test "punctuation_hole_rewrite" =
 
 let%expect_test "newline_hole_rewrite" =
   let template = {|:[x\n]|} in
-  let rewrite_template = "->:[x\n]<-" in
+  let rewrite_template = {|->:[x\n]<-|} in
   let source = {|now.this.
 is,pod|racing
 |} in

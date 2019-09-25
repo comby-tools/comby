@@ -59,11 +59,11 @@ wget -P ocaml-ci-scripts https://raw.githubusercontent.com/ocaml/ocaml-ci-script
 
 # MIT
 mkdir lwt && \
-wget -P lwt https://github.com/ocsigen/lwt/blob/master/LICENSE.md
+wget -P lwt https://raw.githubusercontent.com/ocsigen/lwt/master/LICENSE.md
 
 # BSD-3
 mkdir lambda-term && \
-wget -P lambda-term  https://github.com/ocaml-community/lambda-term/blob/master/LICENSE
+wget -P lambda-term  https://raw.githubusercontent.com/ocaml-community/lambda-term/master/LICENSE
 
 
 # ALL.txt

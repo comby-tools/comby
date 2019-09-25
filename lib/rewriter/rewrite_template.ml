@@ -6,7 +6,7 @@ let substitute template env =
   let substitution_formats =
     [ ":[ ", "]"
     ; ":[", ".]"
-    ; ":[", "\n]"
+    ; ":[", "\\n]"
     ; ":[[", "]]"
     ; ":[", "]"
     ]
