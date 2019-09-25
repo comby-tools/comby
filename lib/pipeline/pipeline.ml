@@ -16,9 +16,9 @@ module Command_configuration = Command_configuration
 let infer_equality_constraints environment =
   let vars = Environment.vars environment in
   List.fold vars ~init:[] ~f:(fun acc var ->
-      if String.is_prefix var ~prefix:"equal_" then
+      if String.is_suffix var ~suffix:"_equal" then
         match String.split var ~on:'_' with
-        | _equal :: target :: _uuid ->
+        | _uuid :: target :: _equal ->
           let expression = Language.Ast.Equal (Variable var, Variable target) in
           expression::acc
         | _ -> acc
@@ -36,9 +36,8 @@ let apply_rule ?(substitute_in_place = true) matcher rule matches =
 let timed_run matcher ?substitute_in_place ?rule ~configuration ~template ~source () =
   let module Matcher = (val matcher : Matchers.Matcher) in
   let matches = Matcher.all ~configuration ~template ~source in
-  match rule with
-  | Some rule -> apply_rule ?substitute_in_place matcher rule matches
-  | None -> matches
+  let rule = Option.value rule ~default:[Ast.True] in
+  apply_rule ?substitute_in_place matcher rule matches
 
 let debug =
   Sys.getenv "DEBUG_COMBY"

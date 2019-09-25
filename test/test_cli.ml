@@ -868,3 +868,16 @@ let%expect_test "generic_matcher_ok" =
 [0;41;30m-|[0m[0m[0;31mdont care[0m[0m
 [0;42;30m+|[0m[0m[0;32mblah[0m[0m
 |}]
+
+
+let%expect_test "warn_on_anonymous_and_templates_flag" =
+  let source = "(fun i -> j) (fun x -> x)" in
+  let command_args =
+    Format.sprintf "-stdin -sequential 'ignore' 'ignore' -templates example/templates/implicit-equals -matcher .ml -stdout"
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect_exact {|(fun i -> j) identWARNING: Templates specified on the command line AND using -templates. Ignoring match
+      and rewrite templates on the command line and only using those in directories.
+|}]
