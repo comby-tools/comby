@@ -14,6 +14,12 @@ let debug =
   | None -> false
   | Some _ -> true
 
+let timeout =
+  match Sys.getenv "TIMEOUT" with
+  | None -> 30 (* seconds *)
+  | Some t -> Int.of_string t
+
+
 let max_request_length =
   match Sys.getenv "MAX_REQUEST_LENGTH" with
   | None -> Int.max_value
@@ -45,8 +51,11 @@ let perform_match request =
     in
     let run ?rule () =
       let configuration = Configuration.create ~match_kind:Fuzzy () in
-      Pipeline.timed_run matcher ?rule ~configuration ~template:match_template ~source ()
-      |> fun matches -> Out.Matches.to_string { matches; source; id }
+      let matches =
+        Pipeline.with_timeout timeout (`String "") ~f:(fun () ->
+            Pipeline.timed_run matcher ?rule ~configuration ~template:match_template ~source ())
+      in
+      Out.Matches.to_string { matches; source; id }
     in
     let code, result =
       match Option.map rule ~f:Rule.create with
@@ -87,8 +96,18 @@ let perform_rewrite request =
     in
     let run ?rule () =
       let configuration = Configuration.create ~match_kind:Fuzzy () in
-      Pipeline.timed_run matcher ?rule ~substitute_in_place ~configuration ~template:match_template ~source ()
-      |> Rewrite.all ?source:source_substitution ~rewrite_template
+      let matches =
+        Pipeline.with_timeout timeout (`String "") ~f:(fun () ->
+            Pipeline.timed_run
+              matcher
+              ?rule
+              ~substitute_in_place
+              ~configuration
+              ~template:match_template
+              ~source
+              ())
+      in
+      Rewrite.all matches ?source:source_substitution ~rewrite_template
       |> Option.value_map ~default ~f:(fun Replacement.{ rewritten_source; in_place_substitutions } ->
           Out.Rewrite.to_string
             { rewritten_source
