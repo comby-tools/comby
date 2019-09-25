@@ -340,8 +340,8 @@ let run
          workers otherwise. This command runs the setup function, only after we are
          finished with parallel work. *)
       Lwt_unix.i_am_the_captain_now ();
-      let editor = Option.value_exn interactive_review in
-      Interactive.run editor count rewrites;
+      let { editor; default_is_accept } = Option.value_exn interactive_review in
+      Interactive.run editor default_is_accept count rewrites;
       count
   in
   if dump_statistics then write_statistics file_filters exclude_directory_prefix count sources start_time;

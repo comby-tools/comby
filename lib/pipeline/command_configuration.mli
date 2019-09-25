@@ -16,6 +16,10 @@ module Printer : sig
   type t = printable_result -> unit
 end
 
+type interactive_review =
+  { editor : string
+  ; default_is_accept : bool
+  }
 
 type output_options =
   { color : bool
@@ -26,7 +30,7 @@ type output_options =
   ; stdout : bool
   ; substitute_in_place : bool
   ; count : bool
-  ; interactive_review : string option
+  ; interactive_review : interactive_review option
   }
 
 type anonymous_arguments =
@@ -70,7 +74,7 @@ type t =
   ; exclude_directory_prefix : string
   ; run_options : run_options
   ; output_printer : Printer.t
-  ; interactive_review : string option
+  ; interactive_review : interactive_review option
   }
 
 val create : user_input -> t Or_error.t
