@@ -153,8 +153,11 @@ let run_on_specifications_with_rewrites specifications process input =
         | Matches (m, number_of_matches) ->
           Matches (m, number_of_matches), count + number_of_matches
         | Replacement (r, content, number_of_matches) ->
-          Replacement (r, content, number_of_matches),
-          count + number_of_matches)
+          if number_of_matches = 0 then
+            Nothing, count
+          else
+            Replacement (r, content, number_of_matches),
+            count + number_of_matches)
   in
   match result with
   | Replacement (_, content, _) -> Some content, count
