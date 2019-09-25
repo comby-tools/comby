@@ -41,6 +41,18 @@ let read_expect_stdin_and_stdout command source =
   let stderr_result = In_channel.input_all stderr in
   stdout_result ^ stderr_result
 
+let read_expect_stderr command source =
+  let open Unix.Process_channels in
+  let { stdin; stdout; stderr } =
+    Unix.open_process_full ~env:(Array.of_list ["COMBY_TEST=1"]) command
+  in
+  Out_channel.output_string stdin source;
+  Out_channel.flush stdin;
+  Out_channel.close stdin;
+  let _ = In_channel.input_all stdout in
+  let stderr_result = In_channel.input_all stderr in
+  stderr_result
+
 let%expect_test "json_lines_separates_by_line" =
   let source = "hello world" in
   let match_template = "o" in
@@ -869,7 +881,6 @@ let%expect_test "generic_matcher_ok" =
 [0;42;30m+|[0m[0m[0;32mblah[0m[0m
 |}]
 
-
 let%expect_test "warn_on_anonymous_and_templates_flag" =
   let source = "(fun i -> j) (fun x -> x)" in
   let command_args =
@@ -881,3 +892,17 @@ let%expect_test "warn_on_anonymous_and_templates_flag" =
   [%expect_exact {|(fun i -> j) identWARNING: Templates specified on the command line AND using -templates. Ignoring match
       and rewrite templates on the command line and only using those in directories.
 |}]
+
+let%expect_test "dump_stats" =
+  let source = {|dont care|} in
+  let match_template = "care" in
+  let rewrite_template = "realy care" in
+  let command_args = Format.sprintf "-stdin '%s' '%s' -stats -matcher .txt" match_template rewrite_template in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let stats_json = read_expect_stderr command source in
+  (match Statistics.of_yojson (Yojson.Safe.from_string stats_json) with
+   | Ok { number_of_files; lines_of_code; number_of_matches; _ } ->
+     Format.printf "number_of_files: %d, lines_of_code: %d, number_of_matches: %d"
+       number_of_files lines_of_code number_of_matches
+   | Error _ -> print_string "Unexpected error");
+  [%expect_exact {|number_of_files: 1, lines_of_code: 1, number_of_matches: 1|}]

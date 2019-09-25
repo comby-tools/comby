@@ -1,7 +1,4 @@
 open Core
-open Patdiff_lib
-
-open Configuration
 
 (* This is the default patdiff configuration, except whitespace is toggled to
    true. See patdiff/lib/configuration record for options.*)
@@ -45,8 +42,8 @@ let default context =
 )|} context
 
 let terminal ?(context = 16) () =
-  Config.t_of_sexp (Sexp.of_string (default context))
-  |> parse
+  Patdiff_lib.Configuration.Config.t_of_sexp (Sexp.of_string (default context))
+  |> Patdiff_lib.Configuration.parse
 
 let diff_configuration =
   {|;; -*- scheme -*-
@@ -85,8 +82,8 @@ let diff_configuration =
 )|}
 
 let match_diff () =
-  Config.t_of_sexp (Sexp.of_string diff_configuration)
-  |> parse
+  Patdiff_lib.Configuration.Config.t_of_sexp (Sexp.of_string diff_configuration)
+  |> Patdiff_lib.Configuration.parse
 
 (* Needs (unrefined true), otherwise it just prints without colors. Unrefined true
    will diff on a line basis. line_unified is ignored for unrefined, but
@@ -127,8 +124,8 @@ let plain_configuration =
 |}
 
 let plain () =
-  Config.t_of_sexp (Sexp.of_string plain_configuration)
-  |> parse
+  Patdiff_lib.Configuration.Config.t_of_sexp (Sexp.of_string plain_configuration)
+  |> Patdiff_lib.Configuration.parse
 
 type kind =
   | Plain

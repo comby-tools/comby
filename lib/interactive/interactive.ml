@@ -2,6 +2,8 @@ open Core
 open Lwt
 open Lwt_react
 
+open Configuration
+
 let debug =
   Sys.getenv "DEBUG_COMBY"
   |> Option.is_some

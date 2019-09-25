@@ -16,6 +16,7 @@
   test_string_literals
   test_special_matcher_cases
   test_generic
+  test_pipeline
   test_rewrite_parts
   test_rewrite_rule
   test_server
