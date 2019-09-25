@@ -1,0 +1,5 @@
+(library
+  (name interactive)
+  (public_name comby.interactive)
+  (preprocess (pps ppx_sexp_conv))
+  (libraries comby.configuration comby.match ppxlib core core.uuid lwt lwt_react lambda-term))

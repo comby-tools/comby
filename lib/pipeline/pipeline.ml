@@ -2,6 +2,7 @@ open Core
 
 open Hack_parallel
 
+open Configuration
 open Command_configuration
 open Command_input
 open Rewriter
