@@ -80,7 +80,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and verbose = flag "verbose" no_arg ~doc:(Format.sprintf "Log to %s" verbose_out_file)
     and rule = flag "rule" (optional_with_default "where true" string) ~doc:"rule Apply rules to matches."
     and match_timeout = flag "timeout" (optional_with_default 3 int) ~doc:"seconds Set match timeout on a source. Default: 3 seconds"
-    and target_directory = flag "directory" ~aliases:["d"] (optional_with_default (Sys.getcwd ()) string) ~doc:(Format.sprintf "path Run recursively on files in a directory. Default is current directory: %s" @@ Sys.getcwd ())
+    and target_directory = flag "directory" ~aliases:["d"] (optional_with_default (Sys.getcwd ()) string) ~doc:(Format.sprintf "path Run recursively on files in a directory relative to the root. Default is current directory: %s" @@ Sys.getcwd ())
     and directory_depth = flag "depth" (optional int) ~doc:"n Depth to recursively descend into directories"
     and specification_directories = flag "templates" (optional (Arg_type.comma_separated string)) ~doc:"path CSV of directories containing templates"
     and file_filters = flag "extensions" ~aliases:["e"; "file-extensions"; "f"] (optional (Arg_type.comma_separated string)) ~doc:"extensions Comma-separated extensions to include, like \".go\" or \".c,.h\". It is just a file suffix, so you can use it to filter file names like \"main.go\". The extension will be used to infer a matcher, unless -custom-matcher or -matcher is specified"
@@ -217,7 +217,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
   ]
 
 let default_command =
-  Command.basic ~summary:"Run a rewrite pass." base_command_parameters
+  Command.basic ~summary:"Run a rewrite pass. Comby runs in current directory by default. The '-stdin' option rewrites input on stdin." base_command_parameters
 
 let () =
   Scheduler.Daemon.check_entry_point ();

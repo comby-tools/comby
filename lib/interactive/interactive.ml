@@ -127,11 +127,11 @@ let handle_editor_errors = function
   | Lwt_unix.WEXITED 0 -> return `Ok
   | WEXITED e | WSIGNALED e | WSTOPPED e ->
     clear_screen () >>= fun () ->
-    let prompt =
+    let message =
       Format.sprintf
         "Error opening editor (error code %d)\n.
          Press any key to continue, or exit now (Ctrl-C).\n" e in
-    Lwt_io.print prompt >>= fun () ->
+    Lwt_io.print message >>= fun () ->
     Lwt_io.read Lwt_io.stdin >>= fun _input ->
     return `Ok
 
@@ -145,13 +145,14 @@ let handle_patch_errors = function
       if e = 127 then
         "Maybe the 'patch' command is not on your path?\n"
       else
-        ""
+        "Run the command again with DEBUG_COMBY=1 set in the environment for more info.\n"
     in
-    let _prompt =
+    let message =
       Format.sprintf
         "Error attempting patch, command exited with %d.\n\
          %s\
          Press any key to continue, or exit now (Ctrl-C).\n" e hint in
+    Lwt_io.print message >>= fun _input ->
     Lwt_io.read_line Lwt_io.stdin >>= fun _input ->
     return `Ok
 
@@ -219,7 +220,7 @@ let process_input default_is_accept hunk_patch prev_start next_start editor path
     | "q" ->
       raise Sys.Break
     | _ ->
-      Lwt_io.print "Uh, I don't know that one. Try again."
+      Lwt_io.printl "Uh, I don't know that one. Try again."
       >>= try_again
   in
   try_again ()
@@ -251,6 +252,7 @@ let run editor default_is_accept count rewrites =
     let do_one_file path rewritten_source =
       let open Patdiff_lib in
       let source_content = In_channel.read_all path in
+      let path = Filename_extended.make_relative path in
       let prev = Patdiff_core.{ name = path; text = source_content } in
       let next = Patdiff_core.{ name = path; text = rewritten_source } in
       let context = 3 in
@@ -268,8 +270,8 @@ let run editor default_is_accept count rewrites =
           in
           clear_screen () >>= fun () ->
           Lwt_io.printl hunk_pretty >>= fun () ->
-          let prev_start = hunk.prev_start + context in
-          let next_start = hunk.next_start + context in
+          let prev_start = hunk.prev_start + context - 1 in
+          let next_start = hunk.next_start + context - 1 in
           process_input
             default_is_accept
             ~continue:(fun () -> next_hunk hunks)

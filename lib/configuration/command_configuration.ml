@@ -351,9 +351,16 @@ let validate_errors { input_options; run_options = _; output_options } =
     , "-in-place may not be used with -stdout."
     ; output_options.overwrite_file_in_place && output_options.diff
     , "-in-place may not be used with -diff."
-    ; Option.is_some output_options.interactive_review && (input_options.stdin || Option.is_some input_options.zip_file || input_options.match_only)
+    ; Option.is_some output_options.interactive_review
+      && (input_options.stdin || Option.is_some input_options.zip_file || input_options.match_only)
     , "-review cannot be used with one or more of the following input flags: -stdin, -zip, -match-only."
-    ; Option.is_some output_options.interactive_review && (output_options.json_lines || output_options.json_only_diff || output_options.stdout || output_options.diff || output_options.overwrite_file_in_place || output_options.count)
+    ; Option.is_some output_options.interactive_review
+      && (output_options.json_lines
+          || output_options.json_only_diff
+          || output_options.stdout
+          || output_options.diff
+          || output_options.overwrite_file_in_place
+          || output_options.count)
     , "-review cannot be used with one or more of the following output flags: -json-lines, -json-only-diff, -stdout, -in-place, -count"
     ; input_options.anonymous_arguments = None &&
       (input_options.specification_directories = None
@@ -374,6 +381,11 @@ let validate_errors { input_options; run_options = _; output_options } =
     , "One or more directories specified with -templates is not a directory."
     ; output_options.json_only_diff && not output_options.json_lines
     , "-json-only-diff can only be supplied with -json-lines."
+    ; Option.is_some output_options.interactive_review &&
+      (not (String.equal input_options.target_directory (Sys.getcwd ())))
+    , "Please remove the -d option and `cd` to the directory where you want to \
+       review from. The -review, -editor, or -default-no options should only be run \
+       at the root directory of the project files to patch."
     ; let result = Rule.create input_options.rule in
       Or_error.is_error result
     , if Or_error.is_error result then
