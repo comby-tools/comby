@@ -18,6 +18,6 @@ RUN eval $(opam env) \
 ARG CACHEBUST=1
 
 RUN eval $(opam env) \
+    && cd comby \
     && make release \
-    && make test \
-    && cd ..
+    && make test
