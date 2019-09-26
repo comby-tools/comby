@@ -270,8 +270,8 @@ let run editor default_is_accept count rewrites =
           in
           clear_screen () >>= fun () ->
           Lwt_io.printl hunk_pretty >>= fun () ->
-          let prev_start = hunk.prev_start + context - 1 in
-          let next_start = hunk.next_start + context - 1 in
+          let prev_start = hunk.prev_start + context in
+          let next_start = hunk.next_start + context in
           process_input
             default_is_accept
             ~continue:(fun () -> next_hunk hunks)
