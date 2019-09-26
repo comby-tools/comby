@@ -1,6 +1,5 @@
 open Core
 open Lwt
-open Lwt_react
 
 open Configuration
 
@@ -120,57 +119,40 @@ module Diff = struct
 
 end
 
-module M = struct
-  class read_line term prompt = object(self)
-    inherit LTerm_read_line.read_line () as super
-    inherit [Zed_string.t] LTerm_read_line.term term
+let clear_screen () =
+  Lwt_io.print "\027[2J" >>= fun () ->
+  Lwt_io.print "\027[H"
 
-    method! show_box = false
-
-    method! send_action action =
-      super#send_action action
-
-    initializer
-      self#set_prompt begin
-        (S.const (LTerm_text.of_utf8 prompt))
-      end
-  end
-end
-
-let clear_screen terminal =
-  LTerm.clear_screen terminal >>= fun () ->
-  LTerm.with_context terminal (fun context ->
-      Lwt_io.write (LTerm.context_oc context) "\027[H")
-
-let handle_editor_errors terminal = function
+let handle_editor_errors = function
   | Lwt_unix.WEXITED 0 -> return `Ok
   | WEXITED e | WSIGNALED e | WSTOPPED e ->
-    clear_screen terminal >>= fun () ->
+    clear_screen () >>= fun () ->
     let prompt =
       Format.sprintf
         "Error opening editor (error code %d)\n.
          Press any key to continue, or exit now (Ctrl-C).\n" e in
-    (new M.read_line terminal prompt)#run >>= fun _ ->
+    Lwt_io.print prompt >>= fun () ->
+    Lwt_io.read Lwt_io.stdin >>= fun _input ->
     return `Ok
 
-let handle_patch_errors terminal = function
+let handle_patch_errors = function
   | Lwt_unix.WEXITED 0 -> return `Ok
   | WEXITED e
   | WSIGNALED e
   | WSTOPPED e ->
-    clear_screen terminal >>= fun () ->
+    clear_screen () >>= fun () ->
     let hint =
       if e = 127 then
         "Maybe the 'patch' command is not on your path?\n"
       else
         ""
     in
-    let prompt =
+    let _prompt =
       Format.sprintf
         "Error attempting patch, command exited with %d.\n\
          %s\
          Press any key to continue, or exit now (Ctrl-C).\n" e hint in
-    (new M.read_line terminal prompt)#run >>= fun _ ->
+    Lwt_io.read_line Lwt_io.stdin >>= fun _input ->
     return `Ok
 
 let apply_patch hunk_patch =
@@ -180,45 +162,45 @@ let apply_patch hunk_patch =
   Lwt_io.close process#stdin >>= fun () ->
   Lwt_io.read process#stdout >>= fun stdout ->
   Lwt_io.read process#stderr >>= fun stderr ->
-  (if debug then LTerm.printf "[debug] %s,%s\n" stdout stderr else return ()) >>= fun () ->
+  (if debug then Lwt_io.printf "[debug] %s,%s\n" stdout stderr else return ()) >>= fun () ->
   process#close
 
 let drop_into_editor editor path ~at_line =
   let command = Format.sprintf "%s +%d %s" editor at_line path in
   Lwt_unix.system command
 
-let process_input default_is_accept hunk_patch prev_start next_start terminal editor path ~continue =
+
+let process_input default_is_accept hunk_patch prev_start next_start editor path ~continue =
   let prompt =
-    let open LTerm_style in
-    let open LTerm_text in
     if default_is_accept then
-      [ S"Accept change ("
-      ; B_fg green; S"y = yes"; E_fg; S" [default], "
-      ; B_fg red; S"n = no"; E_fg; S", "
-      ; B_fg yellow; S"e = edit original"; E_fg; S", "
-      ; B_fg yellow; S"E = apply+edit"; E_fg; S", "
-      ; S"q = quit)?"
+      [ "Accept change ("
+      ; "\x1b[32m"; "y = yes"; "\x1b[0m"; "\x1b[1m"; " [default], "; "\x1b[0m"
+      ; "\x1b[31m"; "n = no"; "\x1b[0m"; ", "
+      ; "\x1b[33m"; "e = edit original"; "\x1b[0m"; ", "
+      ; "\x1b[33m"; "E = apply+edit"; "\x1b[0m"; ", "
+      ; "q = quit)?"
       ]
     else
-      [ S"Accept change ("
-      ; B_fg green; S"y = yes"; E_fg; S", "
-      ; B_fg red; S"n = no"; E_fg; S" [default], "
-      ; B_fg yellow; S"e = edit original"; E_fg; S", "
-      ; B_fg yellow; S"E = apply+edit"; E_fg; S", "
-      ; S"q = quit)?"
+      [ "Accept change ("
+      ; "\x1b[32m"; "y = yes"; "\x1b[0m"; ", "
+      ; "\x1b[31m"; "n = no"; "\x1b[0m"; "\x1b[1m"; " [default], "; "\x1b[0m"
+      ; "\x1b[33m"; "e = edit original"; "\x1b[0m"; ", "
+      ; "\x1b[33m"; "E = apply+edit"; "\x1b[0m"; ", "
+      ; "q = quit)?"
       ]
   in
-  LTerm.printls (LTerm_text.(eval prompt)) >>= fun () ->
+  let prompt = String.concat prompt in
+  Lwt_io.printl prompt >>= fun () ->
   let rec try_again () =
-    (new M.read_line terminal "")#run >>= fun key_pressed ->
-    match Zed_string.to_utf8 key_pressed with
+    Lwt_io.read_line Lwt_io.stdin >>= fun input ->
+    match input with
     | "y" ->
       apply_patch hunk_patch
-      >>= handle_patch_errors terminal
+      >>= handle_patch_errors
       >>= fun _ -> continue ()
     | "" when default_is_accept ->
       apply_patch hunk_patch
-      >>= handle_patch_errors terminal
+      >>= handle_patch_errors
       >>= fun _ -> continue ()
     | "n" ->
       continue ()
@@ -226,18 +208,18 @@ let process_input default_is_accept hunk_patch prev_start next_start terminal ed
       continue ()
     | "e" ->
       drop_into_editor editor path ~at_line:prev_start
-      >>= handle_editor_errors terminal
+      >>= handle_editor_errors
       >>= fun _ -> continue ()
     | "E" ->
       apply_patch hunk_patch
-      >>= handle_patch_errors terminal
+      >>= handle_patch_errors
       >>= fun _ -> drop_into_editor editor path ~at_line:next_start
-      >>= handle_editor_errors terminal
+      >>= handle_editor_errors
       >>= fun _ -> continue ()
     | "q" ->
       raise Sys.Break
     | _ ->
-      LTerm.printl "Uh, I don't know that one. Try again."
+      Lwt_io.print "Uh, I don't know that one. Try again."
       >>= try_again
   in
   try_again ()
@@ -249,25 +231,23 @@ type input =
 
 let run editor default_is_accept count rewrites =
   let thread () =
-    Lazy.force LTerm.stdout >>= fun terminal ->
     let size = List.length rewrites in
     let text =
-      let open LTerm_style in
-      let open LTerm_text in
-      [S"There "] @
-      (if count = 1 then [S"is "; B_fg green; S"1"; E_fg; S" match"]
-       else [S"are "; B_fg green; S(Format.sprintf "%d" count); E_fg; S" matches"]) @
-      [S" in total, "] @
-      (if size = 1 then [S"in "; B_fg green; S"1"; E_fg; S" file"]
-       else [S"spread across "; B_fg green; S(Format.sprintf "%d" size); E_fg; S" files"]) @
-      [S" to review.\n\
-         Press "; B_fg green; S"any key"; E_fg;
-       S" to continue on this patching adventure \
-         ("; B_fg red; S"Ctrl-C to cancel"; E_fg; S")."]
+      ["There "] @
+      (if count = 1 then ["is "; "\x1b[32m"; "1"; "\x1b[0m"; " match"]
+       else ["are "; "\x1b[32m"; Format.sprintf "%d" count; "\x1b[0m"; " matches"]) @
+      [" in total, "] @
+      (if size = 1 then ["in "; "\x1b[32m"; "1"; "\x1b[0m"; " file"]
+       else ["spread across "; "\x1b[32m"; Format.sprintf "%d" size; "\x1b[0m"; " files"]) @
+      [" to review.\n\
+        Press "; "\x1b[32m"; "any key"; "\x1b[0m";
+       " to continue on this patching adventure \
+        ("; "\x1b[31m"; "Ctrl-C to cancel"; "\x1b[0m"; ")."]
     in
-    clear_screen terminal >>= fun () ->
-    LTerm.printls (LTerm_text.(eval text)) >>= fun () ->
-    (new M.read_line terminal "")#run >>= fun _ ->
+    let text = String.concat text in
+    clear_screen () >>= fun () ->
+    Lwt_io.printl text >>= fun () ->
+    Lwt_io.read_line Lwt_io.stdin >>= fun _input ->
     let do_one_file path rewritten_source =
       let open Patdiff_lib in
       let source_content = In_channel.read_all path in
@@ -286,8 +266,8 @@ let run editor default_is_accept count rewrites =
             let apply = Diff.apply_style one_hunk prev next in
             apply ~with_style:(`Pretty context), apply ~with_style:`Plain
           in
-          clear_screen terminal >>= fun () ->
-          LTerm.printl hunk_pretty >>= fun () ->
+          clear_screen () >>= fun () ->
+          Lwt_io.printl hunk_pretty >>= fun () ->
           let prev_start = hunk.prev_start + context in
           let next_start = hunk.next_start + context in
           process_input
@@ -296,7 +276,6 @@ let run editor default_is_accept count rewrites =
             hunk_patch
             prev_start
             next_start
-            terminal
             editor
             path
       in

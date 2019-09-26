@@ -1,6 +1,7 @@
 **
 !src
 !lib
+!docs
 !test
 !Makefile
 !comby.opam
