@@ -102,7 +102,7 @@ if [ $SUCCESS_IN_PATH == "notinpath" ]; then
 fi
 
 
-CHECK=$(printf 'printf("hello world!\\\n");' | $INSTALL_DIR/comby 'printf("hello :[1]!\\n");' 'printf("hello comby!\\n");' -stdin || echo broken)
+CHECK=$(printf 'printf("hello world!\\\n");' | $INSTALL_DIR/comby 'printf("hello :[1]!\\n");' 'printf("hello comby!\\n");' .c -stdin || echo broken)
 if [ "$CHECK"  == "broken" ]; then
     printf "${RED}[-]${NORMAL} ${YELLOW}comby${NORMAL} did not install correctly.\n"
     printf "${YELLOW}[-]${NORMAL} My guess is that you need to install the pcre library on your system. Try:\n"
