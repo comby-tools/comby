@@ -418,3 +418,15 @@ let%expect_test "contextual_matching_with_short_hole_syntax" =
   let rewrite_template = {|:[[1]]|} in
   run source match_template rewrite_template;
   [%expect_exact {|dst1; dst2;|}]
+
+let%expect_test "trivial_empty_case" =
+  let source = "" in
+  let match_template = "" in
+  begin
+    Generic.all ~configuration ~template:match_template ~source
+    |> function
+    | [] -> print_string "No matches."
+    | hd :: _ ->
+      print_string (Yojson.Safe.to_string (Match.to_yojson hd))
+  end;
+  [%expect_exact {|{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":0,"line":1,"column":1}},"environment":[],"matched":""}|}]

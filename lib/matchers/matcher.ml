@@ -733,7 +733,19 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     let set_start_pos p = fun s -> p (advance_state s shift) in
     let p = set_start_pos p in
     match parse_string' p source (Match.create ()) with
-    | Success (_, result) -> Ok result
+    | Success (_, result) ->
+      if source = "" then
+        (* If source is empty and p succeeds, it's the trivial case. We set
+           the result manually. *)
+        Ok {
+          result with
+          range =
+            { match_start = { offset = 0; line = 1; column = 1 }
+            ; match_end = { offset = 0; line = 1; column = 1 }
+            }
+        }
+      else
+        Ok result
     | Failed (msg, _) -> Or_error.error_string msg
 
   let first ?configuration ?shift template source =
@@ -756,25 +768,28 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     in
     make_result @@ begin
       to_template template >>= fun p ->
-      if original_source = "" || template = "" then
-        return []
-      else
-        let rec aux acc shift =
-          match first' shift p original_source with
-          | Ok ({range = { match_start; match_end; _ }; _} as result) ->
-            let shift = match_end.offset in
-            let matched = extract_matched_text original_source match_start match_end in
-            let result = { result with matched } in
-            if shift >= String.length original_source then
-              result :: acc
-            else
-              aux (result :: acc) shift
-          | Error _ -> acc
-        in
-        let matches = aux [] 0 |> List.rev in
-        (* TODO(RVT): reintroduce nested matches *)
-        let compute_nested_matches matches = matches in
-        let matches = compute_nested_matches matches in
-        return matches
+      let p =
+        if template = "" then
+          MParser.(eof >> return Unit)
+        else
+          p
+      in
+      let rec aux acc shift =
+        match first' shift p original_source with
+        | Ok ({range = { match_start; match_end; _ }; _} as result) ->
+          let shift = match_end.offset in
+          let matched = extract_matched_text original_source match_start match_end in
+          let result = { result with matched } in
+          if shift >= String.length original_source then
+            result :: acc
+          else
+            aux (result :: acc) shift
+        | Error _ -> acc
+      in
+      let matches = aux [] 0 |> List.rev in
+      (* TODO(RVT): reintroduce nested matches *)
+      let compute_nested_matches matches = matches in
+      let matches = compute_nested_matches matches in
+      return matches
     end
 end
