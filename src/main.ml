@@ -76,7 +76,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
   [%map_open
      (* flags. *)
     let sequential = flag "sequential" no_arg ~doc:"Run sequentially"
-    and match_only = flag "match-only" no_arg ~doc:"Only perform matching. Put an empty rewrite template as the second argument on the CLI (it is ignored)"
+    and match_only = flag "match-only" no_arg ~aliases:["only-matching"; "o"] ~doc:"Only perform matching. Put an empty rewrite template as the second argument on the CLI (it is ignored)"
     and verbose = flag "verbose" no_arg ~doc:(Format.sprintf "Log to %s" verbose_out_file)
     and rule = flag "rule" (optional_with_default "where true" string) ~doc:"rule Apply rules to matches."
     and match_timeout = flag "timeout" (optional_with_default 3 int) ~doc:"seconds Set match timeout on a source. Default: 3 seconds"
