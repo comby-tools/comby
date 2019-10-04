@@ -12,13 +12,16 @@
 ### See the [usage documentation](https://comby.dev).
 [A short example below](https://github.com/comby-tools/comby#arent-regex-approaches-like-sed-good-enough) shows how comby simplifies matching and rewriting compared to regex approaches like `sed`.
 
-## Install
+**Need help writing patterns or have other problems? Consider posting in [Gitter](https://gitter.im/comby-tools/community).**
 
-### Binary (Mac OS X and Ubuntu Linux) `bash <(curl -sL get.comby.dev)`
 
-- Arch and other Linux: The PCRE library is dynamically linked in the Ubuntu binary. For other distributions, like Arch, a fixup is needed: `ln -s /usr/lib/libpcre.so /usr/lib/libpcre.so.3`. Alternatively, consider [building from source](https://github.com/comby-tools/comby#build-from-source).
+## Install (pre-built binaries)
 
-- Mac OS X: If you run into `dyld: Library not loaded: /usr/local/opt/pcre/lib/libpcre.1.dylib`, try run this fixup:
+### Mac OS X
+
+- `bash <(curl -sL get.comby.dev)`
+
+- If you run into `dyld: Library not loaded: /usr/local/opt/pcre/lib/libpcre.1.dylib`, try run this fixup:
 
 <details>
   <summary>click to expand</summary>
@@ -29,20 +32,38 @@ install_name_tool -change /usr/local/opt/pcre/lib/libpcre.1.dylib /usr/local/bre
 
 </details>
 
+### Ubuntu Linux
 
-### With docker: `docker pull comby/comby`
+- `bash <(curl -sL get.comby.dev)`
 
+- **Arch and other Linux**: The PCRE library is dynamically linked in the Ubuntu binary. For other distributions, like Arch, a fixup is needed: `ln -s /usr/lib/libpcre.so /usr/lib/libpcre.so.3`. Alternatively, consider [building from source](https://github.com/comby-tools/comby#build-from-source).
+
+
+### Windows
+
+- [Install the Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/install-win10) and install Ubuntu. Then run `bash <(curl -sL get.comby.dev)`
+
+
+### Docker
+
+- `docker pull comby/comby`
+
+<details>
+  <summary>click to expand an example invocation for the docker image</summary>
+  
 Running with docker on `stdin`:
 
 ```bash
 echo '(👋 hi)' | docker run -a stdin -a stdout -i comby/comby '(:[emoji] hi)' 'bye :[emoji]' lisp -stdin
 ```
 
-<!--<img width="500" src="https://user-images.githubusercontent.com/888624/64924862-0edf1a00-d7b7-11e9-9c2e-cfeafde5bb4b.png">-->
+<img width="500" src="https://user-images.githubusercontent.com/888624/64924862-0edf1a00-d7b7-11e9-9c2e-cfeafde5bb4b.png">
+
+</details>
+
+
 
 ### Or [try it live](https://bit.ly/2UXkonD).
-
-**Need help writing patterns or have other problems? Consider posting in [Gitter](https://gitter.im/comby-tools/community).**
 
 ## Aren't regex approaches like sed good enough?
 
