@@ -152,6 +152,7 @@ type run_options =
   ; number_of_workers : int
   ; dump_statistics : bool
   ; substitute_in_place : bool
+  ; disable_substring_matching : bool
   }
 
 type user_input =
@@ -459,6 +460,7 @@ let create
          ; number_of_workers
          ; dump_statistics
          ; substitute_in_place
+         ; disable_substring_matching
          }
      ; output_options =
          ({ overwrite_file_in_place
@@ -556,6 +558,7 @@ let create
         ; number_of_workers
         ; dump_statistics
         ; substitute_in_place
+        ; disable_substring_matching
         }
     ; output_printer
     ; interactive_review

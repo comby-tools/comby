@@ -59,6 +59,7 @@ type run_options =
   ; number_of_workers : int
   ; dump_statistics : bool
   ; substitute_in_place : bool
+  ; disable_substring_matching : bool
   }
 
 type user_input =

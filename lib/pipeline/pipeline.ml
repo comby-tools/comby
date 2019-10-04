@@ -283,6 +283,7 @@ let run
         ; number_of_workers
         ; dump_statistics
         ; substitute_in_place
+        ; disable_substring_matching
         }
     ; output_printer
     ; interactive_review
@@ -290,7 +291,7 @@ let run
   =
   let number_of_workers = if sequential then 0 else number_of_workers in
   let scheduler = Scheduler.create ~number_of_workers () in
-  let match_configuration = Configuration.create ~match_kind:Fuzzy () in
+  let match_configuration = Configuration.create ~disable_substring_matching ~match_kind:Fuzzy () in
   let start_time = Statistics.Time.start () in
 
   let per_unit ~input ~path =
