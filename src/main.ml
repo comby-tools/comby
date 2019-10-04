@@ -103,6 +103,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and interactive_review = flag "review" ~aliases:["r"] no_arg ~doc:"Review each patch and accept, reject, or modify it with your editor of choice. Defaults to $EDITOR. If $EDITOR is unset, defaults to \"vim\". Override $EDITOR with the -editor flag."
     and editor = flag "editor" (optional string) ~doc:"editor Perform manual review with [editor]. This activates -review mode."
     and editor_default_is_reject = flag "default-no" no_arg ~doc:"If set, the default action in review (pressing return) will NOT apply the change. Setting this option activates -review mode."
+    and disable_substring_matching = flag "disable-substring-matching" no_arg ~doc:"Allow :[holes] to match substrings"
     and anonymous_arguments =
       anon
         (maybe
@@ -184,6 +185,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; number_of_workers
             ; dump_statistics
             ; substitute_in_place
+            ; disable_substring_matching
             }
         ; output_options =
             { color

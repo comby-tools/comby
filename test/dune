@@ -20,6 +20,7 @@
   test_rewrite_parts
   test_rewrite_rule
   test_server
+  test_substring_disabled
   test_user_defined_language)
  (inline_tests)
  (preprocess (pps ppx_expect ppx_sexp_message ppx_deriving_yojson ppx_deriving_yojson.runtime))

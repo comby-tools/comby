@@ -191,7 +191,20 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     (* Backtrack on failure, specifically for alphanum. *)
     |> attempt
 
-  (** All code can have comments interpolated *)
+  (** Generates a word that is NOT OK with having alphanum chars before or after
+      it. This disables substring parsing. *)
+  let generate_word chars : ('c, _) parser =
+    (fun s ->
+       let prev = prev_char s in
+       (match prev with
+        | Some prev when is_alphanum (Char.to_string prev) -> fail "unsat"
+        | _ ->
+          string (String.of_char_list chars)
+          >>= fun result ->
+          (* there has to be at least one "not alphanum" after this parser for it to succeed, or eof. *)
+          look_ahead (skip (many1 (is_not alphanum)) <|> eof) >>= fun _ ->
+          f result) s)
+
   let generate_string_token_parser str : ('c, _) parser =
     many comment_parser
     >> string str
@@ -616,20 +629,23 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       [`Everything; `Non_space; `Alphanum; `Line; `Blank]
       |> List.map ~f:(fun kind -> attempt (hole_parser kind Code))
     in
-    choice holes
-    (* String literals are handled specially because match semantics change inside string delimiters. *)
-    <|> (raw_string_literal_parser (generate_hole_for_literal Raw_string_literal))
-    <|> (escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal))
-    (* Nested delimiters are handled specially for nestedness. *)
-    <|> (nested_delimiters_parser generate_outer_delimiter_parsers)
-    (* Whitespace is handled specially because we may change whether they are significant for matching. *)
-    <|> (spaces1 |>> generate_spaces_parser)
-    (* Everything else. *)
-    <|>
-    ((many1 (is_not (reserved _s)) >>= fun cl ->
-      if debug then Format.printf "<cl>%s</cl>" @@ String.of_char_list cl;
-      return @@ String.of_char_list cl)
-     |>> generate_string_token_parser)
+    choice
+      [ choice holes
+      (* String literals are handled specially because match semantics change inside string delimiters. *)
+      ; raw_string_literal_parser (generate_hole_for_literal Raw_string_literal)
+      ; escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal)
+      (* Nested delimiters are handled specially for nestedness. *)
+      ; nested_delimiters_parser generate_outer_delimiter_parsers
+      (* Whitespace is handled specially because we may change whether they are significant for matching. *)
+      ; spaces1 |>> generate_spaces_parser
+      (* Optional: parse identifiers and disallow substring matching *)
+      ; if !configuration_ref.disable_substring_matching then many1 (alphanum <|> char '_') |>> generate_word else zero
+      (* Everything else. *)
+      ; (many1 (is_not (reserved _s)) >>= fun cl ->
+         if debug then Format.printf "<cl>%s</cl>" @@ String.of_char_list cl;
+         return @@ String.of_char_list cl)
+        |>> generate_string_token_parser
+      ]
 
   and generate_outer_delimiter_parsers ~left_delimiter ~right_delimiter s =
     let before s =

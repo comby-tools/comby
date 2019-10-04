@@ -19,6 +19,7 @@ let configuration =
       ; number_of_workers = 4
       ; dump_statistics = false
       ; substitute_in_place = true
+      ; disable_substring_matching = false
       }
   ; output_printer = (fun _ -> ())
   ; interactive_review = None
