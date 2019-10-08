@@ -7,6 +7,7 @@ The purpose of this file is to give a high-level overview of planned features. T
 - [ ] Official support for match rules that contain hole syntax. This needs planning to document and test the desired semantics.
 - [ ] Matching support for arbitrary tagged delimiters, like HTML `<p>foo</p>`.
 - [ ] Switching horizontal/vertical layout in comby.live.
+- [ ] Work out matching semantics for "first argument" in common functon syntax.
 
 ### In the coming 3 to 6 months (Oct 2019 - Feb 2020)
 - [ ] Indentation-sensitive support.
