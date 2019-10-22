@@ -554,6 +554,31 @@ module OCaml = struct
   include Matcher.Make (Syntax) (Info)
 end
 
+module Reason = struct
+  module Info = struct
+    let name = "Reason"
+    let extensions = [".re"; ".rei"]
+  end
+
+  module Syntax = struct
+    include Generic.Syntax
+
+    let user_defined_delimiters =
+      Generic.Syntax.user_defined_delimiters
+
+    (* Excludes ' as escapable string literal, since these can be used in
+       typing. *)
+    let escapable_string_literals = ordinary_string
+
+    let comments =
+      [ Nested_multiline ("/*", "*/")
+      ]
+  end
+
+  include Matcher.Make (Syntax) (Info)
+end
+
+
 module Fsharp = struct
   module Info = struct
     let name = "F#"
@@ -705,6 +730,7 @@ let all : (module Types.Matcher.S) list =
   ; (module Pascal)
   ; (module Php)
   ; (module Python)
+  ; (module Reason)
   ; (module Ruby)
   ; (module Rust)
   ; (module Scala)
