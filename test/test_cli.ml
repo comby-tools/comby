@@ -302,6 +302,7 @@ let%expect_test "list_languages" =
  -matcher .pas      Pascal    
  -matcher .php      PHP       
  -matcher .py       Python    
+ -matcher .re       Reason    
  -matcher .rb       Ruby      
  -matcher .rs       Rust      
  -matcher .scala    Scala     
