@@ -419,6 +419,37 @@ module Scala = struct
   include Matcher.Make (C.Syntax) (Info)
 end
 
+module Nim = struct
+  module Info = struct
+    let name = "Nim"
+    let extensions = [".nim"]
+  end
+
+  module Syntax = struct
+    include Dyck.Syntax
+
+
+    (* Excludes ' as escapable string literal, since these can be used in
+       as type suffixes like 'i8 *)
+    let escapable_string_literals = ordinary_string
+
+    let raw_string_literals =
+      [ ({|"""|}, {|"""|})
+      (* Not supported: "raw" string literals as defined in https://nim-lang.org/docs/manual.html#lexical-analysis-raw-string-literals where r"a""b" means the two "" are escaped to single *)
+      (* Not supported: generalized raw string literals as in https://nim-lang.org/docs/manual.html#lexical-analysis-raw-string-literals that needs more special casing in the lexer *)
+
+      ]
+
+    let comments =
+      [ Until_newline "#"
+      ; Nested_multiline ("#[", "]#")
+      ]
+  end
+
+  include Matcher.Make (Syntax) (Info)
+end
+
+
 module Dart = struct
   module Info = struct
     let name = "Dart"
@@ -725,6 +756,7 @@ let all : (module Types.Matcher.S) list =
   ; (module Kotlin)
   ; (module Latex)
   ; (module Lisp)
+  ; (module Nim)
   ; (module OCaml)
   ; (module Paren)
   ; (module Pascal)
