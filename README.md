@@ -87,7 +87,7 @@ To match these with comby, all you need to write is `if (:[condition])`, and spe
 
 ```
 opam init
-opam switch create 4.08.1 4.08.1 
+opam switch create 4.08.1 4.08.1
 ```
 
 - [Install OS dependencies:](#os-dependencies)
