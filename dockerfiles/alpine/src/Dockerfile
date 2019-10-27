@@ -1,4 +1,4 @@
-FROM ocaml/opam2:alpine-3.10-ocaml-4.07
+FROM ocaml/opam2:alpine-3.10-ocaml-4.09
 
 WORKDIR /home/opam
 

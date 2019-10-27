@@ -10,7 +10,7 @@ build: [
     ["jbuilder" "build" "-p" name "-j" jobs "@install"]
 ]
 depends: [
-  "ocaml" {>= "4.07.0"}
+  "ocaml" {>= "4.08.1"}
   "core" {>= "0.12.2"}
   "lwt" {>= "4.3.0"}
   "mparser-comby"
