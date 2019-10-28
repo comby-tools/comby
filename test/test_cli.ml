@@ -99,6 +99,14 @@ let%expect_test "error_on_zip_and_stdin" =
 Next error: -zip may not be used with -stdin.
 |}]
 
+let%expect_test "error_on_stdout_and_diff" =
+  let command_args = "'' '' -stdout -diff" in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command "none" in
+  print_string result;
+  [%expect_exact {|-stdout may not be used with -diff. Note: -stdout outputs the changed file contents and -diff outputs a unified diff. Choose one of these.
+|}]
+
 let%expect_test "error_on_invalid_templates_dir" =
   let source = "hello world" in
   let match_template = "hello :[1]" in

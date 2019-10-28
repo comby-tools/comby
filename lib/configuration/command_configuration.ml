@@ -346,6 +346,9 @@ let validate_errors { input_options; run_options = _; output_options } =
   let violations =
     [ input_options.stdin && Option.is_some input_options.zip_file
     , "-zip may not be used with -stdin."
+    ; output_options.stdout && output_options.diff
+    , "-stdout may not be used with -diff. Note: -stdout outputs the changed \
+       file contents and -diff outputs a unified diff. Choose one of these."
     ; output_options.overwrite_file_in_place && is_some input_options.zip_file
     , "-in-place may not be used with -zip."
     ; output_options.overwrite_file_in_place && output_options.stdout
