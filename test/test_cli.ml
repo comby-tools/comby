@@ -908,3 +908,29 @@ let%expect_test "dump_stats" =
        number_of_files lines_of_code number_of_matches
    | Error _ -> print_string "Unexpected error");
   [%expect_exact {|number_of_files: 1, lines_of_code: 1, number_of_matches: 1|}]
+
+let%expect_test "substitute_bad_parse" =
+  let source = "dont care" in
+  let match_template = "dont care" in
+  let rewrite_template = "dont care" in
+  let command_args = Format.sprintf "%s %s -substitute 'json'" match_template rewrite_template in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_expect_stdin_and_stdout command source
+  |> print_string;
+  [%expect_exact {|Error, could not parse JSON to environment: Line 1, bytes 0-4:
+Invalid token 'json'
+|}]
+
+let%expect_test "substitute_ok" =
+  let source = "a match1 c d a match2 c d" in
+  let match_template = "ignored" in
+  let rewrite_template = "a :[1] c d" in
+  let environment = {|[{"variable":"1","value":"match1","range":{"start":{"offset":2,"line":1,"column":3},"end":{"offset":8,"line":1,"column":9}}}]|} in
+  let command_args =
+    Format.sprintf "'%s' '%s' -stdin -match-only -matcher .txt -substitute '%s'" match_template rewrite_template environment
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_expect_stdin_and_stdout command source
+  |> print_string;
+  [%expect_exact {|a match1 c d
+|}]
