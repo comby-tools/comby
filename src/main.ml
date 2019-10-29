@@ -72,6 +72,34 @@ let list_supported_languages_and_exit () =
   Format.printf "%s%!" list;
   exit 0
 
+let substitute_environment_only_and_exit anonymous_arguments json_environment =
+  let rewrite_template =
+    match anonymous_arguments with
+    | Some { rewrite_template; _ } -> rewrite_template
+    | None ->
+      Format.eprintf
+        "When the -substitute-only argument is active, a rewrite template must \
+         be in the second anonymous argument. For example: `comby 'ignored' \
+         'rewrite_template' -substitute-only 'JSON-for-the-environment'`.";
+      exit 1
+  in
+  match Yojson.Safe.from_string (Option.value_exn json_environment) with
+  | json ->
+    begin
+      Match.Environment.of_yojson json
+      |> function
+      | Ok environment ->
+        let substituted, _ = Rewriter.Rewrite_template.substitute rewrite_template environment in
+        Format.printf "%s@." substituted;
+        exit 0
+      | Error err ->
+        Format.eprintf "Error, could not convert input to environment: %s@." err;
+        exit 1
+    end
+  | exception Yojson.Json_error err ->
+    Format.eprintf "Error, could not parse JSON to environment: %s@." err;
+    exit 1
+
 let base_command_parameters : (unit -> 'result) Command.Param.t =
   [%map_open
      (* flags. *)
@@ -94,6 +122,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and dump_statistics = flag "statistics" ~aliases:["stats"] no_arg ~doc:"Dump statistics to stderr"
     and stdin = flag "stdin" no_arg ~doc:"Read source from stdin"
     and stdout = flag "stdout" no_arg ~doc:"Print changed content to stdout. Useful to editors for reading in changed content."
+    and substitute_environment = flag "substitute-only" (optional string) ~doc:"JSON Substitute the environment specified in JSON into the rewrite template and output the substitution. Do not match or rewrite anything (match templates and inputs are ignored)."
     and diff = flag "diff" no_arg ~doc:"Output diff"
     and color = flag "color" no_arg ~doc:"Color matches or replacements (patience diff)."
     and newline_separated_rewrites = flag "newline-separated" no_arg ~doc:"Instead of rewriting in place, output rewrites separated by newlines."
@@ -139,6 +168,8 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           { match_template; rewrite_template; file_filters })
     in
     if list then list_supported_languages_and_exit ();
+    if Option.is_some substitute_environment then
+      substitute_environment_only_and_exit anonymous_arguments substitute_environment;
     let interactive_review =
       let default_editor =
         let f = Option.some in
