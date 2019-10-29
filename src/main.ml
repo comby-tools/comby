@@ -78,10 +78,9 @@ let substitute_environment_only_and_exit anonymous_arguments json_environment =
     | Some { rewrite_template; _ } -> rewrite_template
     | None ->
       Format.eprintf
-        "When the -substitute-only argument is active, a rewrite\
-         template must be in the second anonymous argument. For \
-         example: comby 'ignored' 'rewrite_template' \
-         -substitute-only 'JSON-for-the-environment'.";
+        "When the -substitute-only argument is active, a rewrite template must \
+         be in the second anonymous argument. For example: `comby 'ignored' \
+         'rewrite_template' -substitute-only 'JSON-for-the-environment'`.";
       exit 1
   in
   match Yojson.Safe.from_string (Option.value_exn json_environment) with

@@ -924,13 +924,13 @@ Invalid token 'json'
 let%expect_test "substitute_ok" =
   let source = "a match1 c d a match2 c d" in
   let match_template = "ignored" in
-  let rewrite_template = "a :[1] c d" in
-  let environment = {|[{"variable":"1","value":"match1","range":{"start":{"offset":2,"line":1,"column":3},"end":{"offset":8,"line":1,"column":9}}}]|} in
+  let rewrite_template = ":[1] :[2]" in
+  let environment = {|[{"variable":"1","value":"hole_1"},{"variable":"2","value":"hole_2"}]|} in
   let command_args =
     Format.sprintf "'%s' '%s' -stdin -match-only -matcher .txt -substitute '%s'" match_template rewrite_template environment
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_expect_stdin_and_stdout command source
   |> print_string;
-  [%expect_exact {|a match1 c d
+  [%expect_exact {|hole_1 hole_2
 |}]
