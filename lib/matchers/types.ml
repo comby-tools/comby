@@ -55,11 +55,24 @@ type hole =
   | Line of (id * dimension)
   | Blank of (id * dimension)
 
+module Omega = struct
+  type omega_match_production =
+    { offset : int
+    ; identifier : string
+    ; text : string
+    }
+
+  type production =
+    | Unit
+    | String of string
+    | Hole of hole
+    | Match of omega_match_production
+end
+
 type production =
   | Unit
   | String of string
   | Hole of hole
-  | Match of (int * string * string)
 
 module Matcher = struct
   module type S = sig

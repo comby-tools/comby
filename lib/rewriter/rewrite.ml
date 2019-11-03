@@ -3,7 +3,14 @@ open Core
 open Match
 open Replacement
 
+let debug =
+  Sys.getenv "DEBUG_COMBY"
+  |> Option.is_some
+
+
 let substitute_match_contexts (matches: Match.t list) source replacements =
+  if debug then
+    Format.printf "Matches: %d | Replacements: %d@." (List.length matches) (List.length replacements);
   let rewrite_template, environment =
     List.fold2_exn
       matches replacements
@@ -13,14 +20,21 @@ let substitute_match_contexts (matches: Match.t list) source replacements =
            { replacement_content; _ } ->
            (* create a hole in the rewrite template based on this match context *)
            let hole_id, rewrite_template = Rewrite_template.of_match_context match_ ~source:rewrite_template in
+           if debug then Format.printf "Hole: %s in %s@." hole_id rewrite_template;
            (* add this match context replacement to the environment *)
            let accumulator_environment = Environment.add accumulator_environment hole_id replacement_content in
            (* update match context replacements offset *)
            rewrite_template, accumulator_environment)
   in
+  if debug then Format.printf "Env:@.%s" (Environment.to_string environment);
+  if debug then Format.printf "Rewrite in:@.%s@." rewrite_template;
   let rewritten_source = Rewrite_template.substitute rewrite_template environment |> fst in
   let offsets = Rewrite_template.get_offsets_for_holes rewrite_template (Environment.vars environment) in
+  if debug then
+    Format.printf "Replacements: %d | Offsets 1: %d@." (List.length replacements) (List.length offsets);
   let offsets = Rewrite_template.get_offsets_after_substitution offsets environment in
+  if debug then
+    Format.printf "Replacements: %d | Offsets 2: %d@." (List.length replacements) (List.length offsets);
   let in_place_substitutions =
     List.map2_exn replacements offsets ~f:(fun replacement (_uid, offset) ->
         let match_start = { Location.default with offset } in

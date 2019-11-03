@@ -1,4 +1,4 @@
-open Core
+(*open Core
 
 module Time = Core_kernel.Time_ns.Span
 
@@ -942,3 +942,4 @@ let%expect_test "substitute_ok" =
   |> print_string;
   [%expect_exact {|hole_1 hole_2
 |}]
+  *)

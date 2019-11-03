@@ -5,7 +5,7 @@ open Lwt.Infix
 open Match
 open Server_types
 
-let binary_path = "../../../comby-server"
+let binary_path = "../../../../comby-server"
 
 let port = "9991"
 

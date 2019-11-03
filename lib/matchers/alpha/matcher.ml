@@ -47,7 +47,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
      | Some { delimiters; escape_character } ->
        List.map delimiters ~f:(fun delimiter ->
            let module M =
-             Parsers.String_literals.Escapable.Make(struct
+             Parsers.String_literals.Alpha.Escapable.Make(struct
                let delimiter = delimiter
                let escape = escape_character
              end)
@@ -59,7 +59,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let raw_string_literal_parser (f : 'a literal_parser_callback) =
     List.map Syntax.raw_string_literals ~f:(fun (left_delimiter, right_delimiter) ->
         let module M =
-          Parsers.String_literals.Raw.Make(struct
+          Parsers.String_literals.Alpha.Raw.Make(struct
             let left_delimiter = left_delimiter
             let right_delimiter = right_delimiter
           end)
@@ -75,7 +75,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       List.map syntax ~f:(function
           | Multiline (left, right) ->
             let module M =
-              Parsers.Comments.Multiline.Make(struct
+              Parsers.Comments.Alpha.Multiline.Make(struct
                 let left = left
                 let right = right
               end)
@@ -83,7 +83,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
             M.comment
           | Nested_multiline (left, right)  ->
             let module M =
-              Parsers.Comments.Nested_multiline.Make(struct
+              Parsers.Comments.Alpha.Nested_multiline.Make(struct
                 let left = left
                 let right = right
               end)
@@ -91,7 +91,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
             M.comment
           | Until_newline start ->
             let module M =
-              Parsers.Comments.Until_newline.Make(struct
+              Parsers.Comments.Alpha.Until_newline.Make(struct
                 let start = start
               end)
             in

@@ -2,4 +2,4 @@
   (name parsers)
   (public_name comby.parsers)
   (preprocess (pps ppx_sexp_conv bisect_ppx --conditional))
-  (libraries ppxlib core mparser mparser.pcre))
+  (libraries angstrom ppxlib core mparser mparser.pcre))
