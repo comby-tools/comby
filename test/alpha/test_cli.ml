@@ -849,7 +849,7 @@ let ()
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_expect_stdin_and_stdout command source
   |> print_string;
-  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":5,"line":1,"column":6},"end":{"offset":11,"line":1,"column":12}},"environment":[],"matched":"let ()"},{"range":{"start":{"offset":23,"line":1,"column":24},"end":{"offset":34,"line":3,"column":7}},"environment":[],"matched":"let\n\n    ()"},{"range":{"start":{"offset":42,"line":1,"column":43},"end":{"offset":48,"line":1,"column":49}},"environment":[],"matched":"let ()"}]}
+  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":5,"line":2,"column":5},"end":{"offset":11,"line":2,"column":11}},"environment":[],"matched":"let ()"},{"range":{"start":{"offset":23,"line":3,"column":5},"end":{"offset":34,"line":5,"column":7}},"environment":[],"matched":"let\n\n    ()"},{"range":{"start":{"offset":42,"line":7,"column":5},"end":{"offset":48,"line":7,"column":11}},"environment":[],"matched":"let ()"}]}
 WARNING: -count and -json-lines is specified. Ignoring -count.
 |}];
 
