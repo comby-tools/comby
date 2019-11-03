@@ -1,5 +1,8 @@
+(copy_files# alpha/*.ml{,i})
+; (copy_files# omega/*.ml{,i})
+
 (library
   (name matchers)
   (public_name comby.matchers)
-  (preprocess (pps ppx_sexp_conv ppx_sexp_message ppx_deriving_yojson bisect_ppx --conditional))
-  (libraries comby.parsers comby.match ppxlib core core.uuid mparser mparser.pcre yojson ppx_deriving_yojson))
+  (preprocess (pps ppx_here ppx_sexp_conv ppx_sexp_message ppx_deriving_yojson bisect_ppx --conditional))
+  (libraries comby.parsers comby.match angstrom ppxlib core core.uuid mparser mparser.pcre yojson ppx_deriving_yojson))

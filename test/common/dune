@@ -1,0 +1,22 @@
+(library
+ (name common_test_integration)
+ (modules
+  test_nested_comments
+  test_c
+  test_bash
+  test_go
+  test_c_separators
+  test_pipeline
+  test_rewrite_parts
+  test_user_defined_language)
+ (inline_tests)
+ (preprocess (pps ppx_expect ppx_sexp_message ppx_deriving_yojson ppx_deriving_yojson.runtime))
+ (libraries
+  comby
+  cohttp-lwt-unix
+  core
+  camlzip))
+
+(alias
+(name runtest)
+(deps (source_tree example) (source_tree example/src/.ignore-me)))

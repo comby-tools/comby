@@ -2,6 +2,11 @@ open Core
 
 open Match
 
+let debug =
+  Sys.getenv "DEBUG_COMBY"
+  |> Option.is_some
+
+
 let substitute template env =
   let substitution_formats =
     [ ":[ ", "]"
@@ -31,6 +36,7 @@ let of_match_context
     ; _
     }
     ~source =
+  if debug then Format.printf "Start idx: %d@.End idx: %d@." start_index end_index;
   let before_part =
     if start_index = 0 then
       ""
