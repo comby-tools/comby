@@ -19,18 +19,7 @@
 
 ### Mac OS X
 
-- `bash <(curl -sL get.comby.dev)`
-
-- If you run into `dyld: Library not loaded: /usr/local/opt/pcre/lib/libpcre.1.dylib`, try run this fixup:
-
-<details>
-  <summary>click to expand</summary>
-  
-```
-install_name_tool -change /usr/local/opt/pcre/lib/libpcre.1.dylib /usr/local/brew/lib/libpcre.1.dylib /usr/local/bin/comby`
-```
-
-</details>
+- `brew install comby`
 
 ### Ubuntu Linux
 
@@ -65,7 +54,7 @@ echo '(👋 hi)' | docker run -a stdin -a stdout -i comby/comby '(:[emoji] hi)' 
 
 ### Or [try it live](https://bit.ly/2UXkonD).
 
-## Aren't regex approaches like sed good enough?
+## Isn't a regex approach like sed good enough?
 
 Sometimes, yes. But often, small changes and refactorings are complicated by nested expressions, comments, or strings. Consider the following C-like snippet. Say the challenge is to rewrite the two `if` conditions to the value `1`. Can you write a regular expression that matches the contents of the two if condition expressions, and only those two? Feel free to share your pattern with [@rvtond](https://twitter.com/rvtond) on Twitter.
 
@@ -87,7 +76,7 @@ To match these with comby, all you need to write is `if (:[condition])`, and spe
 
 ```
 opam init
-opam switch create 4.08.1 4.08.1
+opam switch create 4.09.0 4.09.0
 ```
 
 - [Install OS dependencies:](#os-dependencies)
