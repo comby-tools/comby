@@ -264,7 +264,8 @@ let%expect_test "json_output_option" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":5,"line":1,"column":6}},"environment":[{"variable":"1","value":"X","range":{"start":{"offset":2,"line":1,"column":3},"end":{"offset":3,"line":1,"column":4}}}],"matched":"a X c"},{"range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"1","value":"Y","range":{"start":{"offset":8,"line":1,"column":9},"end":{"offset":9,"line":1,"column":10}}}],"matched":"a Y c"}]}|}]
+  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":5,"line":1,"column":6}},"environment":[{"variable":"1","value":"X","range":{"start":{"offset":2,"line":1,"column":3},"end":{"offset":3,"line":1,"column":4}}}],"matched":"a X c"},{"range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"1","value":"Y","range":{"start":{"offset":8,"line":1,"column":9},"end":{"offset":9,"line":1,"column":10}}}],"matched":"a Y c"}]}
+|}]
 
 let with_zip f =
   let file = Filename.temp_file "comby_" ".zip" in
@@ -802,6 +803,7 @@ let%expect_test "print_single_line_matches" =
   |> print_string;
   [%expect_exact {|let ()
 let ()
+
 |}]
 
 let%expect_test "print_multi_line_matches" =
@@ -826,6 +828,7 @@ in
   [%expect_exact {|let ()
 let\n\n    ()
 let ()
+
 |}];
 
   let command_args =
@@ -836,6 +839,7 @@ let ()
   read_expect_stdin_and_stdout command source
   |> print_string;
   [%expect_exact {|3 matches
+
 |}];
 
   let command_args =
@@ -845,7 +849,8 @@ let ()
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_expect_stdin_and_stdout command source
   |> print_string;
-  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":5,"line":1,"column":6},"end":{"offset":11,"line":1,"column":12}},"environment":[],"matched":"let ()"},{"range":{"start":{"offset":23,"line":1,"column":24},"end":{"offset":34,"line":3,"column":7}},"environment":[],"matched":"let\n\n    ()"},{"range":{"start":{"offset":42,"line":1,"column":43},"end":{"offset":48,"line":1,"column":49}},"environment":[],"matched":"let ()"}]}WARNING: -count and -json-lines is specified. Ignoring -count.
+  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":5,"line":1,"column":6},"end":{"offset":11,"line":1,"column":12}},"environment":[],"matched":"let ()"},{"range":{"start":{"offset":23,"line":1,"column":24},"end":{"offset":34,"line":3,"column":7}},"environment":[],"matched":"let\n\n    ()"},{"range":{"start":{"offset":42,"line":1,"column":43},"end":{"offset":48,"line":1,"column":49}},"environment":[],"matched":"let ()"}]}
+WARNING: -count and -json-lines is specified. Ignoring -count.
 |}];
 
   let command_args =
@@ -856,6 +861,7 @@ let ()
   read_expect_stdin_and_stdout command source
   |> print_string;
   [%expect_exact {|3 matches
+
 WARNING: -count only works with -match-only. Performing -match-only -count.
 |}]
 
