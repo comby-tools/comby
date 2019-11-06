@@ -504,8 +504,17 @@ end
 
 module Javascript = struct
   module Info = struct
-    let name = "Javascript/Typescript"
-    let extensions = [".js"; ".ts"]
+    let name = "Javascript"
+    let extensions = [".js"; ".jsx"]
+  end
+
+  include Matcher.Make (Go.Syntax) (Info)
+end
+
+module Typescript = struct
+  module Info = struct
+    let name = "Typescript"
+    let extensions = [".ts"; ".tsx"]
   end
 
   include Matcher.Make (Go.Syntax) (Info)
@@ -768,6 +777,7 @@ let all : (module Types.Matcher.S) list =
   ; (module SQL)
   ; (module Swift)
   ; (module Text)
+  ; (module Typescript)
   ; (module Xml)
   ; (module Generic)
   ]
