@@ -7,7 +7,7 @@ bug-reports: "https://github.com/comby-tools/comby/issues"
 dev-repo: "git+https://github.com/comby-tools/comby.git"
 license: "Apache-2.0"
 build: [
-    ["jbuilder" "build" "-p" name "-j" jobs "@install"]
+    ["dune" "build" "-p" name "-j" jobs "@install"]
 ]
 depends: [
   "ocaml" {>= "4.08.1"}
@@ -39,10 +39,14 @@ depexts: [
     [
       "pkg-config"
       "libpcre3-dev"
+      "zlib1g-dev"
+      "m4"
+      "libgmp-dev"
     ] {os-distribution = "ubuntu"}
     [
       "pkg-config"
       "pcre"
+      "gmp"
     ] {os-distribution = "macos"}
 ]
 synopsis: "A tool for changing code across many languages"
