@@ -45,37 +45,37 @@ let compute_line_col source offset =
   line, col
 
 let update_match source m =
-    let update_range range =
-      let update_location loc =
-        let open Location in
-        let line, column = compute_line_col source loc.offset in
-        { loc with line; column}
-      in
-      let open Range in
-      let match_start = update_location range.match_start in
-      let match_end = update_location range.match_end in
-      { match_start; match_end }
+  let update_range range =
+    let update_location loc =
+      let open Location in
+      let line, column = compute_line_col source loc.offset in
+      { loc with line; column}
     in
-    let update_environment env =
-      List.fold (Environment.vars env) ~init:env ~f:(fun env var ->
-          let open Option in
-          let updated =
-            Environment.lookup_range env var
-            >>| update_range
-            >>| Environment.update_range env var
-          in
-          Option.value_exn updated)
-    in
-    let range = update_range m.range in
-    let environment = update_environment m.environment in
-    { m with range; environment }
+    let open Range in
+    let match_start = update_location range.match_start in
+    let match_end = update_location range.match_end in
+    { match_start; match_end }
+  in
+  let update_environment env =
+    List.fold (Environment.vars env) ~init:env ~f:(fun env var ->
+        let open Option in
+        let updated =
+          Environment.lookup_range env var
+          >>| update_range
+          >>| Environment.update_range env var
+        in
+        Option.value_exn updated)
+  in
+  let range = update_range m.range in
+  let environment = update_environment m.environment in
+  { m with range; environment }
 
 let timed_run matcher ?substitute_in_place ?rule ~configuration ~template ~source () =
   let module Matcher = (val matcher : Matchers.Matcher) in
   let matches = Matcher.all ~configuration ~template ~source in
   let rule = Option.value rule ~default:[Ast.True] in
   apply_rule ?substitute_in_place matcher rule matches
-|> List.map ~f:(update_match source)
+  |> List.map ~f:(update_match source)
 
 let debug =
   Sys.getenv "DEBUG_COMBY"
