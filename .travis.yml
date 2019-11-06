@@ -3,6 +3,6 @@ services:
     - docker
 sudo: required
 before_install: 
-    - make docker-build
+    - make docker-test-build
 script:
-    - docker run -it -e TRAVIS_JOB_ID="$TRAVIS_JOB_ID" comby-local-build:latest /bin/bash -c "make && make clean && make build-with-coverage && make test && ./push-coverage-report.sh && ./benchmark"
+    - docker run -it -e TRAVIS_JOB_ID="$TRAVIS_JOB_ID" comby-local-test-build:latest /bin/bash -c "make && make clean && make build-with-coverage && make test && ./push-coverage-report.sh && ./benchmark"

@@ -39,11 +39,7 @@ uninstall:
 promote:
 	@dune promote
 
-docker-build:
-	docker build -t comby-local-build .
+docker-test-build:
+	docker build -t comby-local-test-build .
 
-docker-test:
-	docker run -it comby-local-build:latest /bin/bash -c "make && make clean && make build-with-coverage && make test && ./benchmark"
-
-
-.PHONY: all build build-with-coverage release run-server run-staging-server install doc test coverage clean uninstall promote docker-build docker-test
+.PHONY: all build build-with-coverage release run-server run-staging-server install doc test coverage clean uninstall promote docker-test-build

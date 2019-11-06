@@ -44,12 +44,10 @@ cp scripts/install-with-licenses.sh scripts/$VERSION/get/index.html
 comby '"0.x.0"' "$VERSION" .html -i -d scripts/$VERSION
 
 # docker images
-cd scripts
 docker rmi -f comby-alpine-source-build:latest
 docker rmi -f comby-alpine-binary-build:latest
-./build-docker-binary.sh
+./build-docker-binary-releases.sh
 docker tag comby-alpine-binary-build:latest comby/comby:$VERSION
-echo "run: 'docker pull comby/comby:$VERSION'"
 echo "test: 'docker run -it comby/comby:$VERSION' -version"
 echo "push: 'docker push comby/comby:$VERSION"
 echo "tag latest: 'docker tag comby/comby:$VERSION comby/comby:latest"
