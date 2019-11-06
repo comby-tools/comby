@@ -23,6 +23,12 @@ cd ../..
 
 comby '"0.x.0"' "\"$VERSION\"" .ml -d src -i
 
+# Build ubuntu docker binary release and copy binary
+docker build --tag comby-ubuntu-build . -f dockerfiles/ubuntu/binary-release/Dockerfile
+docker run --rm --entrypoint cat comby-ubuntu-build:latest /home/comby/_build/default/src/main.exe > scripts/$VERSION/comby-$VERSION-x86_64-linux
+cd scripts/$VERSION && tar czvf comby-$VERSION-x86_64-linux.tar.gz comby-$VERSION-x86_64-linux && cd ../..
+
+# Build mac binary
 make clean
 make release
 make test
@@ -34,19 +40,17 @@ OS=$(uname -s || echo dunno)
 if [ "$OS" = "Darwin" ]; then
     cp _build/default/src/main.exe scripts/$VERSION/comby-$VERSION-x86_64-macos
     cd scripts/$VERSION && tar czvf comby-$VERSION-x86_64-macos.tar.gz comby-$VERSION-x86_64-macos && cd ../..
-else
-    cp _build/default/src/main.exe scripts/$VERSION/comby-$VERSION-x86_64-linux
-    cd scripts/$VERSION && tar czvf comby-$VERSION-x86_64-linux.tar.gz comby-$VERSION-x86_64-linux && cd ../..
 fi
 
 cp scripts/check-and-install.sh scripts/$VERSION/0/index.html
 cp scripts/install-with-licenses.sh scripts/$VERSION/get/index.html
 comby '"0.x.0"' "$VERSION" .html -i -d scripts/$VERSION
 
-# docker images
+# Alpine docker image
+cd scripts
 ./build-docker-binary-releases.sh
 docker tag comby-alpine-binary-release:latest comby/comby:$VERSION
-echo "test: 'docker run -it comby/comby:$VERSION' -version"
-echo "push: 'docker push comby/comby:$VERSION"
+echo "test: 'docker run -it comby/comby:$VERSION -version'"
+echo "push: 'docker push comby/comby:$VERSION'"
 echo "tag latest: 'docker tag comby/comby:$VERSION comby/comby:latest"
 echo "push: 'docker push comby/comby:latest"
