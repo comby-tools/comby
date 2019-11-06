@@ -1,14 +1,17 @@
+##########################################################################################################################
+### Binary build for testing. Pulled from registry. The base-dependencies-alpine spec builds this. Used by .travis.yml ###
+##########################################################################################################################
 FROM comby/base-dependencies-alpine-3.10:latest
 
-WORKDIR /tmp/comby
+WORKDIR /home/comby
 
-COPY Makefile /tmp/comby/
-COPY comby.opam /tmp/comby/
-COPY dune /tmp/comby/
-COPY docs /tmp/comby/docs
-COPY src /tmp/comby/src
-COPY lib /tmp/comby/lib
-COPY test /tmp/comby/test
-COPY push-coverage-report.sh /tmp/comby/
+COPY Makefile /home/comby/
+COPY comby.opam /home/comby/
+COPY dune /home/comby/
+COPY docs /home/comby/docs
+COPY src /home/comby/src
+COPY lib /home/comby/lib
+COPY test /home/comby/test
+COPY push-coverage-report.sh /home/comby/
 
-RUN sudo chown -R $(whoami) .
+RUN sudo chown -R $(whoami) /home/comby
