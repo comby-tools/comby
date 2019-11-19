@@ -34,6 +34,7 @@ pin-depends: [
   ["bisect_ppx.git" "git+https://github.com/aantron/bisect_ppx.git"]
   ["mparser-comby.git" "git+https://github.com/comby-tools/mparser.git"]
   ["lwt.git" "git+https://github.com/rvantonder/lwt.git#4.3.0-with-captain"]
+  ["patdiff.git" "git+https://github.com/rvantonder/patdiff.git#0.12.1-patch-compatible-diffs"]
 ]
 depexts: [
     [
@@ -49,5 +50,5 @@ depexts: [
       "gmp"
     ] {os-distribution = "macos"}
 ]
-synopsis: "A tool for changing code across many languages"
+synopsis: "A tool for structural code search and replace that supports ~every language"
 description: ""
