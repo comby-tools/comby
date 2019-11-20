@@ -1,6 +1,7 @@
 open Core
 
 open Language
+open Poly
 
 let debug =
   Sys.getenv "DEBUG_COMBY"

@@ -1,6 +1,7 @@
 open Core
 
 open Match
+open Poly
 
 module In = struct
 

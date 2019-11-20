@@ -3,6 +3,7 @@ open Command.Let_syntax
 open Hack_parallel
 
 open Pipeline.Command_configuration
+open Poly
 
 let verbose_out_file = "/tmp/comby.out"
 

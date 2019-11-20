@@ -2,6 +2,7 @@ open Core
 
 open Match
 open Replacement
+open Poly
 
 let debug =
   Sys.getenv "DEBUG_COMBY"

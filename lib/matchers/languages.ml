@@ -1,6 +1,7 @@
 open Core
 
 open Types.Syntax
+open Poly
 
 let ordinary_string = Some { delimiters = [{|"|}]; escape_character = '\\' }
 
