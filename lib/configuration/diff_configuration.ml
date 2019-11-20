@@ -94,6 +94,7 @@ let plain_configuration =
 
 (
  (context 3)
+;; unrefined: output every changed line. unrefined false will merge + and - lines if they are similar.
  (unrefined true)
 
  (line_same
@@ -152,7 +153,7 @@ let get_diff kind source_path source_content result =
   let prev = Patdiff_core.{ name = source_path; text = source_content } in
   let next = Patdiff_core.{ name = source_path; text = result } in
 
-  Compare_core.diff_strings ~print_global_header:true ~patch_compatible_hunks:true configuration ~prev ~next
+  Compare_core.diff_strings ~print_global_header:true configuration ~prev ~next
   |> function
   | `Different diff -> Some diff
   | `Same -> None
