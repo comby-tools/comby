@@ -1,5 +1,5 @@
 (library
   (name replacement)
   (public_name comby.replacement)
-  (preprocess (pps ppx_deriving_yojson bisect_ppx --conditional))
+  (preprocess (pps ppx_deriving_yojson bisect_ppx -conditional))
   (libraries comby.match ppxlib core yojson ppx_deriving_yojson ppx_deriving_yojson.runtime patdiff.lib))

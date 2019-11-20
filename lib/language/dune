@@ -1,5 +1,5 @@
 (library
   (name language)
   (public_name comby.language)
-  (preprocess (pps ppx_sexp_conv bisect_ppx --conditional))
+  (preprocess (pps ppx_sexp_conv bisect_ppx -conditional))
   (libraries comby.parsers comby.match comby.rewriter ppxlib core core.uuid))
