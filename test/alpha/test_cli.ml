@@ -1033,3 +1033,17 @@ let%expect_test "diff_patches_with_trailing_newlines" =
 +2
 \ No newline at end of file
 |}]
+
+let%expect_test "diff_patches_preserve_slash_r" =
+  let source = "dont care" in
+
+  let src_dir = "example" ^/ "diff-preserve-slash-r" in
+  let match_template = "1" in
+  let rewrite_template = "2" in
+
+  let command_args = Format.sprintf "'%s' '%s' -json-lines -json-only-diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect_exact {|{"uri":"example/diff-preserve-slash-r/a","diff":"--- example/diff-preserve-slash-r/a\n+++ example/diff-preserve-slash-r/a\n@@ -1,3 +1,3 @@\n-1\r\n+2\r\n 2\r\n 3\r"}
+|}];
