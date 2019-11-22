@@ -185,7 +185,7 @@ let%expect_test "with_match_rule" =
 
 let%expect_test "with_rewrite_rule" =
   let source = "hello world" in
-  let match_template = ":[2] :[1]" in
+  let match_template = ":[[2]] :[[1]]" in
   let rewrite_template = ":[1]" in
   let rule = {|where rewrite :[1] { ":[_]" -> ":[2]" }|} in
   let command_args =
@@ -203,7 +203,7 @@ let%expect_test "with_rewrite_rule" =
 
 let%expect_test "with_rewrite_rule_stdin_default_no_extension" =
   let source = "hello world" in
-  let match_template = ":[2] :[1]" in
+  let match_template = ":[[2]] :[[1]]" in
   let rewrite_template = ":[1]" in
   let rule = {|where rewrite :[1] { ":[_]" -> ":[2]" }|} in
   let command_args =
@@ -327,7 +327,7 @@ let%expect_test "list_languages" =
 
 let%expect_test "patdiff_and_zip" =
   with_zip (fun file ->
-      let match_template = ":[2] :[1]" in
+      let match_template = ":[[2]] :[[1]]" in
       let rewrite_template = ":[1]" in
       let command_args =
         Format.sprintf "'%s' '%s' .ml -sequential -json-lines -zip %s"
@@ -1046,4 +1046,18 @@ let%expect_test "diff_patches_preserve_slash_r" =
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect_exact {|{"uri":"example/diff-preserve-slash-r/a","diff":"--- example/diff-preserve-slash-r/a\n+++ example/diff-preserve-slash-r/a\n@@ -1,3 +1,3 @@\n-1\r\n+2\r\n 2\r\n 3\r"}
-|}];
+|}]
+
+let%expect_test "warn_on_match_template_starts_with_everything_hole" =
+  let source = "hello world\n" in
+  let match_template = ":[2] :[[1]]" in
+  let rewrite_template = ":[1]" in
+  let command_args =
+    Format.sprintf "-stdin -sequential '%s' '%s' -stdout -f .c " match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|
+    world
+    WARNING: The match template starts with a :[hole]. You almost never want to start a template with :[hole], since it matches everything including newlines up to the part that comes after it. This can make things slow. :[[hole]] might be what you're looking for instead, like when you want to match an assignment foo = bar(args) on a line, use :[[var]] = bar(args). :[hole] is typically useful inside balanced delimiters. |}]

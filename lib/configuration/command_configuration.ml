@@ -69,7 +69,7 @@ let read filename =
   String.chop_suffix template ~suffix:"\n"
   |> Option.value ~default:template
 
-let parse_template_directories paths =
+let parse_template_directories ?(warn = false) paths =
   let parse_directory path =
     let read_optional filename =
       match read filename with
@@ -78,7 +78,7 @@ let parse_template_directories paths =
     in
     match read_optional (path ^/ "match") with
     | None ->
-      Format.eprintf "WARNING: Could not read required match file in %s@." path;
+      if warn then Format.eprintf "WARNING: Could not read required match file in %s@." path;
       None
     | Some match_template ->
       let rule = read_optional (path ^/ "rule") in
@@ -343,8 +343,8 @@ type t =
   ; interactive_review : interactive_review option
   }
 
-let validate_errors { input_options; run_options = _; output_options } =
-  let violations =
+let emit_errors { input_options; run_options = _; output_options } =
+  let error_on =
     [ input_options.stdin && Option.is_some input_options.zip_file
     , "-zip may not be used with -stdin."
     ; output_options.stdout && output_options.diff
@@ -400,7 +400,7 @@ let validate_errors { input_options; run_options = _; output_options } =
         "UNREACHABLE"
     ]
   in
-  List.filter_map violations ~f:(function
+  List.filter_map error_on ~f:(function
       | true, message -> Some (Or_error.error_string message)
       | _ -> None)
   |> Or_error.combine_errors_unit
@@ -422,7 +422,23 @@ let validate_errors { input_options; run_options = _; output_options } =
 
 let emit_warnings { input_options; output_options; _ } =
   let warn_on =
-    [ is_some input_options.specification_directories
+    [ (let match_templates =
+         match input_options.specification_directories, input_options.anonymous_arguments with
+         | None, Some { match_template; _ } ->
+           [ match_template ]
+         | Some specification_directories, _ ->
+           List.map (parse_template_directories specification_directories) ~f:(fun { match_template; _ } -> match_template)
+         | _ -> assert false
+       in
+       List.exists match_templates ~f:(fun match_template ->
+           Pcre.(pmatch ~rex:(regexp "^:\\[[[:alnum:]]+\\]") match_template))),
+      "The match template starts with a :[hole]. You almost never want to start \
+       a template with :[hole], since it matches everything including newlines \
+       up to the part that comes after it. This can make things slow. :[[hole]] \
+       might be what you're looking for instead, like when you want to match an \
+       assignment foo = bar(args) on a line, use :[[var]] = bar(args). :[hole] is \
+       typically useful inside balanced delimiters."
+    ; is_some input_options.specification_directories
       && is_some input_options.anonymous_arguments,
       "Templates specified on the command line AND using -templates. Ignoring match
       and rewrite templates on the command line and only using those in directories."
@@ -476,7 +492,7 @@ let create
      } as configuration)
   : t Or_error.t =
   let open Or_error in
-  validate_errors configuration >>= fun () ->
+  emit_errors configuration >>= fun () ->
   emit_warnings configuration >>= fun () ->
   let rule = Rule.create rule |> Or_error.ok_exn in
   let specifications =
@@ -487,7 +503,7 @@ let create
       else
         [ Specification.create ~match_template ~rewrite_template ~rule () ]
     | Some specification_directories, _ ->
-      parse_template_directories specification_directories
+      parse_template_directories ~warn:true specification_directories
     | _ -> assert false
   in
   let file_filters =
