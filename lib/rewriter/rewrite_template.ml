@@ -14,6 +14,13 @@ let substitute template env =
     ; ":[", "\\n]"
     ; ":[[", "]]"
     ; ":[", "]"
+    (* optional syntax *)
+    ; ":[? ", "]"
+    ; ":[ ?", "]"
+    ; ":[?", ".]"
+    ; ":[?", "\\n]"
+    ; ":[[?", "]]"
+    ; ":[?", "]"
     ]
   in
   Environment.vars env

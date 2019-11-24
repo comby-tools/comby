@@ -48,12 +48,32 @@ type id = string
 type including = char list
 type until = char option
 
-type hole =
-  | Everything of (id * dimension)
-  | Alphanum of (id * dimension)
-  | Non_space of (id * dimension)
-  | Line of (id * dimension)
-  | Blank of (id * dimension)
+module Hole = struct
+
+  type sort =
+    | Everything
+    | Alphanum
+    | Non_space
+    | Line
+    | Blank
+
+  type t =
+    { sort : sort
+    ; identifier : string
+    ; dimension : dimension
+    ; optional : bool
+    }
+
+  let sorts () =
+    [ Everything
+    ; Alphanum
+    ; Non_space
+    ; Line
+    ; Blank
+    ]
+end
+
+type hole = Hole.t
 
 module Omega = struct
   type omega_match_production =
