@@ -21,7 +21,7 @@ This document tabulates the current feature stability and development status.
 | Interactive review mode                     | :white_check_mark:      | Use `-review` for interactive review like in [codemod](https://github.com/facebook/codemod)           |
 | Sub-matching rule expressions               | :alembic:               | See [sub-matching syntax](https://comby.dev/#experimental-language-features-sub-matching)             |
 | Nested rewrite rule expressions             | :alembic:               | See [rewrite expression syntax](https://comby.dev/#experimental-language-features-rewrite-expression) |
-| Optional holes                              | :alembic:               | Optional hole syntax, to be documented                                                                |
+| Optional holes                              | :alembic:               | See [syntax](https://comby.dev/#match-syntax) and [usage tips](https://comby.dev/#tips-and-tricks)                       |
 | Matching for arbitrary balanced tags        | :building_construction: | See [roadmap](https://github.com/comby-tools/comby/blob/master/docs/ROADMAP.md)                       |
 | Indentation-sensitive matching              | :building_construction: | See [#65](https://github.com/comby-tools/comby/issues/65) and [roadmap](https://github.com/comby-tools/comby/blob/master/docs/ROADMAP.md)               |
 | Interactive mode with git-patch             | :bulb:                  | See [#134](https://github.com/comby-tools/comby/issues/134)                                                |
