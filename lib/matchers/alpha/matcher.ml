@@ -211,30 +211,43 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     >> many comment_parser
     >>= fun result -> f result
 
+  let is_optional () =
+    opt false (char '?' |>> fun _ -> true)
+
   let identifier () =
     (many (alphanum <|> char '_') |>> String.of_char_list)
 
+  let hole_body () =
+    is_optional () >>= fun optional ->
+    identifier () >>= fun identifier ->
+    return (optional, identifier)
+
   let everything_hole_parser () =
-    string ":[" >> identifier () << string "]"
+    string ":[" >> hole_body () << string "]"
 
   let non_space_hole_parser () =
-    string ":[" >> identifier () << string ".]"
+    string ":[" >> hole_body () << string ".]"
 
   let line_hole_parser () =
-    string ":[" >> identifier () << string "\\n]"
+    string ":[" >> hole_body () << string "\\n]"
 
   let blank_hole_parser () =
-    string ":[" >> (many1 blank) >> identifier () << string "]"
+    string ":[" >>
+    is_optional () >>= fun optional ->
+    (many1 blank)
+    >> identifier () >>= fun identifier ->
+    string "]" >>
+    return (optional, identifier)
 
   let alphanum_hole_parser () =
-    string ":[[" >> identifier () << string "]]"
+    string ":[[" >> hole_body () << string "]]"
 
   let reserved_holes () =
-    let alphanum = alphanum_hole_parser () in
-    let everything = everything_hole_parser () in
-    let non_space = non_space_hole_parser () in
-    let blank = blank_hole_parser () in
-    let line = line_hole_parser () in
+    let alphanum = alphanum_hole_parser () |>> snd in
+    let everything = everything_hole_parser () |>> snd in
+    let non_space = non_space_hole_parser () |>> snd in
+    let blank = blank_hole_parser () |>> snd in
+    let line = line_hole_parser () |>> snd in
     [ non_space
     ; line
     ; blank
@@ -392,7 +405,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
          anything as prefix to 'def', including '(', and so '(' is not handled
          as a delim.) *)
       let mandatory_prefix = alphanum_delimiter_must_satisfy in
-      (* mandatory_suffix: be more strict with suffix of pening delimiter: don't
+      (* mandatory_suffix: be more strict with suffix of opening delimiter: don't
          use 'any non-alphanum', but instead use whitespace. This since 'def;'
          is undesirable, and 'def.foo' may be intentional. But 'end.' or 'end;'
          probably still refer to a closing delim. *)
@@ -400,7 +413,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       let satisfy_opening_delimiter prev =
         (match prev with
          | Some prev when is_alphanum (Char.to_string prev) -> fail "unsat"
-         (* Try parse whitespace, and we want to cpature its length, in case
+         (* Try parse whitespace, and we want to capture its length, in case
             this is a space between, like 'def def end end'. But in the case
             where there's no space, it means we have just entered the beginning
             of the hole which may start with the 'd' of 'def', but since we
@@ -506,47 +519,111 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     in
     nested_grammar
 
+  let coalesce_whitespace prefix_parser suffix_parser =
+    let is_whitespace p =
+      match
+        parse_string p " " (Match.create ()),
+        (* suffix parser could be a hole. It needs to fail on
+           parsing something like "X" to be a whitespace parser *)
+        parse_string p "X" (Match.create ())
+      with
+      | Success _, Failed _ -> true
+      | _ -> false
+    in
+    let pre = is_whitespace prefix_parser in
+    if debug then Format.printf "Pre: %b@." pre;
+    let suf = is_whitespace suffix_parser in
+    if debug then Format.printf "Suf: %b@." suf;
+    pre && suf
+
+  let prefix_parser p_list i =
+    match List.nth (List.rev p_list) (i+1) with
+    | Some p -> p
+    | None ->
+      if debug then Format.printf "Prefix parser unsat@.";
+      fail "unsat"
+
   let turn_holes_into_matchers_for_this_level ?left_delimiter ?right_delimiter p_list =
-    List.fold_right p_list ~init:[] ~f:(fun p acc ->
-        let process_hole =
-          match parse_string p "_signal_hole" (Match.create ()) with
-          | Failed _ -> p
-          | Success result ->
-            let rest =
-              match acc with
-              | [] -> eof >>= fun () -> f [""]
-              | _ -> sequence_chain acc
-            in
-            match result with
-            | Hole Alphanum (identifier, _) ->
+    List.foldi (List.rev p_list) ~init:[] ~f:(fun i acc p ->
+        match parse_string p "_signal_hole" (Match.create ()) with
+        | Failed _ -> p::acc
+        | Success Hole { sort; identifier; optional; dimension } ->
+          begin
+            match sort with
+            | Alphanum ->
               let allowed =  choice [alphanum; char '_'] |>> String.of_char in
               let hole_semantics = many1 allowed in
-              record_matches identifier hole_semantics
+              begin match optional with
+                | false -> (record_matches identifier hole_semantics)::acc
+                | true ->
+                  if debug then Format.printf "Optional active@.";
+                  match acc with
+                  | [] ->
+                    let hole_semantics = opt [] (attempt hole_semantics) in
+                    (record_matches identifier hole_semantics)::acc
+                  | (suffix::rest) as acc ->
+                    let optional_succeeds_parser =
+                      record_matches identifier hole_semantics
+                      >> sequence_chain acc
+                    in
+                    let optional_fails_parser =
+                      record_matches identifier (return []) >>= fun _ ->
+                      if coalesce_whitespace (prefix_parser p_list i) suffix then
+                        sequence_chain rest
+                      else
+                        sequence_chain acc
+                    in
+                    [(attempt optional_succeeds_parser)
+                     <|> optional_fails_parser]
+              end
 
-            | Hole Non_space (identifier, _dimension) ->
+            | Non_space ->
               let allowed =
                 [skip space; reserved_delimiters ()]
                 |> choice
                 |> is_not
                 |>> Char.to_string
               in
+              let rest =
+                match acc with
+                | [] -> eof >>= fun () -> f [""]
+                | _ -> sequence_chain acc
+              in
               let hole_semantics = many1 (not_followed_by rest "" >> allowed) in
-              record_matches identifier hole_semantics
+              let hole_semantics =
+                if not optional then
+                  hole_semantics
+                else
+                  opt [] (attempt hole_semantics)
+              in
+              (record_matches identifier hole_semantics)::acc
 
-            | Hole Line (identifier, _dimension) ->
+            | Line ->
               let allowed =
                 many (is_not (char '\n'))
                 |>> fun x -> [(String.of_char_list x)^"\n"]
               in
               let hole_semantics = allowed << char '\n' in
-              record_matches identifier hole_semantics
+              let hole_semantics =
+                if not optional then
+                  hole_semantics
+                else
+                  opt [] (attempt hole_semantics)
+              in
+              (record_matches identifier hole_semantics)::acc
 
-            | Hole Blank (identifier, _dimension) ->
+            | Blank ->
               let allowed = blank |>> String.of_char in
               let hole_semantics = many1 allowed in
-              record_matches identifier hole_semantics
+              let hole_semantics =
+                if not optional then
+                  hole_semantics
+                else
+                  opt [] (attempt hole_semantics)
+              in
+              (record_matches identifier hole_semantics)::acc
 
-            | Hole Everything (identifier, dimension) ->
+            | Everything ->
               let matcher =
                 match dimension with
                 | Code ->
@@ -561,38 +638,83 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
                   raw_literal_grammar ~right_delimiter
                 | Comment -> failwith "Unimplemented"
               in
-              (* Continue until rest, but don't consume rest. *)
-              let hole_semantics = many (not_followed_by rest "" >> matcher) in
-              record_matches identifier hole_semantics
-
-            | _ -> failwith "Hole expected"
-        in
-        process_hole::acc)
+              match optional with
+              | false ->
+                let rest =
+                  match acc with
+                  | [] -> eof >>= fun () -> f [""]
+                  | _ -> sequence_chain acc
+                in
+                (* Continue until rest, but don't consume rest. acc will
+                   propagate the rest that needs to be consumed. *)
+                let hole_semantics = many (not_followed_by rest "" >> matcher) in
+                (record_matches identifier hole_semantics)::acc
+              | true ->
+                if debug then Format.printf "Optional active@.";
+                match acc with
+                | [] ->
+                  let rest = eof >>= fun () -> f [""] in
+                  let hole_semantics = many (not_followed_by rest "" >> matcher) in
+                  (* Try match ordinary hole semantics, but if the parser
+                     fails, just let it pass which leads to assigning "" to
+                     identifier *)
+                  let hole_semantics = opt [] (attempt hole_semantics) in
+                  (record_matches identifier hole_semantics)::acc
+                | (suffix::rest) as acc ->
+                  let after = sequence_chain acc in
+                  let hole_semantics = many (not_followed_by after "" >> matcher) in
+                  (* The logic goes: Try to match ordinary hole semantics, and
+                     propagate acc if it succeeds. If ordinary semantics fail,
+                     let it pass and coalesce whitespace with prefix/suffix if
+                     needed and only propagate 'rest', since we remove the
+                     suffix by coalescing. *)
+                  let optional_succeeds_parser =
+                    (* This parser can succeed but does not consume after.
+                       After must still be consumed (acc must be propagated).
+                    *)
+                    record_matches identifier hole_semantics
+                    >>= fun _ ->
+                    if debug then Format.printf "Optional record succeeds.@.";
+                    sequence_chain acc >>= fun r ->
+                    if debug then Format.printf "Rest succeeds.@.";
+                    return r
+                  in
+                  let optional_fails_parser =
+                    if debug then Format.printf "Optional fail case@.";
+                    (* The optional parser that kicks in if
+                       optional_succeeds_parser fails. It does not consume
+                       anything. *)
+                    (record_matches identifier (return [])) >>= fun _ ->
+                    (* Record matches succeeded for optional hole, empty
+                       match. No going back now. Consume suffix if prefix and
+                       suffix are whitespace and propagate rest. Otherwise,
+                       propagate acc. *)
+                    if coalesce_whitespace (prefix_parser p_list i) suffix then
+                      sequence_chain rest
+                    else
+                      sequence_chain acc
+                  in
+                  [(attempt optional_succeeds_parser)
+                   <|> optional_fails_parser]
+          end
+        | Success _ -> failwith "Hole expected")
 
   let hole_parser sort dimension =
-    let skip_signal hole =
-      skip (string "_signal_hole") |>> fun () -> Hole hole
+    let open Hole in
+    let hole_parser =
+      match sort with
+      | Everything -> everything_hole_parser ()
+      | Non_space -> non_space_hole_parser ()
+      | Line -> line_hole_parser ()
+      | Blank -> blank_hole_parser ()
+      | Alphanum -> alphanum_hole_parser ()
     in
-    match sort with
-    | `Everything ->
-      everything_hole_parser () |>> fun id ->
-      skip_signal (Everything (id, dimension))
-    | `Non_space ->
-      non_space_hole_parser () |>> fun id ->
-      skip_signal (Non_space (id, dimension))
-    | `Line ->
-      line_hole_parser () |>> fun id ->
-      skip_signal (Line (id, dimension))
-    | `Blank ->
-      blank_hole_parser () |>> fun id ->
-      skip_signal (Blank (id, dimension))
-    | `Alphanum ->
-      alphanum_hole_parser () |>> fun id ->
-      skip_signal (Alphanum (id, dimension))
+    let skip_signal hole = skip (string "_signal_hole") |>> fun () -> Hole hole in
+    hole_parser |>> fun (optional, identifier) -> skip_signal { sort; identifier; dimension; optional }
 
   let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter s =
     let holes =
-      [`Everything; `Non_space; `Alphanum; `Line; `Blank]
+      Hole.sorts ()
       |> List.map ~f:(fun kind -> attempt (hole_parser kind sort))
     in
     let reserved_holes =
@@ -626,7 +748,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
 
   and common _s =
     let holes =
-      [`Everything; `Non_space; `Alphanum; `Line; `Blank]
+      Hole.sorts ()
       |> List.map ~f:(fun kind -> attempt (hole_parser kind Code))
     in
     choice
