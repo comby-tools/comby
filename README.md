@@ -12,8 +12,14 @@
 ### See the [usage documentation](https://comby.dev).
 [A short example below](https://github.com/comby-tools/comby#isnt-a-regex-approach-like-sed-good-enough) shows how comby simplifies matching and rewriting compared to regex approaches like `sed`.
 
-**Need help writing patterns or have other problems? Consider posting in [Gitter](https://gitter.im/comby-tools/community).**
+<details>
+  <summary>Comby supports interactive review mode (click here to see it in action).</summary>
+  
+![](https://user-images.githubusercontent.com/888624/69503010-b8870980-0ed2-11ea-828d-68c152ed9def.gif)
+  
+</details>
 
+**Need help writing patterns or have other problems? Post them in [Gitter](https://gitter.im/comby-tools/community).**
 
 ## Install (pre-built binaries)
 
