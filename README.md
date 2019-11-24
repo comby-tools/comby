@@ -79,7 +79,7 @@ opam init
 opam switch create 4.09.0 4.09.0
 ```
 
-- [Install OS dependencies:](#os-dependencies)
+- Install OS dependencies:
 
   - **Linux:** `sudo apt-get install pkg-config libpcre3-dev`
 
