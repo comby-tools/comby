@@ -20,10 +20,6 @@ let debug =
   |> Option.is_some
 
 
-type signal_hole =
-  | Signal_a_hole of Types.hole
-  | Dont_care
-
 let record_match_context pos_before pos_after =
   let open Match.Location in
   if debug then Format.printf "match context start pos: %d@." pos_before;
@@ -58,14 +54,14 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let f acc _production =
     acc + 1
 
-  let r acc production : (signal_hole * 'a) t =
+  let r acc production : (production * 'a) t =
     let open Match in
     let open Range in
     let acc = f acc production in
     match production with
     | String s ->
       if debug then Format.printf "Matched String: %S@." s;
-      return (Dont_care, acc)
+      return (Unit, acc)
     | Match { offset = pos_after; identifier; text = content } ->
       (* using just pos after for now, because thats what we do in matcher. lol *)
       if debug then Format.printf "Match: %S @@ %d for %s@." content pos_after identifier;
@@ -74,8 +70,8 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       let range = { match_start = before; match_end = after } in
       let environment = Environment.add ~range !current_environment_ref identifier content in
       current_environment_ref := environment;
-      return (Dont_care, acc)
-    | _ -> return (Dont_care, acc)
+      return (Unit, acc)
+    | _ -> return (Unit, acc)
 
   let between left right p =
     left *> p <* right
@@ -217,74 +213,77 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let many1_till p t =
     lift2 cons p (many_till p t)
 
-  let sequence_chain (p_list : (signal_hole * 'a) t list) =
+  let sequence_chain (p_list : (production * 'a) t list) =
     begin
       let i = ref 0 in
-      List.fold_right p_list ~init:(return (Dont_care, acc)) ~f:(fun p acc ->
+      List.fold_right p_list ~init:(return (Unit, acc)) ~f:(fun p acc ->
           let result =
             if debug then Format.printf "iterate fold_right %d@." !i;
             match parse_string p "_signal_hole" with
             | Error _ ->
               if debug then Format.printf "Composing p with terminating parser@.";
               p *> acc
-            | Ok (f,user_state) ->
+            | Ok (Hole { sort; identifier; _ }, user_state) ->
               (*Format.printf "Ok.@.";*)
-              match f with
-              | Signal_a_hole (Alphanum (identifier, _)) ->
-                pos >>= fun pos_before ->
-                many1 (generate_single_hole_parser ())
-                >>= fun value ->
-                (* acc must come after in order to sat. try mimic alpha to better express this. *)
-                acc >>= fun _ ->
-                r user_state
-                  (Match
-                     { offset = pos_before; identifier; text = (String.concat value) }
-                  )
-              | Signal_a_hole (Everything (identifier, _dimension)) ->
-                if debug then Format.printf "do hole %s@." identifier;
-                let first_pos = Set_once.create () in
-                let pparser =
-                  let until =
-                    (* if this is the base case (the first time we go around the
-                       loop backwards, when the first parser is a hole), then it
-                       means there's a hole at the end without anything following
-                       it in the template. So it should always match to
-                       end_of_input (not empty string) *)
-                    if !i = 0 then
-                      (if debug then Format.printf "Yes this case@.";
-                       end_of_input)
-                    else
-                      (if debug then Format.printf "Yes this second case@.";
-                       acc >>= fun _ -> return ())
+              begin
+                match sort with
+                | Alphanum ->
+                  pos >>= fun pos_before ->
+                  many1 (generate_single_hole_parser ())
+                  >>= fun value ->
+                  (* acc must come after in order to sat. try mimic alpha to better express this. *)
+                  acc >>= fun _ ->
+                  r user_state
+                    (Match
+                       { offset = pos_before; identifier; text = (String.concat value) }
+                    )
+                | Everything ->
+                  if debug then Format.printf "do hole %s@." identifier;
+                  let first_pos = Set_once.create () in
+                  let pparser =
+                    let until =
+                      (* if this is the base case (the first time we go around the
+                         loop backwards, when the first parser is a hole), then it
+                         means there's a hole at the end without anything following
+                         it in the template. So it should always match to
+                         end_of_input (not empty string) *)
+                      if !i = 0 then
+                        (if debug then Format.printf "Yes this case@.";
+                         end_of_input)
+                      else
+                        (if debug then Format.printf "Yes this second case@.";
+                         acc >>= fun _ -> return ())
+                    in
+                    (many_till
+                       (pos >>= fun pos -> Set_once.set_if_none first_pos [%here] pos;
+                        generate_greedy_hole_parser ())
+                       (pos >>= fun pos -> Set_once.set_if_none first_pos [%here] pos;
+                        until)
+                       (* it may be that the many till for the first parser
+                          succeeds on 'empty string', specifically in the :[1]:[2]
+                          case for :[1]. We won't capture the pos of :[1] in the
+                          first parser since it doesn't fire, so, so we have to
+                          set the pos right before the until parser below, if that
+                          happens. *)
+                    ) >>| String.concat
                   in
-                  (many_till
-                     (pos >>= fun pos -> Set_once.set_if_none first_pos [%here] pos;
-                      generate_greedy_hole_parser ())
-                     (pos >>= fun pos -> Set_once.set_if_none first_pos [%here] pos;
-                      until)
-                     (* it may be that the many till for the first parser
-                        succeeds on 'empty string', specifically in the :[1]:[2]
-                        case for :[1]. We won't capture the pos of :[1] in the
-                        first parser since it doesn't fire, so, so we have to
-                        set the pos right before the until parser below, if that
-                        happens. *)
-                  ) >>| String.concat
-                in
-                pparser >>= fun text ->
-                (*Format.printf "have results %d@." @@ List.length results;*)
-                let offset =
-                  match Set_once.get first_pos with
-                  | Some offset -> offset
-                  | _ -> failwith "Did not expect unset offset"
-                in
-                r
-                  user_state
-                  (Match
-                     { offset
-                     ; identifier
-                     ; text
-                     })
-              | _ -> assert false
+                  pparser >>= fun text ->
+                  (*Format.printf "have results %d@." @@ List.length results;*)
+                  let offset =
+                    match Set_once.get first_pos with
+                    | Some offset -> offset
+                    | _ -> failwith "Did not expect unset offset"
+                  in
+                  r
+                    user_state
+                    (Match
+                       { offset
+                       ; identifier
+                       ; text
+                       })
+                | _ -> assert false (* TODO: other sorts *)
+              end
+            | Ok (_, _user_state) -> failwith "unreachable: _signal_hole parsed but not handled by Hole variant"
           in
           i := !i + 1;
           result)
@@ -339,19 +338,19 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     let cons x xs = x::xs in
     lift2 cons p (many_till p t)
 
-  let hole_parser sort dimension : (signal_hole * 'a) t t =
-    match sort with
-    | `Single ->
-      single_hole_parser () |>> fun id ->
-      skip_unit (string "_signal_hole") |>> fun () ->
-      (Signal_a_hole (Alphanum (id, dimension)), acc)
-    | `Greedy ->
-      greedy_hole_parser () |>> fun id ->
-      skip_unit (string "_signal_hole") |>> fun () ->
-      (Signal_a_hole (Everything (id, dimension)), acc)
+  let hole_parser sort dimension : (production * 'a) t t =
+    let open Hole in
+    let hole_parser =
+      match sort with
+      | Alphanum -> single_hole_parser ()
+      | Everything -> greedy_hole_parser ()
+      | _ -> failwith "not implemented"
+    in
+    let skip_signal hole = skip_unit (string "_signal_hole") |>> fun () -> (Hole hole, acc) in
+    hole_parser |>> fun identifier -> skip_signal { sort; identifier; dimension; optional = false }
 
-  let general_parser_generator : (signal_hole * 'a) t t =
-    fix (fun (generator : (signal_hole * 'a) t list t) ->
+  let general_parser_generator : (production * 'a) t t =
+    fix (fun (generator : (production * 'a) t list t) ->
         if debug then Format.printf "Descends@.";
         let nested =
           (* FIXME nested needs comments and string literals (or does it not
@@ -363,7 +362,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
               (string left_delimiter
                *> generator
                <* string right_delimiter)
-              >>= fun (g: (signal_hole * 'a) t list) ->
+              >>= fun (g: (production * 'a) t list) ->
               if debug then Format.printf "G size: %d; delim %s@." (List.length g) left_delimiter;
               (([string left_delimiter
                  >>= fun result -> r acc (String result)]
@@ -375,8 +374,8 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
               |> return)
           |> choice
         in
-        let spaces : (signal_hole * 'a) t t= spaces1 |>> generate_spaces_parser in
-        let escapable_string_literal_parser : (signal_hole * 'a) t t =
+        let spaces : (production * 'a) t t= spaces1 |>> generate_spaces_parser in
+        let escapable_string_literal_parser : (production * 'a) t t =
           escapable_string_literal_parser
           >>| fun string_literal_contents ->
           (* FIXME incomplete likely, may need info about delims. also, no hole
@@ -406,8 +405,8 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
            "" is a valid template, or even "{", because it generates 'seq' on chain *)
         many @@
         choice
-          [ hole_parser `Single Code
-          ; hole_parser `Greedy Code
+          [ hole_parser Alphanum Code
+          ; hole_parser Everything Code
           ; escapable_string_literal_parser
           ; spaces
           ; nested
