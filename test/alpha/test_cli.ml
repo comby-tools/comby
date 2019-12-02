@@ -804,8 +804,8 @@ let%expect_test "print_single_line_matches" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_expect_stdin_and_stdout command source
   |> print_string;
-  [%expect_exact {|let ()
-let ()
+  [%expect_exact {|2:let ()
+3:let ()
 
 |}]
 
@@ -828,9 +828,9 @@ in
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_expect_stdin_and_stdout command source
   |> print_string;
-  [%expect_exact {|let ()
-let\n\n    ()
-let ()
+  [%expect_exact {|2:let ()
+3:let\n\n    ()
+7:let ()
 
 |}];
 

@@ -30,14 +30,18 @@ let pp_source_path ppf source_path =
   | Some path -> Format.fprintf ppf "%s:" path
   | None -> Format.fprintf ppf ""
 
+let pp_line_number ppf start_line =
+  Format.fprintf ppf "%d:" start_line
+
 let pp ppf (source_path, matches) =
   if matches = [] then
     ()
   else
     let matched =
-      List.map matches ~f:(fun { matched; _ } ->
+      List.map matches ~f:(fun { matched; range; _ } ->
           let matched = String.substr_replace_all matched ~pattern:"\n" ~with_:"\\n" in
-          Format.asprintf "%a%s" pp_source_path source_path matched)
+          let line = range.match_start.line in
+          Format.asprintf "%a%a%s" pp_source_path source_path pp_line_number line matched)
       |> String.concat ~sep:"\n"
     in
     Format.fprintf ppf "%s@." matched
