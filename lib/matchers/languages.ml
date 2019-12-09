@@ -7,7 +7,7 @@ let ordinary_string = Some { delimiters = [{|"|}]; escape_character = '\\' }
 module Text = struct
   module Info = struct
     let name = "Text"
-    let extensions = [".txt"]
+    let extensions = [".txt"; ".md"; ".rst"; ".org"]
   end
 
   module Syntax = struct
