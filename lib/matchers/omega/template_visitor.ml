@@ -7,7 +7,8 @@ let is_whitespace = function
   | ' ' | '\t' | '\r' | '\n' -> true
   | _ -> false
 
-let user_defined_delimiters = [ "(", ")" ]
+let user_defined_delimiters =
+  Languages.C.Syntax.user_defined_delimiters
 
 let skip_unit p =
   p >>| ignore
@@ -94,24 +95,27 @@ class virtual ['a] visitor = object(self)
   method enter_other (_other : string) : 'a list = []
 
   method private generate_parser : 'a list t =
-    let spaces =
-      spaces1 >>| fun spaces -> self#enter_spaces spaces
-    in
+    let spaces = spaces1 >>| self#enter_spaces in
     let hole_parser =
       choice
         [ hole_parser Alphanum Code
         ; hole_parser Everything Code
         ]
-      >>| fun hole -> self#enter_hole hole in
-    let _string_literal _acc = () in
+      >>| self#enter_hole in
     let other =
-      many1 (any_char_except ~reserved) >>| fun other -> self#enter_other (String.of_char_list other)
+      many1 (any_char_except ~reserved)
+      >>| String.of_char_list
+      >>| self#enter_other
     in
     fix (fun generator : 'a list t ->
-        let left = "(" in
-        let right = ")" in
         (* body of nested will be visited recursively *)
-        let nested = string left *> generator <* string right >>| fun body -> self#enter_delimiter left right body in
+        let nested =
+          self#user_defined_delimiters
+          |> List.map ~f:(fun (left, right) ->
+              string left *> generator <* string right
+              >>| self#enter_delimiter left right)
+          |> choice
+        in
         (many @@ choice
            [ hole_parser
            ; spaces
