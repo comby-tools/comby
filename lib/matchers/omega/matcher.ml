@@ -214,80 +214,78 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     lift2 cons p (many_till p t)
 
   let sequence_chain (p_list : (production * 'a) t list) =
-    begin
-      let i = ref 0 in
-      List.fold_right p_list ~init:(return (Unit, acc)) ~f:(fun p acc ->
-          let result =
-            if debug then Format.printf "iterate fold_right %d@." !i;
-            match parse_string p "_signal_hole" with
-            | Error _ ->
-              if debug then Format.printf "Composing p with terminating parser@.";
-              p *> acc
-            | Ok (Hole { sort; identifier; _ }, user_state) ->
-              (*Format.printf "Ok.@.";*)
-              begin
-                match sort with
-                | Alphanum ->
-                  pos >>= fun pos_before ->
-                  many1 (generate_single_hole_parser ())
-                  >>= fun value ->
-                  (* acc must come after in order to sat. try mimic alpha to better express this. *)
-                  acc >>= fun _ ->
-                  r user_state
-                    (Match
-                       { offset = pos_before; identifier; text = (String.concat value) }
-                    )
-                | Everything ->
-                  if debug then Format.printf "do hole %s@." identifier;
-                  let first_pos = Set_once.create () in
-                  let pparser =
-                    let until =
-                      (* if this is the base case (the first time we go around the
-                         loop backwards, when the first parser is a hole), then it
-                         means there's a hole at the end without anything following
-                         it in the template. So it should always match to
-                         end_of_input (not empty string) *)
-                      if !i = 0 then
-                        (if debug then Format.printf "Yes this case@.";
-                         end_of_input)
-                      else
-                        (if debug then Format.printf "Yes this second case@.";
-                         acc >>= fun _ -> return ())
-                    in
-                    (many_till
-                       (pos >>= fun pos -> Set_once.set_if_none first_pos [%here] pos;
-                        generate_greedy_hole_parser ())
-                       (pos >>= fun pos -> Set_once.set_if_none first_pos [%here] pos;
-                        until)
-                       (* it may be that the many till for the first parser
-                          succeeds on 'empty string', specifically in the :[1]:[2]
-                          case for :[1]. We won't capture the pos of :[1] in the
-                          first parser since it doesn't fire, so, so we have to
-                          set the pos right before the until parser below, if that
-                          happens. *)
-                    ) >>| String.concat
+    let i = ref 0 in
+    List.fold_right p_list ~init:(return (Unit, acc)) ~f:(fun p acc ->
+        let result =
+          if debug then Format.printf "iterate fold_right %d@." !i;
+          match parse_string p "_signal_hole" with
+          | Error _ ->
+            if debug then Format.printf "Composing p with terminating parser@.";
+            p *> acc
+          | Ok (Hole { sort; identifier; _ }, user_state) ->
+            (*Format.printf "Ok.@.";*)
+            begin
+              match sort with
+              | Alphanum ->
+                pos >>= fun pos_before ->
+                many1 (generate_single_hole_parser ())
+                >>= fun value ->
+                (* acc must come after in order to sat. try mimic alpha to better express this. *)
+                acc >>= fun _ ->
+                r user_state
+                  (Match
+                     { offset = pos_before; identifier; text = (String.concat value) }
+                  )
+              | Everything ->
+                if debug then Format.printf "do hole %s@." identifier;
+                let first_pos = Set_once.create () in
+                let pparser =
+                  let until =
+                    (* if this is the base case (the first time we go around the
+                       loop backwards, when the first parser is a hole), then it
+                       means there's a hole at the end without anything following
+                       it in the template. So it should always match to
+                       end_of_input (not empty string) *)
+                    if !i = 0 then
+                      (if debug then Format.printf "Yes this case@.";
+                       end_of_input)
+                    else
+                      (if debug then Format.printf "Yes this second case@.";
+                       acc >>= fun _ -> return ())
                   in
-                  pparser >>= fun text ->
-                  (*Format.printf "have results %d@." @@ List.length results;*)
-                  let offset =
-                    match Set_once.get first_pos with
-                    | Some offset -> offset
-                    | _ -> failwith "Did not expect unset offset"
-                  in
-                  r
-                    user_state
-                    (Match
-                       { offset
-                       ; identifier
-                       ; text
-                       })
-                | _ -> assert false (* TODO: other sorts *)
-              end
-            | Ok (_, _user_state) -> failwith "unreachable: _signal_hole parsed but not handled by Hole variant"
-          in
-          i := !i + 1;
-          result)
-    end
+                  (many_till
+                     (pos >>= fun pos -> Set_once.set_if_none first_pos [%here] pos;
+                      generate_greedy_hole_parser ())
+                     (pos >>= fun pos -> Set_once.set_if_none first_pos [%here] pos;
+                      until)
+                     (* it may be that the many till for the first parser
+                        succeeds on 'empty string', specifically in the :[1]:[2]
+                        case for :[1]. We won't capture the pos of :[1] in the
+                        first parser since it doesn't fire, so, so we have to
+                        set the pos right before the until parser below, if that
+                        happens. *)
+                  ) >>| String.concat
+                in
+                pparser >>= fun text ->
+                (*Format.printf "have results %d@." @@ List.length results;*)
+                let offset =
+                  match Set_once.get first_pos with
+                  | Some offset -> offset
+                  | _ -> failwith "Did not expect unset offset"
+                in
+                r
+                  user_state
+                  (Match
+                     { offset
+                     ; identifier
+                     ; text
+                     })
+              | _ -> assert false (* TODO: other sorts *)
+            end
+          | Ok (_, _user_state) -> failwith "unreachable: _signal_hole parsed but not handled by Hole variant"
+        in
+        i := !i + 1;
+        result)
 
   (** must have at least one, otherwise spins on
       the empty string *)
@@ -317,9 +315,6 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     *> string str
     *> many comment_parser
     >>= fun result -> r acc (String (String.concat result))
-
-  let generate_single_hole_parser () =
-    (alphanum <|> char '_') |>> String.of_char
 
   let skip_unit p =
     p |>> ignore

@@ -60,6 +60,8 @@ let spaces1 =
   return (Format.sprintf "%c%s" c s)
 
 
+
+
 module Matcher = struct
 
   type omega_match_production =
@@ -77,6 +79,13 @@ module Matcher = struct
   let make_unit p =
     p >>= fun _ -> return Unit
 
+  let alphanum =
+    satisfy (function
+        | 'a' .. 'z'
+        | 'A' .. 'Z'
+        | '0' .. '9' -> true
+        | _ -> false)
+
   class generator = object(_)
     inherit syntax default_syntax
     inherit [production Angstrom.t] Template_visitor.visitor
@@ -89,20 +98,69 @@ module Matcher = struct
       [make_unit @@ spaces1]
 
     (* Wrap the hole so we can find it in enter_delimiter *)
-    method !enter_hole hole =
-      [return (Intermediate_hole hole)]
+    method !enter_hole ({ sort; identifier; _ } as hole) =
+      match sort with
+      | Everything -> [return (Intermediate_hole hole)]
+      | Alphanum ->
+        let result =
+          pos >>= fun pos_before ->
+          many1 ((alphanum <|> char '_') >>| String.of_char)
+          >>= fun matched ->
+          let text = String.concat matched in
+          return (Match { offset = pos_before; identifier; text})
+        in
+        [ result ]
+
+      | _ -> failwith "TODO"
 
     method !enter_delimiter left right body =
       [make_unit @@ string left] @ body @ [make_unit @@ string right]
       (* here we know that holes could be in the level, and where sequence_chain would go. we can merge into a single parser if desired. But don't merge it! What we want is to parse parse parse each little part and call a callback like 'parsed_string' ...*)
 
+    (* method !enter_toplevel. Here, we would put the matcher around comments n such *)
+
   end
 
   let run match_template =
     Template_visitor.fold (new generator) match_template
+
+  (* sequences a list of parsers *)
+  let sequence_chain (p_list : production Angstrom.t list)
+    : production Angstrom.t =
+    List.fold p_list ~init:(return Unit) ~f:( *>)
+end
+
+let debug = false
+
+module Engine = struct
+  let run source p =
+    let state = Buffered.parse p in
+    let state = Buffered.feed state (`String source) in
+    let state = Buffered.feed state `Eof in
+    match state with
+    | Buffered.Done ({ len; off; _ }, result) ->
+      if len <> 0 then
+        (if debug then
+           Format.eprintf "Input left over in parse where not expected: off(%d) len(%d)" off len;
+         Or_error.error_string "Does not match tempalte")
+      else
+        Ok result
+    | _ -> Or_error.error_string "No matches"
 end
 
 
+(* sequence_chain converts 'everything' holes in the level to matches *)
+let convert_everything_holes (p_list : Matcher.production Angstrom.t list)
+  : Matcher.production Angstrom.t list =
+  let i = ref 0 in
+  let result =
+    List.fold_right p_list ~init:[] ~f:(fun _p acc ->
+        (* TODO *)
+        acc
+      )
+  in
+  i := !i + 1;
+  result
 
 (* Proof of concept *)
 module Dumb_generator = struct
