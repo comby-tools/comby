@@ -4,6 +4,7 @@
 ;
 ; TODO
 ;
+  test_template_visitor
   test_generic
   test_match_rule
   test_hole_extensions
