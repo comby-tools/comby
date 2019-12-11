@@ -29,6 +29,7 @@ class virtual ['a] visitor : object
   method enter_spaces : string -> 'a list
   method enter_other : string -> 'a list
   method enter_hole : Hole.t -> 'a list
+  method enter_toplevel : 'a list -> 'a list
 
   method run : string -> 'a list
 end

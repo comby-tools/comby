@@ -93,6 +93,7 @@ class virtual ['a] visitor = object(self)
   method enter_delimiter (_left : string) (_right : string) (_body : 'a list) : 'a list = []
   method enter_spaces (_spaces : string) : 'a list = []
   method enter_other (_other : string) : 'a list = []
+  method enter_toplevel (_matcher : 'a list) = []
 
   method private generate_parser : 'a list t =
     let spaces = spaces1 >>| self#enter_spaces in
@@ -122,6 +123,7 @@ class virtual ['a] visitor = object(self)
            ; nested
            ; other
            ] >>| List.concat))
+    >>| self#enter_toplevel
 
   method run template : 'a list =
     let state = Buffered.parse self#generate_parser in

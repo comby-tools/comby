@@ -374,7 +374,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
               |> return)
           |> choice
         in
-        let spaces : (production * 'a) t t= spaces1 |>> generate_spaces_parser in
+        let spaces : (production * 'a) t t = spaces1 |>> generate_spaces_parser in
         let escapable_string_literal_parser : (production * 'a) t t =
           escapable_string_literal_parser
           >>| fun string_literal_contents ->
