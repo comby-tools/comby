@@ -13,5 +13,5 @@ let show_input_kind =
   function
   | `Paths _ -> Format.sprintf "Paths..."
   | `Path path -> Format.sprintf "Path: %s" path
-  | `String s -> Format.sprintf "String: %s" s
+  | `String _ -> Format.sprintf "A long string..."
   | `Zip _ -> Format.sprintf "Zip..."
