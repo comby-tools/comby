@@ -1,4 +1,3 @@
-open Angstrom
 open Types
 
 class state : object
@@ -34,17 +33,4 @@ class virtual ['a] visitor : object
   method run : string -> 'a list
 end
 
-class ['a] mapper : object
-  inherit state
-
-  method map_delimiter : string -> string -> 'a t -> 'a t
-
-  method generate_parser : 'a t
-
-  method run : string -> 'a t
-end
-
-(* Given a template, traverse it, and return 'a list where list corresponds to elements concatenated by the many parser *)
-val fold : 'a #visitor -> string -> 'a list
-
-val map : 'a #mapper -> string -> 'a t
+val visit : 'a #visitor -> string -> 'a list

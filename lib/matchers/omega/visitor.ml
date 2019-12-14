@@ -7,19 +7,16 @@ let is_whitespace = function
   | ' ' | '\t' | '\r' | '\n' -> true
   | _ -> false
 
-let user_defined_delimiters =
-  Languages.C.Syntax.user_defined_delimiters
-
 let skip_unit p =
   p >>| ignore
 
-let reserved_delimiters =
+let reserved_delimiters user_defined_delimiters =
   List.concat_map user_defined_delimiters ~f:(fun (from, until) -> [from; until])
   |> List.append [":["; "]"]
   |> List.append [":[["; "]]"]
 
-let reserved =
-  reserved_delimiters @ [" "; "\n"; "\t"; "\r"]
+let reserved user_defined_delimiters =
+  ((reserved_delimiters user_defined_delimiters) @ [" "; "\n"; "\t"; "\r"])
   |> List.sort ~compare:(fun v2 v1 ->
       String.length v1 - String.length v2)
 
@@ -138,7 +135,7 @@ class virtual ['a] visitor = object(self)
         ]
       >>| self#enter_hole in
     let other =
-      many1 (any_char_except ~reserved)
+      many1 (any_char_except ~reserved:(reserved self#user_defined_delimiters))
       >>| String.of_char_list
       >>| self#enter_other
     in
@@ -167,30 +164,5 @@ class virtual ['a] visitor = object(self)
     | _ -> []
 end
 
-class ['a] mapper = object(self)
-  inherit state
-
-  method map_delimiter (left : string) (right : string) (p : 'a t) : 'a t =
-    string left *> p <* string right
-
-  method generate_parser : 'a t =
-    fix (fun generator : 'a t ->
-        let left = "(" in
-        let right = ")" in
-        let acc = self#map_delimiter left right generator in
-        acc)
-
-  method run (template : string) : 'a t =
-    let state = Buffered.parse self#generate_parser in
-    let state = Buffered.feed state (`String template) in
-    Buffered.feed state `Eof
-    |> function
-    | Buffered.Done (_, p) -> return p
-    | _ -> failwith "nope"
-end
-
-let fold visitor template =
+let visit visitor template =
   visitor#run template
-
-let map _mapper _template =
-  assert false
