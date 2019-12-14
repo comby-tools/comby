@@ -223,23 +223,29 @@ module Make (S : Syntax.S) (Info : Info.S) = struct
           return (self#enter_match { matched; environment; range })
         in
         let result : production t =
-          many_till_returning_till
-            prefix
-            (at_end_of_input >>= function
-              | true ->
-                Format.printf "Done@.";
-                fail "Done -> Exit"
-              | false ->
-                Format.printf "Attempting recording match@.";
-                record_match ()
-            )
+          (many_till_returning_till
+             prefix
+             (at_end_of_input >>= function
+               | true ->
+                 Format.printf "Done -> Exit, end of input reached!@.";
+                 fail "Done -> Exit"
+               | false ->
+                 Format.printf "Not at the end. Attempting recording match@.";
+                 record_match ()
+             ))
+          <|> (fail "Failed" >>= fun _ -> Format.printf "Failed"; fail "Failed")
         in
-        [result >>= function
-          | Parsed -> Format.printf "parsed@."; return Parsed
-          | Hole_match _ as o ->  Format.printf "hole_matched@."; return o
-          | Match _ as o -> Format.printf "matched@."; return o
-          | Deferred _ as o -> Format.printf "deferred@."; return o
-        ]
+        (* We're only looking for one *)
+        let hd_production =
+          many result >>= function
+          | [] ->
+            Format.printf "nothing@.";
+            fail "none"
+          | hd::_ ->
+            Format.printf "hd@.";
+            return hd
+        in
+        [hd_production]
     end
 
     let run match_template =

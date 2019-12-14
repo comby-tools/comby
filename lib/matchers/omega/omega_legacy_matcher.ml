@@ -419,10 +419,13 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     (* XXX: what is the difference does many vs many1 make here? Semantically,
        it should mean "0 or more matching contexts" vs "1 or more matching
        contexts". We only care about the 1 case anyway, so... *)
+    let prefix =
+      skip_unit comment_parser
+      <|> skip_unit escapable_string_literal_parser
+      <|> skip_unit any_char
+    in
     many (skip_unit
-            (many_till (skip_unit comment_parser
-                        <|> skip_unit escapable_string_literal_parser
-                        <|> skip_unit any_char)
+            (many_till prefix
                (
                  at_end_of_input >>= fun res ->
                  if debug then Format.printf "We are at the end? %b.@." res;
