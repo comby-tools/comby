@@ -9,6 +9,15 @@ let is_whitespace = function
   | ' ' | '\t' | '\r' | '\n' -> true
   | _ -> false
 
+let skip_unit p =
+  p >>| ignore
+
+let cons x xs = x :: xs
+
+(* run p until t succeeds *)
+let many_till_returning_till (p : 'a t) (t : 'b t) : 'b t =
+  fix (fun m -> t <|> (p *> m))
+
 (* FIXME use skip_while once everything works, we don't need the string *)
 let spaces1 =
   satisfy is_whitespace >>= fun c ->
@@ -80,7 +89,8 @@ module Make (S : Syntax.S) (Info : Info.S) = struct
   (* A simple production type that only saves matches *)
   type production =
     | Parsed
-    | Match of almost_omega_match_production
+    | Hole_match of almost_omega_match_production
+    | Match of Match.t
     | Deferred of hole
 
   module Matcher = struct
@@ -100,7 +110,11 @@ module Make (S : Syntax.S) (Info : Info.S) = struct
         [ make_unit @@ spaces1 ]
 
       (* Apply rules here *)
-      method enter_match (matched : almost_omega_match_production) : production =
+      method enter_hole_match (matched : almost_omega_match_production) : production =
+        Hole_match matched
+
+      (* Apply rules here *)
+      method enter_match (matched: Match.t) : production =
         Match matched
 
       (* Wrap the hole so we can find it in enter_delimiter *)
@@ -113,9 +127,9 @@ module Make (S : Syntax.S) (Info : Info.S) = struct
             many1 ((alphanum <|> char '_') >>| String.of_char)
             >>= fun matched ->
             let text = String.concat matched in
-            return (self#enter_match ({ offset = pos_before; identifier; text }))
+            return (self#enter_hole_match ({ offset = pos_before; identifier; text }))
           in
-          [ result ]
+          [result]
 
         | _ -> failwith "TODO"
 
@@ -123,7 +137,44 @@ module Make (S : Syntax.S) (Info : Info.S) = struct
         (* call the hole converter here... *)
         [make_unit @@ string left] @ body @ [make_unit @@ string right]
 
-      (* method !enter_toplevel. Here, we would put the matcher around comments n such *)
+      (* Once we're at the toplevel of the template, generate the source
+         matcher by prefixing it with the 'skip' part. Make it record
+         a match_context when satisfied *)
+      method !enter_toplevel template_elements =
+        (* TODO add skip_unit comment_parser and skip_unit escapable_string_literal parser *)
+        let prefix = choice [ skip_unit any_char ] in
+        let record_match () : production t =
+          let open Match in
+          pos >>= fun start_position ->
+          List.fold template_elements
+            ~init:(return (Match.Environment.create ()))
+            ~f:(fun acc parser ->
+                acc >>= fun acc ->
+                parser >>= function
+                | Hole_match { offset; identifier; text } ->
+                  let before = Location.default in (* FIXME *)
+                  let after = { Location.default with offset } in
+                  let range = Range.{ match_start = before; match_end = after } in
+                  let acc = Environment.add ~range acc identifier text in
+                  return acc
+                | _ -> return acc
+              )
+          >>= fun environment ->
+          pos >>= fun end_position ->
+          let match_start = Location.{ default with offset = start_position } in
+          let match_end = Location.{ default with offset = end_position } in
+          let range = Range.{ match_start; match_end } in
+          let matched = "" in (* FIXME, slice *)
+          return (self#enter_match { matched; environment; range })
+        in
+        let result : production t =
+          many_till_returning_till
+            prefix
+            (at_end_of_input >>= function
+              | true -> fail "Done -> Exit"
+              | false -> record_match ())
+        in
+        [result]
     end
 
     let run match_template =
@@ -162,7 +213,7 @@ module Make (S : Syntax.S) (Info : Info.S) = struct
         | Match m -> m::acc
         | _ -> acc)
     |> function
-    | Ok _ -> []
+    | Ok matches -> matches
     | Error _ -> []
 
   let first ?configuration ?shift:_ template source : Match.t Or_error.t =
