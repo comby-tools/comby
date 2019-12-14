@@ -3,7 +3,9 @@ open Core_kernel
 
 open Types
 
-let debug = false
+let debug = true
+
+let source_ref : string ref = ref ""
 
 let is_whitespace = function
   | ' ' | '\t' | '\r' | '\n' -> true
@@ -98,6 +100,48 @@ module Make (S : Syntax.S) (Info : Info.S) = struct
     let make_unit p =
       p >>= fun _ -> return Parsed
 
+    let zero =
+      fail ""
+
+    let comment_parser comments =
+      match comments with
+      | [] -> zero
+      | syntax ->
+        List.map syntax ~f:(function
+            | Types.Syntax.Multiline (left, right) ->
+              let module M = Parsers.Comments.Omega.Multiline.Make(struct
+                  let left = left
+                  let right = right
+                end)
+              in
+              M.comment
+            | Until_newline start ->
+              let module M = Parsers.Comments.Omega.Until_newline.Make(struct
+                  let start = start
+                end)
+              in
+              M.comment
+            | Nested_multiline (_, _) -> zero) (* FIXME unimplemented nested multiline comments *)
+        |> choice
+
+    let escapable_string_literal_parser escapable_string_literals =
+      (match escapable_string_literals with
+       | None -> []
+       | Some Types.Syntax.{ delimiters; escape_character } ->
+         List.map delimiters ~f:(fun delimiter ->
+             let module M =
+               Parsers.String_literals.Omega.Escapable.Make(struct
+                 let delimiter = delimiter
+                 let escape = escape_character
+               end)
+             in
+             M.base_string_literal >>= fun contents ->
+             (* FIXME figure out if we need to do the same callback thing here to communicate
+                forward that we entered a string *)
+             return contents
+           ))
+      |> choice
+
     class generator = object(self)
       inherit make_syntax syntax_record
       inherit [production Angstrom.t] Visitor.visitor
@@ -141,8 +185,12 @@ module Make (S : Syntax.S) (Info : Info.S) = struct
          matcher by prefixing it with the 'skip' part. Make it record
          a match_context when satisfied *)
       method !enter_toplevel template_elements =
-        (* TODO add skip_unit comment_parser and skip_unit escapable_string_literal parser *)
-        let prefix = choice [ skip_unit any_char ] in
+        Format.printf "Entered toplevel@.";
+        let prefix = choice
+            [ skip_unit (comment_parser self#comments)
+            ; skip_unit (escapable_string_literal_parser self#escapable_string_literals)
+            ; skip_unit any_char
+            ] in
         let record_match () : production t =
           let open Match in
           pos >>= fun start_position ->
@@ -152,7 +200,7 @@ module Make (S : Syntax.S) (Info : Info.S) = struct
                 acc >>= fun acc ->
                 parser >>= function
                 | Hole_match { offset; identifier; text } ->
-                  let before = Location.default in (* FIXME *)
+                  let before = Location.default in (* FIXME. after - len(text)? *)
                   let after = { Location.default with offset } in
                   let range = Range.{ match_start = before; match_end = after } in
                   let acc = Environment.add ~range acc identifier text in
@@ -164,17 +212,34 @@ module Make (S : Syntax.S) (Info : Info.S) = struct
           let match_start = Location.{ default with offset = start_position } in
           let match_end = Location.{ default with offset = end_position } in
           let range = Range.{ match_start; match_end } in
-          let matched = "" in (* FIXME, slice *)
+          let extract_matched_text
+              source
+              Location.{ offset = match_start; _ }
+              Location.{ offset = match_end; _ } =
+            String.slice source match_start match_end
+          in
+          let matched = extract_matched_text !source_ref match_start match_end in
+          Format.printf "Matched: %s@." matched;
           return (self#enter_match { matched; environment; range })
         in
         let result : production t =
           many_till_returning_till
             prefix
             (at_end_of_input >>= function
-              | true -> fail "Done -> Exit"
-              | false -> record_match ())
+              | true ->
+                Format.printf "Done@.";
+                fail "Done -> Exit"
+              | false ->
+                Format.printf "Attempting recording match@.";
+                record_match ()
+            )
         in
-        [result]
+        [result >>= function
+          | Parsed -> Format.printf "parsed@."; return Parsed
+          | Hole_match _ as o ->  Format.printf "hole_matched@."; return o
+          | Match _ as o -> Format.printf "matched@."; return o
+          | Deferred _ as o -> Format.printf "deferred@."; return o
+        ]
     end
 
     let run match_template =
@@ -191,7 +256,7 @@ module Make (S : Syntax.S) (Info : Info.S) = struct
         if len <> 0 then
           (if debug then
              Format.eprintf "Input left over in parse where not expected: off(%d) len(%d)" off len;
-           Or_error.error_string "Does not match tempalte")
+           Or_error.error_string "Does not match template")
         else
           Ok result
       | _ -> Or_error.error_string "No matches"
@@ -207,14 +272,21 @@ module Make (S : Syntax.S) (Info : Info.S) = struct
     Engine.run source accumulator
 
   let all ?configuration:_ ~template ~source : Match.t list =
+    source_ref := source;
     let production_parsers = Matcher.run template in
     fold source production_parsers ~init:[] ~f:(fun acc ->
         function
-        | Match m -> m::acc
+        | Match m ->
+          Format.printf "Yessir@.";
+          m::acc
         | _ -> acc)
     |> function
-    | Ok matches -> matches
-    | Error _ -> []
+    | Ok matches ->
+      Format.printf "Returning %d matches@." @@ List.length matches;
+      matches
+    | Error e ->
+      Format.printf "Error: %s@." (Error.to_string_hum e);
+      []
 
   let first ?configuration ?shift:_ template source : Match.t Or_error.t =
     match all ?configuration ~template ~source with
