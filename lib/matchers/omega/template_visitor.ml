@@ -85,6 +85,13 @@ class virtual syntax = object
   method virtual comments : Syntax.comment_kind list
 end
 
+let spaces =
+  take_while is_whitespace >>= fun s ->
+  return s
+
+let zero =
+  fail ""
+
 class virtual ['a] visitor = object(self)
   inherit state
   inherit syntax
@@ -96,7 +103,34 @@ class virtual ['a] visitor = object(self)
   method enter_toplevel (elements : 'a list) = elements
 
   method private generate_parser : 'a list t =
-    let spaces = spaces1 >>| self#enter_spaces in
+    let comment_parser =
+      match self#comments with
+      | [] -> zero
+      | syntax ->
+        List.map syntax ~f:(function
+            | Multiline (left, right) ->
+              let module M = Parsers.Comments.Omega.Multiline.Make(struct
+                  let left = left
+                  let right = right
+                end)
+              in
+              M.comment
+            | Until_newline start ->
+              let module M = Parsers.Comments.Omega.Until_newline.Make(struct
+                  let start = start
+                end)
+              in
+              M.comment
+            (* FIXME: nested multiline *)
+            | Nested_multiline (_, _) -> zero)
+        |> choice
+    in
+    let spaces =
+      spaces1 >>= fun pre_spaces ->
+      many comment_parser >>= fun comments ->
+      spaces >>= fun post_spaces ->
+      return (self#enter_spaces (pre_spaces^(String.concat comments)^post_spaces))
+    in
     let hole_parser =
       choice
         [ hole_parser Alphanum Code
@@ -109,7 +143,6 @@ class virtual ['a] visitor = object(self)
       >>| self#enter_other
     in
     fix (fun generator : 'a list t ->
-        (* body of nested will be visited recursively *)
         let nested =
           self#user_defined_delimiters
           |> List.map ~f:(fun (left, right) ->

@@ -81,6 +81,7 @@ module Omega = struct
     ; identifier : string
     ; text : string
     }
+  [@@deriving yojson]
 
   type production =
     | Unit

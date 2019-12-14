@@ -3,6 +3,13 @@ open Core_kernel
 
 open Types
 
+let default_syntax =
+  Syntax.{ user_defined_delimiters = Languages.C.Syntax.user_defined_delimiters
+         ; escapable_string_literals = Languages.C.Syntax.escapable_string_literals
+         ; raw_string_literals = Languages.C.Syntax.raw_string_literals
+         ; comments = Languages.C.Syntax.comments
+         }
+
 class syntax
     Syntax.{ user_defined_delimiters
            ; escapable_string_literals
@@ -14,14 +21,6 @@ class syntax
   method raw_string_literals = raw_string_literals
   method comments = comments
 end
-
-let default_syntax =
-  Syntax.{ user_defined_delimiters = [ "(", ")" ]
-         ; escapable_string_literals = None
-         ; raw_string_literals = []
-         ; comments = []
-         }
-
 
 module Printer = struct
   class printer = object(_)
@@ -52,15 +51,18 @@ let is_whitespace = function
   | ' ' | '\t' | '\r' | '\n' -> true
   | _ -> false
 
+(* FIXME use skip_while once everything works, we don't need the string *)
 let spaces1 =
   satisfy is_whitespace >>= fun c ->
-  (* XXX use skip_while once everything works.
-     we don't need the string *)
   take_while is_whitespace >>= fun s ->
   return (Format.sprintf "%c%s" c s)
 
-
-
+let alphanum =
+  satisfy (function
+      | 'a' .. 'z'
+      | 'A' .. 'Z'
+      | '0' .. '9' -> true
+      | _ -> false)
 
 module Matcher = struct
 
@@ -69,65 +71,68 @@ module Matcher = struct
     ; identifier : string
     ; text : string
     }
+  [@@deriving yojson]
 
   (* A simple production type that only saves matches *)
   type production =
-    | Unit
+    | Parsed
     | Match of omega_match_production
-    | Intermediate_hole of hole
+    | Deferred of hole
 
   let make_unit p =
-    p >>= fun _ -> return Unit
+    p >>= fun _ -> return Parsed
 
-  let alphanum =
-    satisfy (function
-        | 'a' .. 'z'
-        | 'A' .. 'Z'
-        | '0' .. '9' -> true
-        | _ -> false)
-
-  class generator = object(_)
+  class generator = object(self)
     inherit syntax default_syntax
     inherit [production Angstrom.t] Template_visitor.visitor
 
     method !enter_other other =
       [make_unit @@ string other]
 
+    (* Includes swallowing comments for now. See template_visitor. *)
     method !enter_spaces _ =
-      (* Add comments, see matcher.ml *)
-      [make_unit @@ spaces1]
+      [ make_unit @@ spaces1 ]
+
+    (* Apply rules here *)
+    method enter_match (matched : omega_match_production) : production =
+      Match matched
 
     (* Wrap the hole so we can find it in enter_delimiter *)
     method !enter_hole ({ sort; identifier; _ } as hole) =
       match sort with
-      | Everything -> [return (Intermediate_hole hole)]
+      | Everything -> [return (Deferred hole)]
       | Alphanum ->
         let result =
           pos >>= fun pos_before ->
           many1 ((alphanum <|> char '_') >>| String.of_char)
           >>= fun matched ->
           let text = String.concat matched in
-          return (Match { offset = pos_before; identifier; text})
+          return (self#enter_match ({ offset = pos_before; identifier; text }))
         in
         [ result ]
 
       | _ -> failwith "TODO"
 
     method !enter_delimiter left right body =
+      (* call the hole converter here... *)
       [make_unit @@ string left] @ body @ [make_unit @@ string right]
-      (* here we know that holes could be in the level, and where sequence_chain would go. we can merge into a single parser if desired. But don't merge it! What we want is to parse parse parse each little part and call a callback like 'parsed_string' ...*)
 
     (* method !enter_toplevel. Here, we would put the matcher around comments n such *)
-
   end
 
   let run match_template =
     Template_visitor.fold (new generator) match_template
 
-  (* sequences a list of parsers *)
-  let sequence_chain (p_list : production Angstrom.t list)
-    : production Angstrom.t =
-    List.fold p_list ~init:(return Unit) ~f:( *>)
+  (* sequences a list of parsers to one parser, throwing away all results except the last. *)
+  let sequence_chain (p_list : production Angstrom.t list) : production Angstrom.t =
+    List.fold p_list ~init:(return Parsed) ~f:( *>)
+
+  (* sequences a list of parsers and accumulates their productions in a list *)
+  let map_chain (p_list : production Angstrom.t list) : production list Angstrom.t =
+    List.fold p_list ~init:(return []) ~f:(fun acc parser ->
+        acc >>= fun acc ->
+        parser >>= fun result ->
+        return (result::acc))
 end
 
 let debug = false
@@ -148,6 +153,14 @@ module Engine = struct
     | _ -> Or_error.error_string "No matches"
 end
 
+let fold source p_list ~f ~init =
+  let accumulator =
+    List.fold p_list ~init:(return init) ~f:(fun acc parser ->
+        acc >>= fun acc ->
+        parser >>= fun parsed ->
+        return (f acc parsed))
+  in
+  Engine.run source accumulator
 
 (* sequence_chain converts 'everything' holes in the level to matches *)
 let convert_everything_holes (p_list : Matcher.production Angstrom.t list)
@@ -161,31 +174,3 @@ let convert_everything_holes (p_list : Matcher.production Angstrom.t list)
   in
   i := !i + 1;
   result
-
-(* Proof of concept *)
-module Dumb_generator = struct
-  open Angstrom
-
-  class generator = object(_)
-    inherit syntax default_syntax
-    inherit ['a Angstrom.t] Template_visitor.visitor
-
-    method !enter_other other =
-      [string other]
-
-    (* too strong! *)
-    method !enter_spaces spaces =
-      [string spaces]
-
-    (* hard *)
-    method !enter_hole _ = []
-
-
-    method !enter_delimiter left right body =
-      [string left] @ body @ [string right]
-
-  end
-
-  let run match_template =
-    Template_visitor.fold (new generator) match_template
-end
