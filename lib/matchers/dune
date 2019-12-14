@@ -1,5 +1,5 @@
-(copy_files# alpha/*.ml{,i})
-; (copy_files# omega/*.ml{,i})
+; (copy_files# alpha/*.ml{,i})
+(copy_files# omega/*.ml{,i})
 
 (library
   (name matchers)
