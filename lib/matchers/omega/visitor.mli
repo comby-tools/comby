@@ -1,3 +1,5 @@
+open Angstrom
+
 open Types
 
 class state : object
@@ -29,6 +31,11 @@ class virtual ['a] visitor : object
   method enter_other : string -> 'a list
   method enter_hole : Hole.t -> 'a list
   method enter_toplevel : 'a list -> 'a list
+
+  (** Unfortunately we have to expose Angstrom.t to make this accessible and
+      reusable to sublcasses. If it weren't for this we wouldn't need to expose
+      it. *)
+  method comment_parser : string t
 
   method run : string -> 'a list
 end

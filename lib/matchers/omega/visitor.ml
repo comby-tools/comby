@@ -99,32 +99,32 @@ class virtual ['a] visitor = object(self)
   method enter_other (_other : string) : 'a list = []
   method enter_toplevel (elements : 'a list) = elements
 
+  method comment_parser : string t =
+    match self#comments with
+    | [] -> zero
+    | syntax ->
+      List.map syntax ~f:(function
+          | Multiline (left, right) ->
+            let module M = Parsers.Comments.Omega.Multiline.Make(struct
+                let left = left
+                let right = right
+              end)
+            in
+            M.comment
+          | Until_newline start ->
+            let module M = Parsers.Comments.Omega.Until_newline.Make(struct
+                let start = start
+              end)
+            in
+            M.comment
+          (* FIXME: nested multiline *)
+          | Nested_multiline (_, _) -> zero)
+      |> choice
+
   method private generate_parser : 'a list t =
-    let comment_parser =
-      match self#comments with
-      | [] -> zero
-      | syntax ->
-        List.map syntax ~f:(function
-            | Multiline (left, right) ->
-              let module M = Parsers.Comments.Omega.Multiline.Make(struct
-                  let left = left
-                  let right = right
-                end)
-              in
-              M.comment
-            | Until_newline start ->
-              let module M = Parsers.Comments.Omega.Until_newline.Make(struct
-                  let start = start
-                end)
-              in
-              M.comment
-            (* FIXME: nested multiline *)
-            | Nested_multiline (_, _) -> zero)
-        |> choice
-    in
     let spaces =
       spaces1 >>= fun pre_spaces ->
-      many comment_parser >>= fun comments ->
+      many self#comment_parser >>= fun comments ->
       spaces >>= fun post_spaces ->
       return (self#enter_spaces (pre_spaces^(String.concat comments)^post_spaces))
     in
@@ -149,10 +149,12 @@ class virtual ['a] visitor = object(self)
         in
         (many @@ choice
            [ hole_parser
+           (* TODO: ; escapable_string_literal *)
            ; spaces
            ; nested
            ; other
-           ] >>| List.concat))
+           ]
+         >>| List.concat))
     >>| self#enter_toplevel
 
   method run template : 'a list =

@@ -239,20 +239,20 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
               | Everything ->
                 if debug then Format.printf "do hole %s@." identifier;
                 let first_pos = Set_once.create () in
+                let until =
+                  (* if this is the base case (the first time we go around the
+                     loop backwards, when the first parser is a hole), then it
+                     means there's a hole at the end without anything following
+                     it in the template. So it should always match to
+                     end_of_input (not empty string) *)
+                  if !i = 0 then
+                    (if debug then Format.printf "Yes this case@.";
+                     end_of_input)
+                  else
+                    (if debug then Format.printf "Yes this second case@.";
+                     acc >>= fun _ -> return ())
+                in
                 let pparser =
-                  let until =
-                    (* if this is the base case (the first time we go around the
-                       loop backwards, when the first parser is a hole), then it
-                       means there's a hole at the end without anything following
-                       it in the template. So it should always match to
-                       end_of_input (not empty string) *)
-                    if !i = 0 then
-                      (if debug then Format.printf "Yes this case@.";
-                       end_of_input)
-                    else
-                      (if debug then Format.printf "Yes this second case@.";
-                       acc >>= fun _ -> return ())
-                  in
                   (many_till
                      (pos >>= fun pos -> Set_once.set_if_none first_pos [%here] pos;
                       generate_greedy_hole_parser ())
