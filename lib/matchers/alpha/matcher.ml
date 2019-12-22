@@ -102,17 +102,9 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     match Syntax.escapable_string_literals with
     | None -> zero
     | Some { escape_character; _ } ->
-      (attempt
-         (char escape_character
-          >> string right_delimiter
-          >>= fun s -> return (Format.sprintf "%c%s" escape_character s))
-      )
+      (string (Format.sprintf "%c%s" escape_character right_delimiter))
       <|>
-      (attempt
-         (char escape_character
-          >> char escape_character
-          >> return (Format.sprintf "%c%c" escape_character escape_character))
-      )
+      (string (Format.sprintf "%c%c" escape_character escape_character))
       <|> (is_not (string right_delimiter) |>> String.of_char)
 
   let raw_literal_grammar ~right_delimiter =
