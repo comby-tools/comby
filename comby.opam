@@ -34,6 +34,7 @@ pin-depends: [
   ["mparser-comby.git" "git+https://github.com/comby-tools/mparser.git"]
   ["lwt.git" "git+https://github.com/rvantonder/lwt.git#4.3.0-with-captain"]
   ["patdiff.git" "git+https://github.com/rvantonder/patdiff.git#0.12.1-patch-compatible-diffs"]
+  ["camlzip.git" "git+https://github.com/rvantonder/camlzip.git#zip64"]
 ]
 depexts: [
     [
