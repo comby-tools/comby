@@ -1,7 +1,6 @@
 .merlin
 _build
 *.install
-/dune-project
 \#*
 .\#*
 scripts/0.*
