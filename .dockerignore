@@ -7,3 +7,4 @@
 !comby.opam
 !dune
 !push-coverage-report.sh
+!dune-project

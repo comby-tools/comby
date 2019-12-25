@@ -7,6 +7,7 @@ WORKDIR /home/comby
 
 COPY Makefile /home/comby/
 COPY comby.opam /home/comby/
+COPY dune-project /home/comby/
 COPY dune /home/comby/
 COPY docs /home/comby/docs
 COPY src /home/comby/src

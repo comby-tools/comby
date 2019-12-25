@@ -377,11 +377,6 @@ let run
               count, inputs
             | _ -> failwith "Can't run interactive review for these inputs")
       in
-      (* RVT modified lwt so that the toplevel Lwt scheduler is prevented from
-         starting up at module load. Lwt interferes with hack_parallel child
-         workers otherwise. This command runs the setup function, only after we are
-         finished with parallel work. *)
-      Lwt_unix.i_am_the_captain_now ();
       let { editor; default_is_accept } = Option.value_exn interactive_review in
       Interactive.run editor default_is_accept count rewrites;
       count
