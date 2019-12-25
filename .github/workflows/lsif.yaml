@@ -9,8 +9,8 @@ jobs:
       - uses: actions/checkout@v1
       - name: OCaml setup
         uses: avsm/setup-ocaml@master
-          with:
-            ocaml-version: '4.08.1'
+        with:
+          ocaml-version: '4.08.1'
       - run: opam pin add comby.dev -n .
       - run: opam depext -yt comby
       - run: opam install -t . --deps-only
