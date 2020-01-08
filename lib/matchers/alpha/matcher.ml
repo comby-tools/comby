@@ -343,7 +343,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
          in
          let range = { match_start = pre_location; match_end = post_location } in
          let environment =
-           if Environment.exists environment identifier then
+           if Environment.exists environment identifier && String.(identifier <> "_") then
              let fresh_hole_id =
                Format.sprintf "%s_%s_equal" Uuid_unix.(Fn.compose Uuid.to_string create ()) identifier
              in

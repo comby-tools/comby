@@ -141,3 +141,11 @@ let%expect_test "implicit_equals" =
   let rewrite_template = {|:[m]|} in
   run source match_template rewrite_template;
   [%expect_exact {|b|}]
+
+let%expect_test "implicit_equals_does_not_apply_to_underscore" =
+  let run = run_all in
+  let source = {|a b c|} in
+  let match_template = {|:[[_]] :[[_]] :[[_]]|} in
+  let rewrite_template = {|:[_]|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|a|}]
