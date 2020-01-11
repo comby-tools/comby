@@ -22,13 +22,31 @@ module Omega = struct
          <|> (any_char |>> String.of_char)
         )
 
-
       let base_string_literal =
         ((string M.delimiter *> (many_till char_token_s (string M.delimiter))
           |>> String.concat)
          >>= fun result ->
-         return (Format.sprintf {|%s%s|} M.delimiter result)
-         (* unlike Alpha, do not suffix the ending delimiter, it was captured by the delimiter parser in many_till *)
+         return (Format.sprintf {|%s%s%s|} M.delimiter result M.delimiter)
+        )
+    end
+  end
+
+  module Raw = struct
+    module type S = sig
+      val left_delimiter : string
+      val right_delimiter : string
+    end
+
+    module Make (M : S) = struct
+      let char_token_s =
+        (any_char |>> String.of_char)
+
+      let base_string_literal =
+        ((
+          string M.left_delimiter *> (many_till char_token_s (string M.right_delimiter))
+          |>> String.concat)
+         >>= fun result ->
+         return (Format.sprintf {|%s%s%s|} M.left_delimiter result M.right_delimiter)
         )
     end
   end

@@ -1,4 +1,4 @@
-(*open Core
+open Core
 
 open Matchers
 open Rewriter
@@ -410,4 +410,3 @@ let%expect_test "match_escaped_escaped" =
       | Some { rewritten_source; _ } -> print_string rewritten_source
       | None -> print_string "EXPECT SUCCESS");
   [%expect_exact {|EXPECT SUCCESS|}]
-  *)

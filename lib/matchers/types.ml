@@ -81,10 +81,12 @@ module Omega = struct
     ; identifier : string
     ; text : string
     }
+  [@@deriving yojson]
 
   type production =
     | Unit
     | String of string
+    | Template_string of string
     | Hole of hole
     | Match of omega_match_production
 end
@@ -104,6 +106,8 @@ module Matcher = struct
       -> string
       -> string
       -> Match.t Or_error.t
+
+    val set_rewrite_template : string -> unit
 
     val all
       :  ?configuration:Configuration.t

@@ -119,8 +119,11 @@ let update_match f m =
   let environment = update_environment m.environment f in
   { m with range; environment }
 
-let timed_run matcher ?substitute_in_place ?rule ~configuration ~template ~source () =
+let timed_run matcher ?rewrite_template ?substitute_in_place ?rule ~configuration ~template ~source () =
   let module Matcher = (val matcher : Matchers.Matcher) in
+  (match rewrite_template with
+   | Some template -> Matcher.set_rewrite_template template;
+   | None -> ());
   let matches = Matcher.all ~configuration ~template ~source in
   let rule = Option.value rule ~default:[Ast.True] in
   let matches = apply_rule ?substitute_in_place matcher rule matches in
@@ -171,7 +174,7 @@ let process_single_source
     in
     let matches =
       with_timeout timeout source ~f:(fun () ->
-          timed_run matcher ?rule ~substitute_in_place ~configuration ~template ~source:input_text ())
+          timed_run matcher ?rewrite_template ?rule ~substitute_in_place ~configuration ~template ~source:input_text ())
     in
     match rewrite_template with
     | None -> Matches (matches, List.length matches)

@@ -922,4 +922,6 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       let matches = compute_nested_matches matches in
       return matches
     end
+
+  let set_rewrite_template _ = () (* Unused in alpha matcher *)
 end

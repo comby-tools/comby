@@ -7,8 +7,8 @@ type t =
   }
 [@@deriving yojson]
 
-let create () =
-  { range = Range.default
+let create ?(range = Range.default) () =
+  { range
   ; environment = Environment.create ()
   ; matched = ""
   }

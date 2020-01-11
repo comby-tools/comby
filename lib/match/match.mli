@@ -66,7 +66,7 @@ type t =
   }
 [@@deriving yojson]
 
-val create : unit -> t
+val create : ?range:range -> unit -> t
 
 val pp : Format.formatter -> string option * t list -> unit
 

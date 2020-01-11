@@ -4,19 +4,8 @@
 ;
 ; TODO
 ;
-  test_generic
-  test_match_rule
-  test_hole_extensions
-  test_python_string_literals
-  test_integration
-  test_statistics
-  test_cli
-  test_c_style_comments
-  test_string_literals
+  test_optional_holes
   test_special_matcher_cases
-  test_generic
-  test_rewrite_rule
-  test_server
   test_substring_disabled)
  (inline_tests)
  (preprocess (pps ppx_expect ppx_sexp_message ppx_deriving_yojson ppx_deriving_yojson.runtime))

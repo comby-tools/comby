@@ -6,18 +6,30 @@ module Omega = struct
   let (|>>) p f =
     p >>= fun x -> return (f x)
 
-  let between left _right p =
-    left *> p (*<* right*)
+  let any_char_except ~reserved =
+    List.fold reserved
+      ~init:(return `OK)
+      ~f:(fun acc reserved_sequence ->
+          option `End_of_input
+            (peek_string (String.length reserved_sequence)
+             >>= fun s ->
+             if s = reserved_sequence then
+               return `Reserved_sequence
+             else
+               acc))
+    >>= function
+    | `OK -> any_char
+    | `End_of_input -> any_char
+    | `Reserved_sequence -> fail "reserved sequence hit"
+
+  let between left right p =
+    left *> p <* right
 
   let to_string from until between : string =
     from ^ (String.of_char_list between) ^ until
 
   let anything_including_newlines ~until =
-    (* until is not consumed in Alpha. Angstrom consumes it. It needs to not
-       consume because we're doing that for 'between'; but now between is
-       changed to not expect it. The point is: it does the right thing but
-       diverges from Alpha and is a little bit... weird *)
-    (many_till any_char (string until))
+    many (any_char_except ~reserved:[until])
 
   let anything_excluding_newlines () =
     anything_including_newlines ~until:"\n"
@@ -41,7 +53,8 @@ module Omega = struct
     end
   end
 
-  (* XXX consumes the newline *)
+  (* Consumes the newline if we don't reintroduce it. This can be improved, we
+     shouldn't need to reintroduce it.*)
   let until_newline start =
     (string start *> anything_excluding_newlines ()
      |>> fun l -> start^(String.of_char_list l))
