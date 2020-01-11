@@ -14,6 +14,14 @@ open Language
 
 module Command_configuration = Command_configuration
 
+let debug =
+  Sys.getenv "DEBUG_COMBY"
+  |> Option.is_some
+
+let fast_line_col_compute =
+  Sys.getenv "FAST_LINE_COL_COMPUTE_COMBY"
+  |> Option.is_some
+
 let infer_equality_constraints environment =
   let vars = Environment.vars environment in
   List.fold vars ~init:[] ~f:(fun acc var ->
@@ -34,7 +42,7 @@ let apply_rule ?(substitute_in_place = true) matcher rule matches =
       (if sat then env else None)
       >>| fun environment -> { matched with environment })
 
-let compute_line_col source offset =
+let compute_line_col_slow source offset =
   let f (offset, line, col) char =
     match offset, char with
     | 0, _ -> (0, line, col)
@@ -44,42 +52,87 @@ let compute_line_col source offset =
   let _, line, col = String.fold ~init:(offset, 1, 1) ~f source in
   line, col
 
-let update_match source m =
-  let update_range range =
-    let update_location loc =
-      let open Location in
-      let line, column = compute_line_col source loc.offset in
-      { loc with line; column}
-    in
-    let open Range in
-    let match_start = update_location range.match_start in
-    let match_end = update_location range.match_end in
-    { match_start; match_end }
+let line_map source =
+  let total_len = String.length source in
+  let num_lines = List.length @@ String.split_on_chars source ~on:['\n'] in
+  let a = Array.create ~len:num_lines (Int.max_value) in
+  let line_index = ref 0 in
+  let f sum char =
+    match char with
+    | '\n' ->
+      a.(!line_index) <- sum + 1;
+      line_index := !line_index + 1;
+      sum + 1
+    | _ ->
+      if sum = total_len - 1 then (* If it's the last char and wasn't a newline, record this offset. *)
+        begin
+          a.(!line_index) <- sum + 1; (* FIXME: no test fails if + 1 is removed. Be ware. *)
+          sum + 1
+        end
+      else
+        sum + 1
   in
-  let update_environment env =
-    List.fold (Environment.vars env) ~init:env ~f:(fun env var ->
-        let open Option in
-        let updated =
-          Environment.lookup_range env var
-          >>| update_range
-          >>| Environment.update_range env var
-        in
-        Option.value_exn updated)
+  let _ = String.fold source ~init:0 ~f in
+  a
+
+let rec binary_search a value low high =
+  if high <= low then
+    low
+  else let mid = (low + high) / 2 in
+    if a.(mid) > value then
+      binary_search a value low (mid - 1)
+    else if a.(mid) < value then
+      binary_search a value (mid + 1) high
+    else
+      mid
+
+let compute_line_col_fast a offset =
+  let offset = offset - 1 in (* make offset 0-based because line_map is 0-based *)
+  let line = binary_search a offset 0 (Array.length a) in
+  let line = if a.(line) < offset then line + 1 else line in
+  let col = if line = 0 then offset else offset - a.(line - 1) in
+  line + 1, col + 1 (* reset 0-based offset to 1 *) + 1 (* output 1-based info *)
+
+let update_range f range =
+  let open Range in
+  let open Location in
+  let update_location loc =
+    let line, column = f loc.offset in
+    { loc with line; column }
   in
-  let range = update_range m.range in
-  let environment = update_environment m.environment in
+  let match_start = update_location range.match_start in
+  let match_end = update_location range.match_end in
+  { match_start; match_end }
+
+let update_environment env f =
+  List.fold (Environment.vars env) ~init:env ~f:(fun env var ->
+      let open Option in
+      let updated =
+        Environment.lookup_range env var
+        >>| update_range f
+        >>| Environment.update_range env var
+      in
+      Option.value_exn updated)
+
+let update_match f m =
+  let range = update_range f m.range in
+  let environment = update_environment m.environment f in
   { m with range; environment }
 
 let timed_run matcher ?substitute_in_place ?rule ~configuration ~template ~source () =
   let module Matcher = (val matcher : Matchers.Matcher) in
   let matches = Matcher.all ~configuration ~template ~source in
   let rule = Option.value rule ~default:[Ast.True] in
-  apply_rule ?substitute_in_place matcher rule matches
-  |> List.map ~f:(update_match source)
+  let matches = apply_rule ?substitute_in_place matcher rule matches in
+  let f offset =
+    if fast_line_col_compute then
+      let a = line_map source in
+      compute_line_col_fast a offset
+    else
+      compute_line_col_slow source offset
+  in
+  List.map matches ~f:(update_match f)
 
-let debug =
-  Sys.getenv "DEBUG_COMBY"
-  |> Option.is_some
 
 type processed_source_result =
   | Matches of (Match.t list * int)
