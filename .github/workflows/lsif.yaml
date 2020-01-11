@@ -15,12 +15,12 @@ jobs:
       - run: opam install -t . --deps-only
       - run: opam pin add -y merlin-lsif https://github.com/rvantonder/merlin.git\#lsif
       - run: opam pin add -y lsif-ocaml https://github.com/rvantonder/lsif-ocaml.git
-      - run: opam exec -- dune build
 #     - name: Setup tmate session
 #       uses: mxschmitt/action-tmate@v1
+      - run: LIBRARY_PATH=$HOME/.opam/4.08.1/lib/hack_parallel opam exec -- dune build
       - run: opam exec -- lsif-ocaml-dump
-#     - run: opam exec -- lsif-ocaml -only-type-hovers > dump.lsif
-      - run: opam exec -- lsif-ocaml > dump.lsif
+      - run: opam exec -- lsif-ocaml -only-type-hovers > dump.lsif
+#     - run: opam exec -- lsif-ocaml > dump.lsif
       - name: Upload LSIF data
         uses: sourcegraph/lsif-upload-action@master
         continue-on-error: true
