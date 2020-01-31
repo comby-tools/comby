@@ -6,6 +6,15 @@ let debug =
   Sys.getenv "DEBUG_COMBY"
   |> Option.is_some
 
+let substitute_fresh template =
+  let pattern = ":[id()]" in
+  let template_ref = ref template in
+  while Option.is_some (String.substr_index !template_ref ~pattern) do
+    let uuid = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
+    let id = String.suffix uuid 12 in
+    template_ref := String.substr_replace_first !template_ref ~pattern ~with_:id
+  done;
+  !template_ref
 
 let substitute template env =
   let substitution_formats =
@@ -23,6 +32,7 @@ let substitute template env =
     ; ":[?", "]"
     ]
   in
+  let template = substitute_fresh template in
   Environment.vars env
   |> List.fold ~init:(template, []) ~f:(fun (acc, vars) variable ->
       match Environment.lookup env variable with
