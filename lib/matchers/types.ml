@@ -56,6 +56,7 @@ module Hole = struct
     | Non_space
     | Line
     | Blank
+    | Regex
 
   type t =
     { sort : sort
@@ -70,6 +71,7 @@ module Hole = struct
     ; Non_space
     ; Line
     ; Blank
+    ; Regex
     ]
 end
 

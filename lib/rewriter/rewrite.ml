@@ -9,8 +9,7 @@ let debug =
 
 
 let substitute_match_contexts (matches: Match.t list) source replacements =
-  if debug then
-    Format.printf "Matches: %d | Replacements: %d@." (List.length matches) (List.length replacements);
+  if debug then Format.printf "Matches: %d | Replacements: %d@." (List.length matches) (List.length replacements);
   let rewrite_template, environment =
     List.fold2_exn
       matches replacements
