@@ -1,3 +1,4 @@
+open Angstrom
 open Core
 
 open Match
@@ -6,13 +7,39 @@ let debug =
   Sys.getenv "DEBUG_COMBY"
   |> Option.is_some
 
+(** Parse the first :[id(label)] label encountered in the template. *)
+let parse_first_label template =
+  let label = take_while (function | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' | '_' -> true | _ -> false) in
+  let parser =
+    many @@
+    choice
+      [ (string ":[id(" *> label <* string ")]" >>= fun label -> return (Some label))
+      ; any_char >>= fun _ -> return None
+      ]
+  in
+  parse_string parser template
+  |> function
+  | Ok label -> List.find_map label ~f:ident
+  | Error _ -> None
+
 let substitute_fresh template =
-  let pattern = ":[id()]" in
+  let label_table = String.Table.create () in
   let template_ref = ref template in
-  while Option.is_some (String.substr_index !template_ref ~pattern) do
-    let uuid = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
-    let id = String.suffix uuid 12 in
-    template_ref := String.substr_replace_first !template_ref ~pattern ~with_:id
+  let current_label_ref = ref (parse_first_label !template_ref) in
+  while Option.is_some !current_label_ref do
+    let label = Option.value_exn !current_label_ref in
+    let id =
+      match String.Table.find label_table label with
+      | Some id -> id
+      | None ->
+        let uuid = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
+        let id = String.suffix uuid 12 in
+        String.Table.add_exn label_table ~key:label ~data:id;
+        id
+    in
+    let pattern = ":[id(" ^ label ^ ")]" in
+    template_ref := String.substr_replace_first !template_ref ~pattern ~with_:id;
+    current_label_ref := parse_first_label !template_ref;
   done;
   !template_ref
 
