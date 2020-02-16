@@ -9,7 +9,7 @@ let debug =
 
 (** Parse the first :[id(label)] label encountered in the template. *)
 let parse_first_label template =
-  let label = take_while (function | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' | '_' -> true | _ -> false) in
+  let label = take_while (function | '0' .. '9' | 'a' .. 'z' | 'A' .. 'Z' | '_' -> true | _ -> false) in
   let parser =
     many @@
     choice
