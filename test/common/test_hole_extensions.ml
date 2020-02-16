@@ -149,3 +149,11 @@ let%expect_test "implicit_equals_does_not_apply_to_underscore" =
   let rewrite_template = {|:[x]|} in
   run source match_template rewrite_template;
   [%expect_exact {|a|}]
+
+let%expect_test "expression_hole" =
+  let run = run_all in
+  let source = {|a(b, c, d)e [][] { { } }|} in
+  let match_template = {|:[x:e]|} in
+  let rewrite_template = {|>:[x]<|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|>a(b, c, d)e< >[][]< >{ { } }<|}]

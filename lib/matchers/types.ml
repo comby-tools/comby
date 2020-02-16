@@ -52,6 +52,7 @@ module Hole = struct
 
   type sort =
     | Everything
+    | Expression
     | Alphanum
     | Non_space
     | Line
@@ -66,6 +67,7 @@ module Hole = struct
 
   let sorts () =
     [ Everything
+    ; Expression
     ; Alphanum
     ; Non_space
     ; Line

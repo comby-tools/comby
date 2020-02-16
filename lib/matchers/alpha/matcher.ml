@@ -217,6 +217,9 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let everything_hole_parser () =
     string ":[" >> hole_body () << string "]"
 
+  let expression_hole_parser () =
+    string ":[" >> hole_body () << string ":e" << string "]"
+
   let non_space_hole_parser () =
     string ":[" >> hole_body () << string ".]"
 
@@ -236,6 +239,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
 
   let reserved_holes () =
     let alphanum = alphanum_hole_parser () |>> snd in
+    let expression = expression_hole_parser () |>> snd in
     let everything = everything_hole_parser () |>> snd in
     let non_space = non_space_hole_parser () |>> snd in
     let blank = blank_hole_parser () |>> snd in
@@ -244,6 +248,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     ; line
     ; blank
     ; alphanum
+    ; expression
     ; everything
     ]
 
@@ -357,6 +362,52 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let alphanum_delimiter_must_satisfy =
     many1 (is_not (skip (choice reserved_alphanum_delimiter_must_satisfy) <|> skip alphanum))
     |>> String.of_char_list
+
+  let generate_delimited_hole_parser
+      ?priority_left_delimiter:left_delimiter
+      ?priority_right_delimiter:right_delimiter =
+    let delimiters =
+      if weaken_delimiter_hole_matching then
+        match left_delimiter, right_delimiter with
+        | Some left_delimiter, Some right_delimiter ->
+          [ (left_delimiter, right_delimiter) ]
+        | _ -> Syntax.user_defined_delimiters
+      else
+        Syntax.user_defined_delimiters
+    in
+    let reserved =
+      List.concat_map delimiters ~f:(fun (from, until) ->
+          [string from; string until]
+        )
+      |> List.map ~f:attempt
+      |> choice
+    in
+    (* A parser that understands the hole matching cut off points happen at
+       delimiters. *)
+    let rec nested_grammar s =
+      (comment_parser
+       <|> raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
+       <|> escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
+       <|> (many1 space |>> String.of_char_list)
+       <|> (attempt @@ delims_over_holes)
+       (* Only consume if not reserved. If it is reserved, we want to trigger the 'many'
+          in (many nested_grammar) to continue. *)
+       <|> (is_not (reserved <|> (space |>> Char.to_string)) |>> String.of_char))
+        s
+    and delims_over_holes s =
+      let between_nested_delims p =
+        let capture_delimiter_result p ~from =
+          let until = until_of_from from in
+          between (string from) (string until) p
+          >>= fun result -> return (String.concat @@ [from] @ result @ [until])
+        in
+        delimiters
+        |> List.map ~f:(fun pair -> capture_delimiter_result p ~from:(fst pair))
+        |> choice
+      in
+      (between_nested_delims (many nested_grammar)) s
+    in
+    delims_over_holes
 
   let generate_everything_hole_parser
       ?priority_left_delimiter:left_delimiter
@@ -615,6 +666,27 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
               in
               (record_matches identifier hole_semantics)::acc
 
+            | Expression ->
+              let non_space =
+                [skip space; reserved_delimiters ()]
+                |> choice
+                |> is_not
+                |>> Char.to_string
+              in
+              let delimited =
+                generate_delimited_hole_parser
+                  ?priority_left_delimiter:left_delimiter
+                  ?priority_right_delimiter:right_delimiter
+              in
+              let matcher = non_space <|> delimited in
+              let rest =
+                match acc with
+                | [] -> eof >>= fun () -> f [""]
+                | _ -> sequence_chain acc
+              in
+              let hole_semantics = many1 (not_followed_by rest "" >> matcher) in
+              (record_matches identifier hole_semantics)::acc
+
             | Everything ->
               let matcher =
                 match dimension with
@@ -696,6 +768,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     let hole_parser =
       match sort with
       | Everything -> everything_hole_parser ()
+      | Expression -> expression_hole_parser ()
       | Non_space -> non_space_hole_parser ()
       | Line -> line_hole_parser ()
       | Blank -> blank_hole_parser ()
