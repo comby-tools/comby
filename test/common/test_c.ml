@@ -22,7 +22,7 @@ let%expect_test "comments_1" =
   let rewrite_template = {|:[1]|} in
 
   run source match_template rewrite_template;
-  [%expect_exact {|expect|}]
+  [%expect_exact {|/**/ expect|}]
 
 let%expect_test "comments_2" =
   let source = {|match this /* */ expect end|} in
@@ -30,7 +30,7 @@ let%expect_test "comments_2" =
   let rewrite_template = {|:[1]|} in
 
   run source match_template rewrite_template;
-  [%expect_exact {|expect|}]
+  [%expect_exact {|/* */ expect|}]
 
 let%expect_test "comments_3" =
   let source = {|match this /* blah blah */ expect /**/ end|} in
@@ -38,7 +38,7 @@ let%expect_test "comments_3" =
   let rewrite_template = {|:[1]|} in
 
   run source match_template rewrite_template;
-  [%expect_exact {|expect|}]
+  [%expect_exact {|/* blah blah */ expect /**/|}]
 
 let%expect_test "comments_4" =
   let source = {|match this expect/**/end|} in

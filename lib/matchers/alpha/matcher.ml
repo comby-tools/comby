@@ -110,14 +110,14 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let raw_literal_grammar ~right_delimiter =
     is_not (string right_delimiter) |>> String.of_char
 
+  let generate_comment_parser _ =
+    (comment_parser >>= fun result -> f result)
+
   let generate_spaces_parser () =
     (* At least a space followed by comments and spaces. *)
     (spaces1
-     >> many comment_parser << spaces
      >>= fun result -> f result)
-    <|>
-    (* This case not covered by tests, may not be needed. *)
-    (many1 comment_parser << spaces >>= fun result -> f result)
+
 
   let sequence_chain (plist : ('c, Match.t) parser sexp_list) : ('c, Match.t) parser =
     List.fold plist ~init:(return Unit) ~f:(>>)
@@ -297,10 +297,18 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       List.concat_map Syntax.raw_string_literals ~f:(fun (from, until) -> [from; until])
       |> List.map ~f:string
     in
+    let reserved_comments =
+      List.concat_map Syntax.comments ~f:(function
+          | Multiline (left, right) -> [left; right]
+          | Nested_multiline (left, right) -> [left; right]
+          | Until_newline start -> [start])
+      |> List.map ~f:string
+    in
     reserved_holes ()
     @ reserved_delimiters
     @ reserved_escapable_strings
     @ reserved_raw_strings
+    @ reserved_comments
     |> List.map ~f:skip
     (* Attempt the reserved: otherwise, if a parser partially succeeds,
        it won't detect that single or greedy is reserved. *)
@@ -761,6 +769,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
                   [(attempt optional_succeeds_parser)
                    <|> optional_fails_parser]
           end
+        | Success Unit -> acc (* for comment *)
         | Success _ -> failwith "Hole expected")
 
   let hole_parser sort dimension =
@@ -823,8 +832,11 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       ; escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal)
       (* Nested delimiters are handled specially for nestedness. *)
       ; nested_delimiters_parser generate_outer_delimiter_parsers
+      (* Skip comments in the template, make them just succeed matching. could
+         also return the comment string, but that's a bit strong. *)
+      ; (comment_parser |>> fun _ -> generate_comment_parser ())
       (* Whitespace is handled specially because we may change whether they are significant for matching. *)
-      ; spaces1 |>> generate_spaces_parser
+      ; (spaces1 |>> fun s -> generate_spaces_parser s)
       (* Optional: parse identifiers and disallow substring matching *)
       ; if !configuration_ref.disable_substring_matching then many1 (alphanum <|> char '_') |>> generate_word else zero
       (* Everything else. *)

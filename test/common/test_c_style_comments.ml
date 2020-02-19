@@ -57,6 +57,7 @@ let%expect_test "rewrite_comments_2" =
   [%expect_exact
     {|
       /* if (fake_condition_body_must_be_non_empty) { fake_body; } */
+      // if (fake_condition_body_must_be_non_empty) { fake_body; }
       if (real_condition_body_must_be_empty) {}
     |}]
 
@@ -82,9 +83,9 @@ let%expect_test "capture_comments" =
       },
       {
         "variable": "2",
-        "value": "console.log(z);",
+        "value": "/* some comment */ console.log(z);",
         "range": {
-          "start": { "offset": 31, "line": 1, "column": 32 },
+          "start": { "offset": 12, "line": 1, "column": 13 },
           "end": { "offset": 46, "line": 1, "column": 47 }
         }
       }
@@ -117,6 +118,7 @@ let%expect_test "single_quote_in_comment" =
   |> print_string;
   [%expect_exact
     {|
+       /*'*/
       {test}
     |}]
 
@@ -219,3 +221,31 @@ let%expect_test "give_back_the_comment_characters_for_newline_comments_too" =
          // a comment
        }
     |}]
+
+let%expect_test "comments_in_templates_imply_whitespace" =
+  let template =
+    {|
+/* f */
+// q
+a
+|}
+  in
+
+  let source =
+    {|
+// idgaf
+/* fooo */
+a
+|}
+  in
+
+  let rewrite_template =
+    {|erased|}
+  in
+
+  all template source
+  |> (fun matches -> Option.value_exn (Rewrite.all ~source ~rewrite_template matches))
+  |> (fun { rewritten_source; _ } -> rewritten_source)
+  |> print_string;
+  [%expect_exact
+    {|erased|}]
