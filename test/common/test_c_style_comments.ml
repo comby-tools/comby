@@ -56,8 +56,6 @@ let%expect_test "rewrite_comments_2" =
   |> print_string;
   [%expect_exact
     {|
-      /* if (fake_condition_body_must_be_non_empty) { fake_body; } */
-      // if (fake_condition_body_must_be_non_empty) { fake_body; }
       if (real_condition_body_must_be_empty) {}
     |}]
 
@@ -83,9 +81,9 @@ let%expect_test "capture_comments" =
       },
       {
         "variable": "2",
-        "value": "/* some comment */ console.log(z);",
+        "value": "console.log(z);",
         "range": {
-          "start": { "offset": 12, "line": 1, "column": 13 },
+          "start": { "offset": 31, "line": 1, "column": 32 },
           "end": { "offset": 46, "line": 1, "column": 47 }
         }
       }
@@ -118,7 +116,6 @@ let%expect_test "single_quote_in_comment" =
   |> print_string;
   [%expect_exact
     {|
-       /*'*/
       {test}
     |}]
 

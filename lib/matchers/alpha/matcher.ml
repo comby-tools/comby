@@ -110,13 +110,15 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let raw_literal_grammar ~right_delimiter =
     is_not (string right_delimiter) |>> String.of_char
 
-  let generate_comment_parser _ =
-    (comment_parser >>= fun result -> f result)
+  (*let generate_comment_parser _ =*)
 
   let generate_spaces_parser () =
     (* At least a space followed by comments and spaces. *)
-    (spaces1
-     >>= fun result -> f result)
+    many1 @@ choice
+      [ skip comment_parser
+      ; spaces1
+      ]
+    >>= fun _ -> f Unit
 
 
   let sequence_chain (plist : ('c, Match.t) parser sexp_list) : ('c, Match.t) parser =
@@ -834,9 +836,9 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       ; nested_delimiters_parser generate_outer_delimiter_parsers
       (* Skip comments in the template, make them just succeed matching. could
          also return the comment string, but that's a bit strong. *)
-      ; (comment_parser |>> fun _ -> generate_comment_parser ())
+      ; (many1 (skip comment_parser <|> spaces1) |>> fun _ -> generate_spaces_parser ())
       (* Whitespace is handled specially because we may change whether they are significant for matching. *)
-      ; (spaces1 |>> fun s -> generate_spaces_parser s)
+      (*; (spaces1 |>> fun s -> generate_spaces_parser s)*)
       (* Optional: parse identifiers and disallow substring matching *)
       ; if !configuration_ref.disable_substring_matching then many1 (alphanum <|> char '_') |>> generate_word else zero
       (* Everything else. *)
