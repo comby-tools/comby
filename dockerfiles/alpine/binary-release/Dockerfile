@@ -16,8 +16,11 @@ COPY test /home/comby/test
 COPY push-coverage-report.sh /home/comby/
 
 RUN sudo chown -R $(whoami) /home/comby
-# Next command must be a single run command for $(opam env) to take effect.
-RUN eval $(opam env) && make && make test && make clean && make release
+RUN LIBRARY_PATH=/home/opam/.opam/4.09/lib/hack_parallel opam exec -- dune build --profile dev 
+RUN make comby comby-server benchmark
+RUN LIBRARY_PATH=/home/opam/.opam/4.09/lib/hack_parallel opam exec -- dune runtest
+RUN opam exec -- dune clean
+RUN LIBRARY_PATH=/home/opam/.opam/4.09/lib/hack_parallel opam exec -- dune build --profile release
 
 ###################################################
 ### Binary distribution on minimal alpine image ###
