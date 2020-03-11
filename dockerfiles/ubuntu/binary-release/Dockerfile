@@ -22,8 +22,8 @@ COPY lib /home/comby/lib
 COPY test /home/comby/test
 COPY push-coverage-report.sh /home/comby/
 
-RUN eval $(opam env) && opam install . --deps-only -y
 RUN sudo chown -R $(whoami) /home/comby
+RUN eval $(opam env) && opam install . --deps-only -y
 RUN LIBRARY_PATH=/home/opam/.opam/4.09.0/lib/hack_parallel opam exec -- dune build --profile dev
 RUN make comby comby-server benchmark
 RUN LIBRARY_PATH=/home/opam/.opam/4.09.0/lib/hack_parallel opam exec -- dune runtest

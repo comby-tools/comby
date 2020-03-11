@@ -5,4 +5,4 @@ sudo: required
 before_install: 
     - make docker-test-build
 script:
-    - docker run -it -e TRAVIS_JOB_ID="$TRAVIS_JOB_ID" comby-local-test-build:latest /bin/bash -c "make && make clean && make build-with-coverage && make test && ./push-coverage-report.sh && ./benchmark"
+    - docker run -it -e TRAVIS_JOB_ID="$TRAVIS_JOB_ID" comby-local-test-build:latest /bin/bash -c "LIBRARY_PATH=/home/opam/.opam/4.09/lib/hack_parallel opam exec -- dune build --profile dev && opam exec -- dune clean && LIBRARY_PATH=/home/opam/.opam/4.09/lib/hack_parallel BISECT_ENABLE=yes dune build --profile dev && make comby comby-server benchmark && LIBRARY_PATH=/home/opam/.opam/4.09/lib/hack_parallel opam exec -- dune runtest && ./push-coverage-report.sh"
