@@ -12,7 +12,7 @@ build: [
 depends: [
   "ocaml" {>= "4.08.1"}
   "core" {>= "0.12.2"}
-  "lwt"
+  "lwt" {>= "4.5.0"}
   "mparser-comby"
   "ppxlib"
   "ppx_deriving"
