@@ -27,7 +27,7 @@ let configuration =
 
 let%expect_test "interactive_paths" =
   let _, count =
-    let scheduler = Scheduler.create ~number_of_workers:0 () in
+    let scheduler = Scheduler.create ~number_of_workers:1 () in
     Pipeline.with_scheduler scheduler ~f:(
       Pipeline.process_paths_for_interactive
         ~sequential:false
