@@ -22,6 +22,10 @@
 
 (alias
  (name DEFAULT)
+ (deps main.bc))
+
+(alias
+ (name DEFAULT)
  (deps server.exe))
 
 (alias
