@@ -34,8 +34,4 @@
 
 (install
  (section bin)
- (files (benchmark.exe as benchmark)))
-
-(install
- (section bin)
  (files (server.exe as comby-server)))
