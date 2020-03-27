@@ -1,0 +1,2 @@
+// ignore-this
+func main() {}

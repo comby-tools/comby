@@ -49,7 +49,7 @@ type user_input_options =
   ; match_only : bool
   ; target_directory : string
   ; directory_depth : int option
-  ; exclude_directory_prefix : string
+  ; exclude_directory_prefix : string list
   }
 
 type run_options =
@@ -72,7 +72,7 @@ type t =
   { sources : Command_input.t
   ; specifications : Specification.t list
   ; file_filters : string list option
-  ; exclude_directory_prefix : string
+  ; exclude_directory_prefix : string list
   ; run_options : run_options
   ; output_printer : Printer.t
   ; interactive_review : interactive_review option
