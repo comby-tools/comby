@@ -299,17 +299,19 @@ let process_paths_for_interactive ~sequential ~f paths scheduler =
     with_scheduler scheduler ~f:(try_or_skip f ~default:([],0))
 
 let filter_zip_entries file_filters exclude_directory_prefix zip =
-  let not_in_an_exclude_directory prefix filename = not (String.is_prefix ~prefix filename) in
+  let exclude_the_directory prefixes filename =
+    List.exists prefixes ~f:(fun prefix -> String.is_prefix ~prefix filename)
+  in
   match file_filters with
   | Some [] | None -> List.filter (Zip.entries zip) ~f:(fun { is_directory; filename; _ } ->
-      not is_directory && not_in_an_exclude_directory exclude_directory_prefix filename)
+      not is_directory && not (exclude_the_directory exclude_directory_prefix filename))
   | Some suffixes ->
     let has_acceptable_suffix filename =
       List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename)
     in
     List.filter (Zip.entries zip) ~f:(fun { is_directory; filename; _ } ->
         not is_directory
-        && not_in_an_exclude_directory exclude_directory_prefix filename
+        && not (exclude_the_directory exclude_directory_prefix filename)
         && has_acceptable_suffix filename)
 
 let process_zip_file ~sequential ~f scheduler zip_file exclude_directory_prefix file_filters =

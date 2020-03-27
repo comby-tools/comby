@@ -54,7 +54,8 @@ let parse_source_directories ?(file_filters = []) exclude_directory_prefix targe
             Continue acc
         else
           begin
-            if String.is_prefix (Filename.basename absolute_path) ~prefix:exclude_directory_prefix then
+            if List.exists exclude_directory_prefix
+                ~f:(fun prefix -> String.is_prefix (Filename.basename absolute_path) ~prefix) then
               Skip acc
             else
               Continue acc
@@ -142,7 +143,7 @@ type user_input_options =
   ; match_only : bool
   ; target_directory : string
   ; directory_depth : int option
-  ; exclude_directory_prefix : string
+  ; exclude_directory_prefix : string list
   }
 
 type run_options =
@@ -337,7 +338,7 @@ type t =
   { sources : Command_input.t
   ; specifications : Specification.t list
   ; file_filters : string list option
-  ; exclude_directory_prefix : string
+  ; exclude_directory_prefix : string list
   ; run_options : run_options
   ; output_printer : Printer.t
   ; interactive_review : interactive_review option
@@ -526,7 +527,7 @@ let create
   let sources =
     match input_source with
     | Stdin -> `String (In_channel.input_all In_channel.stdin)
-    (* TODO(RVT): Unify exclude-dir handling. Currently exclude-dir option must be done while processing zip file in main.ml. *)
+    (* TODO(RVT): Unify exclude-dir handling. Currently the exclude-dir option for zip file is done in pipeline.ml and not here. *)
     | Zip -> `Zip (Option.value_exn zip_file)
     | Directory ->
       let target_directory =

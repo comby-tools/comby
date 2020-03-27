@@ -480,7 +480,8 @@ let%expect_test "is_real_directory" =
 let%expect_test "exclude_dir_option" =
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
-  let command_args = Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir 'ignore' -diff" src_dir in
+  let exclude_dir = "ignore,also-ignore" in
+  let command_args = Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir %s -diff" src_dir exclude_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
@@ -514,6 +515,11 @@ let%expect_test "exclude_dir_option" =
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect{|
+    --- example/src/also-ignore-me/main.c
+    +++ example/src/also-ignore-me/main.c
+    @@ -1,1 +1,1 @@
+    -int main() {}
+    +int pain() {}
     --- example/src/honor-file-extensions/honor.pb.generic
     +++ example/src/honor-file-extensions/honor.pb.generic
     @@ -1,3 +1,3 @@
@@ -644,6 +650,11 @@ let%expect_test "matcher_override" =
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect{|
+    --- example/src/also-ignore-me/main.c
+    +++ example/src/also-ignore-me/main.c
+    @@ -1,1 +1,1 @@
+    -int main() {}
+    +int main_unbalanced_match_) {}
     --- example/src/ignore-me/main.c
     +++ example/src/ignore-me/main.c
     @@ -1,1 +1,1 @@
@@ -716,10 +727,10 @@ let%expect_test "diff_only" =
   [%expect{|
     -json-only-diff can only be supplied with -json-lines. |}]
 
-let%expect_test "zip_exclude_dir_with_extension" =
+let%expect_test "zip_exclude_dir_with_multiple_extension" =
   let source = "doesn't matter" in
   let zip = "example" ^/ "zip-test" ^/ "sample-repo.zip" in
-  let exclude_dir = "sample-repo/vendor" in
+  let exclude_dir = "sample-repo/vendor,sample-repo/ignore-this" in
   let command_args = Format.sprintf "'main' 'pain' .go -zip %s -sequential -diff -exclude-dir %s" zip exclude_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
@@ -735,7 +746,7 @@ let%expect_test "zip_exclude_dir_with_extension" =
 let%expect_test "zip_exclude_dir_no_extension" =
   let source = "doesn't matter" in
   let zip = "example" ^/ "zip-test" ^/ "sample-repo.zip" in
-  let exclude_dir = "sample-repo/vendor" in
+  let exclude_dir = "sample-repo/vendor,sample-repo/ignore-this" in
   let command_args = Format.sprintf "'main' 'pain' -zip %s -sequential -diff -exclude-dir %s" zip exclude_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
