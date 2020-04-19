@@ -1,4 +1,5 @@
 open Core
+open Polymorphic_compare
 open MParser
 
 open Configuration
@@ -6,6 +7,8 @@ open Match
 open Range
 open Location
 open Types
+
+let (let*) x f = bind x f
 
 let configuration_ref = ref (Configuration.create ())
 let weaken_delimiter_hole_matching = false
@@ -52,7 +55,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
                let escape = escape_character
              end)
            in
-           M.base_string_literal >>= fun contents ->
+           let* contents = M.base_string_literal in
            return (f ~contents ~left_delimiter:delimiter ~right_delimiter:delimiter)))
     |> choice
 

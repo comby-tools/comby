@@ -1,4 +1,5 @@
 open Core
+open Polymorphic_compare
 
 module Syntax = struct
 

@@ -10,8 +10,8 @@ build: [
     ["dune" "build" "-p" name "-j" jobs "@install"]
 ]
 depends: [
-  "ocaml" {>= "4.08.1"}
-  "core" {>= "0.12.2"}
+  "ocaml" {>= "4.09.0"}
+  "core" {>= "0.13.0"}
   "lwt" {= "4.5.0"}
   "conduit-lwt-unix" {= "2.0.2"}
   "mparser-comby"

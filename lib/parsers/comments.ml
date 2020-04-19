@@ -13,7 +13,7 @@ module Omega = struct
           option `End_of_input
             (peek_string (String.length reserved_sequence)
              >>= fun s ->
-             if s = reserved_sequence then
+             if String.(s = reserved_sequence) then
                return `Reserved_sequence
              else
                acc))

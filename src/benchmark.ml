@@ -1,4 +1,5 @@
 open Core
+open Polymorphic_compare
 
 module Time = Core_kernel.Time_ns.Span
 

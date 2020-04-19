@@ -34,7 +34,7 @@ let pp_line_number ppf start_line =
   Format.fprintf ppf "%d:" start_line
 
 let pp ppf (source_path, matches) =
-  if matches = [] then
+  if List.is_empty matches then
     ()
   else
     let matched =

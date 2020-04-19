@@ -1,4 +1,5 @@
 open Core
+open Polymorphic_compare
 
 open Types.Syntax
 
