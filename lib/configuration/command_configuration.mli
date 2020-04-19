@@ -50,6 +50,9 @@ type user_input_options =
   ; target_directory : string
   ; directory_depth : int option
   ; exclude_directory_prefix : string list
+  ; exclude_file_prefix : string list
+  ; custom_matcher : string option
+  ; override_matcher : string option
   }
 
 type run_options =
@@ -71,11 +74,11 @@ type user_input =
 type t =
   { sources : Command_input.t
   ; specifications : Specification.t list
-  ; file_filters : string list option
-  ; exclude_directory_prefix : string list
   ; run_options : run_options
   ; output_printer : Printer.t
   ; interactive_review : interactive_review option
+  ; matcher : (module Matchers.Matcher)
+  ; extension : string option
   }
 
 val create : user_input -> t Or_error.t

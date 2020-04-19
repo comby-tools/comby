@@ -2,4 +2,4 @@
   (name pipeline)
   (public_name comby.pipeline)
   (preprocess (pps ppx_sexp_conv ppx_deriving_yojson bisect_ppx --conditional))
-  (libraries comby.interactive comby.statistics comby.parsers comby.match comby.language camlzip ppxlib core yojson ppx_deriving_yojson hack_parallel))
+  (libraries comby.configuration comby.interactive comby.statistics comby.parsers comby.match comby.language camlzip ppxlib core yojson ppx_deriving_yojson hack_parallel))

@@ -5,7 +5,7 @@ type single_input_kind =
 
 type t =
   [ `Paths of string list
-  | `Zip of string
+  | `Zip of string * Zip.entry list
   | single_input_kind
   ]
 
