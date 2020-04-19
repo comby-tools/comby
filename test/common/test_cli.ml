@@ -535,6 +535,16 @@ let%expect_test "exclude_dir_option" =
      // in a comment foo()
      foo()
      }
+    --- example/src/ignore-file/dont-ignore.pb.go
+    +++ example/src/ignore-file/dont-ignore.pb.go
+    @@ -1,1 +1,1 @@
+    -main
+    +pain
+    --- example/src/ignore-file/ignore.pb.go
+    +++ example/src/ignore-file/ignore.pb.go
+    @@ -1,1 +1,1 @@
+    -main
+    +pain
     --- example/src/ignore-me/main.c
     +++ example/src/ignore-me/main.c
     @@ -1,1 +1,1 @@
@@ -545,6 +555,23 @@ let%expect_test "exclude_dir_option" =
     @@ -1,1 +1,1 @@
     -int main() {}
     +int pain() {}
+
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}]
+
+let%expect_test "exclude_file_option" =
+  let source = "hello world" in
+  let src_dir = "example" ^/ "src" ^/ "ignore-file" in
+  let exclude_file = "ignore.pb.go" in
+  let command_args = Format.sprintf "'main' 'pain' -sequential -d %s -exclude %s -diff" src_dir exclude_file in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|
+    --- example/src/ignore-file/dont-ignore.pb.go
+    +++ example/src/ignore-file/dont-ignore.pb.go
+    @@ -1,1 +1,1 @@
+    -main
+    +pain
 
     WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}]
 
@@ -760,6 +787,16 @@ let%expect_test "zip_exclude_dir_no_extension" =
     +func pain() {}
 
     WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}]
+
+let%expect_test "zip_exclude_file" =
+  let source = "doesn't matter" in
+  let zip = "example" ^/ "zip-test" ^/ "sample-repo.zip" in
+  let exclude_file = "main" in
+  let command_args = Format.sprintf "'main' 'pain' .go -zip %s -sequential -diff -exclude %s" zip exclude_file in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{| |}]
 
 let%expect_test "invalid_path_with_error_message" =
   let source = "doesn't matter" in

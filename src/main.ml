@@ -2,52 +2,14 @@ open Core
 open Command.Let_syntax
 open Hack_parallel
 
-open Pipeline.Command_configuration
+open Configuration
+open Command_configuration
 
 let verbose_out_file = "/tmp/comby.out"
 
 let debug =
   Sys.getenv "DEBUG_COMBY"
   |> Option.is_some
-
-let select_matcher custom_matcher override_matcher configuration =
-  if Option.is_some custom_matcher then
-    let matcher_path = Option.value_exn custom_matcher in
-    match Sys.file_exists matcher_path with
-    | `No | `Unknown ->
-      Format.eprintf "Could not open file: %s@." matcher_path;
-      exit 1
-    | `Yes ->
-      Yojson.Safe.from_file matcher_path
-      |> Matchers.Syntax.of_yojson
-      |> function
-      | Ok c -> Matchers.create c, None
-      | Error error ->
-        Format.eprintf "%s@." error;
-        exit 1
-  else if Option.is_some override_matcher then
-    let matcher_override = Option.value_exn override_matcher in
-    let matcher =
-      match Matchers.select_with_extension matcher_override with
-      | Some matcher -> matcher
-      | None when matcher_override <> ".generic" ->
-        Format.eprintf "The matcher %S is not supported. See -list for supported matchers@." matcher_override;
-        exit 1
-      | None -> (module Matchers.Generic)
-    in
-    matcher, None
-  else
-    let extension =
-      match configuration.file_filters with
-      | None | Some [] -> ".generic"
-      | Some (filter::_) ->
-        match Filename.split_extension filter with
-        | _, Some extension -> "." ^ extension
-        | extension, None -> "." ^ extension
-    in
-    match Matchers.select_with_extension extension with
-    | Some matcher -> matcher, Some extension
-    | None -> (module Matchers.Generic), Some extension
 
 let paths_with_file_size paths =
   List.map paths ~f:(fun path ->
@@ -129,6 +91,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and count = flag "count" no_arg ~doc:"Display a count of matches in a file."
     and list = flag "list" no_arg ~doc:"Display supported languages and extensions"
     and exclude_directory_prefix = flag "exclude-dir" (optional_with_default ["."] (Arg_type.comma_separated ~strip_whitespace:true string)) ~doc:"prefixes Comma-separated prefixes of directories to exclude. Do not put whitespace between commas unless the string is quoted. Default: '.' (ignore directories starting with dot)"
+    and exclude_file_prefix = flag "exclude" (optional_with_default []  (Arg_type.comma_separated ~strip_whitespace:true string)) ~doc:"prefixes Comma-separated prefixes of file names or file paths to exclude. Do not put whitespace between commas unless the string is quoted."
     and interactive_review = flag "review" ~aliases:["r"] no_arg ~doc:"Review each patch and accept, reject, or modify it with your editor of choice. Defaults to $EDITOR. If $EDITOR is unset, defaults to \"vim\". Override $EDITOR with the -editor flag."
     and editor = flag "editor" (optional string) ~doc:"editor Perform manual review with [editor]. This activates -review mode."
     and editor_default_is_reject = flag "default-no" no_arg ~doc:"If set, the default action in review (pressing return) will NOT apply the change. Setting this option activates -review mode."
@@ -196,7 +159,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     in
     let substitute_in_place = not newline_separated_rewrites in
     let configuration =
-      Pipeline.Command_configuration.create
+      Command_configuration.create
         { input_options =
             { rule
             ; specification_directories
@@ -208,6 +171,9 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; target_directory
             ; directory_depth
             ; exclude_directory_prefix
+            ; exclude_file_prefix
+            ; custom_matcher
+            ; override_matcher
             }
         ; run_options =
             { sequential
@@ -236,13 +202,13 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
         Format.eprintf "%s@." @@ Error.to_string_hum error;
         exit 1
     in
-    let (module M) as matcher, extension = select_matcher custom_matcher override_matcher configuration in
     fun () ->
-      Pipeline.run matcher configuration;
-      match extension with
+      Pipeline.run configuration;
+      match configuration.extension with
       | Some ".generic" ->
         Format.eprintf "@.WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning.@."
       | Some extension ->
+        let (module M) = configuration.matcher in
         if M.name = "Generic" then
           Format.eprintf "@.WARNING: the GENERIC matcher was used because I'm unable to guess what language to use for the file extension %s. The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning.@." extension
         else if debug then Format.eprintf "@.NOTE: the %s matcher was inferred from extension %s. See '-list' to set a matcher for a specific language.@." M.name extension

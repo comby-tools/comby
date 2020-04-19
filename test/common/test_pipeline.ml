@@ -1,17 +1,14 @@
 open Core
 open Hack_parallel
 
-open Pipeline
+open Configuration
 open Command_configuration
 open Matchers
 
-let matcher = (module Generic : Matchers.Matcher)
-
 let configuration =
-  { sources = `String "source"
+  { matcher = (module Generic : Matchers.Matcher)
+  ; sources = `String "source"
   ; specifications = []
-  ; exclude_directory_prefix = ["."]
-  ; file_filters = None
   ; run_options =
       { sequential = true
       ; verbose = false
@@ -23,6 +20,7 @@ let configuration =
       }
   ; output_printer = (fun _ -> ())
   ; interactive_review = None
+  ; extension = None (* FIXME *)
   }
 
 let%expect_test "interactive_paths" =
@@ -47,7 +45,7 @@ let%expect_test "launch_editor" =
     }
   in
   let result =
-    try Pipeline.run matcher configuration; "passed"
+    try Pipeline.run configuration; "passed"
     with _exc -> "Not a tty"
   in
   print_string result;

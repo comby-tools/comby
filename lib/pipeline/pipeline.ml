@@ -12,8 +12,6 @@ open Matchers
 open Match
 open Language
 
-module Command_configuration = Command_configuration
-
 let debug =
   Sys.getenv "DEBUG_COMBY"
   |> Option.is_some
@@ -298,30 +296,13 @@ let process_paths_for_interactive ~sequential ~f paths scheduler =
     let f = map_reduce ~init ~map ~reduce paths in
     with_scheduler scheduler ~f:(try_or_skip f ~default:([],0))
 
-let filter_zip_entries file_filters exclude_directory_prefix zip =
-  let exclude_the_directory prefixes filename =
-    List.exists prefixes ~f:(fun prefix -> String.is_prefix ~prefix filename)
-  in
-  match file_filters with
-  | Some [] | None -> List.filter (Zip.entries zip) ~f:(fun { is_directory; filename; _ } ->
-      not is_directory && not (exclude_the_directory exclude_directory_prefix filename))
-  | Some suffixes ->
-    let has_acceptable_suffix filename =
-      List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename)
-    in
-    List.filter (Zip.entries zip) ~f:(fun { is_directory; filename; _ } ->
-        not is_directory
-        && not (exclude_the_directory exclude_directory_prefix filename)
-        && has_acceptable_suffix filename)
-
-let process_zip_file ~sequential ~f scheduler zip_file exclude_directory_prefix file_filters =
+let process_zip_file ~sequential ~f scheduler zip_file paths =
   let process_zip_bucket ~init (paths : Zip.entry list) zip =
     List.fold ~init paths ~f:(fun count ({ filename; _ } as entry) ->
         let source = Zip.read_entry zip entry in
         count + f ~input:(`String source) ~path:(Some filename))
   in
   let process_bucket ~init paths = with_zip zip_file ~f:(process_zip_bucket ~init paths) in
-  let paths = with_zip zip_file ~f:(filter_zip_entries file_filters exclude_directory_prefix) in
   if sequential then process_bucket ~init:0 paths
   else
     let map acc bucket_of_paths = process_bucket ~init:acc bucket_of_paths in
@@ -330,7 +311,7 @@ let process_zip_file ~sequential ~f scheduler zip_file exclude_directory_prefix 
     let f = map_reduce ~init ~map ~reduce paths in
     with_scheduler scheduler ~f:(try_or_skip f ~default:0)
 
-let write_statistics file_filters exclude_directory_prefix number_of_matches sources start_time =
+let write_statistics number_of_matches sources start_time =
   let total_time = Statistics.Time.stop start_time in
   let lines_of_code, number_of_files =
     match sources with
@@ -344,8 +325,7 @@ let write_statistics file_filters exclude_directory_prefix number_of_matches sou
             |> (+) acc)
       in
       lines_of_code, List.length paths
-    | `Zip zip_file ->
-      let paths = with_zip zip_file ~f:(filter_zip_entries file_filters exclude_directory_prefix) in
+    | `Zip (zip_file, paths) ->
       let lines_of_code =
         with_zip zip_file ~f:(fun zip ->
             List.fold paths ~init:0 ~f:(fun acc entry ->
@@ -366,11 +346,9 @@ let write_statistics file_filters exclude_directory_prefix number_of_matches sou
   @@ Statistics.to_yojson statistics
 
 let run
-    matcher
-    { sources
+    { matcher
+    ; sources
     ; specifications
-    ; file_filters
-    ; exclude_directory_prefix
     ; run_options =
         { sequential
         ; verbose
@@ -382,6 +360,7 @@ let run
         }
     ; output_printer
     ; interactive_review
+    ; extension = _ (* FIXME *)
     }
   =
   let number_of_workers = if sequential then 0 else number_of_workers in
@@ -410,7 +389,7 @@ let run
       match sources with
       | `String source -> with_scheduler scheduler ~f:(fun _ -> per_unit ~input:(`String source) ~path:None)
       | `Paths paths -> process_paths ~sequential ~f:per_unit paths scheduler
-      | `Zip zip_file -> process_zip_file ~sequential ~f:per_unit scheduler zip_file exclude_directory_prefix file_filters
+      | `Zip (zip_file, paths) -> process_zip_file ~sequential ~f:per_unit scheduler zip_file paths
       | _ -> failwith "No single path handled here"
     else
       let rewrites, count =
@@ -439,4 +418,4 @@ let run
       Interactive.run editor default_is_accept count rewrites;
       count
   in
-  if dump_statistics then write_statistics file_filters exclude_directory_prefix count sources start_time;
+  if dump_statistics then write_statistics count sources start_time;

@@ -37,7 +37,12 @@ let fold_directory ?(sorted=false) root ~init ~f =
   (* The first valid ls_dir happens at depth 0 *)
   aux init root (-1)
 
-let parse_source_directories ?(file_filters = []) exclude_directory_prefix target_directory directory_depth =
+let parse_source_directories
+    ?(file_filters = [])
+    exclude_directory_prefix
+    exclude_file_prefix
+    target_directory
+    directory_depth =
   let max_depth = Option.value directory_depth ~default:Int.max_value in
   let f acc ~depth ~absolute_path ~is_file =
     if depth > max_depth then
@@ -47,9 +52,21 @@ let parse_source_directories ?(file_filters = []) exclude_directory_prefix targe
         if is_file then
           match file_filters with
           | [] ->
-            Continue (absolute_path::acc)
+            let files =
+              if List.exists exclude_file_prefix ~f:(fun prefix -> String.is_prefix (Filename.basename absolute_path) ~prefix) then
+                acc
+              else
+                absolute_path::acc
+            in
+            Continue files
           | suffixes when List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix absolute_path) ->
-            Continue (absolute_path::acc)
+            let files =
+              if List.exists exclude_file_prefix  ~f:(fun prefix -> String.is_prefix (Filename.basename absolute_path) ~prefix) then
+                acc
+              else
+                absolute_path::acc
+            in
+            Continue files
           | _ ->
             Continue acc
         else
@@ -144,6 +161,9 @@ type user_input_options =
   ; target_directory : string
   ; directory_depth : int option
   ; exclude_directory_prefix : string list
+  ; exclude_file_prefix : string list
+  ; custom_matcher : string option
+  ; override_matcher : string option
   }
 
 type run_options =
@@ -337,11 +357,11 @@ end
 type t =
   { sources : Command_input.t
   ; specifications : Specification.t list
-  ; file_filters : string list option
-  ; exclude_directory_prefix : string list
   ; run_options : run_options
   ; output_printer : Printer.t
   ; interactive_review : interactive_review option
+  ; matcher : (module Matchers.Matcher)
+  ; extension : string option
   }
 
 let emit_errors { input_options; run_options = _; output_options } =
@@ -461,6 +481,73 @@ let emit_warnings { input_options; output_options; _ } =
       | _ -> ());
   Ok ()
 
+let with_zip zip_file ~f =
+  let zip_in = Zip.open_in zip_file in
+  let result = f zip_in in
+  Zip.close_in zip_in;
+  result
+
+let filter_zip_entries file_filters exclude_directory_prefix exclude_file_prefix zip =
+  let exclude_the_directory prefixes filename =
+    List.exists prefixes ~f:(fun prefix -> String.is_prefix ~prefix filename)
+  in
+  let exclude_the_file prefixes filename =
+    List.exists prefixes ~f:(fun prefix -> String.is_prefix ~prefix filename)
+  in
+  match file_filters with
+  | Some [] | None -> List.filter (Zip.entries zip) ~f:(fun { is_directory; filename; _ } ->
+      not is_directory
+      && not (exclude_the_directory exclude_directory_prefix filename)
+      && not (exclude_the_file exclude_file_prefix (Filename.basename filename)))
+  | Some suffixes ->
+    let has_acceptable_suffix filename =
+      List.exists suffixes ~f:(fun suffix -> String.is_suffix ~suffix filename)
+    in
+    List.filter (Zip.entries zip) ~f:(fun { is_directory; filename; _ } ->
+        not is_directory
+        && not (exclude_the_directory exclude_directory_prefix filename)
+        && not (exclude_the_file exclude_file_prefix (Filename.basename filename))
+        && has_acceptable_suffix filename)
+
+let select_matcher custom_matcher override_matcher file_filters =
+  if Option.is_some custom_matcher then
+    let matcher_path = Option.value_exn custom_matcher in
+    match Sys.file_exists matcher_path with
+    | `No | `Unknown ->
+      Format.eprintf "Could not open file: %s@." matcher_path;
+      exit 1
+    | `Yes ->
+      Yojson.Safe.from_file matcher_path
+      |> Matchers.Syntax.of_yojson
+      |> function
+      | Ok c -> Matchers.create c, None
+      | Error error ->
+        Format.eprintf "%s@." error;
+        exit 1
+  else if Option.is_some override_matcher then
+    let matcher_override = Option.value_exn override_matcher in
+    let matcher =
+      match Matchers.select_with_extension matcher_override with
+      | Some matcher -> matcher
+      | None when matcher_override <> ".generic" ->
+        Format.eprintf "The matcher %S is not supported. See -list for supported matchers@." matcher_override;
+        exit 1
+      | None -> (module Matchers.Generic)
+    in
+    matcher, None
+  else
+    let extension =
+      match file_filters with
+      | None | Some [] -> ".generic"
+      | Some (filter::_) ->
+        match Filename.split_extension filter with
+        | _, Some extension -> "." ^ extension
+        | extension, None -> "." ^ extension
+    in
+    match Matchers.select_with_extension extension with
+    | Some matcher -> matcher, Some extension
+    | None -> (module Matchers.Generic), Some extension
+
 let create
     ({ input_options =
          { rule
@@ -473,6 +560,9 @@ let create
          ; target_directory
          ; directory_depth
          ; exclude_directory_prefix
+         ; exclude_file_prefix
+         ; custom_matcher
+         ; override_matcher
          }
      ; run_options =
          { sequential
@@ -527,8 +617,10 @@ let create
   let sources =
     match input_source with
     | Stdin -> `String (In_channel.input_all In_channel.stdin)
-    (* TODO(RVT): Unify exclude-dir handling. Currently the exclude-dir option for zip file is done in pipeline.ml and not here. *)
-    | Zip -> `Zip (Option.value_exn zip_file)
+    | Zip ->
+      let zip_file = Option.value_exn zip_file in
+      let paths : Zip.entry list = with_zip zip_file ~f:(filter_zip_entries file_filters exclude_directory_prefix exclude_file_prefix) in
+      `Zip (zip_file, paths)
     | Directory ->
       let target_directory =
         if target_directory = "." then
@@ -540,6 +632,7 @@ let create
         parse_source_directories
           ?file_filters
           exclude_directory_prefix
+          exclude_file_prefix
           target_directory
           directory_depth
       in
@@ -567,11 +660,12 @@ let create
       else
         Printer.Rewrite.print replacement_output source_path replacements result source_content
   in
+  let (module M) as matcher, extension = select_matcher custom_matcher override_matcher file_filters in
   return
-    { sources
+    { matcher
+    ; extension
+    ; sources
     ; specifications
-    ; file_filters
-    ; exclude_directory_prefix
     ; run_options =
         { sequential
         ; verbose
