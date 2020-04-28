@@ -3,8 +3,9 @@ open Core
 open Matchers
 open Rewriter
 
-let configuration = Configuration.create ~match_kind:Fuzzy ()
+open Matchers.Alpha
 
+let configuration = Configuration.create ~match_kind:Fuzzy ()
 
 let run ?(configuration = configuration) (module M : Matchers.Matcher) source match_template rewrite_template =
   M.all ~configuration ~template:match_template ~source
@@ -20,7 +21,7 @@ let%expect_test "parse_rust_apostrophe_ok" =
   let match_template = {|width=":[1]"|} in
   let rewrite_template = {|:[1]|} in
 
-  run (module Matchers.Generic) source match_template rewrite_template;
+  run (module Generic) source match_template rewrite_template;
   [%expect_exact {|1280|}]
 
 let%expect_test "parse_rust_apostrophe_ok" =
@@ -28,7 +29,7 @@ let%expect_test "parse_rust_apostrophe_ok" =
   let match_template = {|{}|} in
   let rewrite_template = {|{} // success|} in
 
-  run (module Matchers.Rust) source match_template rewrite_template;
+  run (module Rust) source match_template rewrite_template;
   [%expect_exact {|pub struct GlobBuilder<'a> {} // success|}]
 
 let%expect_test "parse_ocaml_apostrophe_ok" =
@@ -36,7 +37,7 @@ let%expect_test "parse_ocaml_apostrophe_ok" =
   let match_template = {|type :[v] t = :[_] Int of :[i]|} in
   let rewrite_template = {|:[v], :[i]|} in
 
-  run (module Matchers.OCaml) source match_template rewrite_template;
+  run (module OCaml) source match_template rewrite_template;
   [%expect_exact {|'a, int |}]
 
 let%expect_test "strict_nested_matching" =
@@ -44,7 +45,7 @@ let%expect_test "strict_nested_matching" =
   let match_template = {|(:[1])|} in
   let rewrite_template = {|:[1]|} in
 
-  run (module Matchers.Dyck) source match_template rewrite_template;
+  run (module Dyck) source match_template rewrite_template;
   [%expect_exact {|{}|}]
 
 let%expect_test "strict_nested_matching" =
@@ -52,10 +53,8 @@ let%expect_test "strict_nested_matching" =
   let match_template = {|(:[1])|} in
   let rewrite_template = {|:[1]|} in
 
-  run (module Matchers.Dyck) source match_template rewrite_template;
+  run (module Dyck) source match_template rewrite_template;
   [%expect_exact {|No matches.|}]
-
-
 
 let%expect_test "ocaml_blocks" =
   let source = {|
@@ -73,7 +72,7 @@ let%expect_test "ocaml_blocks" =
   let match_template = {|struct :[1] end|} in
   let rewrite_template = {|struct <deleted> end|} in
 
-  run (module Matchers.OCaml) source match_template rewrite_template;
+  run (module OCaml) source match_template rewrite_template;
   [%expect_exact {|
     module M : sig
         type t
@@ -98,7 +97,7 @@ let%expect_test "ocaml_complex_blocks_with_same_end" =
   let match_template = {|begin :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.OCaml) source match_template rewrite_template;
+  run (module OCaml) source match_template rewrite_template;
   [%expect_exact {|
     <1>match x with
     | _ ->
@@ -125,7 +124,7 @@ end
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|
 <1>ActionController::Base
   before_filter :generate_css_from_less
@@ -140,7 +139,7 @@ let%expect_test "erlang_blocks" =
   let match_template = {|fun(:[1]) :[rest] end|} in
   let rewrite_template = {|<rest>:[rest]</rest>|} in
 
-  run (module Matchers.Erlang) source match_template rewrite_template;
+  run (module Erlang) source match_template rewrite_template;
   [%expect_exact {|Big =  <rest>-> if X > 10 -> true; true -> false end</rest>.|}]
 
 let%expect_test "ruby_blocks" =
@@ -148,7 +147,7 @@ let%expect_test "ruby_blocks" =
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>x</1>|}]
 
 let%expect_test "ruby_blocks_1" =
@@ -156,7 +155,7 @@ let%expect_test "ruby_blocks_1" =
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>class def body1 end def body2 end end</1>|}]
 
 let%expect_test "ruby_blocks_2" =
@@ -164,7 +163,7 @@ let%expect_test "ruby_blocks_2" =
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>class (def body1 end) (def body2 end) end</1>|}]
 
 let%expect_test "ruby_blocks_3" =
@@ -172,7 +171,7 @@ let%expect_test "ruby_blocks_3" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {| <1>(def b end)(def b end)</1> |}]
 
 let%expect_test "ruby_blocks_4" =
@@ -180,7 +179,7 @@ let%expect_test "ruby_blocks_4" =
   let match_template = {|def :[1]end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {| <1>(def a end) f (def b end)</1> |}]
 
 (* this is correct: there's no space in the source 'end', so it matches the inner def/end blocks *)
@@ -189,7 +188,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {| <1>(def a end) f (def b end)</1> |}]
 
 let%expect_test "ruby_blocks_5" =
@@ -197,7 +196,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def:[1]end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {| <1>(df b ed) (df b ed)</1> |}]
 
 let%expect_test "ruby_blocks_5" =
@@ -205,7 +204,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>class ((def (x) end) f (def body end)) end</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -213,7 +212,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|class class (<1>body1</1>) (<1>body2</1>) end end|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -221,7 +220,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>class (def body1 end) (def body2 end) end</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -229,7 +228,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|class class <1>(def body1 end) (def body2 end)</1> end end|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -237,7 +236,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|class class <1>() (def body2 end)</1> end end|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -245,7 +244,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>(def end) (def end)</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -253,7 +252,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>(def end) a (def end)</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -261,7 +260,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>(defa aend) (adef aend)</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -269,7 +268,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>(defa aend) a (adef aend)</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -277,7 +276,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>(adef a endq)</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -285,7 +284,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>adef a endq</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -293,7 +292,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>def foo end</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -301,7 +300,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|No matches.|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -309,7 +308,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>adef a endq</1> |}]
 
 let%expect_test "ruby_blocks_5" =
@@ -317,7 +316,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>fadef a qendq</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -325,7 +324,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>defa aend</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -333,7 +332,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|No matches.|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -341,7 +340,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>adef a endq</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -349,7 +348,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>(adef a endq)</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -357,7 +356,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>(def ( body )end)</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -365,7 +364,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>def ( body )end</1>|}]
 
 
@@ -374,7 +373,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>def( body ) end</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -382,7 +381,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>def() end</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -390,7 +389,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>def () end</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -398,7 +397,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>def( body )end</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -406,7 +405,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>( def( body )end)</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -414,7 +413,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|class :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>(def( body )end)</1>|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -422,7 +421,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|No matches.|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -430,7 +429,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|def :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|No matches.|}]
 
 let%expect_test "ruby_blocks_5" =
@@ -438,7 +437,7 @@ let%expect_test "ruby_blocks_5" =
   let match_template = {|(def :[1] end)|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.Ruby) source match_template rewrite_template;
+  run (module Ruby) source match_template rewrite_template;
   [%expect_exact {|<1>foo</1>|}]
 
 let%expect_test "ocaml_struct_end" =
@@ -446,7 +445,7 @@ let%expect_test "ocaml_struct_end" =
   let match_template = {|= struct :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.OCaml) source match_template rewrite_template;
+  run (module OCaml) source match_template rewrite_template;
   [%expect_exact {|<1>Something</1>|}]
 
 let%expect_test "ocaml_struct_end_2" =
@@ -454,5 +453,5 @@ let%expect_test "ocaml_struct_end_2" =
   let match_template = {|= struct :[1] end|} in
   let rewrite_template = {|<1>:[1]</1>|} in
 
-  run (module Matchers.OCaml) source match_template rewrite_template;
+  run (module OCaml) source match_template rewrite_template;
   [%expect_exact {|<1>include Something</1>|}]

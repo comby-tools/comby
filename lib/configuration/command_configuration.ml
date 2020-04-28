@@ -87,7 +87,7 @@ let read filename =
   String.chop_suffix template ~suffix:"\n"
   |> Option.value ~default:template
 
-let parse_template_directories ?(warn = false) paths =
+let parse_template_directories ?(warn = false) omega paths =
   let parse_directory path =
     let read_optional filename =
       match read filename with
@@ -99,9 +99,15 @@ let parse_template_directories ?(warn = false) paths =
       if warn then Format.eprintf "WARNING: Could not read required match file in %s@." path;
       None
     | Some match_template ->
+      let create =
+        if omega then
+          Rule.Omega.create
+        else
+          Rule.Alpha.create
+      in
       let rule = read_optional (path ^/ "rule") in
       let rule =
-        match Option.map rule ~f:Rule.create with
+        match Option.map rule ~f:create with
         | None -> None
         | Some Ok rule -> Some rule
         | Some Error error ->
@@ -174,6 +180,7 @@ type run_options =
   ; dump_statistics : bool
   ; substitute_in_place : bool
   ; disable_substring_matching : bool
+  ; omega : bool
   }
 
 type user_input =
@@ -364,7 +371,7 @@ type t =
   ; extension : string option
   }
 
-let emit_errors { input_options; run_options = _; output_options } =
+let emit_errors { input_options; run_options; output_options } =
   let error_on =
     [ input_options.stdin && Option.is_some input_options.zip_file
     , "-zip may not be used with -stdin."
@@ -412,7 +419,12 @@ let emit_errors { input_options; run_options = _; output_options } =
     , "Please remove the -d option and `cd` to the directory where you want to \
        review from. The -review, -editor, or -default-no options should only be run \
        at the root directory of the project files to patch."
-    ; let result = Rule.create input_options.rule in
+    ; let result =
+        if run_options.omega then
+          Rule.Omega.create input_options.rule
+        else
+          Rule.Alpha.create input_options.rule
+      in
       Or_error.is_error result
     , if Or_error.is_error result then
         Format.sprintf "Match rule parse error: %s@." @@
@@ -441,14 +453,14 @@ let emit_errors { input_options; run_options = _; output_options } =
       in
       Error.of_string message)
 
-let emit_warnings { input_options; output_options; _ } =
+let emit_warnings { input_options; run_options; output_options } =
   let warn_on =
     [ (let match_templates =
          match input_options.specification_directories, input_options.anonymous_arguments with
          | None, Some { match_template; _ } ->
            [ match_template ]
          | Some specification_directories, _ ->
-           List.map (parse_template_directories specification_directories) ~f:(fun { match_template; _ } -> match_template)
+           List.map (parse_template_directories run_options.omega specification_directories) ~f:(fun { match_template; _ } -> match_template)
          | _ -> assert false
        in
        List.exists match_templates ~f:(fun match_template ->
@@ -509,44 +521,59 @@ let filter_zip_entries file_filters exclude_directory_prefix exclude_file_prefix
         && not (exclude_the_file exclude_file_prefix (Filename.basename filename))
         && has_acceptable_suffix filename)
 
-let select_matcher custom_matcher override_matcher file_filters =
-  if Option.is_some custom_matcher then
-    let matcher_path = Option.value_exn custom_matcher in
-    match Sys.file_exists matcher_path with
-    | `No | `Unknown ->
-      Format.eprintf "Could not open file: %s@." matcher_path;
+let of_custom_matcher (module M : Matchers.Engine) custom_matcher =
+  let matcher_path = Option.value_exn custom_matcher in
+  match Sys.file_exists matcher_path with
+  | `No | `Unknown ->
+    Format.eprintf "Could not open file: %s@." matcher_path;
+    exit 1
+  | `Yes ->
+    Yojson.Safe.from_file matcher_path
+    |> Matchers.Syntax.of_yojson
+    |> function
+    | Ok c -> M.create c, None
+    | Error error ->
+      Format.eprintf "%s@." error;
       exit 1
-    | `Yes ->
-      Yojson.Safe.from_file matcher_path
-      |> Matchers.Syntax.of_yojson
-      |> function
-      | Ok c -> Matchers.create c, None
-      | Error error ->
-        Format.eprintf "%s@." error;
-        exit 1
+
+let of_override_matcher (module M : Matchers.Engine) override_matcher =
+  let matcher_override = Option.value_exn override_matcher in
+  let matcher =
+    match M.select_with_extension matcher_override with
+    | Some matcher -> matcher
+    | None when matcher_override <> ".generic" ->
+      Format.eprintf "The matcher %S is not supported. See -list for supported matchers@." matcher_override;
+      exit 1
+    | None -> (module M.Generic)
+  in
+  matcher, None
+
+let of_extension (module M : Matchers.Engine) file_filters =
+  let extension =
+    match file_filters with
+    | None | Some [] -> ".generic"
+    | Some (filter::_) ->
+      match Filename.split_extension filter with
+      | _, Some extension -> "." ^ extension
+      | extension, None -> "." ^ extension
+  in
+  match M.select_with_extension extension with
+  | Some matcher -> matcher, Some extension
+  | None -> (module M.Generic), Some extension
+
+let select_matcher custom_matcher override_matcher file_filters omega =
+  let engine : (module Matchers.Engine) =
+    if omega then
+      (module Matchers.Omega)
+    else
+      (module Matchers.Alpha)
+  in
+  if Option.is_some custom_matcher then
+    of_custom_matcher engine custom_matcher
   else if Option.is_some override_matcher then
-    let matcher_override = Option.value_exn override_matcher in
-    let matcher =
-      match Matchers.select_with_extension matcher_override with
-      | Some matcher -> matcher
-      | None when matcher_override <> ".generic" ->
-        Format.eprintf "The matcher %S is not supported. See -list for supported matchers@." matcher_override;
-        exit 1
-      | None -> (module Matchers.Generic)
-    in
-    matcher, None
+    of_override_matcher engine override_matcher
   else
-    let extension =
-      match file_filters with
-      | None | Some [] -> ".generic"
-      | Some (filter::_) ->
-        match Filename.split_extension filter with
-        | _, Some extension -> "." ^ extension
-        | extension, None -> "." ^ extension
-    in
-    match Matchers.select_with_extension extension with
-    | Some matcher -> matcher, Some extension
-    | None -> (module Matchers.Generic), Some extension
+    of_extension engine file_filters
 
 let create
     ({ input_options =
@@ -572,6 +599,7 @@ let create
          ; dump_statistics
          ; substitute_in_place
          ; disable_substring_matching
+         ; omega
          }
      ; output_options =
          ({ overwrite_file_in_place
@@ -585,7 +613,15 @@ let create
   let open Or_error in
   emit_errors configuration >>= fun () ->
   emit_warnings configuration >>= fun () ->
-  let rule = Rule.create rule |> Or_error.ok_exn in
+  let rule =
+    let create =
+      if omega then
+        Rule.Omega.create
+      else
+        Rule.Alpha.create
+    in
+    create rule |> Or_error.ok_exn
+  in
   let specifications =
     match specification_directories, anonymous_arguments with
     | None, Some { match_template; rewrite_template; _ } ->
@@ -594,7 +630,7 @@ let create
       else
         [ Specification.create ~match_template ~rewrite_template ~rule () ]
     | Some specification_directories, _ ->
-      parse_template_directories ~warn:true specification_directories
+      parse_template_directories ~warn:true omega specification_directories
     | _ -> assert false
   in
   let file_filters =
@@ -660,7 +696,7 @@ let create
       else
         Printer.Rewrite.print replacement_output source_path replacements result source_content
   in
-  let (module M) as matcher, extension = select_matcher custom_matcher override_matcher file_filters in
+  let (module M) as matcher, extension = select_matcher custom_matcher override_matcher file_filters omega in
   return
     { matcher
     ; extension
@@ -674,6 +710,7 @@ let create
         ; dump_statistics
         ; substitute_in_place
         ; disable_substring_matching
+        ; omega
         }
     ; output_printer
     ; interactive_review

@@ -16,8 +16,6 @@ module Text = struct
     let raw_string_literals = []
     let comments = []
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Paren = struct
@@ -32,7 +30,6 @@ module Paren = struct
       [ "(", ")"
       ]
   end
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Dyck = struct
@@ -54,8 +51,6 @@ module Dyck = struct
 
     let comments = []
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Json = struct
@@ -64,7 +59,7 @@ module Json = struct
     let extensions = [".json"]
   end
 
-  include Matcher.Make (Dyck.Syntax) (Info)
+  module Syntax = Dyck.Syntax
 end
 
 module Latex = struct
@@ -85,8 +80,6 @@ module Latex = struct
       [ Until_newline "%"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Assembly = struct
@@ -102,8 +95,6 @@ module Assembly = struct
       [ Until_newline ";"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Clojure = struct
@@ -121,8 +112,6 @@ module Clojure = struct
       [ Until_newline ";"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Lisp = struct
@@ -139,8 +128,6 @@ module Lisp = struct
       [ Nested_multiline ("#|", "|#")
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Generic = struct
@@ -157,10 +144,7 @@ module Generic = struct
         { delimiters = [{|"|}; {|'|}]
         ; escape_character = '\\'
         }
-
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Bash = struct
@@ -184,8 +168,6 @@ module Bash = struct
     let comments =
       [ Until_newline "#" ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Ruby = struct
@@ -222,8 +204,6 @@ module Ruby = struct
       ; Until_newline "#"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Elixir = struct
@@ -249,8 +229,6 @@ module Elixir = struct
       [ Until_newline "#"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 
@@ -272,8 +250,6 @@ module Python = struct
       [ Until_newline "#"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Html = struct
@@ -294,8 +270,6 @@ module Html = struct
       [ Multiline ("<!--", "-->")
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Xml = struct
@@ -304,7 +278,7 @@ module Xml = struct
     let extensions = [".xml"]
   end
 
-  include Matcher.Make (Html.Syntax) (Info)
+  module Syntax = Html.Syntax
 end
 
 module SQL = struct
@@ -321,8 +295,6 @@ module SQL = struct
       ; Until_newline "--"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Erlang = struct
@@ -346,8 +318,6 @@ module Erlang = struct
       [ Until_newline "%"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module C = struct
@@ -370,8 +340,6 @@ module C = struct
       ; Until_newline "//"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Csharp = struct
@@ -380,7 +348,7 @@ module Csharp = struct
     let extensions = [".cs"]
   end
 
-  include Matcher.Make (C.Syntax) (Info)
+  module Syntax = C.Syntax
 end
 
 module Java = struct
@@ -389,7 +357,7 @@ module Java = struct
     let extensions = [".java"]
   end
 
-  include Matcher.Make (C.Syntax) (Info)
+  module Syntax = C.Syntax
 end
 
 module CSS = struct
@@ -398,7 +366,7 @@ module CSS = struct
     let extensions = [".css"]
   end
 
-  include Matcher.Make (C.Syntax) (Info)
+  module Syntax = C.Syntax
 end
 
 module Kotlin = struct
@@ -407,7 +375,7 @@ module Kotlin = struct
     let extensions = [".kt"; ".kts"]
   end
 
-  include Matcher.Make (C.Syntax) (Info)
+  module Syntax = C.Syntax
 end
 
 module Scala = struct
@@ -416,7 +384,7 @@ module Scala = struct
     let extensions = [".scala"]
   end
 
-  include Matcher.Make (C.Syntax) (Info)
+  module Syntax = C.Syntax
 end
 
 module Nim = struct
@@ -444,8 +412,6 @@ module Nim = struct
       ; Nested_multiline ("#[", "]#")
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 
@@ -463,8 +429,6 @@ module Dart = struct
       ; ({|'''|}, {|'''|})
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Php = struct
@@ -481,8 +445,6 @@ module Php = struct
       [ Until_newline "#"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Go = struct
@@ -498,8 +460,6 @@ module Go = struct
       [ ({|`|}, {|`|})
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Javascript = struct
@@ -508,7 +468,7 @@ module Javascript = struct
     let extensions = [".js"; ".jsx"]
   end
 
-  include Matcher.Make (Go.Syntax) (Info)
+  module Syntax = Go.Syntax
 end
 
 module Typescript = struct
@@ -517,7 +477,7 @@ module Typescript = struct
     let extensions = [".ts"; ".tsx"]
   end
 
-  include Matcher.Make (Go.Syntax) (Info)
+  module Syntax = Go.Syntax
 end
 
 module Swift = struct
@@ -534,8 +494,6 @@ module Swift = struct
       ; Until_newline "//"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Rust = struct
@@ -555,8 +513,6 @@ module Rust = struct
       [ {|r#|}, {|#|}
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module OCaml = struct
@@ -589,8 +545,6 @@ module OCaml = struct
       [ Nested_multiline ("(*", "*)")
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Reason = struct
@@ -613,8 +567,6 @@ module Reason = struct
       [ Nested_multiline ("/*", "*/")
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 
@@ -624,7 +576,7 @@ module Fsharp = struct
     let extensions = [".fsx"]
   end
 
-  include Matcher.Make (OCaml.Syntax) (Info)
+  module Syntax = OCaml.Syntax
 end
 
 (** Follow Free Pascal that allows nested comments, although Rosetta takes the opposite view. *)
@@ -643,8 +595,6 @@ module Pascal = struct
       ; Until_newline "//"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Julia = struct
@@ -661,8 +611,6 @@ module Julia = struct
       ; Until_newline "#"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Fortran = struct
@@ -687,8 +635,6 @@ module Fortran = struct
       [ Until_newline "!"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Haskell = struct
@@ -709,8 +655,6 @@ module Haskell = struct
       ; Until_newline "--"
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
 
 module Elm = struct
@@ -719,7 +663,7 @@ module Elm = struct
     let extensions = [".elm"]
   end
 
-  include Matcher.Make (Haskell.Syntax) (Info)
+  module Syntax = Haskell.Syntax
 end
 
 (** For testing *)
@@ -736,72 +680,4 @@ module C_nested_comments = struct
       [ Nested_multiline ("/*", "*/")
       ]
   end
-
-  include Matcher.Make (Syntax) (Info)
 end
-
-let all : (module Types.Matcher.S) list =
-  [ (module Assembly)
-  ; (module Bash)
-  ; (module C)
-  ; (module Csharp)
-  ; (module CSS)
-  ; (module Dart)
-  ; (module Dyck)
-  ; (module Clojure)
-  ; (module Elm)
-  ; (module Erlang)
-  ; (module Elixir)
-  ; (module Fortran)
-  ; (module Fsharp)
-  ; (module Go)
-  ; (module Html)
-  ; (module Haskell)
-  ; (module Java)
-  ; (module Javascript)
-  ; (module Json)
-  ; (module Julia)
-  ; (module Kotlin)
-  ; (module Latex)
-  ; (module Lisp)
-  ; (module Nim)
-  ; (module OCaml)
-  ; (module Paren)
-  ; (module Pascal)
-  ; (module Php)
-  ; (module Python)
-  ; (module Reason)
-  ; (module Ruby)
-  ; (module Rust)
-  ; (module Scala)
-  ; (module SQL)
-  ; (module Swift)
-  ; (module Text)
-  ; (module Typescript)
-  ; (module Xml)
-  ; (module Generic)
-  ]
-
-let select_with_extension extension : (module Types.Matcher.S) option =
-  List.find all ~f:(fun (module M) -> List.exists M.extensions ~f:((=) extension))
-
-let create
-    Types.Syntax.
-      { user_defined_delimiters
-      ; escapable_string_literals
-      ; raw_string_literals
-      ; comments
-      } =
-  let module Info = struct
-    let name = "User_defined_language"
-    let extensions = []
-  end
-  in
-  let module User_language = struct
-    let user_defined_delimiters = user_defined_delimiters
-    let escapable_string_literals = escapable_string_literals
-    let raw_string_literals = raw_string_literals
-    let comments = comments
-  end
-  in
-  (module Matcher.Make (User_language) (Info) : Types.Matcher.S)

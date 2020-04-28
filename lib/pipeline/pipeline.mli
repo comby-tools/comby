@@ -12,6 +12,7 @@ val process_paths_for_interactive
 
 val timed_run
   : (module Matcher)
+  -> ?omega:bool
   -> ?rewrite_template:string
   -> ?substitute_in_place:bool
   -> ?rule:Language.Ast.expression list

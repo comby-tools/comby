@@ -3,18 +3,9 @@ open Core
 open Matchers
 open Rewriter
 
-open Matchers.Alpha
+open Test_helpers
 
-let configuration = Configuration.create ~disable_substring_matching:true ~match_kind:Fuzzy ()
-
-let format s =
-  let s = String.chop_prefix_exn ~prefix:"\n" s in
-  let leading_indentation = Option.value_exn (String.lfindi s ~f:(fun _ c -> c <> ' ')) in
-  s
-  |> String.split ~on:'\n'
-  |> List.map ~f:(Fn.flip String.drop_prefix leading_indentation)
-  |> String.concat ~sep:"\n"
-  |> String.chop_suffix_exn ~suffix:"\n"
+include Test_omega
 
 let run ?(configuration = configuration) source match_template rewrite_template =
   Generic.first ~configuration match_template source
@@ -291,7 +282,7 @@ let%expect_test "delimiter_matching" =
   let match_template = {|lol:[1]bbq|} in
   let rewrite_template = {|:[1]|} in
   run source match_template rewrite_template;
-  [%expect_exact {||}];
+  [%expect_exact {|wtf|}];
 
   let source = {|x = foo; x = bar;|} in
   let match_template = {|x = :[1];|} in
@@ -333,13 +324,13 @@ let%expect_test "delimiter_matching" =
   let match_template = {|lol:[1]bbq|} in
   let rewrite_template = {|:[1]|} in
   run source match_template rewrite_template;
-  [%expect_exact {||}];
+  [%expect_exact {|howevenwtfispossible|}];
 
   let source = {|lolhowevenlolwtfbbqispossiblebbq|} in
   let match_template = {|lol:[1]bbq|} in
   let rewrite_template = {|:[1]|} in
   run source match_template rewrite_template;
-  [%expect_exact {||}];
+  [%expect_exact {|howevenlolwtfispossiblebbq|}];
 
   let source = {|hello my name is bob the builder|} in
   let match_template = {|:[alongidentifiername] :[2] :[3] :[xyz] :[5] :[6]|} in
@@ -357,7 +348,7 @@ let%expect_test "delimiter_matching" =
   let match_template = {|:[1]api.:[2]/repos/:[3]s/:[4]|} in
   let rewrite_template = {|:[1] :[2] :[3] :[4]|} in
   run source match_template rewrite_template;
-  [%expect_exact {||}];
+  [%expect_exact {|https:// github.com dmjacobsen/slurm/commit 716c1499695c68afcab848a1b49653574b4fc167|}];
 
   let source =
     {|

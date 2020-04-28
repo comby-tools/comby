@@ -1,20 +1,10 @@
 open Core
 
-open Language
-open Matchers
 open Match
 
-let configuration = Configuration.create ~match_kind:Fuzzy ()
+open Test_helpers
 
-let format s =
-  let s = s |> String.chop_prefix_exn ~prefix:"\n" in
-  let leading_indentation =
-    Option.value_exn (String.lfindi s ~f:(fun _ c -> c <> ' ')) in
-  s
-  |> String.split ~on:'\n'
-  |> List.map ~f:(Fn.flip String.drop_prefix leading_indentation)
-  |> String.concat ~sep:"\n"
-  |> String.chop_suffix_exn ~suffix:"\n"
+include Test_alpha
 
 let %expect_test "statistics" =
   let template =

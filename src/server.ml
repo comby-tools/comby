@@ -45,9 +45,9 @@ let perform_match request =
   | Ok ({ source; match_template; rule; language; id } as request) ->
     if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (In.match_request_to_yojson request));
     let matcher =
-      match Matchers.select_with_extension language with
+      match Matchers.Alpha.select_with_extension language with
       | Some matcher -> matcher
-      | None -> (module Matchers.Generic)
+      | None -> (module Matchers.Alpha.Generic)
     in
     let run ?rule () =
       let configuration = Configuration.create ~match_kind:Fuzzy () in
@@ -58,7 +58,7 @@ let perform_match request =
       Out.Matches.to_string { matches; source; id }
     in
     let code, result =
-      match Option.map rule ~f:Rule.create with
+      match Option.map rule ~f:Rule.Alpha.create with
       | None -> 200, run ()
       | Some Ok rule -> 200, run ~rule ()
       | Some Error error -> 400, Error.to_string_hum error
@@ -78,9 +78,9 @@ let perform_rewrite request =
   | Ok ({ source; match_template; rewrite_template; rule; language; substitution_kind; id } as request) ->
     if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (In.rewrite_request_to_yojson request));
     let matcher =
-      match Matchers.select_with_extension language with
+      match Matchers.Alpha.select_with_extension language with
       | Some matcher -> matcher
-      | None -> (module Matchers.Generic)
+      | None -> (module Matchers.Alpha.Generic)
     in
     let source_substitution, substitute_in_place =
       match substitution_kind with
@@ -116,7 +116,7 @@ let perform_rewrite request =
             })
     in
     let code, result =
-      match Option.map rule ~f:Rule.create with
+      match Option.map rule ~f:Rule.Alpha.create with
       | None -> 200, run ()
       | Some Ok rule -> 200, run ~rule ()
       | Some Error error -> 400, Error.to_string_hum error

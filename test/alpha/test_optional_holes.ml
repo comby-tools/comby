@@ -3,6 +3,8 @@ open Core
 open Matchers
 open Rewriter
 
+open Matchers.Alpha
+
 let configuration = Configuration.create ~match_kind:Fuzzy ()
 
 let run ?(configuration = configuration) source match_template rewrite_template =

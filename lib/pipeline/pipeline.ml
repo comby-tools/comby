@@ -32,11 +32,17 @@ let infer_equality_constraints environment =
       else
         acc)
 
-let apply_rule ?(substitute_in_place = true) matcher rule matches =
+let apply_rule ?(substitute_in_place = true) matcher omega rule matches =
   let open Option in
   List.filter_map matches ~f:(fun ({ environment; _ } as matched) ->
       let rule = rule @ infer_equality_constraints environment in
-      let sat, env =  Rule.apply ~substitute_in_place ~matcher rule environment in
+      let apply =
+        if omega then
+          Rule.Omega.apply
+        else
+          Rule.Alpha.apply
+      in
+      let sat, env = apply ~substitute_in_place ~matcher rule environment in
       (if sat then env else None)
       >>| fun environment -> { matched with environment })
 
@@ -117,14 +123,14 @@ let update_match f m =
   let environment = update_environment m.environment f in
   { m with range; environment }
 
-let timed_run matcher ?rewrite_template ?substitute_in_place ?rule ~configuration ~template ~source () =
+let timed_run matcher ?(omega = false) ?rewrite_template ?substitute_in_place ?rule ~configuration ~template ~source () =
   let module Matcher = (val matcher : Matchers.Matcher) in
   (match rewrite_template with
    | Some template -> Matcher.set_rewrite_template template;
    | None -> ());
   let matches = Matcher.all ~configuration ~template ~source in
   let rule = Option.value rule ~default:[Ast.True] in
-  let matches = apply_rule ?substitute_in_place matcher rule matches in
+  let matches = apply_rule ?substitute_in_place matcher omega rule matches in
   let f offset =
     if fast_line_col_compute then
       let a = line_map source in
@@ -156,6 +162,7 @@ let log_to_file path =
 
 let process_single_source
     matcher
+    omega
     substitute_in_place
     configuration
     source
@@ -172,7 +179,7 @@ let process_single_source
     in
     let matches =
       with_timeout timeout source ~f:(fun () ->
-          timed_run matcher ?rewrite_template ?rule ~substitute_in_place ~configuration ~template ~source:input_text ())
+          timed_run matcher ?rewrite_template ?rule ~substitute_in_place ~omega ~configuration ~template ~source:input_text ())
     in
     match rewrite_template with
     | None -> Matches (matches, List.length matches)
@@ -357,6 +364,7 @@ let run
         ; dump_statistics
         ; substitute_in_place
         ; disable_substring_matching
+        ; omega
         }
     ; output_printer
     ; interactive_review
@@ -375,6 +383,7 @@ let run
       (fun input specification ->
          process_single_source
            matcher
+           omega
            substitute_in_place
            match_configuration
            input
@@ -402,6 +411,7 @@ let run
                   (fun input specification ->
                      process_single_source
                        matcher
+                       omega
                        substitute_in_place
                        match_configuration
                        input

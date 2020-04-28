@@ -2,7 +2,7 @@ module Configuration = Configuration
 module Syntax = Types.Syntax
 module type Matcher = Types.Matcher.S
 
-include module type of Languages
+module type Engine = Types.Match_engine.S
 
-(** Omega only *)
-module Template = Template
+module Alpha : Engine
+module Omega : Engine
