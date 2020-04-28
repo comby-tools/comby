@@ -1,6 +1,5 @@
 open Core
 open Command.Let_syntax
-open Hack_parallel
 
 open Configuration
 open Command_configuration
@@ -23,9 +22,15 @@ let paths_with_file_size paths =
       in
       (path, length))
 
-let list_supported_languages_and_exit () =
+let list_supported_languages_and_exit omega =
+  let (module Matcher : Matchers.Engine) =
+    if omega then
+      (module Matchers.Omega)
+    else
+      (module Matchers.Alpha)
+  in
   let list =
-    List.map Matchers.all ~f:(fun (module M) ->
+    List.map Matcher.all ~f:(fun (module M) ->
         let ext = List.hd_exn M.extensions in
         Format.sprintf " -matcher %-10s%-10s\n" ext M.name)
     |> String.concat
@@ -96,6 +101,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and editor = flag "editor" (optional string) ~doc:"editor Perform manual review with [editor]. This activates -review mode."
     and editor_default_is_reject = flag "default-no" no_arg ~doc:"If set, the default action in review (pressing return) will NOT apply the change. Setting this option activates -review mode."
     and disable_substring_matching = flag "disable-substring-matching" no_arg ~doc:"Allow :[holes] to match substrings"
+    and omega = flag "omega" no_arg ~doc:"Use Omega matcher engine."
     and anonymous_arguments =
       anon
         (maybe
@@ -130,7 +136,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           in
           { match_template; rewrite_template; file_filters })
     in
-    if list then list_supported_languages_and_exit ();
+    if list then list_supported_languages_and_exit omega;
     if Option.is_some substitute_environment then
       substitute_environment_only_and_exit anonymous_arguments substitute_environment;
     let interactive_review =
@@ -183,6 +189,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; dump_statistics
             ; substitute_in_place
             ; disable_substring_matching
+            ; omega
             }
         ; output_options =
             { color

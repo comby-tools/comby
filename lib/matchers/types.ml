@@ -1,7 +1,6 @@
 open Core
 
 module Syntax = struct
-
   type escapable_string_literals =
     { delimiters : string list
     ; escape_character: char
@@ -37,6 +36,14 @@ module Info = struct
     val extensions : string list
   end
 end
+
+module Language = struct
+  module type S = sig
+    module Info : Info.S
+    module Syntax : Syntax.S
+  end
+end
+
 
 type dimension =
   | Code
@@ -116,5 +123,54 @@ module Matcher = struct
       -> template:string
       -> source:string
       -> Match.t list
+  end
+end
+
+module Match_engine = struct
+  module type S = sig
+    module Text : Matcher.S
+    module Paren : Matcher.S
+    module Dyck : Matcher.S
+    module Json : Matcher.S
+    module Latex : Matcher.S
+    module Assembly : Matcher.S
+    module Clojure : Matcher.S
+    module Lisp : Matcher.S
+    module Generic : Matcher.S
+    module Bash : Matcher.S
+    module Ruby : Matcher.S
+    module Elixir : Matcher.S
+    module Python : Matcher.S
+    module Html : Matcher.S
+    module Xml : Matcher.S
+    module SQL : Matcher.S
+    module Erlang : Matcher.S
+    module C : Matcher.S
+    module Csharp : Matcher.S
+    module Java : Matcher.S
+    module CSS : Matcher.S
+    module Kotlin : Matcher.S
+    module Scala : Matcher.S
+    module Nim : Matcher.S
+    module Dart : Matcher.S
+    module Php : Matcher.S
+    module Go : Matcher.S
+    module Javascript : Matcher.S
+    module Typescript : Matcher.S
+    module Swift : Matcher.S
+    module Rust : Matcher.S
+    module OCaml : Matcher.S
+    module Reason : Matcher.S
+    module Fsharp : Matcher.S
+    module Pascal : Matcher.S
+    module Julia : Matcher.S
+    module Fortran : Matcher.S
+    module Haskell : Matcher.S
+    module Elm : Matcher.S
+    module C_nested_comments : Matcher.S
+
+    val create : Syntax.t -> (module Matcher.S)
+    val select_with_extension : string -> (module Matcher.S) option
+    val all : (module Matcher.S) list
   end
 end

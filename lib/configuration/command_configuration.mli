@@ -63,6 +63,7 @@ type run_options =
   ; dump_statistics : bool
   ; substitute_in_place : bool
   ; disable_substring_matching : bool
+  ; omega : bool
   }
 
 type user_input =
