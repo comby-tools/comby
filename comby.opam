@@ -14,11 +14,11 @@ depends: [
   "core" {>= "0.12.2"}
   "lwt" {= "4.5.0"}
   "conduit-lwt-unix" {= "2.0.2"}
+  "hack_parallel" {>= "1.0.0"}
   "mparser-comby"
   "ppxlib"
   "ppx_deriving"
   "angstrom"
-  "hack_parallel"
   "opium"
   "pcre"
   "oasis"
