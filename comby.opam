@@ -18,7 +18,7 @@ depends: [
   "mparser-comby"
   "ppxlib"
   "ppx_deriving"
-  "angstrom"
+  "angstrom" {< "0.14.0"}
   "opium"
   "pcre"
   "oasis"
