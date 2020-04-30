@@ -131,14 +131,20 @@ let timed_run matcher ?(omega = false) ?rewrite_template ?substitute_in_place ?r
   let matches = Matcher.all ~configuration ~template ~source in
   let rule = Option.value rule ~default:[Ast.True] in
   let matches = apply_rule ?substitute_in_place matcher omega rule matches in
+  let line_lookup =
+    if fast_line_col_compute then
+      line_map source
+    else
+      Array.create ~len:1 0
+  in
   let f offset =
     if fast_line_col_compute then
-      let a = line_map source in
-      compute_line_col_fast a offset
+      compute_line_col_fast line_lookup offset
     else
       compute_line_col_slow source offset
   in
-  List.map matches ~f:(update_match f)
+  let matches = List.map matches ~f:(update_match f) in
+  matches
 
 
 type processed_source_result =
