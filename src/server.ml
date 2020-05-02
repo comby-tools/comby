@@ -147,6 +147,57 @@ let perform_environment_substitution request =
     if debug then Format.printf "Result (400) %s@." error;
     respond ~code:(`Code 400) (`String error)
 
+(* Perform in place mutation for the first match. *)
+let perform_mutate request =
+  App.string_of_body_exn request
+  (*>>| (fun s -> Format.printf "mutate@."; s)*)
+  >>| check_too_long
+  >>| Result.map ~f:(Fn.compose In.mutate_request_of_yojson Yojson.Safe.from_string)
+  >>| Result.join
+  >>| function
+  | Ok ({ source; match_template; rewrite_template; rule; language; _ } as request) ->
+    if debug then Format.printf "Received %s@." (Yojson.Safe.pretty_to_string (In.mutate_request_to_yojson request));
+    let matcher =
+      match Matchers.Alpha.select_with_extension language with
+      | Some matcher -> matcher
+      | None -> (module Matchers.Alpha.Generic)
+    in
+    let run ?rule () =
+      let configuration = Configuration.create ~match_kind:Fuzzy () in
+      let matches =
+        Pipeline.with_timeout timeout (`String "") ~f:(fun () ->
+            Pipeline.timed_run
+              matcher
+              ?rule
+              ~substitute_in_place:true
+              ~configuration
+              ~template:match_template
+              ~source
+              ())
+      in
+      let matches =
+        match matches with
+        | [] -> []
+        | hd::_ -> [hd]
+      in
+      Rewrite.all matches ~source ~rewrite_template
+      |> Option.value_map ~default:"" ~f:(fun Replacement.{ rewritten_source; _ } ->
+          rewritten_source)
+    in
+    let code, result =
+      match Option.map rule ~f:Rule.Alpha.create with
+      | None -> 200, run ()
+      | Some Ok rule -> 200, run ~rule ()
+      | Some Error error -> 400, Error.to_string_hum error
+    in
+    if debug then Format.printf "Result (%d): %s@." code result;
+    (*Format.printf "resped@.";*)
+    respond ~code:(`Code code) (`String result)
+  | Error error ->
+    if debug then Format.printf "Result (400): %s@." error;
+    Format.printf "shit@.";
+    respond ~code:(`Code 400) (`String error)
+
 let add_cors_headers (headers: Cohttp.Header.t): Cohttp.Header.t =
   Cohttp.Header.add_list headers [
     ("Access-Control-Allow-Origin", "*");
@@ -166,17 +217,22 @@ let allow_cors =
   Rock.Middleware.create ~name:"allow cors" ~filter
 
 let () =
+  Conduit_lwt_server.set_max_active 30_000;
   Lwt.async_exception_hook := (function
       | Unix.Unix_error (error, func, arg) ->
+        Format.printf "Err: %s" @@ Unix.error_message error;
         Logs.warn (fun m ->
             m "Client connection error %s: %s(%S)"
               (Unix.error_message error) func arg
           )
-      | exn -> Logs.err (fun m -> m "Unhandled exception: %a" Fmt.exn exn)
+      | exn ->
+        Format.printf "Err2: %a" Fmt.exn exn;
+        Logs.err (fun m -> m "Unhandled exception: %a" Fmt.exn exn)
     );
   App.empty
   |> App.post "/match" perform_match
   |> App.post "/rewrite" perform_rewrite
   |> App.post "/substitute" perform_environment_substitution
+  |> App.post "/mutate" perform_mutate
   |> App.middleware allow_cors
   |> App.run_command

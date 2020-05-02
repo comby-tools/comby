@@ -4,13 +4,6 @@ open Match
 
 module In = struct
 
-  type substitution_request =
-    { rewrite_template : string [@key "rewrite"]
-    ; environment : Environment.t
-    ; id : int
-    }
-  [@@deriving yojson]
-
   type match_request =
     { source : string
     ; match_template : string [@key "match"]
@@ -27,6 +20,23 @@ module In = struct
     ; rule : string option [@default None]
     ; language : string [@default "generic"]
     ; substitution_kind : string [@default "in_place"]
+    ; id : int
+    }
+  [@@deriving yojson]
+
+  type substitution_request =
+    { rewrite_template : string [@key "rewrite"]
+    ; environment : Environment.t
+    ; id : int
+    }
+  [@@deriving yojson]
+
+  type mutate_request =
+    { source : string
+    ; match_template : string [@key "match"]
+    ; rewrite_template : string [@key "rewrite"]
+    ; rule : string option [@default None]
+    ; language : string [@default "generic"]
     ; id : int
     }
   [@@deriving yojson]
