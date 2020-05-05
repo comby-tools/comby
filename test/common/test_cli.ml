@@ -854,7 +854,6 @@ let%expect_test "print_single_line_matches" =
   |> print_string;
   [%expect_exact {|2:let ()
 3:let ()
-
 |}]
 
 let%expect_test "print_multi_line_matches" =
@@ -879,7 +878,6 @@ in
   [%expect_exact {|2:let ()
 3:let\n\n    ()
 7:let ()
-
 |}];
 
   let command_args =
@@ -890,7 +888,6 @@ in
   read_expect_stdin_and_stdout command source
   |> print_string;
   [%expect_exact {|3 matches
-
 |}];
 
   let command_args =
@@ -912,7 +909,6 @@ WARNING: -count and -json-lines is specified. Ignoring -count.
   read_expect_stdin_and_stdout command source
   |> print_string;
   [%expect_exact {|3 matches
-
 WARNING: -count only works with -match-only. Performing -match-only -count.
 |}]
 

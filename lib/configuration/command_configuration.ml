@@ -249,7 +249,7 @@ module Printer = struct
         | Json_lines -> Match.pp_json_lines
       in
       if List.length matches > 0 then
-        Format.fprintf ppf "%a@." pp (source_path, matches)
+        Format.fprintf ppf "%a" pp (source_path, matches)
 
   end
 
