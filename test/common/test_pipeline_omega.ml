@@ -19,6 +19,7 @@ let configuration =
       ; substitute_in_place = true
       ; disable_substring_matching = false
       ; omega = false
+      ; fast_offset_conversion = false
       }
   ; output_printer = (fun _ -> ())
   ; interactive_review = None

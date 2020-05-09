@@ -16,10 +16,6 @@ let debug =
   Sys.getenv "DEBUG_COMBY"
   |> Option.is_some
 
-let fast_line_col_compute =
-  Sys.getenv "FAST_LINE_COL_COMPUTE_COMBY"
-  |> Option.is_some
-
 let infer_equality_constraints environment =
   let vars = Environment.vars environment in
   List.fold vars ~init:[] ~f:(fun acc var ->
@@ -46,57 +42,6 @@ let apply_rule ?(substitute_in_place = true) matcher omega rule matches =
       (if sat then env else None)
       >>| fun environment -> { matched with environment })
 
-let compute_line_col_slow source offset =
-  let f (offset, line, col) char =
-    match offset, char with
-    | 0, _ -> (0, line, col)
-    | _, '\n' -> (offset - 1, line + 1, 1)
-    | _ -> (offset - 1, line, col + 1)
-  in
-  let _, line, col = String.fold ~init:(offset, 1, 1) ~f source in
-  line, col
-
-let line_map source =
-  let total_len = String.length source in
-  let num_lines = List.length @@ String.split_on_chars source ~on:['\n'] in
-  let a = Array.create ~len:num_lines (Int.max_value) in
-  let line_index = ref 0 in
-  let f sum char =
-    match char with
-    | '\n' ->
-      a.(!line_index) <- sum + 1;
-      line_index := !line_index + 1;
-      sum + 1
-    | _ ->
-      if sum = total_len - 1 then (* If it's the last char and wasn't a newline, record this offset. *)
-        begin
-          a.(!line_index) <- sum + 1; (* FIXME: no test fails if + 1 is removed. Be ware. *)
-          sum + 1
-        end
-      else
-        sum + 1
-  in
-  let _ = String.fold source ~init:0 ~f in
-  a
-
-let rec binary_search a value low high =
-  if high <= low then
-    low
-  else let mid = (low + high) / 2 in
-    if a.(mid) > value then
-      binary_search a value low (mid - 1)
-    else if a.(mid) < value then
-      binary_search a value (mid + 1) high
-    else
-      mid
-
-let compute_line_col_fast a offset =
-  let offset = offset - 1 in (* make offset 0-based because line_map is 0-based *)
-  let line = binary_search a offset 0 (Array.length a) in
-  let line = if a.(line) < offset then line + 1 else line in
-  let col = if line = 0 then offset else offset - a.(line - 1) in
-  line + 1, col + 1 (* reset 0-based offset to 1 *) + 1 (* output 1-based info *)
-
 let update_range f range =
   let open Range in
   let open Location in
@@ -108,7 +53,7 @@ let update_range f range =
   let match_end = update_location range.match_end in
   { match_start; match_end }
 
-let update_environment env f =
+let update_environment f env =
   List.fold (Environment.vars env) ~init:env ~f:(fun env var ->
       let open Option in
       let updated =
@@ -120,10 +65,10 @@ let update_environment env f =
 
 let update_match f m =
   let range = update_range f m.range in
-  let environment = update_environment m.environment f in
+  let environment = update_environment f m.environment in
   { m with range; environment }
 
-let timed_run matcher ?(omega = false) ?rewrite_template ?substitute_in_place ?rule ~configuration ~template ~source () =
+let timed_run matcher ?(fast_offset_conversion = false) ?(omega = false) ?rewrite_template ?substitute_in_place ?rule ~configuration ~template ~source () =
   let module Matcher = (val matcher : Matchers.Matcher) in
   (match rewrite_template with
    | Some template -> Matcher.set_rewrite_template template;
@@ -131,20 +76,19 @@ let timed_run matcher ?(omega = false) ?rewrite_template ?substitute_in_place ?r
   let matches = Matcher.all ~configuration ~template ~source in
   let rule = Option.value rule ~default:[Ast.True] in
   let matches = apply_rule ?substitute_in_place matcher omega rule matches in
-  let line_lookup =
-    if fast_line_col_compute then
-      line_map source
+  let index =
+    if fast_offset_conversion then
+      Offset.index ~source
     else
-      Array.create ~len:1 0
+      Offset.empty
   in
   let f offset =
-    if fast_line_col_compute then
-      compute_line_col_fast line_lookup offset
+    if fast_offset_conversion then
+      Offset.convert_fast ~offset index
     else
-      compute_line_col_slow source offset
+      Offset.convert_slow ~offset ~source
   in
-  let matches = List.map matches ~f:(update_match f) in
-  matches
+  List.map matches ~f:(update_match f)
 
 
 type processed_source_result =
@@ -169,6 +113,7 @@ let log_to_file path =
 let process_single_source
     matcher
     omega
+    fast_offset_conversion
     substitute_in_place
     configuration
     source
@@ -185,7 +130,7 @@ let process_single_source
     in
     let matches =
       with_timeout timeout source ~f:(fun () ->
-          timed_run matcher ?rewrite_template ?rule ~substitute_in_place ~omega ~configuration ~template ~source:input_text ())
+          timed_run matcher ?rewrite_template ?rule ~substitute_in_place ~omega ~fast_offset_conversion ~configuration ~template ~source:input_text ())
     in
     match rewrite_template with
     | None -> Matches (matches, List.length matches)
@@ -371,6 +316,7 @@ let run
         ; substitute_in_place
         ; disable_substring_matching
         ; omega
+        ; fast_offset_conversion
         }
     ; output_printer
     ; interactive_review
@@ -390,6 +336,7 @@ let run
          process_single_source
            matcher
            omega
+           fast_offset_conversion
            substitute_in_place
            match_configuration
            input
@@ -418,6 +365,7 @@ let run
                      process_single_source
                        matcher
                        omega
+                       fast_offset_conversion
                        substitute_in_place
                        match_configuration
                        input
