@@ -181,6 +181,7 @@ type run_options =
   ; substitute_in_place : bool
   ; disable_substring_matching : bool
   ; omega : bool
+  ; fast_offset_conversion : bool
   }
 
 type user_input =
@@ -249,7 +250,7 @@ module Printer = struct
         | Json_lines -> Match.pp_json_lines
       in
       if List.length matches > 0 then
-        Format.fprintf ppf "%a@." pp (source_path, matches)
+        Format.fprintf ppf "%a" pp (source_path, matches)
 
   end
 
@@ -600,6 +601,7 @@ let create
          ; substitute_in_place
          ; disable_substring_matching
          ; omega
+         ; fast_offset_conversion
          }
      ; output_options =
          ({ overwrite_file_in_place
@@ -711,6 +713,7 @@ let create
         ; substitute_in_place
         ; disable_substring_matching
         ; omega
+        ; fast_offset_conversion
         }
     ; output_printer
     ; interactive_review

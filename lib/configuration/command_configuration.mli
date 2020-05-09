@@ -64,6 +64,7 @@ type run_options =
   ; substitute_in_place : bool
   ; disable_substring_matching : bool
   ; omega : bool
+  ; fast_offset_conversion : bool
   }
 
 type user_input =

@@ -12,6 +12,7 @@ val process_paths_for_interactive
 
 val timed_run
   : (module Matcher)
+  -> ?fast_offset_conversion:bool
   -> ?omega:bool
   -> ?rewrite_template:string
   -> ?substitute_in_place:bool

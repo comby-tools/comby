@@ -54,4 +54,4 @@ let pp_match_count ppf (source_path, matches) =
     Format.fprintf ppf "%a%d match\n" pp_source_path source_path (List.length matches)
 
 let pp_json_lines ppf (source_path, matches) =
-  Format.fprintf ppf "%s" @@ Yojson.Safe.to_string @@ to_json source_path matches
+  Format.fprintf ppf "%s\n" @@ Yojson.Safe.to_string @@ to_json source_path matches
