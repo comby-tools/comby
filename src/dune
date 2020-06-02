@@ -2,6 +2,7 @@
  (libraries comby core ppx_deriving_yojson ppx_deriving_yojson.runtime hack_parallel camlzip patdiff.lib) 
  (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show ppx_sexp_conv))
  (modules main)
+ (modes byte exe)
  (names main))
 
 (executables
@@ -19,6 +20,10 @@
 (alias
  (name DEFAULT)
  (deps main.exe))
+
+(alias
+ (name DEFAULT)
+ (deps main.bc))
 
 (alias
  (name DEFAULT)

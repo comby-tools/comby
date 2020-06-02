@@ -9,6 +9,9 @@ build-with-coverage:
 release:
 	@dune build --profile release
 
+byte:
+	@dune build src/main.bc
+
 comby comby-server benchmark:
 	@ln -s _build/install/default/bin/$@ ./$@
 
