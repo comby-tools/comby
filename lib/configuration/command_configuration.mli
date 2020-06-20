@@ -31,6 +31,7 @@ type output_options =
   ; substitute_in_place : bool
   ; count : bool
   ; interactive_review : interactive_review option
+  ; context_lines : int option
   }
 
 type anonymous_arguments =

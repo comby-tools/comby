@@ -103,6 +103,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and disable_substring_matching = flag "disable-substring-matching" no_arg ~doc:"Allow :[holes] to match substrings"
     and omega = flag "omega" no_arg  ~doc:"Use Omega matcher engine."
     and fast_offset_conversion = flag "fast-offset-conversion" no_arg ~doc:"Enable fast offset conversion. This is experimental and will become the default once vetted."
+    and context_lines = flag "context-lines" ~aliases:["C"] (optional int) ~doc:"n Include a string showing n context lines around a match in the -json-lines output. If n is 0, the whole line for the match is included. If the match spans multiple lines, the leading and trailing lines of the match are included."
     and anonymous_arguments =
       anon
         (maybe
@@ -207,6 +208,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; stdout
             ; substitute_in_place
             ; interactive_review
+            ; context_lines
             }
         }
       |> function
