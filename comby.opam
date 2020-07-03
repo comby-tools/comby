@@ -14,7 +14,7 @@ depends: [
   "core" {>= "0.12.2"}
   "lwt" {= "4.5.0"}
   "conduit-lwt-unix" {= "2.0.2"}
-  "hack_parallel" {>= "1.0.0"}
+  "hack_parallel"
   "mparser-comby"
   "ppxlib"
   "ppx_deriving"
@@ -33,8 +33,9 @@ depends: [
 pin-depends: [
   ["bisect_ppx.git" "git+https://github.com/aantron/bisect_ppx.git"]
   ["mparser-comby.git" "git+https://github.com/comby-tools/mparser.git"]
-  ["patdiff.git" "git+https://github.com/rvantonder/patdiff.git#0.12.1-patch-compatible-diffs"]
+  ["patdiff.git" "git+https://github.com/rvantonder/patdiff.git#0.13.0-patch-compatible-diffs"]
   ["camlzip.git" "git+https://github.com/rvantonder/camlzip.git#zip64"]
+  ["hack_parallel.git" "git+https://github.com/rvantonder/hack_parallel.git#4.10"]
 ]
 depexts: [
     [
