@@ -24,6 +24,7 @@ depends: [
   "oasis"
   "tls"
   "camlzip"
+  "shell"
   "patdiff"
   "lwt_react"
   "ppx_deriving_yojson"
