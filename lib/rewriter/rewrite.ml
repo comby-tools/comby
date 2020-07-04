@@ -88,7 +88,7 @@ let substitute_in_rewrite_template rewrite_template ({ environment; _ } : Match.
   }
 
 let all ?source ~rewrite_template matches : result option =
-  if matches = [] then None else
+  if List.is_empty matches then None else
     match source with
     (* in-place substitution *)
     | Some source ->

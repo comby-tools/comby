@@ -1,5 +1,7 @@
 open Core
 
+open Polymorphic_compare
+
 open Language
 
 let debug =

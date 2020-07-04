@@ -108,7 +108,7 @@ module Deprecate = struct
           option `End_of_input
             (peek_string (String.length reserved_sequence)
              >>= fun s ->
-             if s = reserved_sequence then
+             if String.equal s reserved_sequence then
                return `Reserved_sequence
              else
                acc))
