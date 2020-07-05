@@ -12,9 +12,9 @@ jobs:
           ocaml-version: '4.08.1'
       - run: opam pin add comby.dev -n .
       - run: opam depext -yt comby
-      - run: opam install -t . --deps-only
-      - run: opam pin add -y merlin-lsif https://github.com/rvantonder/merlin.git\#lsif
-      - run: opam pin add -y lsif-ocaml https://github.com/rvantonder/lsif-ocaml.git
+      - run: opam exec -- opam install -t . --deps-only
+      - run: opam exec -- opam pin add -y merlin-lsif https://github.com/rvantonder/merlin.git\#lsif
+      - run: opam exec -- opam pin add -y lsif-ocaml https://github.com/rvantonder/lsif-ocaml.git
 #     - name: Setup tmate session
 #       uses: mxschmitt/action-tmate@v1
       - run: opam exec -- dune build

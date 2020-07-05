@@ -313,7 +313,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
 
   let until_of_from from =
     Syntax.user_defined_delimiters
-    |> List.find_map ~f:(fun (from', until) -> if from = from' then Some until else None)
+    |> List.find_map ~f:(fun (from', until) -> if String.equal from from' then Some until else None)
     |> function
     | Some until -> until
     | None -> assert false
@@ -937,7 +937,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     let p = set_start_pos p in
     match parse_string' p source (Match.create ()) with
     | Success (_, result) ->
-      if source = "" then
+      if String.is_empty source then
         (* If source is empty and p succeeds, it's the trivial case. We set
            the result manually. *)
         Ok {
@@ -972,7 +972,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     make_result @@ begin
       to_template template >>= fun p ->
       let p =
-        if template = "" then
+        if String.is_empty template then
           MParser.(eof >> return Unit)
         else
           p

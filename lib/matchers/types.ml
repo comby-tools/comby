@@ -1,5 +1,7 @@
 open Core
 
+open Polymorphic_compare
+
 module Syntax = struct
   type escapable_string_literals =
     { delimiters : string list

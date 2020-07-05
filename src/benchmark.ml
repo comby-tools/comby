@@ -47,10 +47,10 @@ let bench_diff ~iterations baseline_command new_command =
   if debug then Format.printf "time_baseline: %f@." time_baseline;
   if debug then  Format.printf "time_new: %f@." time_new_command;
   let delta_x = 1.0 /. (time_new_command /. time_baseline) in
-  if delta_x < 1.0 then begin
+  if Float.(delta_x < 1.0) then begin
     let percentage_delta = 1.0 -. delta_x in
     Format.printf "SLOWER: %.4fx of master@." delta_x;
-    if percentage_delta > epsilon_warn then begin
+    if Float.(percentage_delta > epsilon_warn) then begin
       Format.printf
         "FAIL: benchmark epsilon exceeded (%.4f > %.4f)@."
         percentage_delta epsilon_warn;
@@ -63,7 +63,7 @@ let bench_diff ~iterations baseline_command new_command =
   end
   else
     let percentage_delta = delta_x -. 1.0 in
-    if percentage_delta > epsilon_same then begin
+    if Float.(percentage_delta > epsilon_same) then begin
       Format.printf "PASS: %.4fx faster@." delta_x;
       0
     end

@@ -222,7 +222,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
         Format.eprintf "@.WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning.@."
       | Some extension ->
         let (module M) = configuration.matcher in
-        if M.name = "Generic" then
+        if String.equal M.name "Generic" then
           Format.eprintf "@.WARNING: the GENERIC matcher was used because I'm unable to guess what language to use for the file extension %s. The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning.@." extension
         else if debug then Format.eprintf "@.NOTE: the %s matcher was inferred from extension %s. See '-list' to set a matcher for a specific language.@." M.name extension
       | None -> ()

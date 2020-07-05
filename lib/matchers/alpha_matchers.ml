@@ -87,7 +87,7 @@ let all : (module Types.Matcher.S) list =
   ]
 
 let select_with_extension extension : (module Types.Matcher.S) option =
-  List.find all ~f:(fun (module M) -> List.exists M.extensions ~f:((=) extension))
+  List.find all ~f:(fun (module M) -> List.exists M.extensions ~f:(String.(=) extension))
 
 let create
     Types.Syntax.

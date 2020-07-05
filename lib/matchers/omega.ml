@@ -184,7 +184,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
 
   let until_of_from from =
     Syntax.user_defined_delimiters
-    |> List.find_map ~f:(fun (from', until) -> if from = from' then Some until else None)
+    |> List.find_map ~f:(fun (from', until) -> if String.equal from from' then Some until else None)
     |> function
     | Some until -> until
     | None -> assert false
@@ -816,7 +816,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let all ?configuration ~template ~source : Match.t list =
     configuration_ref := Option.value configuration ~default:!configuration_ref;
     matches_ref := [];
-    if template = "" && source = "" then [trivial]
+    if String.is_empty template && String.is_empty source then [trivial]
     else match first_is_broken template source with
       | Ok _
       | Error _ -> List.rev !matches_ref
