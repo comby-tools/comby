@@ -755,9 +755,8 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     let state = Buffered.feed state (`String template) in
     Buffered.feed state `Eof
     |> function
-    | Buffered.Done ({ len; buf; _ }, p) ->
-      let c = Bigarray.Array1.unsafe_get buf (len - 1) in
-      if len <> 0 then failwith @@ Format.sprintf "Input left over in template where not expected: %d: %c" len c;
+    | Buffered.Done ({ len; _ }, p) ->
+      if len <> 0 then failwith @@ Format.sprintf "Input left over in template where not expected: %d" len;
       Ok p
     | _ -> Or_error.error_string "Template could not be parsed."
 
