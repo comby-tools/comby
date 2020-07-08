@@ -7,9 +7,10 @@ RUN sudo apt-get install -y \
 	pkg-config \
 	zlib1g-dev \
 	m4 \
-	libgmp-dev
+	libgmp-dev \
+    sqlite-dev
 
-RUN opam init --no-setup --disable-sandboxing --compiler=4.09.0
+RUN opam init --no-setup --disable-sandboxing --compiler=4.10.0
 RUN eval $(opam env) && opam repository set-url default https://opam.ocaml.org && opam update
 
 COPY Makefile /home/comby/
@@ -24,10 +25,10 @@ COPY push-coverage-report.sh /home/comby/
 
 RUN sudo chown -R $(whoami) /home/comby
 RUN eval $(opam env) && opam install . --deps-only -y
-RUN LIBRARY_PATH=/home/opam/.opam/4.09.0/lib/hack_parallel opam exec -- dune build --profile dev
+RUN opam exec -- dune build --profile dev
 RUN make comby comby-server benchmark
-RUN LIBRARY_PATH=/home/opam/.opam/4.09.0/lib/hack_parallel opam exec -- dune runtest
+RUN opam exec -- dune runtest
 RUN opam exec -- dune clean
-RUN LIBRARY_PATH=/home/opam/.opam/4.09.0/lib/hack_parallel opam exec -- dune build --profile release
+RUN opam exec -- dune build --profile release
 
 # The binary is now available in /home/comby/_build/default/src/main.exe

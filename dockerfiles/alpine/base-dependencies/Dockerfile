@@ -1,7 +1,7 @@
 #########################
 ### Base Dependencies ###
 #########################
-FROM ocaml/opam2:alpine-3.10-ocaml-4.09
+FROM ocaml/opam2:alpine-3.12-ocaml-4.10
 
 WORKDIR /home/comby
 
@@ -12,7 +12,8 @@ RUN sudo apk --no-cache add \
     linux-headers \
     perl \
     gmp-dev \
-    zlib-dev
+    zlib-dev \
+    sqlite-dev
 
 # Copy the source files.
 COPY Makefile /home/comby/

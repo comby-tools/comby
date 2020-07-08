@@ -1,7 +1,7 @@
 #######################################
 ### Source build for alpine release ###
 #######################################
-FROM comby/base-dependencies-alpine-3.10:latest AS source-build-alpine
+FROM comby/base-dependencies-alpine-3.12:latest AS source-build-alpine
 
 WORKDIR /home/comby
 
@@ -16,11 +16,11 @@ COPY test /home/comby/test
 COPY push-coverage-report.sh /home/comby/
 
 RUN sudo chown -R $(whoami) /home/comby
-RUN LIBRARY_PATH=/home/opam/.opam/4.09/lib/hack_parallel opam exec -- dune build --profile dev 
+RUN opam exec -- dune build --profile dev
 RUN make comby comby-server benchmark
-RUN LIBRARY_PATH=/home/opam/.opam/4.09/lib/hack_parallel opam exec -- dune runtest
+RUN opam exec -- dune runtest
 RUN opam exec -- dune clean
-RUN LIBRARY_PATH=/home/opam/.opam/4.09/lib/hack_parallel opam exec -- dune build --profile release
+RUN opam exec -- dune build --profile release
 
 ###################################################
 ### Binary distribution on minimal alpine image ###
