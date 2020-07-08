@@ -8,7 +8,7 @@ RUN sudo apt-get install -y \
 	zlib1g-dev \
 	m4 \
 	libgmp-dev \
-    sqlite-dev
+    libsqlite3-dev
 
 RUN opam init --no-setup --disable-sandboxing --compiler=4.10.0
 RUN eval $(opam env) && opam repository set-url default https://opam.ocaml.org && opam update

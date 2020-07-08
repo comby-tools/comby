@@ -45,13 +45,13 @@ depexts: [
       "zlib1g-dev"
       "m4"
       "libgmp-dev"
-      "sqlite-dev"
+      "libsqlite3-dev"
     ] {os-distribution = "ubuntu"}
     [
       "pkg-config"
       "pcre"
       "gmp"
-      "sqlite-dev"
+      "sqlite3"
     ] {os-distribution = "macos"}
 ]
 synopsis: "A tool for structural code search and replace that supports ~every language"
