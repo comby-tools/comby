@@ -233,4 +233,4 @@ let default_command =
 
 let () =
   Scheduler.Daemon.check_entry_point ();
-  Command.run default_command ~version:"0.15.0"
+  Command.run default_command ~version:"0.16.0"
