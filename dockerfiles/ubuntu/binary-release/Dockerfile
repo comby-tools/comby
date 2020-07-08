@@ -2,7 +2,7 @@ FROM ocaml/opam2:ubuntu-18.04-opam
 
 WORKDIR /home/comby
 
-RUN sudo apt-get install -y \
+RUN sudo apt-get update && sudo apt-get install -y \
 	libpcre3-dev \
 	pkg-config \
 	zlib1g-dev \
