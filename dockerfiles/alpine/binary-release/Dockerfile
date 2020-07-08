@@ -25,7 +25,7 @@ RUN opam exec -- dune build --profile release
 ###################################################
 ### Binary distribution on minimal alpine image ###
 ###################################################
-FROM alpine:3.10
+FROM alpine:3.12
 
 LABEL maintainer="Rijnard van Tonder <rvantonder@gmail.com>"
 LABEL name="comby"
