@@ -47,7 +47,12 @@ let parse_source_directories
     directory_depth =
   let max_depth = Option.value directory_depth ~default:Int.max_value in
   let exact_file_paths, file_patterns =
-    List.partition_map file_filters ~f:(fun path -> if String.contains path '/' then `Fst path else `Snd path)
+    List.partition_map file_filters ~f:(fun path ->
+        let is_exact path =
+          (String.contains path '/' && Sys.is_file path = `Yes)
+          || (Sys.is_file ("." ^/ path) = `Yes) (* See if it matches something in the current directory *)
+        in
+        if is_exact path then `Fst path else `Snd path)
   in
   let f acc ~depth ~absolute_path ~is_file =
     if depth > max_depth then
