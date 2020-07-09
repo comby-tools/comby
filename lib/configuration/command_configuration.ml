@@ -46,13 +46,16 @@ let parse_source_directories
     target_directory
     directory_depth =
   let max_depth = Option.value directory_depth ~default:Int.max_value in
+  let exact_file_paths, file_patterns =
+    List.partition_map file_filters ~f:(fun path -> if String.contains path '/' then `Fst path else `Snd path)
+  in
   let f acc ~depth ~absolute_path ~is_file =
     if depth > max_depth then
       Skip acc
     else
       begin
         if is_file then
-          match file_filters with
+          match file_patterns with
           | [] ->
             let files =
               if List.exists exclude_file_prefix ~f:(fun prefix -> String.is_prefix (Filename.basename absolute_path) ~prefix) then
@@ -81,7 +84,13 @@ let parse_source_directories
           end
       end
   in
-  fold_directory target_directory ~init:[] ~f
+  let source_paths =
+    if not (List.is_empty file_patterns) || List.is_empty file_filters then
+      fold_directory target_directory ~init:[] ~f
+    else
+      []
+  in
+  exact_file_paths @ source_paths
 
 let read filename =
   In_channel.read_all filename
@@ -659,7 +668,8 @@ let create
     | Stdin -> `String (In_channel.input_all In_channel.stdin)
     | Zip ->
       let zip_file = Option.value_exn zip_file in
-      let paths : Zip.entry list = with_zip zip_file ~f:(filter_zip_entries file_filters exclude_directory_prefix exclude_file_prefix) in
+      let paths : Zip.entry list =
+        with_zip zip_file ~f:(filter_zip_entries file_filters exclude_directory_prefix exclude_file_prefix) in
       `Zip (zip_file, paths)
     | Directory ->
       let target_directory =
