@@ -1,4 +1,4 @@
-Copyright © 2008-2019 Xavier Clerc, Leonid Rozenberg, Anton Bachin
+Copyright © 2008-2020 Xavier Clerc, Leonid Rozenberg, Anton Bachin
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the “Software”), to deal in

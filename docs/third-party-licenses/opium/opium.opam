@@ -12,25 +12,22 @@ maintainer: ["Rudi Grinberg <rudi.grinberg@gmail>"]
 authors: ["Rudi Grinberg"]
 license: "MIT"
 homepage: "https://github.com/rgrinberg/opium"
-doc: "https://rgrinberg.github.io/opium"
+doc: "https://rgrinberg.github.io/opium/"
 bug-reports: "https://github.com/rgrinberg/opium/issues"
 depends: [
-  "ocaml" {>= "4.04.2"}
+  "ocaml" {>= "4.08"}
   "dune" {>= "1.11"}
-  "base" {>= "v0.11.0"}
-  "stdio" {>= "v0.11.0"}
-  "opium_core"
-  "hmap"
-  "yojson"
-  "cohttp-lwt-unix"
-  "lwt"
+  "opium_kernel" {= version}
+  "httpaf-lwt-unix"
+  "lwt" {>= "5.3.0"}
   "logs"
+  "mtime"
   "cmdliner"
-  "ppx_fields_conv"
-  "ppx_sexp_conv"
+  "sexplib0"
   "re"
   "magic-mime"
   "alcotest" {with-test}
+  "alcotest-lwt" {with-test}
 ]
 build: [
   ["dune" "subst"] {pinned}

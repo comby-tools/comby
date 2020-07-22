@@ -1,4 +1,4 @@
-Copyright (c) 1999-2019, the Authors of Lwt (docs/AUTHORS)
+Copyright (c) 1999-2020, the Authors of Lwt (docs/AUTHORS)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
