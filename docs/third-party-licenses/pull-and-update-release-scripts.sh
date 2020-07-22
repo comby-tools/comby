@@ -1,6 +1,6 @@
 #!/bin/bash
 
-LIBS="ppx_deriving_yojson core ppxlib ppx_deriving hack_parallel opium pcre-ocaml ocaml-tls camlzip bisect_ppx mparser ocaml-ci-scripts patdiff lambda-term lwt"
+LIBS="ppx_deriving_yojson core ppxlib ppx_deriving hack_parallel opium pcre-ocaml ocaml-tls camlzip bisect_ppx mparser ocaml-ci-scripts patdiff lwt toml"
 
 rm ALL.txt 2> /dev/null
 for l in $LIBS; do rm -rf $l; done
@@ -61,9 +61,9 @@ wget -P ocaml-ci-scripts https://raw.githubusercontent.com/ocaml/ocaml-ci-script
 mkdir lwt && \
 wget -P lwt https://raw.githubusercontent.com/ocsigen/lwt/master/LICENSE.md
 
-# BSD-3
-mkdir lambda-term && \
-wget -P lambda-term  https://raw.githubusercontent.com/ocaml-community/lambda-term/master/LICENSE
+# LGPL
+mkdir toml && \
+wget -P toml https://raw.githubusercontent.com/ocaml-toml/To.ml/master/LICENSE
 
 
 # ALL.txt
