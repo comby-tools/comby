@@ -1,0 +1,7 @@
+[a]
+match='(:[1])'
+rewrite='(rewrite)'
+
+[b]
+match='main'
+rewrite='foo'

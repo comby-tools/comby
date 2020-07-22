@@ -1,4 +1,5 @@
 open Core
+open Toml
 
 open Polymorphic_compare
 
@@ -103,7 +104,56 @@ let read filename =
   String.chop_suffix template ~suffix:"\n"
   |> Option.value ~default:template
 
-let parse_template_directories ?(warn = false) omega paths =
+let create_rule omega rule =
+  let create =
+    if omega then
+      Rule.Omega.create
+    else
+      Rule.Alpha.create
+  in
+  match Option.map rule ~f:create with
+  | None -> None
+  | Some Ok rule -> Some rule
+  | Some Error error ->
+    Format.eprintf "Rule parse error: %s@." (Error.to_string_hum error);
+    exit 1
+
+let parse_toml omega path =
+  let open TomlTypes in
+  let toml = Parser.(from_filename path |> unsafe) in
+  let toml = Table.remove (Toml.key "flags") toml in
+  let to_specification (key : Table.key) (value : TomlTypes.value) acc =
+    let name = Table.Key.to_string key in
+    if debug then Format.printf "Key name: %s@." name;
+    match value with
+    | TTable t ->
+      let to_string = function
+        | None -> None
+        | Some TString s -> Some s
+        | Some v ->
+          Format.eprintf "TOML value not a string: %s@." (Toml.Printer.string_of_value v);
+          exit 1
+      in
+      let match_template =
+        match Table.find_opt (Toml.key "match") t with
+        | Some v -> Option.value_exn (to_string (Some v))
+        | None ->
+          Format.eprintf "A 'match' key is required for entry %s@." name;
+          exit 1
+      in
+      let rule = Table.find_opt (Toml.key "rule") t |> to_string |> create_rule omega in
+      let rewrite_template = Table.find_opt (Toml.key "rewrite") t |> to_string in
+      if debug then Format.printf "Processed ->%s<-@." match_template;
+      (name, (Specification.create ~match_template ?rule ?rewrite_template ()))::acc
+    | v ->
+      Format.eprintf "Unexpected format, could not parse ->%s<-@." (Toml.Printer.string_of_value v);
+      exit 1
+  in
+  TomlTypes.Table.fold to_specification toml []
+  |> List.sort ~compare:(fun x y -> String.compare (fst x) (fst y))
+  |> List.map ~f:snd
+
+let parse_templates ?(warn_for_missing_file_in_dir = false) omega paths =
   let parse_directory path =
     let read_optional filename =
       match read filename with
@@ -112,24 +162,10 @@ let parse_template_directories ?(warn = false) omega paths =
     in
     match read_optional (path ^/ "match") with
     | None ->
-      if warn then Format.eprintf "WARNING: Could not read required match file in %s@." path;
+      if warn_for_missing_file_in_dir then Format.eprintf "WARNING: Could not read required match file in %s@." path;
       None
     | Some match_template ->
-      let create =
-        if omega then
-          Rule.Omega.create
-        else
-          Rule.Alpha.create
-      in
-      let rule = read_optional (path ^/ "rule") in
-      let rule =
-        match Option.map rule ~f:create with
-        | None -> None
-        | Some Ok rule -> Some rule
-        | Some Error error ->
-          Format.eprintf "Rule parse error: %s@." (Error.to_string_hum error);
-          exit 1
-      in
+      let rule = create_rule omega @@ read_optional (path ^/ "rule") in
       let rewrite_template = read_optional (path ^/ "rewrite") in
       Specification.create ~match_template ?rule ?rewrite_template ()
       |> Option.some
@@ -147,7 +183,11 @@ let parse_template_directories ?(warn = false) omega paths =
     else
       Continue acc
   in
-  List.concat_map paths ~f:(fun path -> fold_directory path ~sorted:true ~init:[] ~f)
+  List.concat_map paths ~f:(fun path ->
+      if Sys.is_directory path = `Yes then
+        fold_directory path ~sorted:true ~init:[] ~f
+      else
+        parse_toml omega path)
 
 type interactive_review =
   { editor : string
@@ -175,7 +215,7 @@ type anonymous_arguments =
 type user_input_options =
   { rule : string
   ; stdin : bool
-  ; specification_directories : string list option
+  ; templates : string list option
   ; anonymous_arguments : anonymous_arguments option
   ; file_filters : string list option
   ; zip_file : string option
@@ -413,8 +453,8 @@ let emit_errors { input_options; run_options; output_options } =
           || output_options.count)
     , "-review cannot be used with one or more of the following output flags: -json-lines, -json-only-diff, -stdout, -in-place, -count"
     ; input_options.anonymous_arguments = None &&
-      (input_options.specification_directories = None
-       || input_options.specification_directories = Some [])
+      (input_options.templates = None
+       || input_options.templates = Some [])
     , "No templates specified. \
        See -h to specify on the command line, or \
        use -templates \
@@ -424,11 +464,6 @@ let emit_errors { input_options; run_options; output_options } =
     , "-depth must be 0 or greater."
     ; Sys.is_directory input_options.target_directory = `No
     , "Directory specified with -d or -directory is not a directory."
-    ; Option.is_some input_options.specification_directories
-      && List.exists
-        (Option.value_exn input_options.specification_directories)
-        ~f:(fun dir -> not (Sys.is_directory dir = `Yes))
-    , "One or more directories specified with -templates is not a directory."
     ; output_options.json_only_diff && not output_options.json_lines
     , "-json-only-diff can only be supplied with -json-lines."
     ; Option.is_some output_options.interactive_review &&
@@ -436,18 +471,37 @@ let emit_errors { input_options; run_options; output_options } =
     , "Please remove the -d option and `cd` to the directory where you want to \
        review from. The -review, -editor, or -default-no options should only be run \
        at the root directory of the project files to patch."
-    ; let result =
-        if run_options.omega then
-          Rule.Omega.create input_options.rule
-        else
-          Rule.Alpha.create input_options.rule
-      in
-      Or_error.is_error result
-    , if Or_error.is_error result then
-        Format.sprintf "Match rule parse error: %s@." @@
-        Error.to_string_hum (Option.value_exn (Result.error result))
-      else
-        "UNREACHABLE"
+    ; (let message =
+         match input_options.templates with
+         | Some inputs ->
+           List.find_map inputs ~f:(fun input ->
+               if Sys.is_file input = `Yes then
+                 (match Parser.from_filename input with
+                  | `Error (s, _) -> Some s
+                  | _ -> None)
+               else if not (Sys.is_directory input = `Yes) then
+                 Some (Format.sprintf "Directory %S specified with -templates is not a directory." input)
+               else
+                 None)
+         | _ -> None
+       in
+       Option.is_some message
+     , if Option.is_some message then
+         Option.value_exn message
+       else
+         "UNREACHABLE")
+    ; (let result =
+         if run_options.omega then
+           Rule.Omega.create input_options.rule
+         else
+           Rule.Alpha.create input_options.rule
+       in
+       Or_error.is_error result
+     , if Or_error.is_error result then
+         Format.sprintf "Match rule parse error: %s@." @@
+         Error.to_string_hum (Option.value_exn (Result.error result))
+       else
+         "UNREACHABLE")
     ]
   in
   List.filter_map error_on ~f:(function
@@ -473,11 +527,11 @@ let emit_errors { input_options; run_options; output_options } =
 let emit_warnings { input_options; run_options; output_options } =
   let warn_on =
     [ (let match_templates =
-         match input_options.specification_directories, input_options.anonymous_arguments with
+         match input_options.templates, input_options.anonymous_arguments with
          | None, Some { match_template; _ } ->
            [ match_template ]
-         | Some specification_directories, _ ->
-           List.map (parse_template_directories run_options.omega specification_directories) ~f:(fun { match_template; _ } -> match_template)
+         | Some templates, _ ->
+           List.map (parse_templates run_options.omega templates) ~f:(fun { match_template; _ } -> match_template)
          | _ -> assert false
        in
        List.exists match_templates ~f:(fun match_template ->
@@ -488,7 +542,7 @@ let emit_warnings { input_options; run_options; output_options } =
        might be what you're looking for instead, like when you want to match an \
        assignment foo = bar(args) on a line, use :[[var]] = bar(args). :[hole] is \
        typically useful inside balanced delimiters."
-    ; is_some input_options.specification_directories
+    ; is_some input_options.templates
       && is_some input_options.anonymous_arguments,
       "Templates specified on the command line AND using -templates. Ignoring match
       and rewrite templates on the command line and only using those in directories."
@@ -595,7 +649,7 @@ let select_matcher custom_matcher override_matcher file_filters omega =
 let create
     ({ input_options =
          { rule
-         ; specification_directories
+         ; templates
          ; anonymous_arguments
          ; file_filters
          ; zip_file
@@ -641,14 +695,14 @@ let create
     create rule |> Or_error.ok_exn
   in
   let specifications =
-    match specification_directories, anonymous_arguments with
+    match templates, anonymous_arguments with
     | None, Some { match_template; rewrite_template; _ } ->
       if match_only || count then
         [ Specification.create ~match_template ~rule () ]
       else
         [ Specification.create ~match_template ~rewrite_template ~rule () ]
-    | Some specification_directories, _ ->
-      parse_template_directories ~warn:true omega specification_directories
+    | Some templates, _ ->
+      parse_templates ~warn_for_missing_file_in_dir:true omega templates
     | _ -> assert false
   in
   let file_filters =

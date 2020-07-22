@@ -42,7 +42,7 @@ type anonymous_arguments =
 type user_input_options =
   { rule : string
   ; stdin : bool
-  ; specification_directories : string list option
+  ; templates : string list option
   ; anonymous_arguments : anonymous_arguments option
   ; file_filters : string list option
   ; zip_file : string option

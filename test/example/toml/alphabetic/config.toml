@@ -1,0 +1,17 @@
+[c]
+match='''
+(:[1])'''
+rewrite='''
+(cccc)'''
+
+[a]
+match='''
+(:[1])'''
+rewrite='''
+(aaaa)'''
+
+[b]
+match='''
+(:[x])'''
+rewrite='''
+(bbbb)'''
