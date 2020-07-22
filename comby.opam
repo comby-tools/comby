@@ -27,6 +27,7 @@ depends: [
   "shell"
   "patdiff"
   "lwt_react"
+  "toml"
   "ppx_deriving_yojson"
   "ppx_tools_versioned" {>= "5.2.3"}
   "bisect_ppx" {dev & >= "2.0.0"}

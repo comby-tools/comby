@@ -117,7 +117,7 @@ let%expect_test "error_on_invalid_templates_dir" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|One or more directories specified with -templates is not a directory.
+  [%expect_exact {|Directory "nonexistent" specified with -templates is not a directory.
 |}]
 
 let%expect_test "warn_on_anonymous_and_templates_flag" =
@@ -1105,3 +1105,62 @@ let%expect_test "warn_on_match_template_starts_with_everything_hole" =
   [%expect{|
     world
     WARNING: The match template starts with a :[hole]. You almost never want to start a template with :[hole], since it matches everything including newlines up to the part that comes after it. This can make things slow. :[[hole]] might be what you're looking for instead, like when you want to match an assignment foo = bar(args) on a line, use :[[var]] = bar(args). :[hole] is typically useful inside balanced delimiters. |}]
+
+let%expect_test "test_valid_toml" =
+  let source = "main(void)\n" in
+  let config = "example" ^/ "toml" ^/ "plain" ^/ "config.toml" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -config %s -stdout -f .c" config
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|main()|}]
+
+(* If templates rewrite the same thing, the last rule that changes, by
+   alphabetical name, persists. *)
+let%expect_test "test_alphabetical_toml_application" =
+  let source = "main(void)\n" in
+  let config = "example" ^/ "toml" ^/ "alphabetic" ^/ "config.toml" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -config %s -stdout -f .c" config
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|main(cccc)|}]
+
+let%expect_test "test_multi" =
+  let source = "main(void)\n" in
+  let config = "example" ^/ "toml" ^/ "multi" ^/ "config.toml" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -config %s -stdout -f .c" config
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|foo(rewrite)|}]
+
+let%expect_test "test_toml_rule" =
+  let source = "main(void)\n" in
+  let config = "example" ^/ "toml" ^/ "rule" ^/ "config.toml" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -config %s -stdout -f .c" config
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|main(rewrite)|}]
+
+let%expect_test "dot_comby_with_flags" =
+  let source = "main(void)\n" in
+  Sys.chdir ("example" ^/ "dot-comby");
+  let command = Format.sprintf "../../%s %s" binary_path "" in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|
+    [0;31m------ [0m[0;1m/dev/null[0m
+    [0;32m++++++ [0m[0;1m/dev/null[0m
+    [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
+    [0;41;30m-|[0m[0m[0;2mmain([0m[0;31mvoid[0m[0;2m)[0m[0m
+    [0;42;30m+|[0m[0mmain([0;32mrewrite[0m)[0m|}]

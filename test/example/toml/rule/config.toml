@@ -1,0 +1,8 @@
+[name]
+
+match='''
+(:[1])'''
+
+rule='where :[1] == "void"'
+
+rewrite='(rewrite)'

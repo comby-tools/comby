@@ -1,0 +1,11 @@
+[b]
+
+match='''
+(:[1])'''
+
+rewrite='(rewrite)'
+
+[a]
+
+match='''
+(:[1])'''

@@ -1,0 +1,9 @@
+flags="-stdin -sequential -config .comby -lang .c"
+
+[rule]
+match='''
+(:[1])'''
+
+rule='where :[1] == "void"'
+
+rewrite='(rewrite)'

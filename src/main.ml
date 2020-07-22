@@ -77,9 +77,9 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and match_timeout = flag "timeout" (optional_with_default 3 int) ~doc:"seconds Set match timeout on a source. Default: 3 seconds"
     and target_directory = flag "directory" ~aliases:["d"] (optional_with_default (Sys.getcwd ()) string) ~doc:(Format.sprintf "path Run recursively on files in a directory relative to the root. Default is current directory: %s" @@ Sys.getcwd ())
     and directory_depth = flag "depth" (optional int) ~doc:"n Depth to recursively descend into directories"
-    and specification_directories = flag "templates" (optional (Arg_type.comma_separated string)) ~doc:"path CSV of directories containing templates"
+    and templates = flag "templates" ~aliases:["config"; "configuration"] (optional (Arg_type.comma_separated string)) ~doc:"paths CSV of directories containing templates, or TOML configuration files"
     and file_filters = flag "extensions" ~aliases:["e"; "file-extensions"; "f"] (optional (Arg_type.comma_separated string)) ~doc:"extensions Comma-separated extensions to include, like \".go\" or \".c,.h\". It is just a file suffix, so you can use it to filter file names like \"main.go\". The extension will be used to infer a matcher, unless -custom-matcher or -matcher is specified"
-    and override_matcher = flag "matcher" ~aliases:["m"] (optional string) ~doc:"extension Use this matcher on all files regardless of their file extension, unless a -custom-matcher is specified"
+    and override_matcher = flag "matcher" ~aliases:["m"; "lang"; "l"; "language"] (optional string) ~doc:"extension Use this matcher on all files regardless of their file extension, unless a -custom-matcher is specified"
     and custom_matcher = flag "custom-matcher" (optional string) ~doc:"path Path to a JSON file that contains a custom matcher"
     and zip_file = flag "zip" ~aliases:["z"] (optional string) ~doc:"zipfile A zip file containing files to rewrite"
     and json_lines = flag "json-lines" no_arg ~doc:"Output JSON line format"
@@ -113,30 +113,32 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
            )
         )
     in
+    let file_filters_to_paths file_filters =
+      match file_filters with
+      | [] -> None
+      | l ->
+        List.map l ~f:(fun pattern ->
+            if String.contains pattern '/' then
+              match Filename.realpath pattern with
+              | exception Unix.Unix_error _ ->
+                Format.eprintf
+                  "No such file or directory: %s. Comby interprets \
+                   patterns containing '/' as file paths. If a pattern \
+                   does not contain '/' (like '.ml'), it is considered a \
+                   pattern where file endings must match the pattern. \
+                   Please supply only valid file paths or patterns.@." pattern;
+                exit 1
+              | path -> path
+            else
+              pattern)
+        |> Option.some
+    in
     let anonymous_arguments =
       Option.map anonymous_arguments ~f:(fun (match_template, rewrite_template, file_filters) ->
-          let file_filters =
-            match file_filters with
-            | [] -> None
-            | l ->
-              List.map l ~f:(fun pattern ->
-                  if String.contains pattern '/' then
-                    match Filename.realpath pattern with
-                    | exception Unix.Unix_error _ ->
-                      Format.eprintf
-                        "No such file or directory: %s. Comby interprets \
-                         patterns containing '/' as file paths. If a pattern \
-                         does not contain '/' (like '.ml'), it is considered a \
-                         pattern where file endings must match the pattern. \
-                         Please supply only valid file paths or patterns.@." pattern;
-                      exit 1
-                    | path -> path
-                  else
-                    pattern)
-              |> Option.some
-          in
+          let file_filters = file_filters_to_paths file_filters in
           { match_template; rewrite_template; file_filters })
     in
+    let file_filters = Option.bind ~f:file_filters_to_paths file_filters in
     if list then list_supported_languages_and_exit omega;
     if Option.is_some substitute_environment then
       substitute_environment_only_and_exit anonymous_arguments substitute_environment;
@@ -173,7 +175,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
       Command_configuration.create
         { input_options =
             { rule
-            ; specification_directories
+            ; templates
             ; anonymous_arguments
             ; file_filters
             ; zip_file
@@ -231,6 +233,27 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
 let default_command =
   Command.basic ~summary:"Run a rewrite pass. Comby runs in current directory by default. The '-stdin' option rewrites input on stdin." base_command_parameters
 
+let parse_comby_dot_file () =
+  let open Toml in
+  let open TomlTypes in
+  match Parser.from_filename ".comby" with
+  | `Error (s, _) -> Format.eprintf "TOML parse error in .comby file: %s@." s; exit 1
+  | `Ok toml ->
+    let flags = Table.find_opt (Toml.key "flags") toml in
+    let to_flags = function
+      | None -> []
+      | Some TString s ->
+        String.split_on_chars s ~on:[' '; '\t'; '\r'; '\n']
+        |> List.filter ~f:(String.(<>) "")
+      | Some v ->
+        Format.eprintf "TOML value not a string: %s@." (Toml.Printer.string_of_value v);
+        exit 1
+    in
+    to_flags flags
+
 let () =
   Scheduler.Daemon.check_entry_point ();
-  Command.run default_command ~version:"0.16.0"
+  Command.run default_command ~version:"0.16.0" ~extend:(fun _ ->
+      match Sys.file_exists ".comby" with
+      | `Yes -> parse_comby_dot_file ()
+      | _ -> [])
