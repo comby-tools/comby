@@ -103,6 +103,8 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and disable_substring_matching = flag "disable-substring-matching" no_arg ~doc:"Allow :[holes] to match substrings"
     and omega = flag "omega" no_arg  ~doc:"Use Omega matcher engine."
     and fast_offset_conversion = flag "fast-offset-conversion" no_arg ~doc:"Enable fast offset conversion. This is experimental and will become the default once vetted."
+    and regex_pattern = flag "regex" no_arg ~doc:"print a regex that a file must satisfy in order for a pattern to be run"
+    and ripgrep_args = flag "ripgrep" (optional string) ~aliases:["rg"] ~doc:"flags Activate ripgrep for filtering files. Add flags like '-g *.go' to include or exclude file extensions."
     and anonymous_arguments =
       anon
         (maybe
@@ -187,6 +189,8 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; exclude_file_prefix
             ; custom_matcher
             ; override_matcher
+            ; regex_pattern
+            ; ripgrep_args
             }
         ; run_options =
             { sequential
