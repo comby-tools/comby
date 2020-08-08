@@ -396,3 +396,71 @@ let%expect_test "match_escaped_escaped" =
       | Some { rewritten_source; _ } -> print_string rewritten_source
       | None -> print_string "EXPECT SUCCESS");
   [%expect_exact {|EXPECT SUCCESS|}]
+
+let%expect_test "holes_in_raw_literals" =
+  let source = {|
+        return expect(
+            extensionsController.executeCommand({
+                command: 'queryGraphQL',
+                arguments: [
+                    `
+                        query ResolveRepo($repoName: String!) {
+                            repository(name: $repoName) {
+                                url
+                            }
+                        }
+                    `,
+                    { repoName: 'foo' },
+                ],
+            })
+        )
+|} in
+  let template = {|`:[1]`|} in
+  begin
+    Typescript.all ~configuration ~template ~source
+    |> function
+    | [] -> print_string "No matches."
+    | hd :: _ ->
+      print_string hd.matched
+  end;
+  [%expect_exact {|`
+                        query ResolveRepo($repoName: String!) {
+                            repository(name: $repoName) {
+                                url
+                            }
+                        }
+                    `|}]
+
+let%expect_test "holes_in_raw_literals_partial" =
+  let source = {|
+        return expect(
+            extensionsController.executeCommand({
+                command: 'queryGraphQL',
+                arguments: [
+                    `
+                        query ResolveRepo($repoName: String!) {
+                            repository(name: $repoName) {
+                                url
+                            }
+                        }
+                    `,
+                    { repoName: 'foo' },
+                ],
+            })
+        )
+|} in
+  let template = {|` query ResolveRepo(:[1]) {:[2]} `|} in
+  begin
+    Typescript.all ~configuration ~template ~source
+    |> function
+    | [] -> print_string "No matches."
+    | hd :: _ ->
+      print_string hd.matched
+  end;
+  [%expect_exact {|`
+                        query ResolveRepo($repoName: String!) {
+                            repository(name: $repoName) {
+                                url
+                            }
+                        }
+                    `|}]

@@ -118,8 +118,8 @@ module Deprecate = struct
     | `Reserved_sequence -> fail "reserved sequence hit"
 end
 
-(** must have at least one, otherwise spins on
-    the empty string *)
+(** must have at least one, otherwise spins on the empty string. for some reason
+    many1 spaces is not equivalent (spins on empty space?). *)
 let spaces1 =
   satisfy is_whitespace >>= fun c ->
   (* XXX use skip_while once everything works.

@@ -558,6 +558,9 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
         i := !i + 1;
         result)
 
+  let generate_pure_spaces_parser _ignored =
+    spaces1 >>= fun s1 -> r acc (Template_string s1)
+
   (* XXX change ignore to unit once everything works.
      right now it's the string that was parsed by spaces1 *)
   let generate_spaces_parser _ignored =
@@ -636,7 +639,9 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       many @@
       choice
         [ literal_holes
-        ; ((many1 (Parser.Deprecate.any_char_except ~reserved:[":["]) |>> String.of_char_list)
+        ; (spaces1 |>> generate_pure_spaces_parser)
+        ; ((many1 (Parser.Deprecate.any_char_except ~reserved:[":["; " "; "\n"; "\t"; "\r"])
+            |>> String.of_char_list)
            |>> generate_string_token_parser)
         ]
     in

@@ -110,6 +110,11 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let raw_literal_grammar ~right_delimiter =
     is_not (string right_delimiter) |>> String.of_char
 
+  (* Does not take into account code comments. *)
+  let generate_pure_spaces_parser () =
+    spaces1 >>= fun result -> f result
+
+  (* Takes into account code comments. *)
   let generate_spaces_parser () =
     (* At least a space followed by comments and spaces. *)
     (spaces1
@@ -792,7 +797,8 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     let p =
       many
         (choice holes
-         <|> ((many1 (is_not (reserved_holes))
+         <|> (spaces1 |>> generate_pure_spaces_parser)
+         <|> ((many1 (is_not (choice [reserved_holes; skip (space)] ))
                |>> String.of_char_list) |>> generate_string_token_parser))
     in
     match parse_string p contents "" with
