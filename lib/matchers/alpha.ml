@@ -1,11 +1,15 @@
 open Core
 open MParser
 
+open MParser_PCRE
+
 open Configuration
 open Match
 open Range
 open Location
 open Types
+
+module R = MakeRegexp(Regexp)
 
 let configuration_ref = ref (Configuration.create ())
 let weaken_delimiter_hole_matching = false
@@ -237,6 +241,25 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let alphanum_hole_parser () =
     string ":[[" >> hole_body () << string "]]"
 
+
+  let regex_body () =
+    let rec expr s =
+      (choice
+         [ ((char '[' >> (many1 expr) << char ']') |>> fun char_class -> Format.sprintf "[%s]" @@ String.concat char_class)
+         ; (char '\\' >> any_char |>> fun c -> (Format.sprintf "\\%c" c))
+         ; ((is_not (char ']')) |>> Char.to_string)
+         ]) s
+    in
+    let regex_identifier () =
+      identifier () >>= fun v -> char '~' >> many1 expr >>= fun e -> return (Format.sprintf "%s~%s" v (String.concat e))
+    in
+    regex_identifier () >>= fun identifier ->
+    if debug then Format.printf "Regex accepts %s@." identifier;
+    return (false, identifier)
+
+  let regex_hole_parser () =
+    string ":[" >> regex_body () << string "]"
+
   let reserved_holes () =
     let alphanum = alphanum_hole_parser () |>> snd in
     let expression = expression_hole_parser () |>> snd in
@@ -244,12 +267,14 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     let non_space = non_space_hole_parser () |>> snd in
     let blank = blank_hole_parser () |>> snd in
     let line = line_hole_parser () |>> snd in
+    let regex = regex_hole_parser () |>> snd in
     [ non_space
     ; line
     ; blank
     ; alphanum
     ; expression
     ; everything
+    ; regex
     ]
 
   let reserved_delimiters () =
@@ -322,6 +347,12 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     get_pos >>= fun (pre_index, pre_line, pre_column) ->
     p >>= fun matched ->
     get_pos >>= fun (post_index, post_line, post_column) ->
+    let post_index, post_line, post_column =
+      if String.(concat matched = "") then
+        pre_index, pre_line, pre_column
+      else
+        post_index, post_line, post_column
+    in
     update_user_state
       (fun ({ Match.environment; _ } as result) ->
          if debug then begin
@@ -593,6 +624,40 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
         | Success Hole { sort; identifier; optional; dimension } ->
           begin
             match sort with
+            | Regex ->
+              let identifier, pattern = String.lsplit2_exn identifier ~on:'~' in
+              if debug then Format.printf "Regex: Id: %s Pat: %s@." identifier pattern;
+              let compiled_regexp = R.make_regexp pattern in
+              let regexp_parser = R.regexp compiled_regexp in
+              let base_parser = [ regexp_parser ] in
+              let base_parser =
+                (* adds begin line parser if the pattern has ^ anchor *)
+                if String.is_prefix pattern ~prefix:"^" then
+                  let p =
+                    R.make_regexp (String.drop_prefix pattern 1)
+                    |> R.regexp
+                  in
+                  (char '\n' >>= fun _ -> p)::base_parser
+                else
+                  base_parser
+              in
+              let base_parser =
+                (* adds end line parser if the pattern has $ anchor *)
+                if String.is_suffix pattern ~suffix:"$" then
+                  let p =
+                    R.make_regexp (String.drop_suffix pattern 1)
+                    |> R.regexp
+                  in
+                  (p << char '\n')::base_parser
+                else
+                  base_parser
+              in
+              let hole_semantics =
+                choice base_parser >>= fun result ->
+                if debug then Format.printf "Regex success: %s@." result;
+                return [result]
+              in
+              (record_matches identifier hole_semantics)::acc
             | Alphanum ->
               let allowed =  choice [alphanum; char '_'] |>> String.of_char in
               let hole_semantics = many1 allowed in
@@ -773,6 +838,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       | Line -> line_hole_parser ()
       | Blank -> blank_hole_parser ()
       | Alphanum -> alphanum_hole_parser ()
+      | Regex -> regex_hole_parser ()
     in
     let skip_signal hole = skip (string "_signal_hole") |>> fun () -> Hole hole in
     hole_parser |>> fun (optional, identifier) -> skip_signal { sort; identifier; dimension; optional }
@@ -981,7 +1047,13 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
         match first' shift p original_source with
         | Ok ({range = { match_start; match_end; _ }; _} as result) ->
           let shift = match_end.offset in
-          let matched = extract_matched_text original_source match_start match_end in
+          let shift, matched =
+            if match_start.offset = match_end.offset then
+              match_start.offset + 1, "" (* advance one if the matched content is the empty string *)
+            else
+              shift, extract_matched_text original_source match_start match_end
+          in
+          if debug then Format.printf "Extracted matched: %s" matched;
           let result = { result with matched } in
           if shift >= String.length original_source then
             result :: acc

@@ -336,6 +336,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
           | Ok (Hole { sort; identifier; dimension; _ }, user_state) ->
             begin
               match sort with
+              | Regex -> failwith "Not supported (seq chain)"
               | Alphanum ->
                 pos >>= fun offset ->
                 many1 (generate_single_hole_parser ())
@@ -608,6 +609,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       | Line -> line_hole_parser ()
       | Non_space -> non_space_hole_parser ()
       | Expression -> expression_hole_parser ()
+      | Regex -> single_hole_parser ()
     in
     let skip_signal hole = skip_unit (string "_signal_hole") |>> fun () -> (Hole hole, acc) in
     hole_parser |>> fun identifier -> skip_signal { sort; identifier; dimension; optional = false }
