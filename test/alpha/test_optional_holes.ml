@@ -195,7 +195,7 @@ let%expect_test "optional_holes_match_over_coalesced_whitespace_in_strings" =
   let match_template = {|"a :[?b] c"|} in
   let rewrite_template = {|/:[?b]/|} in
   run source match_template rewrite_template;
-  [%expect_exact {|No matches.|}];
+  [%expect_exact {|//|}];
 
   let source = {|"a  c"|} in
   let match_template = {|"a :[?b] c"|} in
@@ -203,13 +203,12 @@ let%expect_test "optional_holes_match_over_coalesced_whitespace_in_strings" =
   run source match_template rewrite_template;
   [%expect_exact {|//|}];
 
-  (* Uh, turns out whitespace is significant inside strings, so this is correct
-     until it is decided otherwise *)
+  (* As of 0.18.0, whitespace is no longer significant for matching inside strings *)
   let source = {|"a     c"|} in
   let match_template = {|"a :[?b] c"|} in
   let rewrite_template = {|/:[?b]/|} in
   run source match_template rewrite_template;
-  [%expect_exact {|/   /|}]
+  [%expect_exact {|//|}]
 
 let%expect_test "optional_holes_substitute" =
   let source = {|()|} in
