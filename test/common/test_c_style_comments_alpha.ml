@@ -51,7 +51,6 @@ let%expect_test "rewrite_comments_2" =
   |> print_string;
   [%expect_exact
     {|
-      /* if (fake_condition_body_must_be_non_empty) { fake_body; } */
       if (real_condition_body_must_be_empty) {}
     |}]
 
@@ -214,3 +213,31 @@ let%expect_test "give_back_the_comment_characters_for_newline_comments_too" =
          // a comment
        }
     |}]
+
+let%expect_test "comments_in_templates_imply_whitespace" =
+  let template =
+    {|
+/* f */
+// q
+a
+|}
+  in
+
+  let source =
+    {|
+// idgaf
+/* fooo */
+a
+|}
+  in
+
+  let rewrite_template =
+    {|erased|}
+  in
+
+  all template source
+  |> (fun matches -> Option.value_exn (Rewrite.all ~source ~rewrite_template matches))
+  |> (fun { rewritten_source; _ } -> rewritten_source)
+  |> print_string;
+  [%expect_exact
+    {|erased|}]

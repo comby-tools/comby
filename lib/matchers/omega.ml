@@ -330,8 +330,8 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
         let result =
           if debug then Format.printf "iterate fold_right %d@." !i;
           match parse_string p "_signal_hole" with
-          | Error _ ->
-            if debug then Format.printf "Composing p with terminating parser@.";
+          | Error s ->
+            if debug then Format.printf "Composing p with terminating parser, error %s@." s;
             p *> acc
           | Ok (Hole { sort; identifier; dimension; _ }, user_state) ->
             begin
@@ -567,10 +567,12 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let generate_spaces_parser _ignored =
     (* XXX still some parts ignored in the choice case in Alpha *)
     if debug then Format.printf "Template_spaces(%s)@." _ignored;
-    spaces1 >>= fun s1 ->
-    many comment_parser >>= fun result ->
-    spaces >>= fun s2 ->
-    r acc (Template_string (s1^String.concat result^s2))
+    many1 @@
+    choice
+      [ comment_parser
+      ; spaces1
+      ] >>= fun result ->
+    r acc (Template_string (String.concat result))
 
   (** All code can have comments interpolated *)
   let generate_string_token_parser str =
@@ -655,7 +657,9 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
                 not fail here"
 
   let general_parser_generator : (production * 'a) t t =
-    let spaces : (production * 'a) t t = spaces1 |>> generate_spaces_parser in
+    let spaces : (production * 'a) t t =
+      many1 (comment_parser <|> spaces1) |>> fun result -> generate_spaces_parser (String.concat result)
+    in
     let other =
       (many1 (Parser.Deprecate.any_char_except ~reserved:Deprecate.reserved) |>> String.of_char_list)
       |>> generate_string_token_parser
