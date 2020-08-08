@@ -53,15 +53,6 @@ module Dyck = struct
   end
 end
 
-module Json = struct
-  module Info = struct
-    let name = "JSON"
-    let extensions = [".json"]
-  end
-
-  module Syntax = Dyck.Syntax
-end
-
 module Latex = struct
   module Info = struct
     let name = "LaTeX"
@@ -144,6 +135,65 @@ module Generic = struct
         { delimiters = [{|"|}; {|'|}]
         ; escape_character = '\\'
         }
+  end
+end
+
+module JSON = struct
+  module Info = struct
+    let name = "JSON"
+    let extensions = [".json"]
+  end
+
+  module Syntax = Generic.Syntax
+end
+
+module JSONC = struct
+  module Info = struct
+    let name = "JSONC"
+    let extensions = [".jsonc"]
+  end
+
+  module Syntax = struct
+    include Generic.Syntax
+    let comments =
+      [ Multiline ("/*", "*/")
+      ; Until_newline "//"
+      ]
+  end
+end
+
+module GraphQL = struct
+  module Info = struct
+    let name = "GraphQL"
+    let extensions = [".gql"; ".graphql"]
+  end
+
+  module Syntax = struct
+    include Generic.Syntax
+
+    let comments =
+      [ Until_newline "#"
+      ]
+  end
+end
+
+module Dhall = struct
+  module Info = struct
+    let name = "Dhall"
+    let extensions = [".dhall"]
+  end
+
+  module Syntax = struct
+    include Generic.Syntax
+
+    let raw_string_literals =
+      [ ("''", "''")
+      ; ("`", "`") ]
+
+    let comments =
+      [ Until_newline "--"
+      ; Nested_multiline ("{-", "-}")
+      ]
   end
 end
 

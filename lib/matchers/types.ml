@@ -135,7 +135,10 @@ module Match_engine = struct
     module Text : Matcher.S
     module Paren : Matcher.S
     module Dyck : Matcher.S
-    module Json : Matcher.S
+    module JSON : Matcher.S
+    module JSONC : Matcher.S
+    module GraphQL : Matcher.S
+    module Dhall : Matcher.S
     module Latex : Matcher.S
     module Assembly : Matcher.S
     module Clojure : Matcher.S
