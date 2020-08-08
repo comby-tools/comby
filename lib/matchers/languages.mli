@@ -3,7 +3,10 @@ open Types
 module Text : Language.S
 module Paren : Language.S
 module Dyck : Language.S
-module Json : Language.S
+module JSON : Language.S
+module JSONC : Language.S
+module GraphQL : Language.S
+module Dhall : Language.S
 module Latex : Language.S
 module Assembly : Language.S
 module Clojure : Language.S
