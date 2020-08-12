@@ -229,6 +229,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let generate_everything_hole_parser
       ?priority_left_delimiter:left_delimiter
       ?priority_right_delimiter:right_delimiter
+      ?at_depth
       () =
     let between_nested_delims p from =
       let until = until_of_from from in
@@ -254,14 +255,16 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       in
       List.concat_map parsers ~f:(fun (from, until) -> [from; until])
     in
+    if debug then if Option.is_some at_depth then Format.printf "Depth is %d@." @@ Option.value_exn at_depth;
     fix (fun grammar ->
         let delimsx = between_nested_delims (many grammar) in
-        let other = Parser.Deprecate.any_char_except ~reserved |>> String.of_char in
+        let other = Parser.Deprecate.any_char_except ~reserved:(reserved @ [" "; "\t"; "\r"; "\n"]) |>> String.of_char in
         choice
           [ comment_parser
           ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
           ; escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
           ; spaces1
+          ; (if Option.equal Int.equal (Some 0) at_depth then (blank1) else (spaces1)) (* TODO #1 *)
           ; delimsx
           ; other
           ])
@@ -333,7 +336,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
           | Error s ->
             if debug then Format.printf "Composing p with terminating parser, error %s@." s;
             p *> acc
-          | Ok (Hole { sort; identifier; dimension; _ }, user_state) ->
+          | Ok (Hole { sort; identifier; dimension; at_depth; _ }, user_state) ->
             begin
               match sort with
               | Regex -> failwith "Not supported (seq chain)"
@@ -498,10 +501,14 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
                      loop backwards, when the first parser is a hole), then it
                      means there's a hole at the end without anything following
                      it in the template. So it should always match to
-                     end_of_input (not empty string) *)
+                     end_of_input (not empty string) OR newline for code holes at the top level. *)
                   if !i = 0 then
                     (if debug then Format.printf "hole until: match to the end of this level@.";
-                     end_of_input)
+                     choice
+                       [ (peek_string 1 >>= fun result -> if String.(result = "\n") then return () else fail "no")  (* TODO #2 *)
+                       ; end_of_input
+                       ]
+                    )
                   else
                     (if debug then Format.printf "hole until: append suffix@.";
                      skip_unit acc)
@@ -515,7 +522,8 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
                       if debug then Format.printf "Pos is %d@." pos;
                       if get_pos () = (-1) then set_pos pos;
                       (match dimension with
-                       | Code -> generate_everything_hole_parser ()
+                       | Code ->
+                         generate_everything_hole_parser ?at_depth ()
                        | Escapable_string_literal ->
                          let right_delimiter = Option.value_exn right_delimiter in
                          escapable_literal_grammar ~right_delimiter
@@ -604,7 +612,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     *> identifier_parser ()
     <* string "]"
 
-  let hole_parser sort dimension : (production * 'a) t t =
+  let hole_parser sort dimension ?at_depth () : (production * 'a) t t =
     let open Hole in
     let hole_parser =
       match sort with
@@ -617,7 +625,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       | Regex -> single_hole_parser ()
     in
     let skip_signal hole = skip_unit (string "_signal_hole") |>> fun () -> (Hole hole, acc) in
-    hole_parser |>> fun identifier -> skip_signal { sort; identifier; dimension; optional = false; at_depth = None }
+    hole_parser |>> fun identifier -> skip_signal { sort; identifier; dimension; optional = false; at_depth }
 
   let reserved_holes () =
     [ single_hole_parser ()
@@ -631,7 +639,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter () =
     let literal_holes =
       Hole.sorts ()
-      |> List.map ~f:(fun kind -> hole_parser kind sort) (* Note: Uses attempt in alpha *)
+      |> List.map ~f:(fun kind -> hole_parser kind sort ()) (* Note: Uses attempt in alpha *)
       |> choice
     in
     let _reserved_holes =
@@ -656,27 +664,26 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
                 quoted string in the template to a parser list should \
                 not fail here"
 
+  let depth = ref (0)
+
   let general_parser_generator : (production * 'a) t t =
-    let spaces : (production * 'a) t t =
-      many1 (comment_parser <|> spaces1) |>> fun result -> generate_spaces_parser (String.concat result)
-    in
-    let other =
-      (many1 (Parser.Deprecate.any_char_except ~reserved:Deprecate.reserved) |>> String.of_char_list)
-      |>> generate_string_token_parser
-    in
-    let code_holes =
+    let code_holes at_depth =
       Hole.sorts ()
-      |> List.map ~f:(fun kind -> hole_parser kind Code)
+      |> List.map ~f:(fun kind -> hole_parser kind Code ~at_depth ())
       |> choice
     in
     fix (fun (generator : (production * 'a) t list t) ->
         if debug then Format.printf "Descends@.";
         let nested =
           if debug then Format.printf "Nested@.";
+          let generator = generator >>=  fun result -> return result in
           choice @@
           List.map Syntax.user_defined_delimiters ~f:(fun (left_delimiter, right_delimiter) ->
-              (string left_delimiter *> generator <* string right_delimiter)
+              (string left_delimiter >>= fun _ ->
+               (depth := !depth + 1;
+                generator) <* string right_delimiter)
               >>= fun (g: (production * 'a) t list) ->
+              if debug then Format.printf "Depth: %d@." !depth;
               if debug then Format.printf "G size: %d; delim %s@." (List.length g) left_delimiter;
               return @@
               sequence_chain @@
@@ -685,12 +692,13 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
               @ [ string right_delimiter >>= fun result -> r acc (Template_string result)])
         in
         many @@ choice
-          [ code_holes
+          [ code_holes !depth
           ; raw_string_literal_parser (generate_hole_for_literal Raw_string_literal ())
           ; escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal ())
-          ; spaces
-          ; nested
-          ; other
+          ; (many1 (comment_parser <|> spaces1) |>> fun result -> generate_spaces_parser (String.concat result))
+          ; (nested >>= fun result -> depth := !depth - 1; return result)
+          ; (many1 (Parser.Deprecate.any_char_except ~reserved:Deprecate.reserved) |>> String.of_char_list)
+            |>> generate_string_token_parser
           ]
         >>= fun x ->
         if debug then Format.printf "Produced %d parsers in main generator@." @@ List.length x;
@@ -824,6 +832,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     Match.create ~range ()
 
   let all ?configuration ~template ~source : Match.t list =
+    depth := (0);
     configuration_ref := Option.value configuration ~default:!configuration_ref;
     matches_ref := [];
     if String.is_empty template && String.is_empty source then [trivial]
@@ -832,6 +841,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       | Error _ -> List.rev !matches_ref
 
   let first ?configuration ?shift:_ template source : Match.t Or_error.t =
+    depth := (0);
     configuration_ref := Option.value configuration ~default:!configuration_ref;
     matches_ref := [];
     match all ?configuration ~template ~source with

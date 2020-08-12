@@ -69,7 +69,8 @@ let%expect_test "custom_long_delimiters_doesn't_work_in_go" =
 
   run_go source match_template rewrite_template;
   [%expect_exact {|
-      case nuked blocks esac
+      case
+        case nuked blocks esac
 
         case
           block 2
