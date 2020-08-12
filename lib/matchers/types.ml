@@ -73,6 +73,7 @@ module Hole = struct
     ; identifier : string
     ; dimension : dimension
     ; optional : bool
+    ; at_depth : int option
     }
 
   let sorts () =

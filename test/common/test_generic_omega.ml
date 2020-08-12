@@ -422,3 +422,54 @@ let%expect_test "trivial_empty_case" =
       print_string (Yojson.Safe.to_string (Match.to_yojson hd))
   end;
   [%expect_exact {|{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":0,"line":1,"column":1}},"environment":[],"matched":""}|}]
+
+let%expect_test "trivial_empty_case" =
+  let source = "" in
+  let match_template = "" in
+  begin
+    Generic.all ~configuration ~template:match_template ~source
+    |> function
+    | [] -> print_string "No matches."
+    | hd :: _ ->
+      print_string (Yojson.Safe.to_string (Match.to_yojson hd))
+  end;
+  [%expect_exact {|{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":0,"line":1,"column":1}},"environment":[],"matched":""}|}]
+
+let%expect_test "test_top_level_hole_stops_at_newline" =
+  let source =
+    {|
+      a = b
+      c = d
+      (
+        e = f
+        (
+          g = h
+          i = j
+        )
+        k = l
+        m = n
+      )
+      o = p
+    |}
+  in
+  let match_template = ":[1] = :[2]" in
+  let rewrite_template = "line" in
+  run_all source match_template rewrite_template;
+  [%expect_exact {||}]
+
+let%expect_test "test_top_level_hole_stops_at_newline_for_example" =
+  let source =
+    {|
+      for i, x := range derp {
+        do not match
+      }
+
+      for i, x := range derp {
+        do match
+      }
+    |}
+  in
+  let match_template = "for i, x :[_] { do match }" in
+  let rewrite_template = "line" in
+  run_all source match_template rewrite_template;
+  [%expect_exact {||}]

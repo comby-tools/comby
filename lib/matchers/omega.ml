@@ -617,7 +617,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       | Regex -> single_hole_parser ()
     in
     let skip_signal hole = skip_unit (string "_signal_hole") |>> fun () -> (Hole hole, acc) in
-    hole_parser |>> fun identifier -> skip_signal { sort; identifier; dimension; optional = false }
+    hole_parser |>> fun identifier -> skip_signal { sort; identifier; dimension; optional = false; at_depth = None }
 
   let reserved_holes () =
     [ single_hole_parser ()

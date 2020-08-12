@@ -453,7 +453,8 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
 
   let generate_everything_hole_parser
       ?priority_left_delimiter:left_delimiter
-      ?priority_right_delimiter:right_delimiter =
+      ?priority_right_delimiter:right_delimiter
+      ?at_depth =
     let with_debug_hole tag =
       match tag with
       | `Spaces chars ->
@@ -580,7 +581,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       (comment_parser
        <|> raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
        <|> escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
-       <|> (many1 space >>= fun r -> with_debug_hole (`Spaces r))
+       <|> (many1 (if Option.equal Int.equal (Some 0) at_depth then blank else space)  >>= fun r -> with_debug_hole (`Spaces r))
        <|> (attempt @@ delims_over_holes >>= fun r -> with_debug_hole (`Delimited r))
        (* Only consume if not reserved. If it is reserved, we want to trigger the 'many'
           in (many nested_grammar) to continue. *)
@@ -632,7 +633,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     List.foldi (List.rev p_list) ~init:[] ~f:(fun i acc p ->
         match parse_string p "_signal_hole" (Match.create ()) with
         | Failed _ -> p::acc
-        | Success Hole { sort; identifier; optional; dimension } ->
+        | Success Hole { sort; identifier; optional; dimension; at_depth } ->
           begin
             match sort with
             | Regex ->
@@ -770,6 +771,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
                   generate_everything_hole_parser
                     ?priority_left_delimiter:left_delimiter
                     ?priority_right_delimiter:right_delimiter
+                    ?at_depth
                 | Escapable_string_literal ->
                   let right_delimiter = Option.value_exn right_delimiter in
                   escapable_literal_grammar ~right_delimiter
@@ -840,7 +842,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
         | Success Unit -> acc (* for comment *)
         | Success _ -> failwith "Hole expected")
 
-  let hole_parser sort dimension =
+  let hole_parser sort dimension ?at_depth =
     let open Hole in
     let hole_parser =
       match sort with
@@ -853,7 +855,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       | Regex -> regex_hole_parser ()
     in
     let skip_signal hole = skip (string "_signal_hole") |>> fun () -> Hole hole in
-    hole_parser |>> fun (optional, identifier) -> skip_signal { sort; identifier; dimension; optional }
+    hole_parser |>> fun (optional, identifier) -> skip_signal { sort; identifier; dimension; optional; at_depth }
 
   let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter s =
     let holes =
@@ -887,21 +889,24 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     | Failed (_msg, _) ->
       failwith "literal parser did not succeed"
 
+  let depth = ref (-1)
+
   let rec generate_parsers s =
+    depth := !depth + 1;
     many (common s)
 
   and common _s =
-    let holes =
+    let holes at_depth =
       Hole.sorts ()
-      |> List.map ~f:(fun kind -> attempt (hole_parser kind Code))
+      |> List.map ~f:(fun kind -> attempt (hole_parser kind Code ~at_depth))
     in
     choice
-      [ choice holes
+      [ (choice (holes !depth) >>= fun result -> (*Format.printf "Depth hole %d@." !depth;*) return result)
       (* String literals are handled specially because match semantics change inside string delimiters. *)
       ; raw_string_literal_parser (generate_hole_for_literal Raw_string_literal)
       ; escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal)
       (* Nested delimiters are handled specially for nestedness. *)
-      ; nested_delimiters_parser generate_outer_delimiter_parsers
+      ; (nested_delimiters_parser generate_outer_delimiter_parsers >>= fun result -> depth := !depth - 1; return result)
       (* Skip comments in the template, just succeed. If desired, could return the comment string. *)
       ; (many1 (skip comment_parser <|> spaces1) |>> fun _ -> generate_spaces_parser ())
       (* Optional: parse identifiers and disallow substring matching *)
@@ -1043,6 +1048,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
 
   let all ?configuration ~template ~source:original_source : Match.t list =
     let open Or_error in
+    depth := (-1);
     configuration_ref := Option.value configuration ~default:!configuration_ref;
     let make_result = function
       | Ok ok -> ok
