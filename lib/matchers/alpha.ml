@@ -901,7 +901,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       |> List.map ~f:(fun kind -> attempt (hole_parser kind Code ~at_depth))
     in
     choice
-      [ (choice (holes !depth) >>= fun result -> (*Format.printf "Depth hole %d@." !depth;*) return result)
+      [ choice (holes !depth)
       (* String literals are handled specially because match semantics change inside string delimiters. *)
       ; raw_string_literal_parser (generate_hole_for_literal Raw_string_literal)
       ; escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal)
@@ -1037,6 +1037,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
 
   let first ?configuration ?shift template source =
     let open Or_error in
+    depth := (-1);
     configuration_ref := Option.value configuration ~default:!configuration_ref;
     to_template template >>= fun p ->
     let shift =

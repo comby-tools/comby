@@ -79,6 +79,10 @@ let is_whitespace = function
   | ' ' | '\t' | '\r' | '\n' -> true
   | _ -> false
 
+let is_blank = function
+  | ' ' | '\t' -> true
+  | _ -> false
+
 let blank =
   choice
     [ char ' '
@@ -126,6 +130,14 @@ let spaces1 =
      we don't need the string *)
   take_while is_whitespace >>= fun s ->
   return (Format.sprintf "%c%s" c s)
+
+let blank1 =
+  satisfy is_blank >>= fun c ->
+  (* XXX use skip_while once everything works.
+     we don't need the string *)
+  take_while is_blank >>= fun s ->
+  return (Format.sprintf "%c%s" c s)
+
 
 let spaces =
   take_while is_whitespace >>= fun s ->

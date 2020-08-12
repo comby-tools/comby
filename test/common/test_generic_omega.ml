@@ -455,7 +455,8 @@ let%expect_test "test_top_level_hole_stops_at_newline" =
   let match_template = ":[1] = :[2]" in
   let rewrite_template = "line" in
   run_all source match_template rewrite_template;
-  [%expect_exact {||}]
+  [%expect_exact {|linelineline
+    |}]
 
 let%expect_test "test_top_level_hole_stops_at_newline_for_example" =
   let source =
@@ -472,4 +473,6 @@ let%expect_test "test_top_level_hole_stops_at_newline_for_example" =
   let match_template = "for i, x :[_] { do match }" in
   let rewrite_template = "line" in
   run_all source match_template rewrite_template;
-  [%expect_exact {||}]
+  [%expect_exact {|
+      line
+    |}]
