@@ -138,7 +138,12 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
           let file_filters = file_filters_to_paths file_filters in
           { match_template; rewrite_template; file_filters })
     in
-    let file_filters = Option.bind ~f:file_filters_to_paths file_filters in
+    let file_filters =
+      if Option.is_some zip_file then
+        file_filters
+      else
+        Option.bind ~f:file_filters_to_paths file_filters
+    in
     if list then list_supported_languages_and_exit omega;
     if Option.is_some substitute_environment then
       substitute_environment_only_and_exit anonymous_arguments substitute_environment;
