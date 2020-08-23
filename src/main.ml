@@ -258,7 +258,7 @@ let parse_comby_dot_file () =
 
 let () =
   Scheduler.Daemon.check_entry_point ();
-  Command.run default_command ~version:"0.18.1" ~extend:(fun _ ->
+  Command.run default_command ~version:"0.18.2" ~extend:(fun _ ->
       match Sys.file_exists ".comby" with
       | `Yes -> parse_comby_dot_file ()
       | _ -> [])
