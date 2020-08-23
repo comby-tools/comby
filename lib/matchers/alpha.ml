@@ -638,6 +638,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
             match sort with
             | Regex ->
               let identifier, pattern = String.lsplit2_exn identifier ~on:'~' in
+              let identifier = if String.(identifier = "") then "_" else identifier in
               if debug then Format.printf "Regex: Id: %s Pat: %s@." identifier pattern;
               let compiled_regexp = R.make_regexp pattern in
               let regexp_parser = R.regexp compiled_regexp in
