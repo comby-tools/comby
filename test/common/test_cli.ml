@@ -1109,6 +1109,18 @@ let%expect_test "warn_on_match_template_starts_with_everything_hole" =
     world
     WARNING: The match template starts with a :[hole]. You almost never want to start a template with :[hole], since it matches everything including newlines up to the part that comes after it. This can make things slow. :[[hole]] might be what you're looking for instead, like when you want to match an assignment foo = bar(args) on a line, use :[[var]] = bar(args). :[hole] is typically useful inside balanced delimiters. |}]
 
+let%expect_test "test_ellipses" =
+  let source = "foo(bar)" in
+  let match_ = "...(...)" in
+  let rewrite = "delete" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -stdout '%s' '%s' -f .c" match_ rewrite
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|delete|}]
+
 let%expect_test "test_valid_toml" =
   let source = "main(void)\n" in
   let config = "example" ^/ "toml" ^/ "plain" ^/ "config.toml" in

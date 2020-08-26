@@ -705,6 +705,11 @@ let create
       parse_templates ~warn_for_missing_file_in_dir:true omega templates
     | _ -> assert false
   in
+  let specifications =
+    List.map specifications ~f:(fun ({ match_template; _ } as spec) ->
+        { spec with match_template =
+                      String.substr_replace_all match_template ~pattern:"..." ~with_:":[_]" })
+  in
   let file_filters =
     match anonymous_arguments with
     | None -> file_filters
