@@ -19,8 +19,9 @@ let run ?(configuration = configuration) source match_template rewrite_template 
     (* this is too annoying to fix everytime the grammar changes. *)
     print_string ""
 
-let run_all ?(configuration = configuration) source match_template rewrite_template =
-  Generic.all ~configuration ~template:match_template ~source
+let run_all ?(m = (module Generic : Matchers.Matcher)) ?(configuration = configuration) source match_template rewrite_template =
+  let (module M) = m in
+  M.all ~configuration ~template:match_template ~source
   |> function
   | [] -> print_string "No matches."
   | results ->
@@ -442,7 +443,8 @@ let%expect_test "test_top_level_hole_stops_at_newline" =
   in
   let match_template = ":[1] = :[2]" in
   let rewrite_template = "line" in
-  run_all source match_template rewrite_template;
+  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = true } in
+  run_all ~configuration source match_template rewrite_template;
   [%expect_exact {|
 line
 line
@@ -472,11 +474,131 @@ let%expect_test "test_top_level_hole_stops_at_newline_for_example" =
   in
   let match_template = "for i, x := :[_] { do match }" in
   let rewrite_template = "erased" in
-  run_all source match_template rewrite_template;
+  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = true } in
+  run_all ~configuration source match_template rewrite_template;
   [%expect_exact {|
       for i, x := range derp {
         do not match
       }
 
       erased
+    |}]
+
+let%expect_test "test_top_level_hole_stops_at_newline_for_example" =
+  let source =
+    {|
+      for i, x := range derp {
+        do not match
+      }
+
+      for i, x := range derp {
+        do match
+      }
+    |}
+  in
+  let match_template = "for i, x := :[_] { do match }" in
+  let rewrite_template = "erased" in
+  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = true } in
+  run_all ~configuration source match_template rewrite_template;
+  [%expect_exact {|
+      for i, x := range derp {
+        do not match
+      }
+
+      erased
+    |}]
+
+let%expect_test "test_top_level_hole_crosses_newlines_for_html" =
+  let source =
+    {|
+      <foo>
+      stuff
+      </foo>
+    |}
+  in
+  let match_template = "<foo>:[x]</foo>" in
+  let rewrite_template = ":[x]" in
+  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = true } in
+  run_all ~m:(module Matchers.Alpha.Html) ~configuration source match_template rewrite_template;
+  [%expect_exact {|No matches.|}]
+
+let%expect_test "test_top_level_hole_stops_at_newline_false" =
+  let source =
+    {|
+      a = b
+      c = d
+      (
+        e = f
+        (
+          g = h
+          i = j
+        )
+        k = l
+        m = n
+      )
+      o = p
+    |}
+  in
+  let match_template = ":[1] = :[2]" in
+  let rewrite_template = "line" in
+  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = false } in
+  run_all ~configuration source match_template rewrite_template;
+  [%expect_exact {|line|}]
+
+let%expect_test "test_top_level_hole_stops_at_newline_for_example_false" =
+  let source =
+    {|
+      for i, x := range derp {
+        do not match
+      }
+
+      for i, x := range derp {
+        do match
+      }
+    |}
+  in
+  let match_template = "for i, x := :[_] { do match }" in
+  let rewrite_template = "erased" in
+  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = false } in
+  run_all ~configuration source match_template rewrite_template;
+  [%expect_exact {|
+      erased
+    |}]
+
+let%expect_test "test_top_level_hole_stops_at_newline_for_example_false" =
+  let source =
+    {|
+      for i, x := range derp {
+        do not match
+      }
+
+      for i, x := range derp {
+        do match
+      }
+    |}
+  in
+  let match_template = "for i, x := :[_] { do match }" in
+  let rewrite_template = "erased" in
+  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = false } in
+  run_all ~configuration source match_template rewrite_template;
+  [%expect_exact {|
+      erased
+    |}]
+
+let%expect_test "test_top_level_hole_crosses_newlines_for_html_false" =
+  let source =
+    {|
+      <foo>
+      stuff
+      </foo>
+    |}
+  in
+  let match_template = "<foo>:[x]</foo>" in
+  let rewrite_template = ":[x]" in
+  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = false } in
+  run_all ~m:(module Matchers.Alpha.Html) ~configuration source match_template rewrite_template;
+  [%expect_exact {|
+      
+      stuff
+      
     |}]

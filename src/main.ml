@@ -103,6 +103,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and disable_substring_matching = flag "disable-substring-matching" no_arg ~doc:"Allow :[holes] to match substrings"
     and omega = flag "omega" no_arg  ~doc:"Use Omega matcher engine."
     and fast_offset_conversion = flag "fast-offset-conversion" no_arg ~doc:"Enable fast offset conversion. This is experimental and will become the default once vetted."
+    and cut_off_newline = flag "cut-off-newline" no_arg ~aliases:[] ~doc:"Disable matching newlines at the top level for hole."
     and anonymous_arguments =
       anon
         (maybe
@@ -203,6 +204,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; disable_substring_matching
             ; omega
             ; fast_offset_conversion
+            ; cut_off_newline
             }
         ; output_options =
             { color

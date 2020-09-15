@@ -856,6 +856,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       | Regex -> regex_hole_parser ()
     in
     let skip_signal hole = skip (string "_signal_hole") |>> fun () -> Hole hole in
+    let at_depth = if not !configuration_ref.cut_off_top_level_newline_matching then None else at_depth in
     hole_parser |>> fun (optional, identifier) -> skip_signal { sort; identifier; dimension; optional; at_depth }
 
   let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter s =
@@ -902,7 +903,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       |> List.map ~f:(fun kind -> attempt (hole_parser kind Code ~at_depth))
     in
     choice
-      [ (choice (holes !depth) >>= fun result -> (*Format.printf "Depth hole %d@." !depth;*) return result)
+      [ (choice (holes !depth) >>= fun result -> if debug then Format.printf "Depth hole %d@." !depth; return result)
       (* String literals are handled specially because match semantics change inside string delimiters. *)
       ; raw_string_literal_parser (generate_hole_for_literal Raw_string_literal)
       ; escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal)
