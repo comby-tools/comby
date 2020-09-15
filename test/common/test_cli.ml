@@ -300,7 +300,8 @@ let%expect_test "list_languages" =
  -matcher .html     HTML      
  -matcher .hs       Haskell   
  -matcher .java     Java      
- -matcher .js       Javascript
+ -matcher .js       JavaScript
+ -matcher .jsx      JSX       
  -matcher .json     JSON      
  -matcher .jsonc    JSONC     
  -matcher .gql      GraphQL   
@@ -322,7 +323,8 @@ let%expect_test "list_languages" =
  -matcher .sql      SQL       
  -matcher .swift    Swift     
  -matcher .txt      Text      
- -matcher .ts       Typescript
+ -matcher .ts       TypeScript
+ -matcher .tsx      TSX       
  -matcher .xml      XML       
  -matcher .generic  Generic   
 |}]

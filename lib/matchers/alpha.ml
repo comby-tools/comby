@@ -856,7 +856,16 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       | Regex -> regex_hole_parser ()
     in
     let skip_signal hole = skip (string "_signal_hole") |>> fun () -> Hole hole in
-    let at_depth = if not !configuration_ref.cut_off_top_level_newline_matching then None else at_depth in
+    let at_depth =
+      if !configuration_ref.match_newline_toplevel then
+        None
+      else
+        (* Match newlines at toplevel if for languages that are likely to match
+           around context-sensitive tags *)
+        match Info.name with
+        | "HTML" | "XML" | "Text" | "LaTeX" -> None
+        | _ -> at_depth
+    in
     hole_parser |>> fun (optional, identifier) -> skip_signal { sort; identifier; dimension; optional; at_depth }
 
   let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter s =

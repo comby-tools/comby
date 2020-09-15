@@ -6,17 +6,17 @@ type t =
   { match_kind : match_kind
   ; significant_whitespace : bool
   ; disable_substring_matching : bool
-  ; cut_off_top_level_newline_matching : bool
+  ; match_newline_toplevel : bool
   }
 
 let create
     ?(disable_substring_matching = false)
     ?(match_kind = Fuzzy)
     ?(significant_whitespace = false)
-    ?(cut_off_top_level_newline_matching = false)
+    ?(match_newline_toplevel = true)
     () =
   { match_kind
   ; significant_whitespace
   ; disable_substring_matching
-  ; cut_off_top_level_newline_matching
+  ; match_newline_toplevel
   }

@@ -514,8 +514,8 @@ end
 
 module Javascript = struct
   module Info = struct
-    let name = "Javascript"
-    let extensions = [".js"; ".jsx"]
+    let name = "JavaScript"
+    let extensions = [".js"]
   end
 
   module Syntax = Go.Syntax
@@ -523,11 +523,29 @@ end
 
 module Typescript = struct
   module Info = struct
-    let name = "Typescript"
-    let extensions = [".ts"; ".tsx"]
+    let name = "TypeScript"
+    let extensions = [".ts"]
   end
 
   module Syntax = Go.Syntax
+end
+
+module Jsx = struct
+  module Info = struct
+    let name = "JSX"
+    let extensions = [".jsx"]
+  end
+
+  module Syntax = Javascript.Syntax
+end
+
+module Tsx = struct
+  module Info = struct
+    let name = "TSX"
+    let extensions = [".tsx"]
+  end
+
+  module Syntax = Typescript.Syntax
 end
 
 module Swift = struct

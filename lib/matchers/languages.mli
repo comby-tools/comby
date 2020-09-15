@@ -31,7 +31,9 @@ module Dart : Language.S
 module Php : Language.S
 module Go : Language.S
 module Javascript : Language.S
+module Jsx : Language.S
 module Typescript : Language.S
+module Tsx : Language.S
 module Swift : Language.S
 module Rust : Language.S
 module OCaml : Language.S

@@ -317,7 +317,7 @@ let run
         ; disable_substring_matching
         ; omega
         ; fast_offset_conversion
-        ; cut_off_newline
+        ; match_newline_toplevel
         }
     ; output_printer
     ; interactive_review
@@ -330,7 +330,7 @@ let run
     Configuration.create
       ~disable_substring_matching
       ~match_kind:Fuzzy
-      ~cut_off_top_level_newline_matching:cut_off_newline
+      ~match_newline_toplevel
       ()
   in
   let start_time = Statistics.Time.start () in
