@@ -694,6 +694,7 @@ let create
       else
         Rule.Alpha.create
     in
+    let rule = String.substr_replace_all rule ~pattern:"..." ~with_:":[_]" in
     create rule |> Or_error.ok_exn
   in
   let specifications =
