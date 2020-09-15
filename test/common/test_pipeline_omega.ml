@@ -20,7 +20,7 @@ let configuration =
       ; disable_substring_matching = false
       ; omega = false
       ; fast_offset_conversion = false
-      ; cut_off_newline = false
+      ; match_newline_toplevel = false
       }
   ; output_printer = (fun _ -> ())
   ; interactive_review = None

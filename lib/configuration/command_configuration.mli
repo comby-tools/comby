@@ -65,7 +65,7 @@ type run_options =
   ; disable_substring_matching : bool
   ; omega : bool
   ; fast_offset_conversion : bool
-  ; cut_off_newline : bool
+  ; match_newline_toplevel : bool
   }
 
 type user_input =

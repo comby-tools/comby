@@ -443,7 +443,7 @@ let%expect_test "test_top_level_hole_stops_at_newline" =
   in
   let match_template = ":[1] = :[2]" in
   let rewrite_template = "line" in
-  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = true } in
+  let configuration = { (Configuration.create ()) with match_newline_toplevel = false } in
   run_all ~configuration source match_template rewrite_template;
   [%expect_exact {|
 line
@@ -474,7 +474,7 @@ let%expect_test "test_top_level_hole_stops_at_newline_for_example" =
   in
   let match_template = "for i, x := :[_] { do match }" in
   let rewrite_template = "erased" in
-  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = true } in
+  let configuration = { (Configuration.create ()) with match_newline_toplevel = false } in
   run_all ~configuration source match_template rewrite_template;
   [%expect_exact {|
       for i, x := range derp {
@@ -498,7 +498,7 @@ let%expect_test "test_top_level_hole_stops_at_newline_for_example" =
   in
   let match_template = "for i, x := :[_] { do match }" in
   let rewrite_template = "erased" in
-  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = true } in
+  let configuration = { (Configuration.create ()) with match_newline_toplevel = false } in
   run_all ~configuration source match_template rewrite_template;
   [%expect_exact {|
       for i, x := range derp {
@@ -507,20 +507,6 @@ let%expect_test "test_top_level_hole_stops_at_newline_for_example" =
 
       erased
     |}]
-
-let%expect_test "test_top_level_hole_crosses_newlines_for_html" =
-  let source =
-    {|
-      <foo>
-      stuff
-      </foo>
-    |}
-  in
-  let match_template = "<foo>:[x]</foo>" in
-  let rewrite_template = ":[x]" in
-  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = true } in
-  run_all ~m:(module Matchers.Alpha.Html) ~configuration source match_template rewrite_template;
-  [%expect_exact {|No matches.|}]
 
 let%expect_test "test_top_level_hole_stops_at_newline_false" =
   let source =
@@ -541,7 +527,7 @@ let%expect_test "test_top_level_hole_stops_at_newline_false" =
   in
   let match_template = ":[1] = :[2]" in
   let rewrite_template = "line" in
-  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = false } in
+  let configuration = { (Configuration.create ()) with match_newline_toplevel = true } in
   run_all ~configuration source match_template rewrite_template;
   [%expect_exact {|line|}]
 
@@ -559,7 +545,7 @@ let%expect_test "test_top_level_hole_stops_at_newline_for_example_false" =
   in
   let match_template = "for i, x := :[_] { do match }" in
   let rewrite_template = "erased" in
-  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = false } in
+  let configuration = { (Configuration.create ()) with match_newline_toplevel = true } in
   run_all ~configuration source match_template rewrite_template;
   [%expect_exact {|
       erased
@@ -579,13 +565,13 @@ let%expect_test "test_top_level_hole_stops_at_newline_for_example_false" =
   in
   let match_template = "for i, x := :[_] { do match }" in
   let rewrite_template = "erased" in
-  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = false } in
+  let configuration = { (Configuration.create ()) with match_newline_toplevel = true } in
   run_all ~configuration source match_template rewrite_template;
   [%expect_exact {|
       erased
     |}]
 
-let%expect_test "test_top_level_hole_crosses_newlines_for_html_false" =
+let%expect_test "test_top_level_hole_crosses_newlines_for_html_by_default" =
   let source =
     {|
       <foo>
@@ -595,7 +581,6 @@ let%expect_test "test_top_level_hole_crosses_newlines_for_html_false" =
   in
   let match_template = "<foo>:[x]</foo>" in
   let rewrite_template = ":[x]" in
-  let configuration = { (Configuration.create ()) with cut_off_top_level_newline_matching = false } in
   run_all ~m:(module Matchers.Alpha.Html) ~configuration source match_template rewrite_template;
   [%expect_exact {|
       

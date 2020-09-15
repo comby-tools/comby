@@ -164,7 +164,9 @@ module Match_engine = struct
     module Php : Matcher.S
     module Go : Matcher.S
     module Javascript : Matcher.S
+    module Jsx : Matcher.S
     module Typescript : Matcher.S
+    module Tsx : Matcher.S
     module Swift : Matcher.S
     module Rust : Matcher.S
     module OCaml : Matcher.S

@@ -238,7 +238,7 @@ type run_options =
   ; disable_substring_matching : bool
   ; omega : bool
   ; fast_offset_conversion : bool
-  ; cut_off_newline : bool
+  ; match_newline_toplevel : bool
   }
 
 type user_input =
@@ -673,7 +673,7 @@ let create
          ; disable_substring_matching
          ; omega
          ; fast_offset_conversion
-         ; cut_off_newline
+         ; match_newline_toplevel
          }
      ; output_options =
          ({ overwrite_file_in_place
@@ -792,7 +792,7 @@ let create
         ; disable_substring_matching
         ; omega
         ; fast_offset_conversion
-        ; cut_off_newline
+        ; match_newline_toplevel
         }
     ; output_printer
     ; interactive_review
