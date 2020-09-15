@@ -1123,6 +1123,26 @@ let%expect_test "test_ellipses" =
   print_string result;
   [%expect{|delete|}]
 
+let%expect_test "test_rule_ellipses" =
+  let source = "foo(foo, bar, baz)" in
+  let match_ = "foo(:[args])" in
+  let rule = {|
+    where match :[args] {
+    | "nope" -> true
+    | "..., bar, ..." -> true
+    | "..." -> false
+    }
+  |}
+  in
+  let rewrite = "delete" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -stdout '%s' '%s' -f .c -rule '%s'" match_ rewrite rule
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|delete|}]
+
 let%expect_test "test_valid_toml" =
   let source = "main(void)\n" in
   let config = "example" ^/ "toml" ^/ "plain" ^/ "config.toml" in
