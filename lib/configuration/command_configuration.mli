@@ -53,6 +53,8 @@ type user_input_options =
   ; exclude_file_prefix : string list
   ; custom_matcher : string option
   ; override_matcher : string option
+  ; regex_pattern : bool
+  ; ripgrep_args : string option
   }
 
 type run_options =

@@ -226,6 +226,8 @@ type user_input_options =
   ; exclude_file_prefix : string list
   ; custom_matcher : string option
   ; override_matcher : string option
+  ; regex_pattern : bool
+  ; ripgrep_args : string option
   }
 
 type run_options =
@@ -647,6 +649,26 @@ let select_matcher custom_matcher override_matcher file_filters omega =
   else
     of_extension engine file_filters
 
+let regex_of_specifications specifications =
+  Format.sprintf "(%s)"
+  @@ String.concat ~sep:")|("
+  @@ List.map specifications ~f:Specification.to_regex
+
+let ripgrep_file_filters specifications args : string list =
+  let regex = regex_of_specifications specifications in
+  let args =
+    String.split_on_chars args ~on:[' '; '\t'; '\r'; '\n']
+    |> List.filter ~f:(String.(<>) "")
+  in
+  let result = Ripgrep.run ~pattern:regex ~args in
+  match result with
+  | Ok result ->
+    if debug then Format.printf "Ripgrep result: %s@." @@ String.concat ~sep:"\n" result;
+    result
+  | Error e ->
+    Format.eprintf "%s@." (Error.to_string_hum e);
+    exit 1
+
 let create
     ({ input_options =
          { rule
@@ -662,6 +684,8 @@ let create
          ; exclude_file_prefix
          ; custom_matcher
          ; override_matcher
+         ; regex_pattern
+         ; ripgrep_args
          }
      ; run_options =
          { sequential
@@ -713,7 +737,8 @@ let create
         { spec with match_template =
                       String.substr_replace_all match_template ~pattern:"..." ~with_:":[_]" })
   in
-  let file_filters =
+  if regex_pattern then (Format.printf "%s@." (regex_of_specifications specifications); exit 0);
+  let file_filters_from_anonymous_args =
     match anonymous_arguments with
     | None -> file_filters
     | Some { file_filters = None; _ } -> file_filters
@@ -723,6 +748,11 @@ let create
         Some (additional_file_filters @ anonymous_file_filters)
       | None ->
         Some anonymous_file_filters
+  in
+  let file_filters =
+    match ripgrep_args with
+    | Some args -> Some (ripgrep_file_filters specifications args)
+    | None -> file_filters_from_anonymous_args
   in
   let input_source =
     match stdin, zip_file with

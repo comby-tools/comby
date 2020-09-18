@@ -2,4 +2,4 @@
   (name configuration)
   (public_name comby.configuration)
   (preprocess (pps ppx_deriving.show ppx_sexp_conv ppx_sexp_message ppx_deriving_yojson bisect_ppx --conditional))
-  (libraries camlzip comby.statistics comby.parsers comby.match comby.language ppxlib core core.uuid mparser mparser.pcre yojson ppx_deriving_yojson hack_parallel toml))
+  (libraries camlzip comby.statistics comby.parsers comby.match comby.language ppxlib core core.uuid mparser mparser.pcre yojson ppx_deriving_yojson hack_parallel toml lwt lwt.unix))

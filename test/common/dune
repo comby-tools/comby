@@ -2,6 +2,7 @@
  (name common_test_integration)
  (modules
   test_helpers
+  test_extract_regex
   test_alpha
   test_omega
   test_cli
