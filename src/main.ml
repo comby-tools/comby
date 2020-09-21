@@ -106,6 +106,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and match_newline_toplevel = flag "match-newline-at-toplevel" no_arg ~aliases:[] ~doc:"Enable matching newlines at the top level for :[hole]."
     and regex_pattern = flag "regex" no_arg ~doc:"print a regex that a file must satisfy in order for a pattern to be run"
     and ripgrep_args = flag "ripgrep" (optional string) ~aliases:["rg"] ~doc:"flags Activate ripgrep for filtering files. Add flags like '-g *.go' to include or exclude file extensions."
+    and bound_count = flag "bound-count" (optional int) ~doc:"num Stop running when at least num matches are found (possibly more are returned for parallel jobs)."
     and anonymous_arguments =
       anon
         (maybe
@@ -209,6 +210,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; omega
             ; fast_offset_conversion
             ; match_newline_toplevel
+            ; bound_count
             }
         ; output_options =
             { color

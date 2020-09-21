@@ -179,16 +179,16 @@ let run_on_specifications specifications output_printer process input output_fil
         process input specification
         |> function
         | Nothing -> Nothing, count
-        | Matches (m, number_of_matches) ->
-          Matches (m, number_of_matches), count + number_of_matches
-        | Replacement (r, content, number_of_matches) ->
-          Replacement (r, content, number_of_matches),
+        | Matches (l, number_of_matches) ->
+          Matches (l, number_of_matches), count + number_of_matches
+        | Replacement (l, content, number_of_matches) ->
+          Replacement (l, content, number_of_matches),
           count + number_of_matches)
   in
   output_result output_printer output_file input result;
   count
 
-let run_on_specifications_with_rewrites specifications process input =
+let run_on_specifications_for_interactive specifications process input =
   let result, count =
     List.fold specifications ~init:(Nothing, 0) ~f:(fun (result, count) specification ->
         let input =
@@ -226,12 +226,21 @@ let try_or_skip f scheduler ~default =
 let map_reduce ~init ~map ~reduce data scheduler =
   Scheduler.map_reduce scheduler ~init ~map ~reduce data
 
-let process_paths ~sequential ~f paths scheduler =
-  let process_bucket ~init paths =
-    List.fold ~init paths ~f:(fun count path ->
-        count + f ~input:(`Path path) ~path:(Some path))
+let process_paths ~sequential ~f paths scheduler bound_count =
+  let fold =
+    match bound_count with
+    | None ->
+      List.fold ~f:(fun count path -> count + f ~input:(`Path path) ~path:(Some path))
+    | Some bound_count ->
+      List.fold_until ~finish:(fun x -> x) ~f:(fun acc path ->
+          if acc > bound_count then
+            Stop acc
+          else
+            Continue (acc + f ~input:(`Path path) ~path:(Some path)))
   in
-  if sequential then process_bucket ~init:0 paths
+  let process_bucket ~init paths = fold ~init paths  in
+  if sequential then
+    process_bucket ~init:0 paths
   else
     let map acc bucket_of_paths = process_bucket ~init:acc bucket_of_paths in
     let reduce = (+) in
@@ -241,24 +250,36 @@ let process_paths ~sequential ~f paths scheduler =
 
 let process_paths_for_interactive ~sequential ~f paths scheduler =
   let process_bucket ~init paths =
-    List.fold ~init paths ~f:(fun (acc,c) path ->
+    List.fold ~init paths ~f:(fun (acc, c) path ->
         match f ~input:(`Path path) ~path:(Some path) with
-        | Some rewritten_source, c' -> Interactive.{ path; rewritten_source}::acc,c+c'
-        | None, c' -> acc,c+c')
+        | Some rewritten_source, c' -> Interactive.{ path; rewritten_source }::acc, c+c'
+        | None, c' -> acc, c + c')
   in
-  if sequential then process_bucket ~init:([],0) paths
+  if sequential then process_bucket ~init:([], 0) paths
   else
     let map acc bucket_of_paths = process_bucket ~init:acc bucket_of_paths in
-    let reduce (acc', c') (acc,c) = (List.append acc acc'), (c' + c) in
-    let init = ([],0) in
+    let reduce (acc', c') (acc, c) = (List.append acc acc'), (c' + c) in
+    let init = ([], 0) in
     let f = map_reduce ~init ~map ~reduce paths in
-    with_scheduler scheduler ~f:(try_or_skip f ~default:([],0))
+    with_scheduler scheduler ~f:(try_or_skip f ~default:([], 0))
 
-let process_zip_file ~sequential ~f scheduler zip_file paths =
+let process_zip_file ~sequential ~f scheduler zip_file paths max_count =
   let process_zip_bucket ~init (paths : Zip.entry list) zip =
-    List.fold ~init paths ~f:(fun count ({ filename; _ } as entry) ->
-        let source = Zip.read_entry zip entry in
-        count + f ~input:(`String source) ~path:(Some filename))
+    let fold =
+      match max_count with
+      | None ->
+        List.fold ~f:(fun count ({ Zip.filename; _ } as entry) ->
+            let source = Zip.read_entry zip entry in
+            count + f ~input:(`String source) ~path:(Some filename))
+      | Some max_count ->
+        List.fold_until ~finish:(fun x -> x) ~f:(fun count ({ Zip.filename; _ } as entry) ->
+            if count > max_count then
+              Stop count
+            else
+              let source = Zip.read_entry zip entry in
+              Continue (count + f ~input:(`String source) ~path:(Some filename)))
+    in
+    fold ~init paths
   in
   let process_bucket ~init paths = with_zip zip_file ~f:(process_zip_bucket ~init paths) in
   if sequential then process_bucket ~init:0 paths
@@ -318,6 +339,7 @@ let run
         ; omega
         ; fast_offset_conversion
         ; match_newline_toplevel
+        ; bound_count
         }
     ; output_printer
     ; interactive_review
@@ -357,8 +379,8 @@ let run
     if Option.is_none interactive_review then
       match sources with
       | `String source -> with_scheduler scheduler ~f:(fun _ -> per_unit ~input:(`String source) ~path:None)
-      | `Paths paths -> process_paths ~sequential ~f:per_unit paths scheduler
-      | `Zip (zip_file, paths) -> process_zip_file ~sequential ~f:per_unit scheduler zip_file paths
+      | `Paths paths -> process_paths ~sequential ~f:per_unit paths scheduler bound_count
+      | `Zip (zip_file, paths) -> process_zip_file ~sequential ~f:per_unit scheduler zip_file paths bound_count
       | _ -> failwith "No single path handled here"
     else
       let rewrites, count =
@@ -366,7 +388,7 @@ let run
             match sources with
             | `Paths paths ->
               let with_rewrites ~input ~path:_ =
-                run_on_specifications_with_rewrites
+                run_on_specifications_for_interactive
                   specifications
                   (fun input specification ->
                      process_single_source

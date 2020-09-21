@@ -68,6 +68,7 @@ type run_options =
   ; omega : bool
   ; fast_offset_conversion : bool
   ; match_newline_toplevel : bool
+  ; bound_count : int option
   }
 
 type user_input =
