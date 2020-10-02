@@ -661,7 +661,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
                     R.make_regexp (String.drop_suffix pattern 1)
                     |> R.regexp
                   in
-                  (p << char '\n')::base_parser
+                  (p << (skip @@ char '\n' <|> eof))::base_parser
                 else
                   base_parser
               in

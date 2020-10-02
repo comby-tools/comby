@@ -7,8 +7,15 @@ open Matchers.Alpha
 
 let configuration = Configuration.create ~match_kind:Fuzzy ()
 
-let run ?(configuration = configuration) (module M : Matchers.Matcher) source match_template rewrite_template =
+let run ?(configuration = configuration) (module M : Matchers.Matcher) source match_template ?rule rewrite_template =
+  let open Language in
+  let rule =
+    match rule with
+    | Some rule -> Rule.Alpha.create rule |> Or_error.ok_exn
+    | None -> Rule.Alpha.create "where true" |> Or_error.ok_exn
+  in
   M.all ~configuration ~template:match_template ~source
+  |> List.filter ~f:(fun { Match.environment; _ } -> Rule.Alpha.(sat @@ apply rule environment))
   |> function
   | [] -> print_string "No matches."
   | results ->
@@ -246,4 +253,46 @@ foo(bar, baz(),
 
 
           (>qux.derp)<)
+|}]
+
+let%expect_test "eof_anchor" =
+  let source = {|
+setScore(5)
+setScore(6)
+setScore(6.5)
+setScore("")
+setScore("hi")
+setScore("hi" + "there")
+setScore('ho')
+setScore(x)
+setScore(null)
+setScore(4/3.0)
+setScore(4.0/3.0)
+setScore(4/3)
+|}
+  in
+  let match_template = {|setScore(:[1])|} in
+  let rule = {|
+     where match :[1] {
+     | ":[~^\\d+$]" -> false
+     | ":[_]" -> true
+     }
+  |}
+  in
+  let rewrite_template = "setScore( /*CHECK ME*/ :[1])" in
+
+  run (module Generic) source match_template ~rule rewrite_template;
+  [%expect_exact {|
+setScore(5)
+setScore(6)
+setScore( /*CHECK ME*/ 6.5)
+setScore( /*CHECK ME*/ "")
+setScore( /*CHECK ME*/ "hi")
+setScore( /*CHECK ME*/ "hi" + "there")
+setScore( /*CHECK ME*/ 'ho')
+setScore( /*CHECK ME*/ x)
+setScore( /*CHECK ME*/ null)
+setScore( /*CHECK ME*/ 4/3.0)
+setScore( /*CHECK ME*/ 4.0/3.0)
+setScore( /*CHECK ME*/ 4/3)
 |}]
