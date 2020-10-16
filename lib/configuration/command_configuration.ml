@@ -241,6 +241,7 @@ type run_options =
   ; omega : bool
   ; fast_offset_conversion : bool
   ; match_newline_toplevel : bool
+  ; bound_count : int option
   }
 
 type user_input =
@@ -687,18 +688,7 @@ let create
          ; regex_pattern
          ; ripgrep_args
          }
-     ; run_options =
-         { sequential
-         ; verbose
-         ; match_timeout
-         ; number_of_workers
-         ; dump_statistics
-         ; substitute_in_place
-         ; disable_substring_matching
-         ; omega
-         ; fast_offset_conversion
-         ; match_newline_toplevel
-         }
+     ; run_options = ({ omega; _ } as run_options)
      ; output_options =
          ({ overwrite_file_in_place
           ; color
@@ -813,18 +803,7 @@ let create
     ; extension
     ; sources
     ; specifications
-    ; run_options =
-        { sequential
-        ; verbose
-        ; match_timeout
-        ; number_of_workers
-        ; dump_statistics
-        ; substitute_in_place
-        ; disable_substring_matching
-        ; omega
-        ; fast_offset_conversion
-        ; match_newline_toplevel
-        }
+    ; run_options
     ; output_printer
     ; interactive_review
     }

@@ -21,6 +21,7 @@ let configuration =
       ; omega = false
       ; fast_offset_conversion = false
       ; match_newline_toplevel = false
+      ; bound_count = None
       }
   ; output_printer = (fun _ -> ())
   ; interactive_review = None
