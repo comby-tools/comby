@@ -13,6 +13,47 @@ let create ?(range = Range.default) () =
   ; matched = ""
   }
 
+let update_range f range =
+  let open Range in
+  let open Location in
+  let update_location loc =
+    let line, column = f loc.offset in
+    { loc with line; column }
+  in
+  let match_start = update_location range.match_start in
+  let match_end = update_location range.match_end in
+  { match_start; match_end }
+
+let update_environment f env =
+  List.fold (Environment.vars env) ~init:env ~f:(fun env var ->
+      let open Option in
+      let updated =
+        Environment.lookup_range env var
+        >>| update_range f
+        >>| Environment.update_range env var
+      in
+      Option.value_exn updated)
+
+let update_match f m =
+  let range = update_range f m.range in
+  let environment = update_environment f m.environment in
+  { m with range; environment }
+
+let convert_offset ~fast ~source match_ =
+  let f offset =
+    let index =
+      if fast then
+        Offset.index ~source
+      else
+        Offset.empty
+    in
+    if fast then
+      Offset.convert_fast ~offset index
+    else
+      Offset.convert_slow ~offset ~source
+  in
+  update_match f match_
+
 let to_json source_path matches =
   let json_matches matches = `List (List.map ~f:to_yojson matches) in
   let uri =

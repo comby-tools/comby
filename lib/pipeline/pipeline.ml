@@ -12,6 +12,8 @@ open Matchers
 open Match
 open Language
 
+let verbose_out_file = "/tmp/comby.out"
+
 let debug =
   Sys.getenv "DEBUG_COMBY"
   |> Option.is_some
@@ -42,61 +44,27 @@ let apply_rule ?(substitute_in_place = true) matcher omega rule matches =
       (if sat then env else None)
       >>| fun environment -> { matched with environment })
 
-let update_range f range =
-  let open Range in
-  let open Location in
-  let update_location loc =
-    let line, column = f loc.offset in
-    { loc with line; column }
-  in
-  let match_start = update_location range.match_start in
-  let match_end = update_location range.match_end in
-  { match_start; match_end }
-
-let update_environment f env =
-  List.fold (Environment.vars env) ~init:env ~f:(fun env var ->
-      let open Option in
-      let updated =
-        Environment.lookup_range env var
-        >>| update_range f
-        >>| Environment.update_range env var
-      in
-      Option.value_exn updated)
-
-let update_match f m =
-  let range = update_range f m.range in
-  let environment = update_environment f m.environment in
-  { m with range; environment }
-
-let timed_run matcher ?(fast_offset_conversion = false) ?(omega = false) ?rewrite_template ?substitute_in_place ?rule ~configuration ~template ~source () =
-  let module Matcher = (val matcher : Matchers.Matcher) in
+let timed_run
+    (module Matcher : Matchers.Matcher)
+    ?(fast_offset_conversion = false)
+    ?(omega = false)
+    ?substitute_in_place
+    ~configuration
+    ~source
+    ~specification:(Specification.{ match_template = template; rule; rewrite_template })
+    () =
   (match rewrite_template with
    | Some template -> Matcher.set_rewrite_template template;
    | None -> ());
   let matches = Matcher.all ~configuration ~template ~source in
   let rule = Option.value rule ~default:[Ast.True] in
-  let matches = apply_rule ?substitute_in_place matcher omega rule matches in
-  let index =
-    if fast_offset_conversion then
-      Offset.index ~source
-    else
-      Offset.empty
-  in
-  let f offset =
-    if fast_offset_conversion then
-      Offset.convert_fast ~offset index
-    else
-      Offset.convert_slow ~offset ~source
-  in
-  List.map matches ~f:(update_match f)
-
+  let matches = apply_rule ?substitute_in_place (module Matcher) omega rule matches in
+  List.map matches ~f:(Match.convert_offset ~fast:fast_offset_conversion ~source)
 
 type processed_source_result =
   | Matches of (Match.t list * int)
   | Replacement of (Replacement.t list * string * int)
   | Nothing
-
-let verbose_out_file = "/tmp/comby.out"
 
 let with_timeout timeout source ~f =
   try Statistics.Time.time_out ~after:timeout f ();
@@ -117,20 +85,28 @@ let process_single_source
     substitute_in_place
     configuration
     source
-    Specification.{ match_template = template; rule ; rewrite_template }
+    (Specification.{ rewrite_template; _ } as specification)
     verbose
     timeout =
   try
     let input_text =
       match source with
-      | `String input_text -> input_text
-      | `Path path ->
+      | String input_text -> input_text
+      | Path path ->
         if verbose then log_to_file path;
         In_channel.read_all path
     in
     let matches =
       with_timeout timeout source ~f:(fun () ->
-          timed_run matcher ?rewrite_template ?rule ~substitute_in_place ~omega ~fast_offset_conversion ~configuration ~template ~source:input_text ())
+          timed_run
+            matcher
+            ~substitute_in_place
+            ~omega
+            ~fast_offset_conversion
+            ~configuration
+            ~specification
+            ~source:input_text
+            ())
     in
     match rewrite_template with
     | None -> Matches (matches, List.length matches)
@@ -157,8 +133,8 @@ let output_result output_printer source_path source_content result =
   | Replacement (replacements, result, _) ->
     let source_content =
       match source_content with
-      | `String content -> content
-      | `Path path -> In_channel.read_all path
+      | String content -> content
+      | Path path -> In_channel.read_all path
     in
     output_printer (Printer.Replacements { source_path; replacements; result; source_content })
 
@@ -168,13 +144,13 @@ let with_zip zip_file ~f =
   Zip.close_in zip_in;
   result
 
-let run_on_specifications specifications output_printer process input output_file =
+let run_on_specifications specifications output_printer process (input : single_source) output_file =
   let result, count =
     List.fold specifications ~init:(Nothing, 0) ~f:(fun (result, count) specification ->
         let input =
           match result with
           | Nothing | Matches _ -> input
-          | Replacement (_, content, _) -> `String content
+          | Replacement (_, content, _) -> String content
         in
         process input specification
         |> function
@@ -188,13 +164,13 @@ let run_on_specifications specifications output_printer process input output_fil
   output_result output_printer output_file input result;
   count
 
-let run_on_specifications_for_interactive specifications process input =
+let run_on_specifications_for_interactive specifications process (input : single_source) =
   let result, count =
     List.fold specifications ~init:(Nothing, 0) ~f:(fun (result, count) specification ->
         let input =
           match result with
           | Nothing | Matches _ -> input
-          | Replacement (_, content, _) -> `String content
+          | Replacement (_, content, _) -> String content
         in
         process input specification
         |> function
@@ -230,13 +206,13 @@ let process_paths ~sequential ~f paths scheduler bound_count =
   let fold =
     match bound_count with
     | None ->
-      List.fold ~f:(fun count path -> count + f ~input:(`Path path) ~path:(Some path))
+      List.fold ~f:(fun count path -> count + f ~input:(Path path) ~output_path:(Some path))
     | Some bound_count ->
       List.fold_until ~finish:(fun x -> x) ~f:(fun acc path ->
           if acc > bound_count then
             Stop acc
           else
-            Continue (acc + f ~input:(`Path path) ~path:(Some path)))
+            Continue (acc + f ~input:(Path path) ~output_path:(Some path)))
   in
   let process_bucket ~init paths = fold ~init paths  in
   if sequential then
@@ -251,7 +227,7 @@ let process_paths ~sequential ~f paths scheduler bound_count =
 let process_paths_for_interactive ~sequential ~f paths scheduler =
   let process_bucket ~init paths =
     List.fold ~init paths ~f:(fun (acc, c) path ->
-        match f ~input:(`Path path) ~path:(Some path) with
+        match f ~input:(Path path) ~path:(Some path) with
         | Some rewritten_source, c' -> Interactive.{ path; rewritten_source }::acc, c+c'
         | None, c' -> acc, c + c')
   in
@@ -270,14 +246,14 @@ let process_zip_file ~sequential ~f scheduler zip_file paths max_count =
       | None ->
         List.fold ~f:(fun count ({ Zip.filename; _ } as entry) ->
             let source = Zip.read_entry zip entry in
-            count + f ~input:(`String source) ~path:(Some filename))
+            count + f ~input:(String source) ~output_path:(Some filename))
       | Some max_count ->
         List.fold_until ~finish:(fun x -> x) ~f:(fun count ({ Zip.filename; _ } as entry) ->
             if count > max_count then
               Stop count
             else
               let source = Zip.read_entry zip entry in
-              Continue (count + f ~input:(`String source) ~path:(Some filename)))
+              Continue (count + f ~input:(String source) ~output_path:(Some filename)))
     in
     fold ~init paths
   in
@@ -357,7 +333,7 @@ let run
   in
   let start_time = Statistics.Time.start () in
 
-  let per_unit ~input ~path =
+  let per_unit ~(input : single_source) ~output_path =
     run_on_specifications
       specifications
       output_printer
@@ -373,15 +349,14 @@ let run
            verbose
            match_timeout)
       input
-      path
+      output_path
   in
   let count =
     if Option.is_none interactive_review then
       match sources with
-      | `String source -> with_scheduler scheduler ~f:(fun _ -> per_unit ~input:(`String source) ~path:None)
+      | `String source -> with_scheduler scheduler ~f:(fun _ -> per_unit ~input:(String source) ~output_path:None)
       | `Paths paths -> process_paths ~sequential ~f:per_unit paths scheduler bound_count
       | `Zip (zip_file, paths) -> process_zip_file ~sequential ~f:per_unit scheduler zip_file paths bound_count
-      | _ -> failwith "No single path handled here"
     else
       let rewrites, count =
         with_scheduler scheduler ~f:(fun _scheduler ->
@@ -390,7 +365,7 @@ let run
               let with_rewrites ~input ~path:_ =
                 run_on_specifications_for_interactive
                   specifications
-                  (fun input specification ->
+                  (fun (input : single_source) specification ->
                      process_single_source
                        matcher
                        omega

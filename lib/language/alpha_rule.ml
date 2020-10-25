@@ -41,7 +41,7 @@ let rec apply
     predicates
     env =
   let open Option in
-  let module Matcher = (val matcher : Matchers.Matcher) in
+  let (module Matcher) = matcher in
 
   let equal_in_environment var value env =
     match Environment.lookup env var with

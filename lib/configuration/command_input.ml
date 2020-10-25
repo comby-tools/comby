@@ -1,17 +1,14 @@
-type single_input_kind =
-  [ `String of string
-  | `Path of string
-  ]
+type single_source =
+  | Path of string
+  | String of string
 
 type t =
   [ `Paths of string list
   | `Zip of string * Zip.entry list
-  | single_input_kind
+  | `String of string
   ]
 
 let show_input_kind =
   function
-  | `Paths _ -> Format.sprintf "Paths..."
-  | `Path path -> Format.sprintf "Path: %s" path
-  | `String _ -> Format.sprintf "A long string..."
-  | `Zip _ -> Format.sprintf "Zip..."
+  | String _ -> "A long string..."
+  | Path path -> Format.sprintf "A path: %s" path
