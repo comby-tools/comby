@@ -68,6 +68,8 @@ type t =
 
 val create : ?range:range -> unit -> t
 
+val convert_offset : fast:bool -> source:string -> t -> t
+
 val pp : Format.formatter -> string option * t list -> unit
 
 val pp_json_lines : Format.formatter -> string option * t list -> unit

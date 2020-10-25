@@ -5,15 +5,37 @@ open Test_helpers
 module Alpha = Test_alpha
 module Omega = Test_omega
 
+let to_string format matches =
+  let f = match format with
+    | `Json -> Match.pp_json_lines
+    | `Text -> Match.pp
+  in
+  Format.asprintf "%a" f (Some "file", matches)
+
+let run source match_template format : (string * string) =
+  let specification = Configuration.Specification.create ~match_template () in
+  let run ~fast =
+    let result =
+      Pipeline.timed_run
+        (module Omega.C)
+        ~fast_offset_conversion:fast
+        ~configuration
+        ~specification
+        ~source
+        ()
+    in
+    to_string format result
+  in
+  (run ~fast:false, run ~fast:true)
+
 let%expect_test "fast_match_offset_to_line_col_conversions" =
   let source = In_channel.read_all "example/test-match-locations/mod_fortune.c" in
   let template = ":[fn.](:[1])" in
-  let run ~fast = Pipeline.timed_run ~fast_offset_conversion:fast (module Omega.C) ~configuration ~template ~source () in
-  let to_string matches = Format.asprintf "%a" Match.pp (Some "file", matches) in
-  let slow_result = to_string @@ run ~fast:false in
-  let fast_result = to_string @@ run ~fast:true in
-  assert String.(slow_result = fast_result);
-  print_string fast_result;
+  let slow_result, fast_result = run source template `Text in
+  if String.(slow_result <> fast_result) then
+    print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
+  else
+    print_string fast_result;
   [%expect_exact {|file:8:mod_fortune_init(liModules *mods, liModule *mod)
 file:9:mod_fortune_free(liModules *mods, liModule *mod)
 file:19:*fortune_rand(fortune_data *fd)
@@ -82,12 +104,11 @@ file:203:li_plugin_free(mods->main, mod->config)
 let%expect_test "fast_match_offset_to_line_col_conversions_2" =
   let source = In_channel.read_all "example/test-match-locations/physical_lua.c" in
   let template = ":[fn.](:[1])" in
-  let run ~fast = Pipeline.timed_run ~fast_offset_conversion:fast (module Omega.C) ~configuration ~template ~source () in
-  let to_string matches = Format.asprintf "%a" Match.pp (Some "file", matches) in
-  let slow_result = to_string @@ run ~fast:false in
-  let fast_result = to_string @@ run ~fast:true in
-  assert String.(slow_result = fast_result);
-  print_string fast_result;
+  let slow_result, fast_result = run source template `Text in
+  if String.(slow_result <> fast_result) then
+    print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
+  else
+    print_string fast_result;
   [%expect_exact {|file:11:DEF_LUA_MODIFY_GSTRING(attr)
 file:12:lua_physical_attr_read_##attr(liPhysical *phys, lua_State *L)
 file:13:lua_pushlstring(L, phys->attr->str, phys->attr->len)
@@ -164,23 +185,19 @@ file:168:lua_setmetatable(L, -2)
 let%expect_test "fast_match_offset_to_line_col_conversions_2" =
   let source = "foo(bar)" in
   let template = ":[fn.](:[1])" in
-  let run ~fast = Pipeline.timed_run ~fast_offset_conversion:fast (module Omega.C) ~configuration ~template ~source () in
-  let to_string matches = Format.asprintf "%a" Match.pp (Some "file", matches) in
-  let slow_result = to_string @@ run ~fast:false in
-  let fast_result = to_string @@ run ~fast:true in
-  assert String.(slow_result = fast_result);
-  print_string fast_result;
+  let slow_result, fast_result = run source template `Text in
+  if String.(slow_result <> fast_result) then
+    print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
+  else
+    print_string fast_result;
   [%expect_exact {|file:1:foo(bar)
 |}]
 
 let%expect_test "correct_columns" =
   let source = "hello world" in
   let template = "hello :[1]" in
-  let run ~fast = Pipeline.timed_run ~fast_offset_conversion:fast (module Omega.C) ~configuration ~template ~source () in
-  let to_string matches = Format.asprintf "%a" Match.pp_json_lines (Some "file", matches) in
-  let slow_result = to_string @@ run ~fast:false in
-  let fast_result = to_string @@ run ~fast:true in
-  if not String.(slow_result = fast_result) then
+  let slow_result, fast_result = run source template `Json in
+  if String.(slow_result <> fast_result) then
     print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
   else
     print_string fast_result;
@@ -189,11 +206,8 @@ let%expect_test "correct_columns" =
 
   let source = "hello world\nhello potato\n" in
   let template = "hello :[1]" in
-  let run ~fast = Pipeline.timed_run ~fast_offset_conversion:fast (module Omega.C) ~configuration ~template ~source () in
-  let to_string matches = Format.asprintf "%a" Match.pp_json_lines (Some "file", matches) in
-  let slow_result = to_string @@ run ~fast:false in
-  let fast_result = to_string @@ run ~fast:true in
-  if not String.(slow_result = fast_result) then
+  let slow_result, fast_result = run source template `Json in
+  if String.(slow_result <> fast_result) then
     print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
   else
     print_string fast_result;
@@ -202,11 +216,8 @@ let%expect_test "correct_columns" =
 
   let source = "hello world\nhello potato" in
   let template = "hello :[1]" in
-  let run ~fast = Pipeline.timed_run ~fast_offset_conversion:fast (module Omega.C) ~configuration ~template ~source () in
-  let to_string matches = Format.asprintf "%a" Match.pp_json_lines (Some "file", matches) in
-  let slow_result = to_string @@ run ~fast:false in
-  let fast_result = to_string @@ run ~fast:true in
-  if not String.(slow_result = fast_result) then
+  let slow_result, fast_result = run source template `Json in
+  if String.(slow_result <> fast_result) then
     print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
   else
     print_string fast_result;

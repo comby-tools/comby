@@ -50,10 +50,11 @@ let perform_match request =
       | None -> (module Matchers.Alpha.Generic)
     in
     let run ?rule () =
-      let configuration = Configuration.create ~match_kind:Fuzzy () in
+      let configuration = Matchers.Configuration.create ~match_kind:Fuzzy () in
       let matches =
-        Pipeline.with_timeout timeout (`String "") ~f:(fun () ->
-            Pipeline.timed_run matcher ?rule ~configuration ~template:match_template ~source ())
+        Pipeline.with_timeout timeout (String "") ~f:(fun () ->
+            let specification = Comby.Configuration.Specification.create ~match_template ?rule () in
+            Pipeline.timed_run matcher ~configuration ~specification ~source ())
       in
       Out.Matches.to_string { matches; source; id }
     in
@@ -97,14 +98,14 @@ let perform_rewrite request =
     let run ?rule () =
       let configuration = Configuration.create ~match_kind:Fuzzy () in
       let matches =
-        Pipeline.with_timeout timeout (`String "") ~f:(fun () ->
+        Pipeline.with_timeout timeout (String "") ~f:(fun () ->
+            let specification = Comby.Configuration.Specification.create ~match_template ?rule () in
             Pipeline.timed_run
               matcher
-              ?rule
               ~substitute_in_place
               ~configuration
-              ~template:match_template
               ~source
+              ~specification
               ())
       in
       Rewrite.all matches ?source:source_substitution ~rewrite_template
