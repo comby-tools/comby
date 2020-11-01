@@ -900,6 +900,31 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     | Failed (_msg, _) ->
       failwith "literal parser did not succeed"
 
+  let generate_hole_for_comment ~contents s =
+    let holes =
+      Hole.sorts ()
+      |> List.map ~f:(fun kind -> attempt (hole_parser kind Comment))
+    in
+    let reserved_holes =
+      reserved_holes ()
+      |> List.map ~f:skip
+      |> List.map ~f:attempt
+      |> choice
+    in
+
+    let p =
+      many
+        (choice holes
+         <|> ((many1 (is_not (choice [reserved_holes] ))
+               |>> fun _ -> generate_spaces_parser ())))
+    in
+    match parse_string p contents "" with
+    | Success p when List.length p > 1 -> (turn_holes_into_matchers_for_this_level p |> sequence_chain) s
+    | Success p -> (sequence_chain p) s
+    | _ ->
+      failwith "comment parser did not succeed"
+
+
   let depth = ref (-1)
 
   let rec generate_parsers s =
@@ -916,10 +941,11 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
       (* String literals are handled specially because match semantics change inside string delimiters. *)
       ; raw_string_literal_parser (generate_hole_for_literal Raw_string_literal)
       ; escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal)
-      (* Nested delimiters are handled specially for nestedness. *)
-      ; (nested_delimiters_parser generate_outer_delimiter_parsers >>= fun result -> depth := !depth - 1; return result)
+      ; (comment_parser >>= fun result -> (generate_hole_for_comment ~contents:result))
       (* Skip comments in the template, just succeed. If desired, could return the comment string. *)
       ; (many1 (skip comment_parser <|> spaces1) |>> fun _ -> generate_spaces_parser ())
+      (* Nested delimiters are handled specially for nestedness. *)
+      ; (nested_delimiters_parser generate_outer_delimiter_parsers >>= fun result -> depth := !depth - 1; return result)
       (* Optional: parse identifiers and disallow substring matching *)
       ; if !configuration_ref.disable_substring_matching then many1 (alphanum <|> char '_') |>> generate_word else zero
       (* Everything else. *)
