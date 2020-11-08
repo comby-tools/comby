@@ -455,3 +455,5 @@ let%expect_test "ocaml_struct_end_2" =
 
   run (module OCaml) source match_template rewrite_template;
   [%expect_exact {|<1>include Something</1>|}]
+
+let%expect_test "coq_blocks" = ()

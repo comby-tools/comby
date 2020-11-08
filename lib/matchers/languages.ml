@@ -637,6 +637,31 @@ module Reason = struct
   end
 end
 
+module Coq = struct
+  module Info = struct
+    let name = "Coq"
+    let extensions = [".v"]
+  end
+
+  module Syntax = struct
+    include Generic.Syntax
+
+    let user_defined_delimiters =
+      Generic.Syntax.user_defined_delimiters
+      @
+      [ "{|", "|}"
+      ; "Proof", "Qed"
+      ; "Proof", "Defined"
+      ; "match", "end"
+      ]
+
+    let escapable_string_literals = ordinary_string
+
+    let comments =
+      [ Nested_multiline ("(*", "*)")
+      ]
+  end
+end
 
 module Fsharp = struct
   module Info = struct
