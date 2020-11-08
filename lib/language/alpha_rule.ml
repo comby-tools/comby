@@ -41,7 +41,7 @@ let rec apply
     predicates
     env =
   let open Option in
-  let module Matcher = (val matcher : Matchers.Matcher) in
+  let (module Matcher) = matcher in
 
   let equal_in_environment var value env =
     match Environment.lookup env var with
@@ -68,7 +68,7 @@ let rec apply
     | Not_equal (left, right) ->
       let sat, env = rule_match env (Equal (left, right)) in
       not sat, env
-    | Match (Variable variable, cases) ->
+    | Match (Variable variable, language, cases) ->
       let result =
         Environment.lookup env variable >>= fun source ->
         List.find_map cases ~f:(fun (template, case_expression) ->
@@ -76,6 +76,15 @@ let rec apply
             | String template ->
               begin
                 let configuration = match_configuration_of_syntax template in
+                let (module Matcher : Matchers.Matcher) =
+                  match language with
+                  | None -> matcher
+                  | Some extension ->
+                    match Matchers.Alpha.select_with_extension extension with
+                    | Some matcher -> matcher
+                    (* TODO handle in parsing *)
+                    | None -> failwith @@ Format.sprintf "No matcher for language %S" extension
+                in
                 Matcher.all ~configuration ~template ~source |> function
                 | [] -> None
                 | matches ->
@@ -97,11 +106,11 @@ let rec apply
               failwith "| :[hole] is invalid. Maybe you meant to put quotes")
       in
       Option.value_map result ~f:ident ~default:(false, Some env)
-    | Match (String template, cases) ->
+    | Match (String template, language, cases) ->
       let source, _ = Rewriter.Rewrite_template.substitute template env in
       let fresh_var = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
       let env = Environment.add env fresh_var source in
-      rule_match env (Match (Variable fresh_var, cases))
+      rule_match env (Match (Variable fresh_var, language, cases))
     | RewriteTemplate rewrite_template ->
       begin
         match rewrite_context with
@@ -199,15 +208,15 @@ let create rule =
       antecedent, consequent
     in
     let match_pattern =
-      let pattern keyword =
-        string keyword << spaces >> atom_parser << spaces << char '{' << spaces
-        >>= fun atom ->
-        many1 case_parser
-        << char '}' << spaces
-        >>= fun cases -> return (atom, cases)
-      in
-      pattern Syntax.start_match_pattern |>> fun (atom, cases) ->
-      Match (atom, cases)
+      string Syntax.start_match_pattern << spaces >> atom_parser << spaces
+      >>= fun atom ->
+      option (string "as" >> spaces >> value_parser << spaces)
+      >>= fun language ->
+      char '{' >> spaces >>
+      many1 case_parser
+      << char '}' << spaces
+      |>> fun cases ->
+      Match (atom, language, cases)
     in
     match_pattern s
   and rewrite_pattern_parser s =

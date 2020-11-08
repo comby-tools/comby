@@ -13,7 +13,7 @@ type expression =
   | False
   | Equal of atom * atom
   | Not_equal of atom * atom
-  | Match of atom * (antecedent * consequent) list
+  | Match of atom * string option * (antecedent * consequent) list
   | RewriteTemplate of string
   | Rewrite of atom * (antecedent * expression)
 and consequent = expression list

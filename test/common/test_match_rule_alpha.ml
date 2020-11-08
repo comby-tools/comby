@@ -37,7 +37,7 @@ let%expect_test "parse_match_one_case" =
   Rule.create {|where match "match_me" { | "case_one" -> true }|}
   |> Or_error.ok_exn
   |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule ((Match (String match_me) (((String case_one) (True))))))
+  [%expect_exact "(rule ((Match (String match_me) () (((String case_one) (True))))))
 "]
 
 let%expect_test "parse_match_multi_case" =
@@ -51,7 +51,7 @@ let%expect_test "parse_match_multi_case" =
   |> Or_error.ok_exn
   |> fun rule -> print_s [%message (rule : Ast.expression list)];
   [%expect_exact "(rule
- ((Match (String match_me)
+ ((Match (String match_me) ()
    (((String case_one) (True)) ((String case_two) (False))))))
 "]
 
