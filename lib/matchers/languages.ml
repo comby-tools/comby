@@ -518,7 +518,24 @@ module Javascript = struct
     let extensions = [".js"]
   end
 
-  module Syntax = Go.Syntax
+  module Syntax = struct
+    include Dyck.Syntax
+
+    let raw_string_literals =
+      [ ({|`|}, {|`|})
+      ]
+
+    let escapable_string_literals =
+      Some
+        { delimiters = [{|"|}; {|'|}; {|/|}]
+        ; escape_character = '\\'
+        }
+
+    let comments =
+      [ Multiline ("/*", "*/")
+      ; Until_newline "//"
+      ]
+  end
 end
 
 module Typescript = struct
@@ -527,7 +544,7 @@ module Typescript = struct
     let extensions = [".ts"]
   end
 
-  module Syntax = Go.Syntax
+  module Syntax = Javascript.Syntax
 end
 
 module Jsx = struct
