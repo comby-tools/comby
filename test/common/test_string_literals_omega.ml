@@ -397,17 +397,6 @@ let%expect_test "match_escaped_escaped" =
       | None -> print_string "EXPECT SUCCESS");
   [%expect_exact {|EXPECT SUCCESS|}]
 
-let%expect_test "dont_detect_comments_in_strings_with_hole_matcher" =
-  let source = {|"// not a comment"|} in
-  let template = {|":[1]"|} in
-  let rewrite_template = {|:[1]|} in
-  Go.all ~configuration ~template ~source
-  |> Rewrite.all ~source ~rewrite_template
-  |> (function
-      | Some { rewritten_source; _ } -> print_string rewritten_source
-      | None -> print_string "BROKEN EXPECT");
-  [%expect_exact {|// not a comment|}]
-
 let%expect_test "holes_in_raw_literals" =
   let source = {|
         return expect(
@@ -475,3 +464,25 @@ let%expect_test "holes_in_raw_literals_partial" =
                             }
                         }
                     `|}]
+
+let%expect_test "dont_detect_comments_in_strings_with_hole_matcher" =
+  let source = {|"// not a comment"|} in
+  let template = {|":[1]"|} in
+  let rewrite_template = {|:[1]|} in
+  Go.all ~configuration ~template ~source
+  |> Rewrite.all ~source ~rewrite_template
+  |> (function
+      | Some { rewritten_source; _ } -> print_string rewritten_source
+      | None -> print_string "BROKEN EXPECT");
+  [%expect_exact {|// not a comment|}]
+
+let%expect_test "match_regex_delimiters" =
+  let source = {|/f\/oo/ "/bar/"|} in
+  let template = {|/:[1]/|} in
+  let rewrite_template = {|:[1]|} in
+  Typescript.all ~configuration ~template ~source
+  |> Rewrite.all ~source ~rewrite_template
+  |> (function
+      | Some { rewritten_source; _ } -> print_string rewritten_source
+      | None -> print_string "EXPECT SUCCESS");
+  [%expect_exact {|f\/oo "/bar/"|}]
