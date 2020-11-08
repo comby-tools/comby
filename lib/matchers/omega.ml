@@ -580,8 +580,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     many comment_parser
     >>= fun s1 ->
     string str >>= fun result ->
-    many comment_parser >>= fun s2 ->
-    r acc (Template_string (String.concat s1 ^ result ^ String.concat s2))
+    r acc (Template_string (String.concat s1 ^ result))
 
   let single_hole_parser () =
     string ":[[" *> identifier_parser () <* string "]]"

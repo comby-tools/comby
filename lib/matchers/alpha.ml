@@ -207,7 +207,6 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
   let generate_string_token_parser str : ('c, _) parser =
     many comment_parser
     >> string str
-    >> many comment_parser
     >>= fun result -> f result
 
   let is_optional () =
