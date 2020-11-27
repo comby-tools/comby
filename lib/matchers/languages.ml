@@ -735,6 +735,10 @@ module Haskell = struct
       [ ({|"""|}, {|"""|})
       ]
 
+    (* Excludes ' as escapable string literal, since these can be used in
+       identifiers. *)
+    let escapable_string_literals = ordinary_string
+
     let comments =
       [ Multiline ("{-", "-}")
       ; Until_newline "--"
