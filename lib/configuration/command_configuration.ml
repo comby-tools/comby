@@ -404,7 +404,9 @@ module Printer = struct
       let print_if_some output = Option.value_map output ~default:() ~f:(Format.fprintf ppf "%s@.") in
       match output_format with
       | Stdout -> Format.fprintf ppf "%s" rewritten_source
-      | Overwrite_file -> Out_channel.write_all ~data:rewritten_source (Option.value path ~default:"/dev/null")
+      | Overwrite_file ->
+        if (replacements <> []) then
+          Out_channel.write_all ~data:rewritten_source (Option.value path ~default:"/dev/null")
       | Interactive_review -> () (* Handled after (potentially parallel) processing *)
       | Diff kind -> print_if_some @@ Diff_configuration.get_diff kind path source_content rewritten_source
       | Match_only -> print_if_some @@ Diff_configuration.get_diff Match_only path rewritten_source source_content
