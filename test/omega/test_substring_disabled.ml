@@ -23,7 +23,7 @@ let run ?(configuration = configuration) source match_template rewrite_template 
     |> (fun { rewritten_source; _ } -> rewritten_source)
     |> print_string
   | Error _ ->
-    (* this is too annoying to fix everytime the grammar changes. *)
+    (* this is too annoying to fix every time the grammar changes. *)
     print_string ""
 
 let run_all ?(configuration = configuration) source match_template rewrite_template =

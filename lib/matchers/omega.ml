@@ -750,7 +750,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
                   current_environment_ref := Match.Environment.create ();
                   (* cannot return: we must try some other parser or else we'll
                      infini loop! We can't advance because we haven't
-                     successfuly parsed the character at the current position.
+                     successfully parsed the character at the current position.
                      So: fail and try another parser in the choice. *)
                   fail "no match, try something else"
                 in

@@ -4,7 +4,7 @@ Suppose we have a pattern like `(:[1])`. We could weaken delimiter matching to
 allow matching, for example, anything except parens, i.e., `(])` would be valid
 and could be matched against. In strict delimiter matching, where `[]` must be
 balanced, `(])` would not be valid. This could, in theory, give a bit of a
-performance bump since we wouldn't neet to ensure well-balancedness with
+performance bump since we wouldn't need to ensure well-balancedness with
 respect to any other delimiters besides `()`.
 
 Weak delimiter matching only works for unique delimiters. For example, the
@@ -39,7 +39,7 @@ and we would re-encounter the delimiter subsequently).
 
 ## Choice operator behavior and 'attempt'
 
-If `a1` succees in the parse sequence `a1 >>= a2 >>= a3 <|> b1 >>= b2 >>= b3`,
+If `a1` succeeds in the parse sequence `a1 >>= a2 >>= a3 <|> b1 >>= b2 >>= b3`,
 the whole parser will fail, and `b1 >>= ...` will never be attempted. Putting
 `attempt @@ a1 >>= a2 >>= a3 <|> attempt @@ b1 >>= ...` will backtrack if `a1`
 succeeds but `a2` fails, and will then try `b1`. This pattern is important for

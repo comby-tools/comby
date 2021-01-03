@@ -66,7 +66,7 @@ is associated with a match and rewrite template. Rules impose constraints on
 matches and can extend rewriting. It is an explicit decision to separate rules
 (and their constraints) from templates. This avoids conflating constraints and
 concrete syntax. Compare to regular expressions which mix these concerns,
-leading to the possiblity of very complex expressions (e.g., with match groups
+leading to the possibility of very complex expressions (e.g., with match groups
 and `|` clauses), and the need to escape these metacharacters (or concrete
 characters).  Separate rules in Comby achieve a more declarative way for
 introducing constraints, and deliver readable and escape-free match and rewrite

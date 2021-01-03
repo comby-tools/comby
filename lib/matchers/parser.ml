@@ -97,7 +97,7 @@ let skip_unit p =
 module Deprecate = struct
   (* XXX can shortcircuit *)
   (* what if you hit a reserved
-     seqence "{" and then attempt
+     sequence "{" and then attempt
      ":[[" and then say "end of
      input" and then move ahead any_char. not good.
      going from longest to shortest works though *)
