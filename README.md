@@ -14,9 +14,9 @@
 
 <details>
   <summary>Comby supports interactive review mode (click here to see it in action).</summary>
-  
+
 ![](https://user-images.githubusercontent.com/888624/69503010-b8870980-0ed2-11ea-828d-68c152ed9def.gif)
-  
+
 </details>
 
 **Need help writing patterns or have other problems? Post them in [Gitter](https://gitter.im/comby-tools/community).**
@@ -31,7 +31,7 @@
 
 - `bash <(curl -sL get.comby.dev)`
 
-- **Arch and other Linux**: The PCRE library is dynamically linked in the Ubuntu binary. For other distributions, like Arch, a fixup is needed: `ln -s /usr/lib/libpcre.so /usr/lib/libpcre.so.3`. Alternatively, consider [building from source](https://github.com/comby-tools/comby#build-from-source).
+- **Other Linux distributions**: The PCRE library is dynamically linked in the Ubuntu binary. For other distributions like Arch Linux, a fixup is needed: `sudo ln -s /usr/lib/libpcre.so /usr/lib/libpcre.so.3`. On Fedora, use `sudo ln -s /usr/lib64/libpcre.so /usr/lib64/libpcre.so.3`. Alternatively, consider [building from source](https://github.com/comby-tools/comby#build-from-source).
 
 
 ### Windows
@@ -45,7 +45,7 @@
 
 <details>
   <summary>click to expand an example invocation for the docker image</summary>
-  
+
 Running with docker on `stdin`:
 
 ```bash
@@ -69,7 +69,7 @@ if (fgets(line, 128, file_pointer) == Null) // 1) if (...) returns 0
       return 0;
 ...
 if (scanf("%d) %d", &x, &y) == 2) // 2) if (scanf("%d) %d", &x, &y) == 2) returns 0
-      return 0; 
+      return 0;
 ```
 
 To match these with comby, all you need to write is `if (:[condition])`, and specify one flag that this language is C-like. The replacement is `if (1)`. See the [live example](https://bit.ly/30935ou).
