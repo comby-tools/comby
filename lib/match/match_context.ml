@@ -54,8 +54,26 @@ let convert_offset ~fast ~source match_ =
   in
   update_match f match_
 
+let update_environment f env =
+  List.fold (Environment.vars env) ~init:env ~f:(fun env var ->
+      let open Option in
+      let updated =
+        Environment.lookup env var
+        >>| f
+        >>| Environment.update env var
+      in
+      Option.value_exn updated)
+
 let to_json source_path matches =
-  let json_matches matches = `List (List.map ~f:to_yojson matches) in
+  let json_matches matches =
+    matches
+    |> List.map ~f:(fun m ->
+        { m with matched = String.escaped m.matched;
+                 environment = update_environment String.escaped m.environment })
+    |> List.map ~f:to_yojson
+    |> fun matches ->
+    `List matches
+  in
   let uri =
     match source_path with
     | Some path -> `String path

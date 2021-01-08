@@ -211,7 +211,7 @@ let%expect_test "correct_columns" =
     print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
   else
     print_string fast_result;
-  [%expect_exact {|{"uri":"file","matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":25,"line":3,"column":1}},"environment":[{"variable":"1","value":"world\nhello potato\n","range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":25,"line":3,"column":1}}}],"matched":"hello world\nhello potato\n"}]}
+  [%expect_exact {|{"uri":"file","matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":25,"line":3,"column":1}},"environment":[{"variable":"1","value":"world\\nhello potato\\n","range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":25,"line":3,"column":1}}}],"matched":"hello world\\nhello potato\\n"}]}
 |}];
 
   let source = "hello world\nhello potato" in
@@ -221,5 +221,5 @@ let%expect_test "correct_columns" =
     print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
   else
     print_string fast_result;
-  [%expect_exact {|{"uri":"file","matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":24,"line":2,"column":13}},"environment":[{"variable":"1","value":"world\nhello potato","range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":24,"line":2,"column":13}}}],"matched":"hello world\nhello potato"}]}
+  [%expect_exact {|{"uri":"file","matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":24,"line":2,"column":13}},"environment":[{"variable":"1","value":"world\\nhello potato","range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":24,"line":2,"column":13}}}],"matched":"hello world\\nhello potato"}]}
 |}]
