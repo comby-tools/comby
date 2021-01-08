@@ -53,6 +53,18 @@ let read_expect_stderr command source =
   let stderr_result = In_channel.input_all stderr in
   stderr_result
 
+let%expect_test "sequential_increment_rewrite_template_id" =
+  let source = "a" in
+  let match_template = "a" in
+  let rewrite_template = ":[id()] :[id(x)] :[id()] :[id(y)] :[id()] :[id(x)]" in
+  let command_args =
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -stdout" match_template rewrite_template
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect_exact {|1 2 3 4 5 2|}]
+
 let%expect_test "json_lines_separates_by_line" =
   let source = "hello world" in
   let match_template = "o" in

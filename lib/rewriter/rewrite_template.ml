@@ -7,6 +7,9 @@ let debug =
   Sys.getenv "DEBUG_COMBY"
   |> Option.is_some
 
+let uuid_for_id_counter = ref 0
+let uuid_for_sub_counter = ref 0
+
 (** Parse the first :[id(label)] label encountered in the template. *)
 let parse_first_label template =
   let label = take_while (function | '0' .. '9' | 'a' .. 'z' | 'A' .. 'Z' | '_' -> true | _ -> false) in
@@ -22,7 +25,7 @@ let parse_first_label template =
   | Ok label -> List.find_map label ~f:ident
   | Error _ -> None
 
-let substitute_fresh template =
+let substitute_fresh ?(sequential = false) template =
   let label_table = String.Table.create () in
   let template_ref = ref template in
   let current_label_ref = ref (parse_first_label !template_ref) in
@@ -32,9 +35,20 @@ let substitute_fresh template =
       match String.Table.find label_table label with
       | Some id -> id
       | None ->
-        let uuid = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
-        let id = String.suffix uuid 12 in
-        String.Table.add_exn label_table ~key:label ~data:id;
+        let id =
+          if sequential then
+            (
+              uuid_for_id_counter := !uuid_for_id_counter + 1;
+              Format.sprintf "%d" !uuid_for_id_counter
+            )
+          else
+            (
+              let uuid = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
+              String.suffix uuid 12
+            )
+        in
+        if String.(label <> "") then
+          String.Table.add_exn label_table ~key:label ~data:id;
         id
     in
     let pattern = ":[id(" ^ label ^ ")]" in
@@ -43,7 +57,7 @@ let substitute_fresh template =
   done;
   !template_ref
 
-let substitute template env =
+let substitute ?sequential template env =
   let substitution_formats =
     [ ":[ ", "]"
     ; ":[", ".]"
@@ -59,7 +73,7 @@ let substitute template env =
     ; ":[?", "]"
     ]
   in
-  let template = substitute_fresh template in
+  let template = substitute_fresh ?sequential template in
   Environment.vars env
   |> List.fold ~init:(template, []) ~f:(fun (acc, vars) variable ->
       match Environment.lookup env variable with

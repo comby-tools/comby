@@ -2,6 +2,7 @@
     emit result separated by newlines *)
 val all
   :  ?source:string
+  -> ?sequential:bool
   -> rewrite_template:string
   -> Match.t list
   -> Replacement.result option

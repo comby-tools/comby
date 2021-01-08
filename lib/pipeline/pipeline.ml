@@ -79,6 +79,7 @@ let log_to_file path =
       Out_channel.output_lines out_channel [Format.sprintf "Processing %s%!" path])
 
 let process_single_source
+    sequential
     matcher
     omega
     fast_offset_conversion
@@ -116,7 +117,7 @@ let process_single_source
         (* If there are no matches, return the original source (for editor support). *)
         Replacement ([], input_text, 0)
       | matches ->
-        match Rewrite.all ~source:input_text ~rewrite_template matches with
+        match Rewrite.all ~sequential ~source:input_text ~rewrite_template matches with
         | None -> Nothing
         | Some { rewritten_source; in_place_substitutions } ->
           Replacement (in_place_substitutions, rewritten_source, List.length matches)
@@ -339,6 +340,7 @@ let run
       output_printer
       (fun input specification ->
          process_single_source
+           sequential
            matcher
            omega
            fast_offset_conversion
@@ -367,6 +369,7 @@ let run
                   specifications
                   (fun (input : single_source) specification ->
                      process_single_source
+                       sequential
                        matcher
                        omega
                        fast_offset_conversion

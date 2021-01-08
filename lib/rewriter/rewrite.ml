@@ -8,7 +8,7 @@ let debug =
   |> Option.is_some
 
 
-let substitute_match_contexts (matches: Match.t list) source replacements =
+let substitute_match_contexts ?sequential (matches: Match.t list) source replacements =
   if debug then Format.printf "Matches: %d | Replacements: %d@." (List.length matches) (List.length replacements);
   let rewrite_template, environment =
     List.fold2_exn
@@ -27,7 +27,7 @@ let substitute_match_contexts (matches: Match.t list) source replacements =
   in
   if debug then Format.printf "Env:@.%s" (Environment.to_string environment);
   if debug then Format.printf "Rewrite in:@.%s@." rewrite_template;
-  let rewritten_source = Rewrite_template.substitute rewrite_template environment |> fst in
+  let rewritten_source = Rewrite_template.substitute ?sequential rewrite_template environment |> fst in
   let offsets = Rewrite_template.get_offsets_for_holes rewrite_template (Environment.vars environment) in
   if debug then
     Format.printf "Replacements: %d | Offsets 1: %d@." (List.length replacements) (List.length offsets);
@@ -52,8 +52,8 @@ let substitute_match_contexts (matches: Match.t list) source replacements =
    (b) its replacement context (to calculate the range)
    (c) an environment of values that are updated to reflect their relative offset in the rewrite template
    *)
-let substitute_in_rewrite_template rewrite_template ({ environment; _ } : Match.t) =
-  let replacement_content, vars_substituted_for = Rewrite_template.substitute rewrite_template environment in
+let substitute_in_rewrite_template ?sequential rewrite_template ({ environment; _ } : Match.t) =
+  let replacement_content, vars_substituted_for = Rewrite_template.substitute ?sequential rewrite_template environment in
   let offsets = Rewrite_template.get_offsets_for_holes rewrite_template (Environment.vars environment) in
   let offsets = Rewrite_template.get_offsets_after_substitution offsets environment in
   let environment =
@@ -86,20 +86,20 @@ let substitute_in_rewrite_template rewrite_template ({ environment; _ } : Match.
       }
   }
 
-let all ?source ~rewrite_template matches : result option =
+let all ?source ?sequential ~rewrite_template matches : result option =
   if List.is_empty matches then None else
     match source with
     (* in-place substitution *)
     | Some source ->
       let matches : Match.t list = List.rev matches in
       matches
-      |> List.map ~f:(substitute_in_rewrite_template rewrite_template)
-      |> substitute_match_contexts matches source
+      |> List.map ~f:(substitute_in_rewrite_template ?sequential rewrite_template)
+      |> substitute_match_contexts ?sequential matches source
       |> Option.some
     (* no in place substitution, emit result separated by newlines *)
     | None ->
       matches
-      |> List.map ~f:(substitute_in_rewrite_template rewrite_template)
+      |> List.map ~f:(substitute_in_rewrite_template ?sequential rewrite_template)
       |> List.map ~f:(fun { replacement_content; _ } -> replacement_content)
       |> String.concat ~sep:"\n"
       |> (fun rewritten_source -> { rewritten_source; in_place_substitutions = [] })
