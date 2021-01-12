@@ -17,7 +17,8 @@ function ctrl_c() {
 
 trap ctrl_c INT
 
-if which tput >/dev/null 2>&1; then
+colors=0
+if [ -z "$TERM" ] && which tput >/dev/null 2>&1; then
     colors=$(tput colors)
 fi
 if [ -t 1 ] && [ -n "$colors" ] && [ "$colors" -ge 8 ]; then
