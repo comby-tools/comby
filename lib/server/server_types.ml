@@ -1,7 +1,5 @@
 open Core
 
-open Polymorphic_compare
-
 open Match
 
 module In = struct
