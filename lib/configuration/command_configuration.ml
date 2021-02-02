@@ -119,10 +119,10 @@ let create_rule omega rule =
     exit 1
 
 let parse_toml omega path =
-  let open TomlTypes in
+  let open Toml.Types in
   let toml = Parser.(from_filename path |> unsafe) in
-  let toml = Table.remove (Toml.key "flags") toml in
-  let to_specification (key : Table.key) (value : TomlTypes.value) acc =
+  let toml = Table.remove (Toml.Min.key "flags") toml in
+  let to_specification (key : Table.key) (value : Toml.Types.value) acc =
     let name = Table.Key.to_string key in
     if debug then Format.printf "Key name: %s@." name;
     match value with
@@ -135,21 +135,21 @@ let parse_toml omega path =
           exit 1
       in
       let match_template =
-        match Table.find_opt (Toml.key "match") t with
+        match Table.find_opt (Toml.Min.key "match") t with
         | Some v -> Option.value_exn (to_string (Some v))
         | None ->
           Format.eprintf "A 'match' key is required for entry %s@." name;
           exit 1
       in
-      let rule = Table.find_opt (Toml.key "rule") t |> to_string |> create_rule omega in
-      let rewrite_template = Table.find_opt (Toml.key "rewrite") t |> to_string in
+      let rule = Table.find_opt (Toml.Min.key "rule") t |> to_string |> create_rule omega in
+      let rewrite_template = Table.find_opt (Toml.Min.key "rewrite") t |> to_string in
       if debug then Format.printf "Processed ->%s<-@." match_template;
       (name, (Specification.create ~match_template ?rule ?rewrite_template ()))::acc
     | v ->
       Format.eprintf "Unexpected format, could not parse ->%s<-@." (Toml.Printer.string_of_value v);
       exit 1
   in
-  TomlTypes.Table.fold to_specification toml []
+  Toml.Types.Table.fold to_specification toml []
   |> List.sort ~compare:(fun x y -> String.compare (fst x) (fst y))
   |> List.map ~f:snd
 

@@ -247,12 +247,11 @@ let default_command =
   Command.basic ~summary:"Run a rewrite pass. Comby runs in current directory by default. The '-stdin' option rewrites input on stdin." base_command_parameters
 
 let parse_comby_dot_file () =
-  let open Toml in
-  let open TomlTypes in
-  match Parser.from_filename ".comby" with
+  let open Toml.Types in
+  match Toml.Parser.from_filename ".comby" with
   | `Error (s, _) -> Format.eprintf "TOML parse error in .comby file: %s@." s; exit 1
   | `Ok toml ->
-    let flags = Table.find_opt (Toml.key "flags") toml in
+    let flags = Table.find_opt (Toml.Min.key "flags") toml in
     let to_flags = function
       | None -> []
       | Some TString s ->
