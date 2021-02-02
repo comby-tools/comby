@@ -44,4 +44,8 @@ module Julia : Language.S
 module Fortran : Language.S
 module Haskell : Language.S
 module Elm : Language.S
+module Zig : Language.S
+module Coq : Language.S
+module Move : Language.S
+module Solidity : Language.S
 module C_nested_comments : Language.S

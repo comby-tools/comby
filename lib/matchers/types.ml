@@ -175,6 +175,10 @@ module Match_engine = struct
     module Fortran : Matcher.S
     module Haskell : Matcher.S
     module Elm : Matcher.S
+    module Zig: Matcher.S
+    module Coq: Matcher.S
+    module Move: Matcher.S
+    module Solidity: Matcher.S
     module C_nested_comments : Matcher.S
 
     val create : Syntax.t -> (module Matcher.S)

@@ -303,6 +303,7 @@ let%expect_test "list_languages" =
  -matcher .dart     Dart      
  -matcher .dyck     Dyck      
  -matcher .clj      Clojure   
+ -matcher .v        Coq       
  -matcher .elm      Elm       
  -matcher .erl      Erlang    
  -matcher .ex       Elixir    
@@ -322,6 +323,7 @@ let%expect_test "list_languages" =
  -matcher .kt       Kotlin    
  -matcher .tex      LaTeX     
  -matcher .lisp     Lisp      
+ -matcher .move     Move      
  -matcher .nim      Nim       
  -matcher .ml       OCaml     
  -matcher .paren    Paren     
@@ -332,12 +334,14 @@ let%expect_test "list_languages" =
  -matcher .rb       Ruby      
  -matcher .rs       Rust      
  -matcher .scala    Scala     
+ -matcher .sol      Solidity  
  -matcher .sql      SQL       
  -matcher .swift    Swift     
  -matcher .txt      Text      
  -matcher .ts       TypeScript
  -matcher .tsx      TSX       
  -matcher .xml      XML       
+ -matcher .zig      Zig       
  -matcher .generic  Generic   
 |}]
 

@@ -512,6 +512,18 @@ module Go = struct
   end
 end
 
+module Solidity = struct
+  module Info = struct
+    let name = "Solidity"
+    let extensions = [".sol"]
+  end
+
+  (* Note this doesn't take care of multiple concatenated strings:
+     https://github.com/ethereum/solidity/issues/7292 *)
+  module Syntax = C.Syntax
+end
+
+
 module Javascript = struct
   module Info = struct
     let name = "JavaScript"
@@ -588,7 +600,7 @@ module Rust = struct
   end
 
   module Syntax = struct
-    include Swift.Syntax
+    include Generic.Syntax
 
     (* Excludes ' as escapable string literal, since these can be used in
        typing. *)
@@ -596,6 +608,29 @@ module Rust = struct
 
     let raw_string_literals =
       [ {|r#|}, {|#|}
+      ]
+
+    let comments =
+      [ Nested_multiline ("/*", "*/")
+      ; Until_newline "//"
+      ]
+  end
+end
+
+module Move = struct
+  module Info = struct
+    let name = "Move"
+    let extensions = [".move"]
+  end
+
+  module Syntax = struct
+    include Generic.Syntax
+
+    let escapable_string_literals = ordinary_string
+
+    let comments =
+      [ Nested_multiline ("/*", "*/")
+      ; Until_newline "//"
       ]
   end
 end
@@ -654,6 +689,33 @@ module Reason = struct
   end
 end
 
+module Coq = struct
+  module Info = struct
+    let name = "Coq"
+    let extensions = [".v"]
+  end
+
+  module Syntax = struct
+    include Generic.Syntax
+
+    let user_defined_delimiters =
+      Generic.Syntax.user_defined_delimiters
+      @
+      [ "{|", "|}"
+      ; "Proof", "Qed"
+      ; "Proof", "Defined"
+      ; "match", "end"
+      ]
+
+    (* Excludes ' as escapable string literal, since these can be used in
+       typing. *)
+    let escapable_string_literals = ordinary_string
+
+    let comments =
+      [ Nested_multiline ("(*", "*)")
+      ]
+  end
+end
 
 module Fsharp = struct
   module Info = struct
@@ -690,7 +752,7 @@ module Julia = struct
 
   module Syntax = struct
     include Generic.Syntax
-    
+
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
       @
@@ -702,7 +764,7 @@ module Julia = struct
       ; "begin", "end"
       ; "let", "end"
       ]
-      
+
     let comments =
       [ Nested_multiline ("#=", "=#")
       ; Until_newline "#"
@@ -765,6 +827,26 @@ module Elm = struct
   end
 
   module Syntax = Haskell.Syntax
+end
+
+module Zig = struct
+  module Info = struct
+    let name = "Zig"
+    let extensions =
+      [ ".zig"
+      ]
+  end
+
+  module Syntax = struct
+    include Generic.Syntax
+
+    let comments =
+      [ Until_newline "//"
+      ]
+
+    (* Multiline strings with \\ are awkward to support. Maybe later. *)
+    let escapable_string_literals = ordinary_string
+  end
 end
 
 (** For testing *)
