@@ -10,7 +10,7 @@ RUN sudo apt-get update && sudo apt-get install -y \
 	libgmp-dev \
     libsqlite3-dev
 
-RUN opam init --no-setup --disable-sandboxing --compiler=4.10.0
+RUN opam init --no-setup --disable-sandboxing --compiler=4.11.0
 RUN eval $(opam env) && opam repository set-url default https://opam.ocaml.org && opam update
 
 COPY Makefile /home/comby/

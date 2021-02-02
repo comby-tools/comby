@@ -11,7 +11,7 @@ build: [
 ]
 depends: [
   "ocaml" {>= "4.08.1"}
-  "core" {>= "0.12.2"}
+  "core"
   "lwt" {= "4.5.0"}
   "conduit-lwt-unix" {= "2.0.2"}
   "hack_parallel"
@@ -28,7 +28,7 @@ depends: [
   "patdiff"
   "lwt_react"
   "ppx_deriving_yojson"
-  "toml" { < "6.0.0" }  
+  "toml"
   "ppx_tools_versioned" {>= "5.2.3"}
   "bisect_ppx" {dev & >= "2.0.0"}
 ]
