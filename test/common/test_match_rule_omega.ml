@@ -143,7 +143,7 @@ let%expect_test "where_true" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -192,7 +192,7 @@ let%expect_test "match_sat" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -208,7 +208,7 @@ let%expect_test "match_sat" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -251,7 +251,7 @@ let%expect_test "match_sat" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -287,7 +287,7 @@ let%expect_test "match_sat" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -322,7 +322,7 @@ let%expect_test "match_sat" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -341,7 +341,7 @@ let%expect_test "match_s_suffix" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -377,7 +377,7 @@ let%expect_test "match_s_suffix" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -415,7 +415,7 @@ let%expect_test "configuration_choice_based_on_case" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -434,7 +434,7 @@ let%expect_test "configuration_choice_based_on_case" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -471,7 +471,7 @@ let%expect_test "configuration_choice_based_on_case" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -492,7 +492,7 @@ let%expect_test "match_using_environment_merge" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -527,7 +527,7 @@ let%expect_test "match_using_environment_merge" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -552,7 +552,7 @@ let%expect_test "nested_matches" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -593,7 +593,7 @@ let%expect_test "nested_matches" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -614,7 +614,7 @@ let%expect_test "match_on_template" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -651,7 +651,7 @@ let%expect_test "match_on_template" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|
@@ -688,7 +688,7 @@ let%expect_test "match_on_template" =
     |> Or_error.ok_exn
   in
 
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply rule environment))
   |> print_matches;
   [%expect {|

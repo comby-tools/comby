@@ -123,8 +123,10 @@ module Matcher = struct
 
     val all
       :  ?configuration:Configuration.t
+      -> ?nested: bool
       -> template:string
       -> source:string
+      -> unit
       -> Match.t list
   end
 end

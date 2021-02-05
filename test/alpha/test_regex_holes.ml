@@ -14,7 +14,7 @@ let run ?(configuration = configuration) (module M : Matchers.Matcher) source ma
     | Some rule -> Rule.Alpha.create rule |> Or_error.ok_exn
     | None -> Rule.Alpha.create "where true" |> Or_error.ok_exn
   in
-  M.all ~configuration ~template:match_template ~source
+  M.all ~configuration ~template:match_template ~source ()
   |> List.filter ~f:(fun { Match.environment; _ } -> Rule.Alpha.(sat @@ apply rule environment))
   |> function
   | [] -> print_string "No matches."

@@ -56,7 +56,11 @@
   test_rewrite_parts_omega
 
   test_user_defined_language_alpha
-  test_user_defined_language_omega)
+  test_user_defined_language_omega
+
+  test_nested_matches_alpha
+  test_nested_matches_omega
+  )
  (inline_tests)
  (preprocess (pps ppx_expect ppx_sexp_message ppx_deriving_yojson ppx_deriving_yojson.runtime))
  (libraries

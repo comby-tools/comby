@@ -7,7 +7,7 @@ open Test_helpers
 include Test_alpha
 
 let all ?(configuration = configuration) template source =
-  C.all ~configuration ~template ~source
+  C.all ~configuration ~template ~source ()
 
 let%expect_test "rewrite_comments_1" =
   let template = "replace this :[1] end" in

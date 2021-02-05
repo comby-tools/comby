@@ -1056,46 +1056,110 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     in
     first' shift p source
 
-  let all ?configuration ~template ~source:original_source : Match.t list =
-    let open Or_error in
-    depth := (-1);
-    configuration_ref := Option.value configuration ~default:!configuration_ref;
-    let make_result = function
-      | Ok ok -> ok
-      | Error _ -> []
-    in
-    make_result @@ begin
-      to_template template >>= fun p ->
-      let p =
-        if String.is_empty template then
-          MParser.(eof >> return Unit)
-        else
-          p
+  let all ?configuration ?(nested = false) ~template ~source:original_source () : Match.t list =
+    let rec aux_all ?configuration ?(nested = false) ~template ~source:original_source () =
+      let open Or_error in
+      depth := (-1);
+      configuration_ref := Option.value configuration ~default:!configuration_ref;
+      let make_result = function
+        | Ok ok -> ok
+        | Error _ -> []
       in
-      let rec aux acc shift =
-        match first' shift p original_source with
-        | Ok ({range = { match_start; match_end; _ }; _} as result) ->
-          let shift = match_end.offset in
-          let shift, matched =
-            if match_start.offset = match_end.offset then
-              match_start.offset + 1, "" (* advance one if the matched content is the empty string *)
-            else
-              shift, extract_matched_text original_source match_start match_end
-          in
-          if debug then Format.printf "Extracted matched: %s" matched;
-          let result = { result with matched } in
-          if shift >= String.length original_source then
-            result :: acc
+      make_result @@ begin
+        to_template template >>= fun p ->
+        let p =
+          if String.is_empty template then
+            MParser.(eof >> return Unit)
           else
-            aux (result :: acc) shift
-        | Error _ -> acc
+            p
+        in
+        let rec aux acc shift =
+          match first' shift p original_source with
+          | Ok ({range = { match_start; match_end; _ }; _} as result) ->
+            let shift = match_end.offset in
+            let shift, matched =
+              if match_start.offset = match_end.offset then
+                match_start.offset + 1, "" (* advance one if the matched content is the empty string *)
+              else
+                shift, extract_matched_text original_source match_start match_end
+            in
+            if debug then Format.printf "Extracted matched: %s" matched;
+            let result = { result with matched } in
+            if shift >= String.length original_source then
+              result :: acc
+            else
+              aux (result :: acc) shift
+          | Error _ ->
+            acc
+        in
+        let matches = aux [] 0 |> List.rev in
+        if nested then
+          return ((compute_nested_matches ?configuration ~nested template matches) @ matches)
+        else
+          return matches
+      end
+    and compute_nested_matches ?configuration ?nested template matches =
+      let rec aux acc matches =
+        match (matches : Match.t list) with
+        | [] -> acc
+        | { environment; _ }::rest ->
+          List.fold ~init:acc (Environment.vars environment) ~f:(fun acc v ->
+              let source_opt = Environment.lookup environment v in
+              match source_opt with
+              | Some source ->
+                let nested_matches =
+                  match first ?configuration template source with
+                  | Ok { matched; _ } when String.(matched <> source) ->
+                    if String.(matched = "") && String.length source > 1 then
+                      let matches = aux_all ?configuration ?nested ~template ~source () in
+                      let { match_start = ms; _ } = Option.value_exn (Environment.lookup_range environment v) in
+                      List.map matches ~f:(fun m ->
+                          (*Format.eprintf "Doing %S. Parent matched is %S. Start is %d@." m.matched matched ms.offset;*)
+                          let environment =
+                            List.fold (Environment.vars m.environment) ~init:m.environment ~f:(fun env var ->
+                                let open Option in
+                                let updated : environment option =
+                                  Environment.lookup_range env var
+                                  >>| fun r ->
+                                  let range = {
+                                    match_start =
+                                      { r.match_start with offset = ms.offset + r.match_start.offset - 1 } ;
+                                    match_end =
+                                      { r.match_end with offset = ms.offset + r.match_end.offset - 1 }
+                                  }
+                                  in
+                                  Environment.update_range env var range
+                                in
+                                match updated with
+                                | None -> env
+                                | Some env -> env)
+                          in
+                          let range = {
+                            match_start =
+                              { m.range.match_start with offset = ms.offset + m.range.match_start.offset - 1 } ;
+                            match_end =
+                              { m.range.match_end with offset = ms.offset + m.range.match_end.offset - 1 }
+                          }
+                          in
+                          { m with range; environment })
+                    else
+                      []
+                  | _ ->
+                    []
+                in
+                acc @ nested_matches
+              | _ -> acc)
+          @ aux acc rest
       in
-      let matches = aux [] 0 |> List.rev in
-      (* TODO(RVT): reintroduce nested matches *)
-      let compute_nested_matches matches = matches in
-      let matches = compute_nested_matches matches in
-      return matches
-    end
+      aux [] matches
+    in
+    if nested then
+      (* Use sort on offset for a top-down ordering. *)
+      aux_all ?configuration ~nested ~template ~source:original_source ()
+      |> List.sort ~compare:(fun left right -> left.range.match_start.offset - right.range.match_start.offset)
+    else
+      (* Don't change list order for non-nested matches--it's backwards and matters for rewriting. *)
+      aux_all ?configuration ~nested ~template ~source:original_source ()
 
   let set_rewrite_template _ = () (* Unused in alpha matcher *)
 end

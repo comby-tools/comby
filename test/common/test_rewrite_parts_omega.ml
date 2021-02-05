@@ -8,7 +8,7 @@ open Test_helpers
 include Test_omega
 
 let all ?(configuration = configuration) template source =
-  C.all ~configuration ~template ~source
+  C.all ~configuration ~template ~source ()
 
 let%expect_test "get_offsets_for_holes" =
   let rewrite_template = {|1234:[1]1234:[2]|} in

@@ -29,7 +29,7 @@ let run ?(configuration = configuration) source match_template rewrite_template 
     print_string ""
 
 let run_all ?(configuration = configuration) source match_template rewrite_template =
-  Generic.all ~configuration ~template:match_template ~source
+  Generic.all ~configuration ~template:match_template ~source ()
   |> function
   | [] -> print_string "No matches."
   | results ->
@@ -424,7 +424,7 @@ let%expect_test "trivial_empty_case" =
   let source = "" in
   let match_template = "" in
   begin
-    Generic.all ~configuration ~template:match_template ~source
+    Generic.all ~configuration ~template:match_template ~source ()
     |> function
     | [] -> print_string "No matches."
     | hd :: _ ->

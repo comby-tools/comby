@@ -31,7 +31,7 @@ let %expect_test "statistics" =
     |> Rule.create
     |> Or_error.ok_exn
   in
-  Go.all ~configuration ~template ~source
+  Go.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } ->
       Rule.(sat @@ apply rule environment))
   |> fun matches ->

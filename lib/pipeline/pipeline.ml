@@ -56,7 +56,7 @@ let timed_run
   (match rewrite_template with
    | Some template -> Matcher.set_rewrite_template template;
    | None -> ());
-  let matches = Matcher.all ~configuration ~template ~source in
+  let matches = Matcher.all ~configuration ~template ~source () in
   let rule = Option.value rule ~default:[Ast.True] in
   let matches = apply_rule ?substitute_in_place (module Matcher) omega rule matches in
   List.map matches ~f:(Match.convert_offset ~fast:fast_offset_conversion ~source)
