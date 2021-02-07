@@ -33,6 +33,13 @@ let%expect_test "parse_basic" =
   [%expect_exact {|(rule ((Equal (String a) (String a))))
 |}]
 
+let%expect_test "parse_option_nested" =
+  Rule.create {|where nested, "a" == "a" |}
+  |> Or_error.ok_exn
+  |> fun rule -> print_s [%message (rule : Ast.expression list)];
+  [%expect_exact {|(rule ((Option nested) (Equal (String a) (String a))))
+|}]
+
 let%expect_test "parse_match_one_case" =
   Rule.create {|where match "match_me" { | "case_one" -> true }|}
   |> Or_error.ok_exn
