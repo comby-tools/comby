@@ -823,8 +823,8 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     Match.create ~range ()
 
   let all ?configuration ?(nested = false) ~template ~source:original_source () : Match.t list =
+    configuration_ref := Option.value configuration ~default:!configuration_ref;
     let rec aux_all ?configuration ?(nested = false) ~template ~source () =
-      configuration_ref := Option.value configuration ~default:!configuration_ref;
       matches_ref := [];
       if String.is_empty template && String.is_empty source then [trivial]
       else match first_is_broken template source with
