@@ -858,9 +858,9 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
                               >>| fun r ->
                               let range = {
                                 match_start =
-                                  { r.match_start with offset = ms.offset + r.match_start.offset - 1 } ;
+                                  { r.match_start with offset = ms.offset + r.match_start.offset } ;
                                 match_end =
-                                  { r.match_end with offset = ms.offset + r.match_end.offset - 1 }
+                                  { r.match_end with offset = ms.offset + r.match_end.offset }
                               }
                               in
                               Environment.update_range env var range
@@ -871,9 +871,9 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
                       in
                       let range = {
                         match_start =
-                          { m.range.match_start with offset = ms.offset + m.range.match_start.offset - 1 } ;
+                          { m.range.match_start with offset = ms.offset + m.range.match_start.offset  } ;
                         match_end =
-                          { m.range.match_end with offset = ms.offset + m.range.match_end.offset - 1 }
+                          { m.range.match_end with offset = ms.offset + m.range.match_end.offset }
                       }
                       in
                       { m with range; environment })
