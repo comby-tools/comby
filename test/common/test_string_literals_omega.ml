@@ -7,7 +7,7 @@ open Test_helpers
 include Test_omega
 
 let all ?(configuration = configuration) template source =
-  C.all ~configuration ~template ~source
+  C.all ~configuration ~template ~source ()
 
 let%expect_test "comments_in_string_literals_should_not_be_treated_as_comments_by_fuzzy" =
   let source = {|"/*"(x)|} in
@@ -24,7 +24,7 @@ let%expect_test "comments_in_string_literals_should_not_be_treated_as_comments_b
   let source = {|`//`(x)|} in
   let template = {|(:[1])|} in
   let rewrite_template = {|:[1]|} in
-  Go.all ~configuration ~template ~source
+  Go.all ~configuration ~template ~source ()
   |> Rewrite.all ~source ~rewrite_template
   |> (function
       | Some { rewritten_source; _ } -> print_string rewritten_source
@@ -293,7 +293,7 @@ let%expect_test "go_raw_string_literals" =
   let match_template = {|`:[1]`|} in
   let rewrite_template = {|:[1]|} in
 
-  Go.all ~configuration ~source ~template:match_template
+  Go.all ~configuration ~source ~template:match_template ()
   |> (fun matches -> Option.value_exn (Rewrite.all ~source ~rewrite_template matches))
   |> (fun { rewritten_source; _ } -> rewritten_source)
   |> print_string;
@@ -310,7 +310,7 @@ let%expect_test "go_raw_string_literals" =
   let match_template = {|:[1]|} in
   let rewrite_template = {|:[1]|} in
 
-  Go.all ~configuration ~source ~template:match_template
+  Go.all ~configuration ~source ~template:match_template ()
   |> (fun matches -> Option.value_exn (Rewrite.all ~source ~rewrite_template matches))
   |> (fun { rewritten_source; _ } -> rewritten_source)
   |> print_string;
@@ -320,7 +320,7 @@ let%expect_test "match_string_literals" =
   let source = {|`(` match `(``(` this `(` |} in
   let match_template = {|match :[1] this|} in
   let rewrite_template = {|:[1]|} in
-  Go.all ~configuration ~template:match_template ~source
+  Go.all ~configuration ~template:match_template ~source ()
   |> (fun matches -> Option.value_exn (Rewrite.all ~source ~rewrite_template matches))
   |> (fun { rewritten_source; _ } -> rewritten_source)
   |> print_string;
@@ -340,7 +340,7 @@ let%expect_test "go_raw_string_literals" =
   let match_template = {|`:[1]`|} in
   let rewrite_template = {|:[1]|} in
 
-  Go.all ~configuration ~source ~template:match_template
+  Go.all ~configuration ~source ~template:match_template ()
   |> (fun matches -> Option.value_exn (Rewrite.all ~source ~rewrite_template matches))
   |> (fun { rewritten_source; _ } -> rewritten_source)
   |> print_string;
@@ -356,7 +356,7 @@ let%expect_test "regression_matching_kubernetes" =
   let source = {|"\n" y = 5|} in
   let template = {|y = :[1]|} in
   let rewrite_template = {|:[1]|} in
-  Go.all ~configuration ~template ~source
+  Go.all ~configuration ~template ~source ()
   |> Rewrite.all ~source ~rewrite_template
   |> (function
       | Some { rewritten_source; _ } -> print_string rewritten_source
@@ -368,7 +368,7 @@ let%expect_test "match_escaped_any_char" =
   let source = {|printf("hello world\n");|} in
   let template = {|printf(":[1]");|} in
   let rewrite_template = {|:[1]|} in
-  Go.all ~configuration ~template ~source
+  Go.all ~configuration ~template ~source ()
   |> Rewrite.all ~source ~rewrite_template
   |> (function
       | Some { rewritten_source; _ } -> print_string rewritten_source
@@ -379,7 +379,7 @@ let%expect_test "match_escaped_escaped" =
   let source = {|printf("hello world\n\\");|} in
   let template = {|printf(":[1]");|} in
   let rewrite_template = {|:[1]|} in
-  Go.all ~configuration ~template ~source
+  Go.all ~configuration ~template ~source ()
   |> Rewrite.all ~source ~rewrite_template
   |> (function
       | Some { rewritten_source; _ } -> print_string rewritten_source
@@ -390,7 +390,7 @@ let%expect_test "match_escaped_escaped" =
   let source = {|printf("hello world\n\");|} in
   let template = {|printf(":[1]");|} in
   let rewrite_template = {|:[1]|} in
-  Go.all ~configuration ~template ~source
+  Go.all ~configuration ~template ~source ()
   |> Rewrite.all ~source ~rewrite_template
   |> (function
       | Some { rewritten_source; _ } -> print_string rewritten_source
@@ -417,7 +417,7 @@ let%expect_test "holes_in_raw_literals" =
 |} in
   let template = {|`:[1]`|} in
   begin
-    Typescript.all ~configuration ~template ~source
+    Typescript.all ~configuration ~template ~source ()
     |> function
     | [] -> print_string "No matches."
     | hd :: _ ->
@@ -451,7 +451,7 @@ let%expect_test "holes_in_raw_literals_partial" =
 |} in
   let template = {|` query ResolveRepo(:[1]) {:[2]} `|} in
   begin
-    Typescript.all ~configuration ~template ~source
+    Typescript.all ~configuration ~template ~source ()
     |> function
     | [] -> print_string "No matches."
     | hd :: _ ->
@@ -469,7 +469,7 @@ let%expect_test "dont_detect_comments_in_strings_with_hole_matcher" =
   let source = {|"// not a comment"|} in
   let template = {|":[1]"|} in
   let rewrite_template = {|:[1]|} in
-  Go.all ~configuration ~template ~source
+  Go.all ~configuration ~template ~source ()
   |> Rewrite.all ~source ~rewrite_template
   |> (function
       | Some { rewritten_source; _ } -> print_string rewritten_source
@@ -480,7 +480,7 @@ let%expect_test "match_regex_delimiters" =
   let source = {|/f\/oo/ "/bar/"|} in
   let template = {|/:[1]/|} in
   let rewrite_template = {|:[1]|} in
-  Typescript.all ~configuration ~template ~source
+  Typescript.all ~configuration ~template ~source ()
   |> Rewrite.all ~source ~rewrite_template
   |> (function
       | Some { rewritten_source; _ } -> print_string rewritten_source

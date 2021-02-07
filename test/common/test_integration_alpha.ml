@@ -7,7 +7,7 @@ open Test_helpers
 include Test_alpha
 
 let all ?(configuration = configuration) template source =
-  Generic.all ~configuration ~template ~source
+  Generic.all ~configuration ~template ~source ()
 
 let print_matches matches =
   List.map matches ~f:Match.to_yojson

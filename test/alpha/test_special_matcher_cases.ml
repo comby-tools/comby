@@ -8,7 +8,7 @@ open Matchers.Alpha
 let configuration = Configuration.create ~match_kind:Fuzzy ()
 
 let run ?(configuration = configuration) (module M : Matchers.Matcher) source match_template rewrite_template =
-  M.all ~configuration ~template:match_template ~source
+  M.all ~configuration ~template:match_template ~source ()
   |> function
   | [] -> print_string "No matches."
   | results ->

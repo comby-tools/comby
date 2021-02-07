@@ -7,7 +7,7 @@ open Test_helpers
 include Test_omega
 
 let run_all ?(configuration = configuration) source match_template rewrite_template =
-  Generic.all ~configuration ~template:match_template ~source
+  Generic.all ~configuration ~template:match_template ~source ()
   |> function
   | [] -> print_string "No matches."
   | results ->

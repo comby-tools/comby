@@ -9,7 +9,11 @@ type t = Ast.t
 
 type result = bool * environment option
 
+type options = Options.t
+
 module type Engine = sig
+  val options : t -> Options.t
+
   val sat : result -> bool
 
   val result_env : result -> environment option

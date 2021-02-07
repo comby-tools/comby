@@ -822,18 +822,82 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     in
     Match.create ~range ()
 
-  let all ?configuration ~template ~source : Match.t list =
-    configuration_ref := Option.value configuration ~default:!configuration_ref;
-    matches_ref := [];
-    if String.is_empty template && String.is_empty source then [trivial]
-    else match first_is_broken template source with
-      | Ok _
-      | Error _ -> List.rev !matches_ref
+  let all ?configuration ?(nested = false) ~template ~source:original_source () : Match.t list =
+    let rec aux_all ?configuration ?(nested = false) ~template ~source () =
+      configuration_ref := Option.value configuration ~default:!configuration_ref;
+      matches_ref := [];
+      if String.is_empty template && String.is_empty source then [trivial]
+      else match first_is_broken template source with
+        | Ok _
+        | Error _ ->
+          let matches = List.rev !matches_ref in
+          if nested then
+            (compute_nested_matches ?configuration ~nested template matches) @ matches
+          else
+            matches
+    and compute_nested_matches ?configuration ?nested template matches =
+      let open Match in
+      let open Range in
+      let rec aux acc matches =
+        match (matches : Match.t list) with
+        | [] -> acc
+        | { environment; _ }::rest ->
+          List.fold ~init:acc (Environment.vars environment) ~f:(fun acc v ->
+              let source_opt = Environment.lookup environment v in
+              match source_opt with
+              | Some source ->
+                let nested_matches =
+                  let matches = aux_all ?configuration ?nested ~template ~source () in
+                  let { match_start = ms; _ } = Option.value_exn (Environment.lookup_range environment v) in
+                  List.map matches ~f:(fun m ->
+                      let environment =
+                        List.fold (Environment.vars m.environment) ~init:m.environment ~f:(fun env var ->
+                            let open Option in
+                            let updated : environment option =
+                              Environment.lookup_range env var
+                              >>| fun r ->
+                              let range = {
+                                match_start =
+                                  { r.match_start with offset = ms.offset + r.match_start.offset - 1 } ;
+                                match_end =
+                                  { r.match_end with offset = ms.offset + r.match_end.offset - 1 }
+                              }
+                              in
+                              Environment.update_range env var range
+                            in
+                            match updated with
+                            | None -> env
+                            | Some env -> env)
+                      in
+                      let range = {
+                        match_start =
+                          { m.range.match_start with offset = ms.offset + m.range.match_start.offset - 1 } ;
+                        match_end =
+                          { m.range.match_end with offset = ms.offset + m.range.match_end.offset - 1 }
+                      }
+                      in
+                      { m with range; environment })
+                in
+                acc @ nested_matches
+              | _ -> acc)
+          @ aux acc rest
+      in
+      aux [] matches
+    in
+    if nested then
+      let open Match in
+      (* Use sort on offset for a top-down ordering. *)
+      aux_all ?configuration ~nested ~template ~source:original_source ()
+      |> List.sort ~compare:(fun left right -> left.range.match_start.offset - right.range.match_start.offset)
+    else
+      (* Don't reverse the list for non-nested matches--it matters for rewriting. *)
+      aux_all ?configuration ~nested ~template ~source:original_source ()
+
 
   let first ?configuration ?shift:_ template source : Match.t Or_error.t =
     configuration_ref := Option.value configuration ~default:!configuration_ref;
     matches_ref := [];
-    match all ?configuration ~template ~source with
+    match all ?configuration ~template ~source () with
     | [] -> Or_error.error_string "No result"
     | (hd::_) -> Ok hd (* FIXME be efficient *)
 end
