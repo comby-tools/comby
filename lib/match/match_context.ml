@@ -99,6 +99,7 @@ let pp ppf (source_path, matches) =
     let matched =
       List.map matches ~f:(fun { matched; range; _ } ->
           let matched = String.substr_replace_all matched ~pattern:"\n" ~with_:"\\n" in
+          let matched = String.substr_replace_all matched ~pattern:"\r" ~with_:"\\r" in
           let line = range.match_start.line in
           Format.asprintf "%a%a%s" pp_source_path source_path pp_line_number line matched)
       |> String.concat ~sep:"\n"
