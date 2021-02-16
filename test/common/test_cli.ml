@@ -1017,6 +1017,17 @@ let%expect_test "substitute_ok" =
   [%expect_exact {|hole_1 hole_2
 |}]
 
+let%expect_test "escape_carriage-return" =
+  let source = "line1\r\nline2\r\n" in
+  let match_template = {|:[x\n]|} in
+  let command_args = Format.sprintf {|'%s' '' -stdin -match-only -matcher .c|} match_template in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  read_expect_stdin_and_stdout command source
+  |> print_string;
+  [%expect_exact {|1:line1\r\n
+2:line2\r\n
+|}]
+
 let%expect_test "diff_patches_with_trailing_newlines" =
   let source = "dont care" in
 
