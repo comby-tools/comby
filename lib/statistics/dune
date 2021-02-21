@@ -1,5 +1,6 @@
 (library
   (name statistics)
   (public_name comby.statistics)
-  (preprocess (pps ppx_deriving_yojson bisect_ppx --conditional))
+  (instrumentation (backend bisect_ppx))
+  (preprocess (pps ppx_deriving_yojson))
   (libraries yojson ppx_deriving_yojson ppx_deriving_yojson.runtime))

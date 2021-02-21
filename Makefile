@@ -4,7 +4,7 @@ build:
 	dune build --profile dev
 
 build-with-coverage:
-	@BISECT_ENABLE=yes dune build --profile dev
+	@dune build --instrument-with bisect_ppx
 
 release:
 	@dune build --profile release

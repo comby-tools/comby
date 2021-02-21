@@ -6,7 +6,7 @@
   test_substring_disabled
   test_regex_holes)
  (inline_tests)
- (preprocess (pps ppx_expect ppx_sexp_message ppx_deriving_yojson ppx_deriving_yojson.runtime))
+ (preprocess (pps ppx_expect ppx_sexp_message ppx_deriving_yojson))
  (libraries
   comby
   cohttp-lwt-unix
