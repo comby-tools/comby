@@ -9,7 +9,7 @@ build:
 
 build-with-coverage:
 	@rm -rf comby comby-server benchmark
-	@dune build --instrument-with bisect_ppx
+	@dune build --instrument-with bisect_ppx --force
 	@ln -sfn _build/install/default/bin/comby comby
 	@ln -sfn _build/install/default/bin/comby-server comby-server
 	@ln -sfn _build/install/default/bin/benchmark benchmark
