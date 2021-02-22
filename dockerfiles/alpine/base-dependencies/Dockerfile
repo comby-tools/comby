@@ -30,6 +30,6 @@ COPY push-coverage-report.sh /home/comby/
 RUN sudo chown -R $(whoami) /home/comby
 
 # Build and install the OCaml dependencies.
-RUN eval $(opam env) && opam repository set-url default https://opam.ocaml.org && opam update && opam install . --deps-only -y
+RUN eval $(opam env) && opam repository set-url default https://opam.ocaml.org && opam update && opam install . --deps-only --with-test -y
 # Delete the source files
 RUN sudo rm -rf /home/comby

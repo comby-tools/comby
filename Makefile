@@ -1,21 +1,21 @@
-all: build comby comby-server benchmark
+all: build
 
 build:
-	@rm comby comby-server benchmark
+	@rm -rf comby comby-server benchmark
 	@dune build --profile dev
 	@ln -sfn _build/install/default/bin/comby comby
 	@ln -sfn _build/install/default/bin/comby-server comby-server
 	@ln -sfn _build/install/default/bin/benchmark benchmark
 
 build-with-coverage:
-	@rm comby comby-server benchmark
+	@rm -rf comby comby-server benchmark
 	@dune build --instrument-with bisect_ppx
 	@ln -sfn _build/install/default/bin/comby comby
 	@ln -sfn _build/install/default/bin/comby-server comby-server
 	@ln -sfn _build/install/default/bin/benchmark benchmark
 
 release:
-	@rm comby comby-server benchmark
+	@rm -rf comby comby-server benchmark
 	@dune build --profile release
 	@ln -sfn _build/install/default/bin/comby comby
 	@ln -sfn _build/install/default/bin/comby-server comby-server
