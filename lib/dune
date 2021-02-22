@@ -6,8 +6,7 @@
   (libraries 
    ppxlib 
    core 
-   mparser 
-   mparser.pcre 
+   mparser-comby
    comby.language
    comby.match
    comby.matchers

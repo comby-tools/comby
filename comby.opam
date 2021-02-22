@@ -16,12 +16,12 @@ depends: [
   "conduit-lwt-unix"
   "hack_parallel"
   "mparser-comby"
+  "mparser-comby-pcre"
   "ppxlib"
   "ppx_deriving"
   "angstrom" {< "0.14.0"}
   "opium"
   "pcre"
-  "oasis"
   "tls"
   "camlzip"
   "shell"
@@ -33,7 +33,8 @@ depends: [
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
 pin-depends: [
-  ["mparser-comby.git" "git+https://github.com/comby-tools/mparser.git"]
+  ["mparser-comby.git" "git+https://github.com/comby-tools/mparser.git#dune"]
+  ["mparser-comby-pcre.git" "git+https://github.com/comby-tools/mparser.git#dune"]
   ["patdiff.git" "git+https://github.com/rvantonder/patdiff.git#0.14.0-patch-compatible-diffs"]
   ["camlzip.git" "git+https://github.com/rvantonder/camlzip.git#zip64"]
   ["hack_parallel.git" "git+https://github.com/rvantonder/hack_parallel.git#4.10-unconstrained-core"]
