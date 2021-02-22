@@ -42,8 +42,8 @@ let default context =
 )|} context
 
 let terminal ?(context = 16) () =
-  Patdiff_lib.Configuration.Config.t_of_sexp (Sexp.of_string (default context))
-  |> Patdiff_lib.Configuration.parse
+  Patdiff.Configuration.On_disk.t_of_sexp (Sexp.of_string (default context))
+  |> Patdiff.Configuration.parse
 
 let diff_configuration =
   {|;; -*- scheme -*-
@@ -82,8 +82,8 @@ let diff_configuration =
 )|}
 
 let match_diff () =
-  Patdiff_lib.Configuration.Config.t_of_sexp (Sexp.of_string diff_configuration)
-  |> Patdiff_lib.Configuration.parse
+  Patdiff.Configuration.On_disk.t_of_sexp (Sexp.of_string diff_configuration)
+  |> Patdiff.Configuration.parse
 
 (* Needs (unrefined true), otherwise it just prints without colors. Unrefined true
    will diff on a line basis. line_unified is ignored for unrefined, but
@@ -125,8 +125,8 @@ let plain_configuration =
 |}
 
 let plain () =
-  Patdiff_lib.Configuration.Config.t_of_sexp (Sexp.of_string plain_configuration)
-  |> Patdiff_lib.Configuration.parse
+  Patdiff.Configuration.On_disk.t_of_sexp (Sexp.of_string plain_configuration)
+  |> Patdiff.Configuration.parse
 
 type kind =
   | Plain
@@ -136,7 +136,7 @@ type kind =
   | Match_only
 
 let get_diff kind source_path source_content result =
-  let open Patdiff_lib in
+  let open Patdiff in
   let source_path =
     match source_path with
     | Some path -> path
@@ -150,8 +150,8 @@ let get_diff kind source_path source_content result =
     | Default -> terminal ~context:3 ()
     | Match_only -> match_diff ()
   in
-  let prev = Patdiff_core.{ name = source_path; text = source_content } in
-  let next = Patdiff_core.{ name = source_path; text = result } in
+  let prev = Patdiff.Diff_input.{ name = source_path; text = source_content } in
+  let next = Patdiff.Diff_input.{ name = source_path; text = result } in
 
   Compare_core.diff_strings ~print_global_header:true configuration ~prev ~next
   |> function

@@ -53,7 +53,7 @@ let parse_source_directories
           (String.contains path '/' && Sys.is_file path = `Yes)
           || (Sys.is_file ("." ^/ path) = `Yes) (* See if it matches something in the current directory *)
         in
-        if is_exact path then `Fst path else `Snd path)
+        if is_exact path then Either.First path else Either.Second path)
   in
   let f acc ~depth ~absolute_path ~is_file =
     if depth > max_depth then
