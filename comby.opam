@@ -33,7 +33,6 @@ depends: [
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
 pin-depends: [
-  ["bisect_ppx.git" "git+https://github.com/aantron/bisect_ppx.git"]
   ["mparser-comby.git" "git+https://github.com/comby-tools/mparser.git"]
   ["patdiff.git" "git+https://github.com/rvantonder/patdiff.git#0.14.0-patch-compatible-diffs"]
   ["camlzip.git" "git+https://github.com/rvantonder/camlzip.git#zip64"]
