@@ -13,7 +13,7 @@ depends: [
   "ocaml" {>= "4.08.1"}
   "core"
   "lwt" {= "4.5.0"}
-  "conduit-lwt-unix" {= "2.0.2"}
+  "conduit-lwt-unix"
   "hack_parallel"
   "mparser-comby"
   "ppxlib"
@@ -27,17 +27,17 @@ depends: [
   "shell"
   "patdiff"
   "lwt_react"
-  "ppx_deriving_yojson"
-  "toml"
-  "ppx_tools_versioned" {>= "5.2.3"}
-  "bisect_ppx" {dev & >= "2.0.0"}
+  "ppx_deriving_yojson" {>= "3.6.0"}
+  "toml" {>= "6.0.0"}
+  "dune" {>= "2.7.0"}
+  "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
 pin-depends: [
   ["bisect_ppx.git" "git+https://github.com/aantron/bisect_ppx.git"]
   ["mparser-comby.git" "git+https://github.com/comby-tools/mparser.git"]
-  ["patdiff.git" "git+https://github.com/rvantonder/patdiff.git#0.13.0-patch-compatible-diffs"]
+  ["patdiff.git" "git+https://github.com/rvantonder/patdiff.git#0.14.0-patch-compatible-diffs"]
   ["camlzip.git" "git+https://github.com/rvantonder/camlzip.git#zip64"]
-  ["hack_parallel.git" "git+https://github.com/rvantonder/hack_parallel.git#4.10"]
+  ["hack_parallel.git" "git+https://github.com/rvantonder/hack_parallel.git#4.10-unconstrained-core"]
 ]
 depexts: [
     [

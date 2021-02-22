@@ -8,9 +8,11 @@ let debug =
   |> Option.is_some
 
 module Diff = struct
-  open Patdiff_lib
-  open Patience_diff_lib
+  open Patdiff
   open Configuration
+  open Patience_diff_lib
+  open Patdiff_kernel
+  open Patdiff_core
 
   (* Useful unexposed function Taken from Compare_core. *)
   let compare_lines
@@ -70,7 +72,7 @@ module Diff = struct
       hunks =
     if unrefined then Patience_diff.Hunks.unified hunks
     else
-      Patdiff_core.refine
+      Without_unix.refine
         ~rules
         ~output
         ~keep_ws
@@ -81,7 +83,7 @@ module Diff = struct
         ~word_big_enough
 
   let get_hunks config prev next =
-    let lines { Patdiff_core.name = _; text } = String.split_lines text |> Array.of_list in
+    let lines { Patdiff.Diff_input.name = _; text } = String.split_lines text |> Array.of_list in
     let hunks =
       Comparison_result.create config
         ~prev
@@ -96,17 +98,17 @@ module Diff = struct
 
   let hunk_to_string
       hunks
-      { output; rules; location_style; _ }
+      (style : Patdiff.Configuration.t) (*{ output; rules; location_style; _ }*)
       ?print_global_header
-      ~(prev : Patdiff_core.diff_input)
-      ~(next : Patdiff_core.diff_input) =
-    Patdiff_core.output_to_string
+      ~(prev : Patdiff.Diff_input.t)
+      ~(next : Patdiff.Diff_input.t) =
+    Without_unix.output_to_string
       hunks
       ?print_global_header
-      ~file_names:(prev.name, next.name)
-      ~output
-      ~rules
-      ~location_style
+      ~file_names:(Fake prev.name, Fake next.name)
+      ~output:style.output
+      ~rules:style.rules
+      ~location_style:style.location_style
 
   let apply_style ~with_style hunks prev next =
     let with_style =
@@ -115,7 +117,7 @@ module Diff = struct
       | `Plain -> Diff_configuration.plain ()
     in
     let one_hunk = stylize_hunks with_style hunks in
-    hunk_to_string one_hunk ~print_global_header:true with_style ~prev ~next
+    hunk_to_string one_hunk with_style ~print_global_header:true ~prev ~next
 
 end
 
@@ -250,11 +252,11 @@ let run editor default_is_accept count rewrites =
     Lwt_io.printl text >>= fun () ->
     Lwt_io.read_line Lwt_io.stdin >>= fun _input ->
     let do_one_file path rewritten_source =
-      let open Patdiff_lib in
+      let open Patdiff in
       let source_content = In_channel.read_all path in
       let path = Filename_extended.make_relative path in
-      let prev = Patdiff_core.{ name = path; text = source_content } in
-      let next = Patdiff_core.{ name = path; text = rewritten_source } in
+      let prev = Diff_input.{ name = path; text = source_content } in
+      let next = Diff_input.{ name = path; text = rewritten_source } in
       let context = 3 in
       let rev_hunks =
         let configuration = Diff_configuration.terminal ~context () in

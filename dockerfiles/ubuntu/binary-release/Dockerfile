@@ -25,10 +25,11 @@ COPY push-coverage-report.sh /home/comby/
 
 RUN sudo chown -R $(whoami) /home/comby
 RUN eval $(opam env) && opam install . --deps-only -y
-RUN opam exec -- dune build --profile dev
-RUN make comby comby-server benchmark
+RUN opam exec -- make build
 RUN opam exec -- dune runtest
 RUN opam exec -- dune clean
+# UGH. stop dune from complaining
+RUN rm -rf comby comby-server benchmark
 RUN opam exec -- dune build --profile release
 
 # The binary is now available in /home/comby/_build/default/src/main.exe

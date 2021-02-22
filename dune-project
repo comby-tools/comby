@@ -1,2 +1,2 @@
-(lang dune 1.9)
+(lang dune 2.7)
 (name comby)

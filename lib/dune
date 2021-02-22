@@ -1,7 +1,8 @@
 (library
   (name comby)
   (public_name comby)
-  (preprocess (pps ppx_deriving.show ppx_deriving.eq ppx_sexp_conv bisect_ppx --conditional))
+  (instrumentation (backend bisect_ppx))
+  (preprocess (pps ppx_deriving.show ppx_deriving.eq ppx_sexp_conv))
   (libraries 
    ppxlib 
    core 
