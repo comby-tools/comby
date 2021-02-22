@@ -63,7 +63,7 @@ wget -P lwt https://raw.githubusercontent.com/ocsigen/lwt/master/LICENSE.md
 
 # LGPL
 mkdir toml && \
-wget -P toml https://raw.githubusercontent.com/ocaml-toml/To.ml/master/LICENSE
+wget -P toml https://raw.githubusercontent.com/ocaml-toml/To.ml/master/LICENSE.md
 
 
 # ALL.txt
