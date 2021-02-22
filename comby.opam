@@ -13,7 +13,7 @@ depends: [
   "ocaml" {>= "4.08.1"}
   "core"
   "lwt" {= "4.5.0"}
-  "conduit-lwt-unix" {= "2.0.2"}
+  "conduit-lwt-unix"
   "hack_parallel"
   "mparser-comby"
   "ppxlib"
@@ -29,7 +29,6 @@ depends: [
   "lwt_react"
   "ppx_deriving_yojson" {>= "3.6.0"}
   "toml" {>= "6.0.0"}
-  "ppx_tools_versioned" {>= "5.2.3"}
   "dune" {>= "2.7.0"}
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
