@@ -5,4 +5,4 @@ sudo: required
 before_install: 
     - make docker-test-build
 script:
-    - docker run -it -e TRAVIS_JOB_ID="$TRAVIS_JOB_ID" comby-local-test-build:latest /bin/bash -c "opam exec -- make build && opam exec -- dune clean && opam exec -- make build-with-coverage && opam exec -- dune runtest && ./push-coverage-report.sh"
+    - docker run -it -e TRAVIS="true" -e PULL_REQUEST_NUMBER="$TRAVIS_PULL_REQUEST" -e TRAVIS_JOB_ID="$TRAVIS_JOB_ID" comby-local-test-build:latest /bin/bash -c "opam exec -- make build && opam exec -- dune clean && opam exec -- make build-with-coverage && opam exec -- dune runtest && ./push-coverage-report.sh"
