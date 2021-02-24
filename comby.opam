@@ -17,6 +17,7 @@ depends: [
   "hack_parallel"
   "mparser-comby"
   "mparser-comby-pcre"
+  "parany"
   "ppxlib"
   "ppx_deriving"
   "angstrom" {< "0.14.0"}
@@ -53,6 +54,7 @@ depexts: [
       "pcre"
       "gmp"
       "sqlite3"
+      "autoconf"
     ] {os-distribution = "macos"}
 ]
 synopsis: "A tool for structural code search and replace that supports ~every language"
