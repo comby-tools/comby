@@ -201,6 +201,7 @@ let with_scheduler scheduler ~f =
 let try_or_skip f scheduler ~default =
   try f scheduler with End_of_file -> default
 
+(* use uname -sm and detect arm64, Darwin *)
 let process_paths_parmap ~f (paths : string list) : int =
   Parany.Parmap.parfold ~csize:16 6 (fun path -> f ~input:(Path path) ~output_path:(Some path)) (+) 0 paths
 
