@@ -201,6 +201,9 @@ let with_scheduler scheduler ~f =
 let try_or_skip f scheduler ~default =
   try f scheduler with End_of_file -> default
 
+let process_paths_parmap ~f (paths : string list) : int =
+  Parany.Parmap.parfold ~csize:16 6 (fun path -> f ~input:(Path path) ~output_path:(Some path)) (+) 0 paths
+
 let map_reduce ~init ~map ~reduce data scheduler =
   Scheduler.map_reduce scheduler ~init ~map ~reduce data
 
@@ -358,7 +361,7 @@ let run
     if Option.is_none interactive_review then
       match sources with
       | `String source -> with_scheduler scheduler ~f:(fun _ -> per_unit ~input:(String source) ~output_path:None)
-      | `Paths paths -> process_paths ~sequential ~f:per_unit paths scheduler bound_count
+      | `Paths paths -> process_paths_parmap ~f:per_unit paths
       | `Zip (zip_file, paths) -> process_zip_file ~sequential ~f:per_unit scheduler zip_file paths bound_count
     else
       let rewrites, count =
