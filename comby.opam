@@ -23,7 +23,6 @@ depends: [
   "tls"
   "camlzip"
   "shell"
-  "patdiff"
   "lwt_react"
   "ppx_deriving_yojson" {>= "3.6.0"}
   "toml" {>= "6.0.0"}
@@ -31,7 +30,6 @@ depends: [
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
 pin-depends: [
-  ["patdiff.git" "git+https://github.com/rvantonder/patdiff.git#0.14.0-patch-compatible-diffs"]
   ["camlzip.git" "git+https://github.com/rvantonder/camlzip.git#zip64"]
 ]
 depexts: [
