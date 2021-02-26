@@ -1,0 +1,73 @@
+2017-06-12  Max Mouratov  <mmouratov@gmail.com>
+
+	Version 1.2.3
+
+	* New: [MParser.is_not].
+	* New: [MParser.non_space].
+	* Fix: A couple of implementation tweaks were added that should provide
+	a minor performance boost.
+
+
+2017-05-19  Max Mouratov  <mmouratov@gmail.com>
+
+	Version 1.2.2
+
+	A minor release that improves documentation.
+
+
+2016-11-19  Max Mouratov  <mmouratov@gmail.com>
+
+	Version 1.2.1
+
+	* New: OASIS is set up to produce API reference (in HTML).
+	* Fix: The library file names were made distinct from the corresponding
+	module names, as name conflicts made OASIS confused on Windows.
+	* Fix: A couple of implementation tweaks were added that should provide
+	a minor performance boost.
+
+
+2016-01-20  Max Mouratov  <mmouratov@gmail.com>
+
+	Version 1.2
+
+	* New: [MParser.(>>)] and [MParser.(<<)] now have aliases
+	[MParser.(>>>)] and [MParser.(<<<)], the names of which do not cause
+	conflicts with the Camlp4 parser ("<<" is the start of a quotation).
+	* New: [MParser.skip p] is now an alias for [p |>> ignore]. The old
+	[MParser.skip] is now available as [MParser.skip_nchars], which is a
+	more suitable name for its semantics.
+	* New (MParser_PCRE): [`Anchored] is now a compilation flag instead
+	of a runtime one, which helps a little bit with performance.
+	* Fix: [CharStream] was renamed to [MParser_Char_Stream] in order to
+	avoid link-time module name conflicts with other libraries.
+	* Fix (MParser_Char_Stream): Mutable strings were replaced with
+	[Bytes.t] in the implementation, as it should be in modern OCaml.
+
+
+2014-07-04  Max Mouratov  <mmouratov@gmail.com>
+
+	Version 1.1
+
+	* New: Support for pluggable regular expression engines.
+	* New (MParser_PCRE): PCRE-related functionality is split out into a
+	separate, optional subpackage.
+	* New (MParser_RE): support for RE-based regular expressions.
+	* Fix: .cmxs files (native plugins) are built correctly now.
+	* New: [MParser.set_pos].
+
+
+2013-05-02  Max Mouratov  <mmouratov@gmail.com>
+
+	Version 1.0.1
+
+	* Fix: "expecting" and "unexpected" error messages must not contain
+	duplicate items.
+	* New: A tutorial section in the README file.
+
+
+2013-01-22  Max Mouratov  <mmouratov@gmail.com>
+
+	Version 1.0 (initial version after ripping the code out of ocaml-base)
+
+	* Fix: A bug in [MParser.option].
+        * New: [MParser.bind] (for the sake of compatibility with pa_monad).
