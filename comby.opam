@@ -37,7 +37,6 @@ pin-depends: [
   ["mparser-comby-pcre.git" "git+https://github.com/comby-tools/mparser.git#dune"]
   ["patdiff.git" "git+https://github.com/rvantonder/patdiff.git#0.14.0-patch-compatible-diffs"]
   ["camlzip.git" "git+https://github.com/rvantonder/camlzip.git#zip64"]
-  ["hack_parallel.git" "git+https://github.com/rvantonder/hack_parallel.git#4.10-unconstrained-core"]
 ]
 depexts: [
     [
