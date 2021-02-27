@@ -16,7 +16,7 @@ depends: [
   "conduit-lwt-unix"
   "ppxlib"
   "ppx_deriving"
-  "angstrom"
+  "angstrom" {>= "0.15.0"}
   "opium"
   "pcre"
   "patience_diff" {>= "v0.14" & < "v0.15"}
