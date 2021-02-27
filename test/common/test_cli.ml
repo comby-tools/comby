@@ -1,4 +1,5 @@
 open Core
+open Camlzip
 
 module Time = Core_kernel.Time_ns.Span
 

@@ -29,9 +29,6 @@ depends: [
   "dune" {>= "2.7.0"}
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
-pin-depends: [
-  ["camlzip.git" "git+https://github.com/rvantonder/camlzip.git#zip64"]
-]
 depexts: [
     [
       "pkg-config"

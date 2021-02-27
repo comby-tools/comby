@@ -1,5 +1,5 @@
 open Core
-
+open Camlzip
 open Hack_parallel
 
 open Configuration

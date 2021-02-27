@@ -1,5 +1,6 @@
 open Core
 open Toml
+open Camlzip
 
 open Polymorphic_compare
 
