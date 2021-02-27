@@ -3,6 +3,7 @@
 !lib
 !docs
 !test
+!vendored
 !Makefile
 !comby.opam
 !dune
