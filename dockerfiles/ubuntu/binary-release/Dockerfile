@@ -8,7 +8,7 @@ RUN sudo apt-get update && sudo apt-get install -y \
 	zlib1g-dev \
 	m4 \
 	libgmp-dev \
-    libsqlite3-dev
+	libsqlite3-dev
 
 RUN opam init --no-setup --disable-sandboxing --compiler=4.11.0
 RUN eval $(opam env) && opam repository set-url default https://opam.ocaml.org && opam update
@@ -21,6 +21,7 @@ COPY docs /home/comby/docs
 COPY src /home/comby/src
 COPY lib /home/comby/lib
 COPY test /home/comby/test
+COPY vendored /home/comby/vendored
 COPY push-coverage-report.sh /home/comby/
 
 RUN sudo chown -R $(whoami) /home/comby
