@@ -1,0 +1,3 @@
+(library (name patdiff_app_test)
+ (libraries async core expect_test_helpers_async expect_test_helpers_core)
+ (preprocess (pps ppx_jane)))

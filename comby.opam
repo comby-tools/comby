@@ -14,29 +14,19 @@ depends: [
   "core"
   "lwt" {= "4.5.0"}
   "conduit-lwt-unix"
-  "hack_parallel"
-  "mparser-comby"
-  "mparser-comby-pcre"
   "ppxlib"
   "ppx_deriving"
   "angstrom" {< "0.14.0"}
   "opium"
   "pcre"
+  "patience_diff" {>= "v0.14" & < "v0.15"}
   "tls"
-  "camlzip"
   "shell"
-  "patdiff"
   "lwt_react"
   "ppx_deriving_yojson" {>= "3.6.0"}
   "toml" {>= "6.0.0"}
   "dune" {>= "2.7.0"}
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
-]
-pin-depends: [
-  ["mparser-comby.git" "git+https://github.com/comby-tools/mparser.git#dune"]
-  ["mparser-comby-pcre.git" "git+https://github.com/comby-tools/mparser.git#dune"]
-  ["patdiff.git" "git+https://github.com/rvantonder/patdiff.git#0.14.0-patch-compatible-diffs"]
-  ["camlzip.git" "git+https://github.com/rvantonder/camlzip.git#zip64"]
 ]
 depexts: [
     [

@@ -1,0 +1,55 @@
+(executables
+  (libraries camlzip)
+  (modules minizip_on_linux)
+  (modes exe)
+  (names minizip_on_linux))
+
+(executables
+  (libraries camlzip)
+  (modules minizip)
+  (modes exe)
+  (names minizip))
+
+(executables
+  (libraries camlzip)
+  (modules minigzip)
+  (modes exe)
+  (names minigzip))
+
+(executables
+  (libraries camlzip)
+  (modules testzlib)
+  (modes exe)
+  (names testzlib))
+
+(alias
+  (name DEFAULT)
+  (deps minizip_on_linux.exe))
+
+(alias
+  (name DEFAULT)
+  (deps minizip.exe))
+
+(alias
+  (name DEFAULT)
+  (deps minigzip.exe))
+
+(alias
+  (name DEFAULT)
+  (deps testzlib.exe))
+
+(install
+  (section bin)
+  (files (minizip_on_linux.exe as minizip_on_linux)))
+
+(install
+  (section bin)
+  (files (minizip.exe as minizip)))
+
+(install
+  (section bin)
+  (files (minigzip.exe as minigzip)))
+
+(install
+  (section bin)
+  (files (testzlib.exe as testzlib)))

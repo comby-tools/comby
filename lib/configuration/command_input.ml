@@ -4,7 +4,7 @@ type single_source =
 
 type t =
   [ `Paths of string list
-  | `Zip of string * Zip.entry list
+  | `Zip of string * Camlzip.Zip.entry list
   | `String of string
   ]
 
