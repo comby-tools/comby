@@ -1,0 +1,28 @@
+(library
+ (name camlzip)
+ (public_name camlzip)
+ (synopsis "OCaml ZIP interface")
+ (modules gzip zip zlib)
+ ; the next library stanza isn't strictly required to compile, 
+ ; as long as the unix parts are not needed, but I want it to 
+ ; compile executables for tests
+ (libraries unix)
+ (c_names zlibstubs)
+ (c_flags
+  (:include c_flags.sexp))
+ (c_library_flags
+  (:include c_library_flags.sexp)))
+
+(rule
+ (targets c_flags.sexp c_library_flags.sexp)
+ (deps
+  (:discover config/discover.exe))
+ (action
+  (run %{discover})))
+
+(env
+ (dev
+  (flags (:standard -w A-3-4-27-29-32-34-35-39-40-41-42-44-45-48-49-50-57-60)))
+ (release
+  (flags (:standard -w A-3-4-27-29-32-34-35-39-40-41-42-44-45-48-49-50-57-60))
+ (ocamlopt_flags (-O3))))
