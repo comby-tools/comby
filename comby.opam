@@ -14,14 +14,13 @@ depends: [
   "core"
   "lwt" {= "4.5.0"}
   "conduit-lwt-unix"
-  "hack_parallel"
   "ppxlib"
   "ppx_deriving"
   "angstrom" {< "0.14.0"}
   "opium"
   "pcre"
+  "patience_diff" {>= "v0.14" & < "v0.15"}
   "tls"
-  "camlzip"
   "shell"
   "lwt_react"
   "ppx_deriving_yojson" {>= "3.6.0"}
