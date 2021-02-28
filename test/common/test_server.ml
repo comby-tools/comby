@@ -48,10 +48,8 @@ let kill () =
     | `Ok -> ()
     | `No_such_process -> ()
 
-let () = launch ()
-
 let%expect_test "post_request" =
-
+  let () = launch () in
   let source = "hello world" in
   let match_template = "hello :[1]" in
   let rule = Some {|where :[1] == "world"|} in
