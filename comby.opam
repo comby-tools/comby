@@ -26,6 +26,8 @@ depends: [
   "shell"
   "toml" {>= "6.0.0"}
   "tls"
+  "hack_parallel" { arch != "arm32" & arch != "arm64" }
+  "parany" 
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
 depexts: [
@@ -37,6 +39,9 @@ depexts: [
       "libgmp-dev"
       "libsqlite3-dev"
     ] {os-distribution = "ubuntu"}
+    [
+      "autoconf"
+    ] { arch = "arm32" | arch = "arm64" }
     [
       "pkg-config"
       "pcre"

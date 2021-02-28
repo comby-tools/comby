@@ -1,6 +1,3 @@
-open Core
-open Hack_parallel
-
 open Configuration
 open Command_configuration
 
@@ -11,10 +8,8 @@ let configuration =
   ; sources = `String "source"
   ; specifications = []
   ; run_options =
-      { sequential = true
-      ; verbose = false
+      { verbose = false
       ; match_timeout = 3
-      ; number_of_workers = 4
       ; dump_statistics = false
       ; substitute_in_place = true
       ; disable_substring_matching = false
@@ -22,6 +17,7 @@ let configuration =
       ; fast_offset_conversion = false
       ; match_newline_toplevel = false
       ; bound_count = None
+      ; compute_mode = `Sequential
       }
   ; output_printer = (fun _ -> ())
   ; interactive_review = None
@@ -34,6 +30,8 @@ let configuration =
       { configuration.run_options with omega = true }
   }
 
+(* TODO restore this, can't access the Parallel_hack module *)
+(*
 let%expect_test "interactive_paths" =
   let _, count =
     let scheduler = Scheduler.create ~number_of_workers:1 () in
@@ -61,3 +59,4 @@ let%expect_test "launch_editor" =
   in
   print_string result;
   [%expect_exact {|Not a tty|}]
+*)
