@@ -12,20 +12,20 @@ build: [
 depends: [
   "ocaml" {>= "4.08.1"}
   "core"
+  "dune" {>= "2.7.0"}
+  "angstrom" {>= "0.15.0"}
   "lwt" {= "4.5.0"}
+  "lwt_react"
   "conduit-lwt-unix"
+  "opium"
+  "patience_diff" {>= "v0.14" & < "v0.15"}
   "ppxlib"
   "ppx_deriving"
-  "angstrom" {< "0.14.0"}
-  "opium"
-  "pcre"
-  "patience_diff" {>= "v0.14" & < "v0.15"}
-  "tls"
-  "shell"
-  "lwt_react"
   "ppx_deriving_yojson" {>= "3.6.0"}
+  "pcre"
+  "shell"
   "toml" {>= "6.0.0"}
-  "dune" {>= "2.7.0"}
+  "tls"
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
 depexts: [

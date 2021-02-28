@@ -329,7 +329,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
     List.fold_right p_list ~init:(return (Unit, acc)) ~f:(fun p acc ->
         let result =
           if debug then Format.printf "iterate fold_right %d@." !i;
-          match parse_string p "_signal_hole" with
+          match parse_string ~consume:All p "_signal_hole" with
           | Error s ->
             if debug then Format.printf "Composing p with terminating parser, error %s@." s;
             p *> acc
@@ -648,7 +648,7 @@ module Make (Syntax : Syntax.S) (Info : Info.S) = struct
            |>> generate_string_token_parser)
         ]
     in
-    match parse_string parser contents with
+    match parse_string ~consume:All parser contents with
     | Ok parsers -> sequence_chain ~left_delimiter ~right_delimiter parsers
     | Error _ ->
       failwith "If this failure happens it is a bug: Converting a \

@@ -20,7 +20,7 @@ let parse_first_label template =
       ; any_char >>= fun _ -> return None
       ]
   in
-  parse_string parser template
+  parse_string ~consume:All parser template
   |> function
   | Ok label -> List.find_map label ~f:ident
   | Error _ -> None
