@@ -209,12 +209,12 @@ let write_statistics number_of_matches sources start_time =
 
 let run_batch ~f:per_unit sources compute_mode bound_count =
   match compute_mode with
-  | `Hack_parallel number_of_workers ->
-    Parallel_hack.process ~f:per_unit number_of_workers bound_count sources
-  | `Parany number_of_workers ->
-    Parallel_parany.process ~f:per_unit number_of_workers bound_count sources
   | `Sequential ->
     Sequential.process ~f:per_unit bound_count sources
+  | `Parany number_of_workers ->
+    Parallel_parany.process ~f:per_unit number_of_workers bound_count sources
+  | `Hack_parallel number_of_workers ->
+    Parallel_hack.process ~f:per_unit number_of_workers bound_count sources
 
 let run_interactive
     specifications
@@ -254,8 +254,8 @@ let run_interactive
   let rewrites, count =
     match compute_mode with
     | `Sequential -> Sequential.process_interactive ~f:with_rewrites paths
-    | `Hack_parallel number_of_workers -> Parallel_hack.process_interactive ~f:with_rewrites paths number_of_workers
     | `Parany number_of_workers -> Parallel_parany.process_interactive ~f:with_rewrites paths number_of_workers
+    | `Hack_parallel number_of_workers -> Parallel_hack.process_interactive ~f:with_rewrites paths number_of_workers
   in
   let { editor; default_is_accept } = interactive_review in
   Interactive.run editor default_is_accept count rewrites;
