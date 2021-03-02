@@ -231,11 +231,17 @@ type user_input_options =
   ; ripgrep_args : string option
   }
 
+type number_of_workers = int
+
+type compute_mode =
+  [ `Sequential
+  | `Hack_parallel of int
+  | `Parany of int
+  ]
+
 type run_options =
-  { sequential : bool
-  ; verbose : bool
+  { verbose : bool
   ; match_timeout : int
-  ; number_of_workers : int
   ; dump_statistics : bool
   ; substitute_in_place : bool
   ; disable_substring_matching : bool
@@ -243,6 +249,7 @@ type run_options =
   ; fast_offset_conversion : bool
   ; match_newline_toplevel : bool
   ; bound_count : int option
+  ; compute_mode : compute_mode
   }
 
 type user_input =

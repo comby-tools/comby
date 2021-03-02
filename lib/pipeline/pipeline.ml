@@ -1,6 +1,4 @@
 open Core
-open Camlzip
-open Hack_parallel
 
 open Configuration
 open Command_configuration
@@ -140,12 +138,6 @@ let output_result output_printer source_path source_content result =
     in
     output_printer (Printer.Replacements { source_path; replacements; result; source_content })
 
-let with_zip zip_file ~f =
-  let zip_in = Zip.open_in zip_file in
-  let result = f zip_in in
-  Zip.close_in zip_in;
-  result
-
 let run_on_specifications specifications output_printer process (input : single_source) output_file =
   let result, count =
     List.fold specifications ~init:(Nothing, 0) ~f:(fun (result, count) specification ->
@@ -190,84 +182,6 @@ let run_on_specifications_for_interactive specifications process (input : single
   | Replacement (_, content, _) -> Some content, count
   | _ -> None, 0
 
-let with_scheduler scheduler ~f =
-  let result = f scheduler in
-  begin
-    try Scheduler.destroy scheduler
-    with Unix.Unix_error (_,"kill",_) -> Format.printf "UH OH@."; ()
-  end;
-  result
-
-let try_or_skip f scheduler ~default =
-  try f scheduler with End_of_file -> default
-
-let map_reduce ~init ~map ~reduce data scheduler =
-  Scheduler.map_reduce scheduler ~init ~map ~reduce data
-
-let process_paths ~sequential ~f paths scheduler bound_count =
-  let fold =
-    match bound_count with
-    | None ->
-      List.fold ~f:(fun count path -> count + f ~input:(Path path) ~output_path:(Some path))
-    | Some bound_count ->
-      List.fold_until ~finish:(fun x -> x) ~f:(fun acc path ->
-          if acc > bound_count then
-            Stop acc
-          else
-            Continue (acc + f ~input:(Path path) ~output_path:(Some path)))
-  in
-  let process_bucket ~init paths = fold ~init paths  in
-  if sequential then
-    process_bucket ~init:0 paths
-  else
-    let map acc bucket_of_paths = process_bucket ~init:acc bucket_of_paths in
-    let reduce = (+) in
-    let init = 0 in
-    let f = map_reduce ~init ~map ~reduce paths in
-    with_scheduler scheduler ~f:(try_or_skip f ~default:0)
-
-let process_paths_for_interactive ~sequential ~f paths scheduler =
-  let process_bucket ~init paths =
-    List.fold ~init paths ~f:(fun (acc, c) path ->
-        match f ~input:(Path path) ~path:(Some path) with
-        | Some rewritten_source, c' -> Interactive.{ path; rewritten_source }::acc, c+c'
-        | None, c' -> acc, c + c')
-  in
-  if sequential then process_bucket ~init:([], 0) paths
-  else
-    let map acc bucket_of_paths = process_bucket ~init:acc bucket_of_paths in
-    let reduce (acc', c') (acc, c) = (List.append acc acc'), (c' + c) in
-    let init = ([], 0) in
-    let f = map_reduce ~init ~map ~reduce paths in
-    with_scheduler scheduler ~f:(try_or_skip f ~default:([], 0))
-
-let process_zip_file ~sequential ~f scheduler zip_file paths max_count =
-  let process_zip_bucket ~init (paths : Zip.entry list) zip =
-    let fold =
-      match max_count with
-      | None ->
-        List.fold ~f:(fun count ({ Zip.filename; _ } as entry) ->
-            let source = Zip.read_entry zip entry in
-            count + f ~input:(String source) ~output_path:(Some filename))
-      | Some max_count ->
-        List.fold_until ~finish:(fun x -> x) ~f:(fun count ({ Zip.filename; _ } as entry) ->
-            if count > max_count then
-              Stop count
-            else
-              let source = Zip.read_entry zip entry in
-              Continue (count + f ~input:(String source) ~output_path:(Some filename)))
-    in
-    fold ~init paths
-  in
-  let process_bucket ~init paths = with_zip zip_file ~f:(process_zip_bucket ~init paths) in
-  if sequential then process_bucket ~init:0 paths
-  else
-    let map acc bucket_of_paths = process_bucket ~init:acc bucket_of_paths in
-    let reduce = (+) in
-    let init = 0 in
-    let f = map_reduce ~init ~map ~reduce paths in
-    with_scheduler scheduler ~f:(try_or_skip f ~default:0)
-
 let write_statistics number_of_matches sources start_time =
   let total_time = Statistics.Time.stop start_time in
   let lines_of_code, number_of_files =
@@ -275,19 +189,10 @@ let write_statistics number_of_matches sources start_time =
     | `String source ->
       List.length (String.split_lines source), 1
     | `Paths paths ->
-      let lines_of_code =
-        List.fold paths ~init:0 ~f:(fun acc paths ->
-            In_channel.read_lines paths
-            |> List.length
-            |> (+) acc)
-      in
+      let lines_of_code = Fold.loc_paths paths in
       lines_of_code, List.length paths
     | `Zip (zip_file, paths) ->
-      let lines_of_code =
-        with_zip zip_file ~f:(fun zip ->
-            List.fold paths ~init:0 ~f:(fun acc entry ->
-                let source = Zip.read_entry zip entry in
-                acc + (List.length (String.split_lines source))))in
+      let lines_of_code = Fold.loc_zip zip_file paths in
       lines_of_code, List.length paths
     | _ -> failwith "No single path handled here"
   in
@@ -302,15 +207,67 @@ let write_statistics number_of_matches sources start_time =
   @@ Yojson.Safe.pretty_to_string
   @@ Statistics.to_yojson statistics
 
+let run_batch ~f:per_unit sources compute_mode bound_count =
+  match compute_mode with
+  | `Sequential ->
+    Sequential.process ~f:per_unit bound_count sources
+  | `Parany number_of_workers ->
+    Parallel_parany.process ~f:per_unit number_of_workers bound_count sources
+  | `Hack_parallel number_of_workers ->
+    Parallel_hack.process ~f:per_unit number_of_workers bound_count sources
+
+let run_interactive
+    specifications
+    sequential
+    matcher
+    omega
+    fast_offset_conversion
+    substitute_in_place
+    match_configuration
+    verbose
+    match_timeout
+    sources
+    compute_mode
+    interactive_review =
+  let with_rewrites ~input ~path:_ =
+    run_on_specifications_for_interactive
+      specifications
+      (fun (input : single_source) specification ->
+         process_single_source
+           sequential
+           matcher
+           omega
+           fast_offset_conversion
+           substitute_in_place
+           match_configuration
+           input
+           specification
+           verbose
+           match_timeout)
+      input
+  in
+  let paths =
+    match sources with
+    | `Paths paths -> paths
+    | _ -> failwith "Cannot run interactive mode with this input source, must be file paths."
+  in
+  let rewrites, count =
+    match compute_mode with
+    | `Sequential -> Sequential.process_interactive ~f:with_rewrites paths
+    | `Parany number_of_workers -> Parallel_parany.process_interactive ~f:with_rewrites paths number_of_workers
+    | `Hack_parallel number_of_workers -> Parallel_hack.process_interactive ~f:with_rewrites paths number_of_workers
+  in
+  let { editor; default_is_accept } = interactive_review in
+  Interactive.run editor default_is_accept count rewrites;
+  count
+
 let run
     { matcher
     ; sources
     ; specifications
     ; run_options =
-        { sequential
-        ; verbose
+        { verbose
         ; match_timeout
-        ; number_of_workers
         ; dump_statistics
         ; substitute_in_place
         ; disable_substring_matching
@@ -318,14 +275,14 @@ let run
         ; fast_offset_conversion
         ; match_newline_toplevel
         ; bound_count
+        ; compute_mode
         }
     ; output_printer
     ; interactive_review
     ; extension = _ (* FIXME *)
     }
   =
-  let number_of_workers = if sequential then 0 else number_of_workers in
-  let scheduler = Scheduler.create ~number_of_workers () in
+  let sequential = match compute_mode with | `Sequential -> true | _ -> false in
   let match_configuration =
     Configuration.create
       ~disable_substring_matching
@@ -355,39 +312,25 @@ let run
       output_path
   in
   let count =
-    if Option.is_none interactive_review then
-      match sources with
-      | `String source -> with_scheduler scheduler ~f:(fun _ -> per_unit ~input:(String source) ~output_path:None)
-      | `Paths paths -> process_paths ~sequential ~f:per_unit paths scheduler bound_count
-      | `Zip (zip_file, paths) -> process_zip_file ~sequential ~f:per_unit scheduler zip_file paths bound_count
-    else
-      let rewrites, count =
-        with_scheduler scheduler ~f:(fun _scheduler ->
-            match sources with
-            | `Paths paths ->
-              let with_rewrites ~input ~path:_ =
-                run_on_specifications_for_interactive
-                  specifications
-                  (fun (input : single_source) specification ->
-                     process_single_source
-                       sequential
-                       matcher
-                       omega
-                       fast_offset_conversion
-                       substitute_in_place
-                       match_configuration
-                       input
-                       specification
-                       verbose
-                       match_timeout)
-                  input
-              in
-              let count, inputs = process_paths_for_interactive ~sequential ~f:with_rewrites paths scheduler in
-              count, inputs
-            | _ -> failwith "Can't run interactive review for these inputs")
-      in
-      let { editor; default_is_accept } = Option.value_exn interactive_review in
-      Interactive.run editor default_is_accept count rewrites;
-      count
+    match interactive_review with
+    | None ->
+      begin match sources with
+        | `String source ->  per_unit ~input:(String source) ~output_path:None
+        | #batch_input as sources -> run_batch ~f:per_unit sources compute_mode bound_count
+      end
+    | Some interactive_review ->
+      run_interactive
+        specifications
+        sequential
+        matcher
+        omega
+        fast_offset_conversion
+        substitute_in_place
+        match_configuration
+        verbose
+        match_timeout
+        sources
+        compute_mode
+        interactive_review
   in
   if dump_statistics then write_statistics count sources start_time;

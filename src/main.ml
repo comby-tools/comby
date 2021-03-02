@@ -107,6 +107,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and regex_pattern = flag "regex" no_arg ~doc:"print a regex that a file must satisfy in order for a pattern to be run"
     and ripgrep_args = flag "ripgrep" (optional string) ~aliases:["rg"] ~doc:"flags Activate ripgrep for filtering files. Add flags like '-g *.go' to include or exclude file extensions."
     and bound_count = flag "bound-count" (optional int) ~doc:"num Stop running when at least num matches are found (possibly more are returned for parallel jobs)."
+    and parany = flag "parany" no_arg ~doc:"force comby to use the alternative parany parallel processing library."
     and anonymous_arguments =
       anon
         (maybe
@@ -180,6 +181,14 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     let omega = omega || omega_env in
     let fast_offset_conversion_env = Option.is_some @@ Sys.getenv "FAST_OFFSET_CONVERSION_COMBY" in
     let fast_offset_conversion = fast_offset_conversion_env || fast_offset_conversion in
+    let arch = Unix.Utsname.machine (Core.Unix.uname ()) in
+    let compute_mode = match sequential, parany, arch with
+      | true, _, _ -> `Sequential
+      | _, true, _
+      | _, _, "arm32"
+      | _, _, "arm64" -> `Parany number_of_workers
+      | _, false, _ -> `Hack_parallel number_of_workers
+    in
     let configuration =
       Command_configuration.create
         { input_options =
@@ -200,10 +209,8 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; ripgrep_args
             }
         ; run_options =
-            { sequential
-            ; verbose
+            { verbose
             ; match_timeout
-            ; number_of_workers
             ; dump_statistics
             ; substitute_in_place
             ; disable_substring_matching
@@ -211,6 +218,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; fast_offset_conversion
             ; match_newline_toplevel
             ; bound_count
+            ; compute_mode
             }
         ; output_options =
             { color
@@ -264,7 +272,7 @@ let parse_comby_dot_file () =
     to_flags flags
 
 let () =
-  Scheduler.Daemon.check_entry_point ();
+  If_hack_parallel.check_entry_point ();
   Command.run default_command ~version:"1.1.0" ~extend:(fun _ ->
       match Sys.file_exists ".comby" with
       | `Yes -> parse_comby_dot_file ()

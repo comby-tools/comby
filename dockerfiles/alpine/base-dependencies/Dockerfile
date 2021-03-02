@@ -13,7 +13,8 @@ RUN sudo apk --no-cache add \
     perl \
     gmp-dev \
     zlib-dev \
-    sqlite-dev
+    sqlite-dev \
+    autoconf
 
 # Copy the source files.
 COPY Makefile /home/comby/
