@@ -18,6 +18,7 @@ depends: [
   "lwt_react"
   "conduit-lwt-unix"
   "opium"
+  "parany" 
   "patience_diff" {>= "v0.14" & < "v0.15"}
   "ppxlib"
   "ppx_deriving"
@@ -27,7 +28,6 @@ depends: [
   "toml" {>= "6.0.0"}
   "tls"
   "hack_parallel" { arch != "arm32" & arch != "arm64" }
-  "parany" 
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
 depexts: [
@@ -38,15 +38,14 @@ depexts: [
       "m4"
       "libgmp-dev"
       "libsqlite3-dev"
-    ] {os-distribution = "ubuntu"}
-    [
       "autoconf"
-    ] { arch = "arm32" | arch = "arm64" }
+    ] {os-distribution = "ubuntu"}
     [
       "pkg-config"
       "pcre"
       "gmp"
       "sqlite3"
+      "autoconf"
     ] {os-distribution = "macos"}
 ]
 synopsis: "A tool for structural code search and replace that supports ~every language"
