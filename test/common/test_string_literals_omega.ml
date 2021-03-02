@@ -476,6 +476,8 @@ let%expect_test "dont_detect_comments_in_strings_with_hole_matcher" =
       | None -> print_string "BROKEN EXPECT");
   [%expect_exact {|// not a comment|}]
 
+(* Deactivated: this will conflict with division syntax *)
+(*
 let%expect_test "match_regex_delimiters" =
   let source = {|/f\/oo/ "/bar/"|} in
   let template = {|/:[1]/|} in
@@ -486,3 +488,4 @@ let%expect_test "match_regex_delimiters" =
       | Some { rewritten_source; _ } -> print_string rewritten_source
       | None -> print_string "EXPECT SUCCESS");
   [%expect_exact {|f\/oo "/bar/"|}]
+*)

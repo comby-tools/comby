@@ -539,7 +539,7 @@ module Javascript = struct
 
     let escapable_string_literals =
       Some
-        { delimiters = [{|"|}; {|'|}; {|/|}]
+        { delimiters = [{|"|}; {|'|}]
         ; escape_character = '\\'
         }
 
