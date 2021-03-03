@@ -1,5 +1,5 @@
 open Core
-open Opium.Std
+open Opium
 
 open Comby
 open Language
@@ -37,7 +37,7 @@ let check_too_long s =
     Ok s
 
 let perform_match request =
-  App.string_of_body_exn request
+  Request.to_plain_text request
   >>| check_too_long
   >>| Result.map ~f:(Fn.compose In.match_request_of_yojson Yojson.Safe.from_string)
   >>| Result.join
@@ -65,13 +65,13 @@ let perform_match request =
       | Some Error error -> 400, Error.to_string_hum error
     in
     if debug then Format.printf "Result (%d) %s@." code result;
-    respond ~code:(`Code code) (`String result)
+    Response.make ~status:(Status.of_code code) ~body:(Body.of_string result) ()
   | Error error ->
     if debug then Format.printf "Result (400) %s@." error;
-    respond ~code:(`Code 400) (`String error)
+    Response.make ~status:(Status.of_code 400) ~body:(Body.of_string error) ()
 
 let perform_rewrite request =
-  App.string_of_body_exn request
+  Request.to_plain_text request
   >>| check_too_long
   >>| Result.map ~f:(Fn.compose In.rewrite_request_of_yojson Yojson.Safe.from_string)
   >>| Result.join
@@ -123,13 +123,13 @@ let perform_rewrite request =
       | Some Error error -> 400, Error.to_string_hum error
     in
     if debug then Format.printf "Result (%d): %s@." code result;
-    respond ~code:(`Code code) (`String result)
+    Response.make ~status:(Status.of_code code) ~body:(Body.of_string result) ()
   | Error error ->
     if debug then Format.printf "Result (400): %s@." error;
-    respond ~code:(`Code 400) (`String error)
+    Response.make ~status:(Status.of_code 400) ~body:(Body.of_string error) ()
 
 let perform_environment_substitution request =
-  App.string_of_body_exn request
+  Request.to_plain_text request
   >>| Yojson.Safe.from_string
   >>| In.substitution_request_of_yojson
   >>| function
@@ -143,28 +143,10 @@ let perform_environment_substitution request =
         }
     in
     if debug then Format.printf "Result (%d) %s@." code result;
-    respond ~code:(`Code code) (`String result)
+    Response.make ~status:(Status.of_code code) ~body:(Body.of_string result) ()
   | Error error ->
     if debug then Format.printf "Result (400) %s@." error;
-    respond ~code:(`Code 400) (`String error)
-
-let add_cors_headers (headers: Cohttp.Header.t): Cohttp.Header.t =
-  Cohttp.Header.add_list headers [
-    ("Access-Control-Allow-Origin", "*");
-    ("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
-    ("Access-Control-Allow-Headers", "Origin, Content-Type, X-Auth-Token");
-  ]
-
-let allow_cors =
-  let filter handler req =
-    handler req
-    >>| fun response ->
-    response
-    |> Response.headers
-    |> add_cors_headers
-    |> Field.fset Response.Fields.headers response
-  in
-  Rock.Middleware.create ~name:"allow cors" ~filter
+    Response.make ~status:(Status.of_code 400) ~body:(Body.of_string error) ()
 
 let () =
   Lwt.async_exception_hook := (function
@@ -179,5 +161,4 @@ let () =
   |> App.post "/match" perform_match
   |> App.post "/rewrite" perform_rewrite
   |> App.post "/substitute" perform_environment_substitution
-  |> App.middleware allow_cors
   |> App.run_command

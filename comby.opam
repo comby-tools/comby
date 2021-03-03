@@ -31,9 +31,10 @@ depends: [
   "hack_parallel" {arch != "arm32" & arch != "arm64"}
   "conduit-lwt-unix"
   "core"
-  "lwt" {= "4.5.0"}
+  "lwt"
   "lwt_react"
   "opium"
+  "cohttp-lwt-unix"
   "parany" 
   "patience_diff" {>= "v0.14" & < "v0.15"}
   "ppxlib"

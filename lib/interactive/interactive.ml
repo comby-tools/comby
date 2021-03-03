@@ -101,7 +101,8 @@ module Diff = struct
       (style : Patdiff.Configuration.t) (*{ output; rules; location_style; _ }*)
       ?print_global_header
       ~(prev : Patdiff.Diff_input.t)
-      ~(next : Patdiff.Diff_input.t) =
+      ~(next : Patdiff.Diff_input.t)
+      () =
     Without_unix.output_to_string
       hunks
       ?print_global_header
@@ -117,7 +118,7 @@ module Diff = struct
       | `Plain -> Diff_configuration.plain ()
     in
     let one_hunk = stylize_hunks with_style hunks in
-    hunk_to_string one_hunk with_style ~print_global_header:true ~prev ~next
+    hunk_to_string one_hunk with_style ~print_global_header:true ~prev ~next ()
 
 end
 
