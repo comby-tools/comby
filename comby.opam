@@ -18,6 +18,7 @@ build: [
     ]
 ]
 depends: [
+  "dune" {>= "2.7.0"}
   "ocaml" {>= "4.08.1"}
   "angstrom" {>= "0.15.0"}
   "conf-autoconf"
@@ -27,7 +28,6 @@ depends: [
   "conf-pkg-config"
   "conf-sqlite3"
   "conf-zlib" {os = "linux"}
-  "dune" {>= "2.7.0"}
   "hack_parallel" {arch != "arm32" & arch != "arm64"}
   "conduit-lwt-unix"
   "core"
