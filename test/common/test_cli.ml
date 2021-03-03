@@ -868,7 +868,7 @@ let%expect_test "print_single_line_matches" =
   let match_template = "let ()" in
   let rewrite_template = "dont care" in
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -match-only -matcher .generic"
+    Format.sprintf "-stdin '%s' '%s' -sequential -match-only -matcher .generic"
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -891,7 +891,7 @@ in
   let match_template = "let ()" in
   let rewrite_template = "dont care" in
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -match-only -matcher .generic"
+    Format.sprintf "-stdin '%s' '%s' -sequential -match-only -matcher .generic"
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -903,7 +903,7 @@ in
 |}];
 
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -match-only -count -matcher .generic"
+    Format.sprintf "-stdin '%s' '%s' -sequential -match-only -count -matcher .generic"
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -913,7 +913,7 @@ in
 |}];
 
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -match-only -count -json-lines -matcher .generic"
+    Format.sprintf "-stdin '%s' '%s' -sequential -match-only -count -json-lines -matcher .generic"
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -924,7 +924,7 @@ WARNING: -count and -json-lines is specified. Ignoring -count.
 |}];
 
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -count -matcher .generic"
+    Format.sprintf "-stdin '%s' '%s' -sequential -count -matcher .generic"
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -939,7 +939,7 @@ let%expect_test "unrecognized_matcher" =
   let match_template = "dont care" in
   let rewrite_template = "dont care" in
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -matcher invalid"
+    Format.sprintf "-stdin -sequential '%s' '%s' -matcher invalid"
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -953,7 +953,7 @@ let%expect_test "generic_matcher_ok" =
   let match_template = "dont care" in
   let rewrite_template = "blah" in
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -matcher .generic"
+    Format.sprintf "-stdin -sequential '%s' '%s' -matcher .generic"
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -982,7 +982,7 @@ let%expect_test "dump_stats" =
   let source = {|dont care|} in
   let match_template = "care" in
   let rewrite_template = "realy care" in
-  let command_args = Format.sprintf "-stdin '%s' '%s' -stats -matcher .txt" match_template rewrite_template in
+  let command_args = Format.sprintf "-stdin '%s' '%s' -sequential -stats -matcher .txt" match_template rewrite_template in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let stats_json = read_expect_stderr command source in
   (match Statistics.of_yojson (Yojson.Safe.from_string stats_json) with
@@ -1021,7 +1021,7 @@ let%expect_test "substitute_ok" =
 let%expect_test "escape_carriage-return" =
   let source = "line1\r\nline2\r\n" in
   let match_template = {|:[x\n]|} in
-  let command_args = Format.sprintf {|'%s' '' -stdin -match-only -matcher .c|} match_template in
+  let command_args = Format.sprintf {|'%s' '' -sequential -stdin -match-only -matcher .c|} match_template in
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_expect_stdin_and_stdout command source
   |> print_string;
@@ -1036,7 +1036,7 @@ let%expect_test "diff_patches_with_trailing_newlines" =
   let match_template = "1" in
   let rewrite_template = "2" in
 
-  let command_args = Format.sprintf "'%s' '%s' -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
+  let command_args = Format.sprintf "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
@@ -1050,7 +1050,7 @@ let%expect_test "diff_patches_with_trailing_newlines" =
 |}];
 
   let src_dir = "example" ^/ "diff-no-newlines" ^/ "2" in
-  let command_args = Format.sprintf "'%s' '%s' -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
+  let command_args = Format.sprintf "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
@@ -1066,7 +1066,7 @@ let%expect_test "diff_patches_with_trailing_newlines" =
 |}];
 
   let src_dir = "example" ^/ "diff-no-newlines" ^/ "3" in
-  let command_args = Format.sprintf "'%s' '%s' -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
+  let command_args = Format.sprintf "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
@@ -1083,7 +1083,7 @@ let%expect_test "diff_patches_with_trailing_newlines" =
   let match_template = "1" in
   let rewrite_template = "2\n" in
   let src_dir = "example" ^/ "diff-no-newlines" ^/ "4" in
-  let command_args = Format.sprintf "'%s' '%s' -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
+  let command_args = Format.sprintf "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
@@ -1099,7 +1099,7 @@ let%expect_test "diff_patches_with_trailing_newlines" =
   let match_template = "1\n" in
   let rewrite_template = "2" in
   let src_dir = "example" ^/ "diff-no-newlines" ^/ "5" in
-  let command_args = Format.sprintf "'%s' '%s' -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
+  let command_args = Format.sprintf "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
@@ -1118,7 +1118,7 @@ let%expect_test "diff_patches_preserve_slash_r" =
   let match_template = "1" in
   let rewrite_template = "2" in
 
-  let command_args = Format.sprintf "'%s' '%s' -json-lines -json-only-diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
+  let command_args = Format.sprintf "'%s' '%s' -sequential -json-lines -json-only-diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
