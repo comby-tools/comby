@@ -99,6 +99,8 @@ git clone https://github.com/comby-tools/comby
 cd comby && opam install . --deps-only -y
 ```
 
+- Run `eval $(opam env)`
+
 - Build and test
 
 ```
