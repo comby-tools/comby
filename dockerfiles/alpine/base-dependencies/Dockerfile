@@ -14,6 +14,7 @@ RUN sudo apk --no-cache add \
     gmp-dev \
     zlib-dev \
     sqlite-dev \
+    libev-dev \
     autoconf
 
 # Copy the source files.
