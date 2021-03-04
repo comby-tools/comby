@@ -23,7 +23,7 @@ depends: [
   "angstrom" {>= "0.15.0"}
   "conf-autoconf"
   "conf-gmp"
-  "conf-libenv"
+  "conf-libev"
   "conf-libpcre"
   "conf-m4" {os = "linux"}
   "conf-pkg-config"
