@@ -46,11 +46,11 @@ depends: [
   "tls"
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
+x-ci-accept-failures: ["oraclelinux-8"] # libev not available by default
 synopsis: "A tool for structural code search and replace that supports ~every language"
 description: """
 Comby is a tool designed to make it easy to match change syntax for basically
-every language. You can think of it like grep/sed, but with added ability to
-recognize code blocks, expressions, and strings delimited by parentheses,
-braces, quotes, and so on.
+every language. You can think of it like grep or sed, but with added ability to
+recognize code structures like blocks and expressions (e.g., delimited by
+braces or parentheses), strings (e.g., delimited by quotes), and so on.
 """
-
