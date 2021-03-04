@@ -850,7 +850,7 @@ let%expect_test "warn_on_stdin_and_in_place_flags" =
   let match_template = ":[[1]]" in
   let rewrite_template = ":[[1]]" in
   let command_args =
-    Format.sprintf "-stdin -in-place '%s' '%s' -matcher .generic"
+    Format.sprintf "-stdin -sequential -in-place '%s' '%s' -matcher .generic"
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
@@ -1010,7 +1010,7 @@ let%expect_test "substitute_ok" =
   let rewrite_template = ":[1] :[2]" in
   let environment = {|[{"variable":"1","value":"hole_1"},{"variable":"2","value":"hole_2"}]|} in
   let command_args =
-    Format.sprintf "'%s' '%s' -stdin -match-only -matcher .txt -substitute '%s'" match_template rewrite_template environment
+    Format.sprintf "'%s' '%s' -stdin -sequential -match-only -matcher .txt -substitute '%s'" match_template rewrite_template environment
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   read_expect_stdin_and_stdout command source
