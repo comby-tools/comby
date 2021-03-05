@@ -3,4 +3,4 @@
   (public_name comby.parsers)
   (instrumentation (backend bisect_ppx))
   (preprocess (pps ppx_sexp_conv))
-  (libraries angstrom ppxlib core mparser-comby))
+  (libraries angstrom core mparser-comby))

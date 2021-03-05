@@ -38,7 +38,6 @@ depends: [
   "cohttp-lwt-unix"
   "parany"
   "patience_diff" {>= "v0.14" & < "v0.15"}
-  "ppxlib"
   "ppx_deriving"
   "ppx_deriving_yojson" {>= "3.6.0"}
   "pcre"
@@ -47,7 +46,6 @@ depends: [
   "tls"
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
-available: [ os-distribution != "oraclelinux" ]
 synopsis: "A tool for structural code search and replace that supports ~every language"
 description: """
 Comby is a tool designed to make it easy to match change syntax for basically
