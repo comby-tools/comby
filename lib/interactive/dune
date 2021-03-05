@@ -2,4 +2,4 @@
   (name interactive)
   (public_name comby.interactive)
   (preprocess (pps ppx_sexp_conv))
-  (libraries comby.configuration comby.match ppxlib core core.uuid shell.filename_extended lwt lwt.unix))
+  (libraries comby.configuration comby.match core core.uuid shell.filename_extended lwt lwt.unix))

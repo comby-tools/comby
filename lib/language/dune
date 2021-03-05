@@ -3,4 +3,4 @@
   (public_name comby.language)
   (instrumentation (backend bisect_ppx))
   (preprocess (pps ppx_sexp_conv))
-  (libraries comby.parsers comby.match comby.rewriter ppxlib core core.uuid))
+  (libraries comby.parsers comby.match comby.rewriter core core.uuid))
