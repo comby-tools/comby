@@ -49,3 +49,5 @@ module Coq : Language.S
 module Move : Language.S
 module Solidity : Language.S
 module C_nested_comments : Language.S
+
+val all : (module Language.S) list

@@ -27,7 +27,6 @@ module Syntax = struct
     val raw_string_literals : (string * string) list
     val comments : comment_kind list
   end
-
 end
 
 module Info = struct
@@ -86,6 +85,29 @@ module Hole = struct
 end
 
 type hole = Hole.t
+
+module Metasyntax = struct
+  type hole_syntax =
+    | Prefix of Hole.sort * string
+    | Delimited of Hole.sort * string option * string option
+    | Regex of string * char * string
+
+  type t =
+    { definition : hole_syntax list
+    ; identifier : char -> bool
+    }
+
+  module type S = sig
+    val everything : (string option * string option) option
+    val expression : (string option * string option) option
+    val alphanum : (string option * string option) option
+    val non_space : (string option * string option) option
+    val line : (string option * string option) option
+    val blank : (string option * string option) option
+    val regex : (string * char * string) option
+    val identifier : char -> bool
+  end
+end
 
 module Omega = struct
   type omega_match_production =
@@ -183,8 +205,8 @@ module Match_engine = struct
     module Solidity: Matcher.S
     module C_nested_comments : Matcher.S
 
-    val create : Syntax.t -> (module Matcher.S)
-    val select_with_extension : string -> (module Matcher.S) option
     val all : (module Matcher.S) list
+    val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matcher.S) option
+    val create : ?metasyntax:Metasyntax.t -> Syntax.t -> (module Matcher.S)
   end
 end

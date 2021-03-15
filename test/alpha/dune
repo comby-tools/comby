@@ -1,6 +1,7 @@
 (library
  (name alpha_test_integration)
  (modules
+  test_custom_metasyntax
   test_optional_holes
   test_special_matcher_cases
   test_substring_disabled
