@@ -1,13 +1,13 @@
 module Matchers = struct
   module Configuration = Matchers.Configuration
-  include Matchers.Syntax
-  include Matchers.Hole
+  module Syntax = Matchers.Syntax
+  module Hole = Matchers.Hole
+  module Metasyntax = Matchers.Metasyntax
 
   module Alpha = Matchers.Alpha
-  include Matchers.Omega
+  module Omega = Matchers.Omega
 
-  include Matchers.Languages
-  include Matchers.Metasyntax
+  module Languages = Matchers.Languages
 end
 
 module Language = Language
