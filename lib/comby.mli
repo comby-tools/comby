@@ -2,8 +2,6 @@ module Matchers : sig
   module Configuration : module type of Matchers.Configuration
   module Syntax : module type of Matchers.Syntax
 
-  (*module Matcher : Matchers.Matcher*)
-
   module Hole : sig
     type sort =
       | Everything
@@ -42,62 +40,64 @@ module Matchers : sig
     module Default : S
   end
 
+  module type Matcher = Matchers.Matcher
+
   module Alpha : sig
-    module Text : Matchers.Matcher
-    module Paren : Matchers.Matcher
-    module Dyck : Matchers.Matcher
-    module JSON : Matchers.Matcher
-    module JSONC : Matchers.Matcher
-    module GraphQL : Matchers.Matcher
-    module Dhall : Matchers.Matcher
-    module Latex : Matchers.Matcher
-    module Assembly : Matchers.Matcher
-    module Clojure : Matchers.Matcher
-    module Lisp : Matchers.Matcher
-    module Generic : Matchers.Matcher
-    module Bash : Matchers.Matcher
-    module Ruby : Matchers.Matcher
-    module Elixir : Matchers.Matcher
-    module Python : Matchers.Matcher
-    module Html : Matchers.Matcher
-    module Xml : Matchers.Matcher
-    module SQL : Matchers.Matcher
-    module Erlang : Matchers.Matcher
-    module C : Matchers.Matcher
-    module Csharp : Matchers.Matcher
-    module Java : Matchers.Matcher
-    module CSS : Matchers.Matcher
-    module Kotlin : Matchers.Matcher
-    module Scala : Matchers.Matcher
-    module Nim : Matchers.Matcher
-    module Dart : Matchers.Matcher
-    module Php : Matchers.Matcher
-    module Go : Matchers.Matcher
-    module Javascript : Matchers.Matcher
-    module Jsx : Matchers.Matcher
-    module Typescript : Matchers.Matcher
-    module Tsx : Matchers.Matcher
-    module Swift : Matchers.Matcher
-    module Rust : Matchers.Matcher
-    module OCaml : Matchers.Matcher
-    module Reason : Matchers.Matcher
-    module Fsharp : Matchers.Matcher
-    module Pascal : Matchers.Matcher
-    module Julia : Matchers.Matcher
-    module Fortran : Matchers.Matcher
-    module Haskell : Matchers.Matcher
-    module Elm : Matchers.Matcher
-    module Zig : Matchers.Matcher
-    module Coq : Matchers.Matcher
-    module Move : Matchers.Matcher
-    module Solidity : Matchers.Matcher
-    module C_nested_comments : Matchers.Matcher
+    module Text : Matcher
+    module Paren : Matcher
+    module Dyck : Matcher
+    module JSON : Matcher
+    module JSONC : Matcher
+    module GraphQL : Matcher
+    module Dhall : Matcher
+    module Latex : Matcher
+    module Assembly : Matcher
+    module Clojure : Matcher
+    module Lisp : Matcher
+    module Generic : Matcher
+    module Bash : Matcher
+    module Ruby : Matcher
+    module Elixir : Matcher
+    module Python : Matcher
+    module Html : Matcher
+    module Xml : Matcher
+    module SQL : Matcher
+    module Erlang : Matcher
+    module C : Matcher
+    module Csharp : Matcher
+    module Java : Matcher
+    module CSS : Matcher
+    module Kotlin : Matcher
+    module Scala : Matcher
+    module Nim : Matcher
+    module Dart : Matcher
+    module Php : Matcher
+    module Go : Matcher
+    module Javascript : Matcher
+    module Jsx : Matcher
+    module Typescript : Matcher
+    module Tsx : Matcher
+    module Swift : Matcher
+    module Rust : Matcher
+    module OCaml : Matcher
+    module Reason : Matcher
+    module Fsharp : Matcher
+    module Pascal : Matcher
+    module Julia : Matcher
+    module Fortran : Matcher
+    module Haskell : Matcher
+    module Elm : Matcher
+    module Zig : Matcher
+    module Coq : Matcher
+    module Move : Matcher
+    module Solidity : Matcher
+    module C_nested_comments : Matcher
 
-    val all : (module Matchers.Matcher) list
+    val all : (module Matcher) list
 
-    val create : ?metasyntax:Metasyntax.t -> Syntax.t -> (module Matchers.Matcher)
+    val create : ?metasyntax:Metasyntax.t -> Syntax.t -> (module Matcher)
 
-    val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matchers.Matcher) option
+    val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matcher) option
   end
 
 (*

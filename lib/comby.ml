@@ -1,4 +1,5 @@
 module Matchers = struct
+  module type Matcher = Matchers.Matcher
   module Configuration = Matchers.Configuration
   module Syntax = Matchers.Syntax
   module Hole = Matchers.Hole
