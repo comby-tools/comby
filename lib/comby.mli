@@ -1,6 +1,11 @@
 module Matchers : sig
   module Configuration : module type of Matchers.Configuration
-  module Alpha : module type of Matchers.Alpha
+
+
+
+  module Alpha : sig
+    include module type of Matchers.Alpha
+  end
 
 (*
   module Configuration = Configuration
