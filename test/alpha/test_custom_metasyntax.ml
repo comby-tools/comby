@@ -4,7 +4,7 @@ open Matchers
 let configuration = Configuration.create ~match_kind:Fuzzy ()
 
 let create definition =
-  let metasyntax = Matchers.Metasyntax.{ definition; identifier = function | 'A' .. 'Z' -> true | _ -> false } in
+  let metasyntax = Matchers.Metasyntax.{ definition; identifier = function | 'A' .. 'Z' | '_' -> true | _ -> false } in
   Option.value_exn (Matchers.Alpha.select_with_extension ~metasyntax ".go")
 
 let run (module M : Matchers.Matcher) source match_template _rewrite_template =
@@ -79,4 +79,15 @@ let%expect_test "custom_metasyntax_multiple_holes" =
   in
 
   run matcher "foo(bar.baz)" {|$M:\w+|} "";
-  [%expect_exact {|No matches.|}];
+  [%expect_exact {|No matches.|}]
+
+let%expect_test "custom_metasyntax_underscore" =
+  let matcher = create
+      [ Delimited (Everything, Some "$", None)
+      ; Delimited (Alphanum, Some "?", None)
+      ]
+  in
+
+  run matcher "simple(bar)" {|$_(?_)|} "";
+  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"_","value":"simple","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}}}],"matched":"simple(bar)"}]}
+|}];
