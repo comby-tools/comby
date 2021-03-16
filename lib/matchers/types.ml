@@ -89,7 +89,6 @@ type hole = Hole.t
 module Metasyntax = struct
 
   type hole_definition =
-    (*| Prefix of string*)
     | Delimited of string option * string option
 
   type hole_syntax =
@@ -97,12 +96,12 @@ module Metasyntax = struct
     | Regex of string * char * string
 
   type t =
-    { definition : hole_syntax list
+    { syntax : hole_syntax list
     ; identifier : char -> bool
     }
 
   module type S = sig
-    val definition : hole_syntax list
+    val syntax : hole_syntax list
     val identifier : char -> bool
   end
 end

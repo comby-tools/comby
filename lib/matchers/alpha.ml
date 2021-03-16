@@ -217,10 +217,10 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
     satisfy Metasyntax.identifier
 
   let optional_identifier () =
-    (many (identifier ()) |>> String.of_char_list)
+    many (identifier ()) |>> String.of_char_list
 
   let identifier () =
-    (many1 (identifier ()) |>> String.of_char_list)
+    many1 (identifier ()) |>> String.of_char_list
 
   let hole_body () =
     is_optional () >>= fun optional ->
@@ -247,7 +247,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
     | None -> return ()
 
   let hole_parsers =
-    List.fold ~init:[] Metasyntax.definition ~f:(fun acc -> function
+    List.fold ~init:[] Metasyntax.syntax ~f:(fun acc -> function
         | Hole (sort, Delimited (left, right)) ->
           (sort, (p left >> hole_body () << p right))::acc
         | Regex (left, separator, right) ->
@@ -615,7 +615,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
           begin
             match sort with
             | Regex ->
-              let separator = List.find_map_exn Metasyntax.definition ~f:(function
+              let separator = List.find_map_exn Metasyntax.syntax ~f:(function
                   | Hole _ -> None
                   | Regex (_, separator, _) -> Some separator)
               in
@@ -829,8 +829,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
     let open Hole in
     let hole_parser =
       let open Polymorphic_compare in
-      List.find_map hole_parsers ~f:(fun (sort', parser) ->
-          if sort' = sort then Some parser else None)
+      List.find_map hole_parsers ~f:(fun (sort', parser) -> Option.some_if (sort' = sort) parser)
     in
     let skip_signal hole = skip (string "_signal_hole") |>> fun () -> Hole hole in
     let at_depth =

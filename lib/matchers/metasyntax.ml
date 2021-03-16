@@ -1,6 +1,6 @@
 include Types.Metasyntax
 
-let default_definition =
+let default_syntax =
   [ Hole (Everything, Delimited (Some ":[", Some "]"))
   ; Hole (Expression, Delimited (Some ":[", Some ":e]"))
   ; Hole (Alphanum, Delimited (Some ":[[", Some "]]"))
@@ -18,11 +18,11 @@ let default_identifier =
   | '_' -> true
   | _ -> false
 
-let default_metasyntax = { definition = default_definition; identifier = default_identifier }
+let default_metasyntax = { syntax = default_syntax; identifier = default_identifier }
 
-let create { definition; identifier } =
+let create { syntax; identifier } =
   let module Metasyntax = struct
-    let definition = definition
+    let syntax = syntax
     let identifier = identifier
   end
   in
