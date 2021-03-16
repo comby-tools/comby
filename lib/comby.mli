@@ -40,78 +40,87 @@ module Matchers : sig
     module Default : S
   end
 
-  module type Matcher = Matchers.Matcher
+  module Matcher : sig module type S end
 
   module Alpha : sig
-    module Text : Matcher
-    module Paren : Matcher
-    module Dyck : Matcher
-    module JSON : Matcher
-    module JSONC : Matcher
-    module GraphQL : Matcher
-    module Dhall : Matcher
-    module Latex : Matcher
-    module Assembly : Matcher
-    module Clojure : Matcher
-    module Lisp : Matcher
-    module Generic : Matcher
-    module Bash : Matcher
-    module Ruby : Matcher
-    module Elixir : Matcher
-    module Python : Matcher
-    module Html : Matcher
-    module Xml : Matcher
-    module SQL : Matcher
-    module Erlang : Matcher
-    module C : Matcher
-    module Csharp : Matcher
-    module Java : Matcher
-    module CSS : Matcher
-    module Kotlin : Matcher
-    module Scala : Matcher
-    module Nim : Matcher
-    module Dart : Matcher
-    module Php : Matcher
-    module Go : Matcher
-    module Javascript : Matcher
-    module Jsx : Matcher
-    module Typescript : Matcher
-    module Tsx : Matcher
-    module Swift : Matcher
-    module Rust : Matcher
-    module OCaml : Matcher
-    module Reason : Matcher
-    module Fsharp : Matcher
-    module Pascal : Matcher
-    module Julia : Matcher
-    module Fortran : Matcher
-    module Haskell : Matcher
-    module Elm : Matcher
-    module Zig : Matcher
-    module Coq : Matcher
-    module Move : Matcher
-    module Solidity : Matcher
-    module C_nested_comments : Matcher
+    module Text : Matcher.S
+    module Paren : Matcher.S
+    module Dyck : Matcher.S
+    module JSON : Matcher.S
+    module JSONC : Matcher.S
+    module GraphQL : Matcher.S
+    module Dhall : Matcher.S
+    module Latex : Matcher.S
+    module Assembly : Matcher.S
+    module Clojure : Matcher.S
+    module Lisp : Matcher.S
+    module Generic : Matcher.S
+    module Bash : Matcher.S
+    module Ruby : Matcher.S
+    module Elixir : Matcher.S
+    module Python : Matcher.S
+    module Html : Matcher.S
+    module Xml : Matcher.S
+    module SQL : Matcher.S
+    module Erlang : Matcher.S
+    module C : Matcher.S
+    module Csharp : Matcher.S
+    module Java : Matcher.S
+    module CSS : Matcher.S
+    module Kotlin : Matcher.S
+    module Scala : Matcher.S
+    module Nim : Matcher.S
+    module Dart : Matcher.S
+    module Php : Matcher.S
+    module Go : Matcher.S
+    module Javascript : Matcher.S
+    module Jsx : Matcher.S
+    module Typescript : Matcher.S
+    module Tsx : Matcher.S
+    module Swift : Matcher.S
+    module Rust : Matcher.S
+    module OCaml : Matcher.S
+    module Reason : Matcher.S
+    module Fsharp : Matcher.S
+    module Pascal : Matcher.S
+    module Julia : Matcher.S
+    module Fortran : Matcher.S
+    module Haskell : Matcher.S
+    module Elm : Matcher.S
+    module Zig : Matcher.S
+    module Coq : Matcher.S
+    module Move : Matcher.S
+    module Solidity : Matcher.S
+    module C_nested_comments : Matcher.S
 
-    val all : (module Matcher) list
+    val all : (module Matcher.S) list
 
-    val create : ?metasyntax:Metasyntax.t -> Syntax.t -> (module Matcher)
+    val create : ?metasyntax:Metasyntax.t -> Syntax.t -> (module Matcher.S)
 
-    val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matcher) option
+    val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matcher.S) option
   end
 
 (*
-  module Configuration = Configuration
-  module Syntax = Syntax
-
-
-  module Alpha : sig
-    val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Metasyntax.S) option
-  end
-
   module Omega = Omega
   module Languages = Languages
 *)
+end
+
+module Specification : module type of Configuration.Specification
+
+module Pipeline : sig
+
+  val with_timeout : int -> Configuration.Command_input.single_source -> f:(unit -> 'a list) -> 'a list
+
+  val timed_run
+    : (module Matchers.Matcher.S)
+    -> ?fast_offset_conversion:bool
+    -> ?omega:bool
+    -> ?substitute_in_place:bool
+    -> configuration:Matchers.Configuration.t
+    -> source:string
+    -> specification:Specification.t  -> unit
+    -> Match.t list
 end
 
 module Language = Language

@@ -1,8 +1,7 @@
 open Configuration
-open Matchers
 
 val timed_run
-  : (module Matcher)
+  : (module Matchers.Matcher.S)
   -> ?fast_offset_conversion:bool
   -> ?omega:bool
   -> ?substitute_in_place:bool

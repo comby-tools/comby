@@ -43,7 +43,7 @@ let apply_rule ?(substitute_in_place = true) matcher omega rule matches =
       >>| fun environment -> { matched with environment })
 
 let timed_run
-    (module Matcher : Matchers.Matcher)
+    (module Matcher : Matcher.S)
     ?(fast_offset_conversion = false)
     ?(omega = false)
     ?substitute_in_place

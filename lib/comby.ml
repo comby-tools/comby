@@ -1,5 +1,7 @@
 module Matchers = struct
-  module type Matcher = Matchers.Matcher
+  module Matcher = struct
+    module type S = Matchers.Matcher.S
+  end
   module Configuration = Matchers.Configuration
   module Syntax = Matchers.Syntax
   module Hole = Matchers.Hole
@@ -11,6 +13,9 @@ module Matchers = struct
   module Languages = Matchers.Languages
 end
 
+module Specification = Configuration.Specification
+
+module Pipeline = Pipeline
 module Language = Language
 module Match = Match
 module Replacement = Replacement

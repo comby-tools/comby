@@ -4,7 +4,7 @@ open Command_configuration
 include Test_alpha
 
 let configuration =
-  { matcher = (module Generic : Matchers.Matcher)
+  { matcher = (module Generic : Matchers.Matcher.S)
   ; sources = `String "source"
   ; specifications = []
   ; run_options =

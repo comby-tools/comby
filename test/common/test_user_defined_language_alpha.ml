@@ -6,7 +6,7 @@ open Test_helpers
 
 let create = Matchers.Alpha.create
 
-let run (module M : Matchers.Matcher) source match_template rewrite_template =
+let run (module M : Matchers.Matcher.S) source match_template rewrite_template =
   M.first ~configuration match_template source
   |> function
   | Ok result ->

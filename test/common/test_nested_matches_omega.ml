@@ -5,7 +5,7 @@ open Test_helpers
 include Test_omega
 
 let run
-    ?(m = (module Generic : Matchers.Matcher))
+    ?(m = (module Generic : Matchers.Matcher.S))
     ?(configuration = configuration)
     ?rule
     source

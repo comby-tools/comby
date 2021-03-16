@@ -1,5 +1,7 @@
 module Configuration = Configuration
-module type Matcher = Types.Matcher.S
+module Matcher = struct
+  module type S = Types.Matcher.S
+end
 
 module type Engine = Types.Match_engine.S
 

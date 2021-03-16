@@ -7,7 +7,7 @@ let create syntax =
   let metasyntax = Matchers.Metasyntax.{ syntax; identifier = function | 'A' .. 'Z' | '_' -> true | _ -> false } in
   Option.value_exn (Matchers.Alpha.select_with_extension ~metasyntax ".go")
 
-let run (module M : Matchers.Matcher) source match_template _rewrite_template =
+let run (module M : Matchers.Matcher.S) source match_template _rewrite_template =
   M.all ~configuration ~template:match_template ~source ()
   |> function
   | [] -> print_string "No matches."
