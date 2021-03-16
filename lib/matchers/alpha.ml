@@ -251,11 +251,10 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
         | Hole (sort, Delimited (left, right)) ->
           (sort, (p left >> hole_body () << p right))::acc
         | Regex (left, separator, right) ->
-          (Regex, (p (Some left) >> regex_body separator right () << p (Some right)))::acc
-      )
+          (Regex, (p (Some left) >> regex_body separator right () << p (Some right)))::acc)
 
-  let reserved_holes () : ((bool * id), 'a) parser list  =
-    List.map hole_parsers ~f:(fun (_, parser) -> parser)
+  let reserved_holes =
+    List.map hole_parsers ~f:(fun (_, parser) -> parser >>= fun _ -> return "")
 
   let reserved_delimiters () =
     let required_from_suffix = not_alphanum in
@@ -309,7 +308,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
           | Until_newline start -> [start])
       |> List.map ~f:string
     in
-    [ (reserved_holes () |> List.map ~f:(fun p -> attempt p >>= fun _ -> return ""))
+    [ reserved_holes
     ; reserved_delimiters
     ; reserved_escapable_strings
     ; reserved_raw_strings
@@ -852,7 +851,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
   let generate_hole_for_literal dimension ~contents ~left_delimiter ~right_delimiter s =
     let holes = choice @@ List.map hole_parsers ~f:(fun (kind, _) -> attempt (hole_parser kind dimension)) in
     let reserved_holes =
-      reserved_holes ()
+      reserved_holes
       |> List.map ~f:skip
       |> List.map ~f:attempt
       |> choice
