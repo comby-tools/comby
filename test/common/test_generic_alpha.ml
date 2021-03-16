@@ -117,6 +117,12 @@ let%expect_test "basic_failures" =
   [%expect_exact {||}]
 
 let%expect_test "delimiter_matching" =
+  let source = {|foo(bar)|} in
+  let match_template = {|:[1](bar)|} in
+  let rewrite_template = {|:[1]|} in
+  run source match_template rewrite_template;
+  [%expect_exact {|foo|}];
+
   let source = {|(a b c) d|} in
   let match_template = {|(:[1]) d|} in
   let rewrite_template = {|:[1]|} in

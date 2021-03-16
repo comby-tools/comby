@@ -48,13 +48,13 @@ let%expect_test "optional_holes_basic_match" =
   [%expect_exact {|/foo//|}];
 
   let source = {|(foo)|} in
-  let match_template = {|(:[[?x]]:[? w])|} in
+  let match_template = {|(:[[?x]]:[ ?w])|} in
   let rewrite_template = {|/:[?x]/:[?w]/|} in
   run source match_template rewrite_template;
   [%expect_exact {|/foo//|}];
 
   let source = {|()|} in
-  let match_template = {|(:[[?x]]:[? w]:[?y]:[?z.])|} in
+  let match_template = {|(:[[?x]]:[ ?w]:[?y]:[?z.])|} in
   let rewrite_template = {|/:[?x]/:[?w]/:[?y]|} in
   run source match_template rewrite_template;
   [%expect_exact {|///|}];
@@ -212,7 +212,7 @@ let%expect_test "optional_holes_match_over_coalesced_whitespace_in_strings" =
 
 let%expect_test "optional_holes_substitute" =
   let source = {|()|} in
-  let match_template = {|(:[[?x]]:[? w]:[?y]:[?z.])|} in
+  let match_template = {|(:[[?x]]:[ ?w]:[?y]:[?z.])|} in
   let rewrite_template = {|/:[x]/:[w]/:[y]/:[z]|} in
   run source match_template rewrite_template;
   [%expect_exact {|////|}]

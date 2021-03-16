@@ -1,3 +1,3 @@
 open Types
 
-module Make (_ : Syntax.S) (_ : Info.S) : Matcher.S
+module Make (_ : Language.S): Matcher.S

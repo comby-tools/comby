@@ -82,8 +82,9 @@ let record_match_context pos_before pos_after =
   if rewrite then Buffer.add_string actual result;
   matches_ref := match_context :: !matches_ref
 
-module Make (Syntax : Syntax.S) (Info : Info.S) = struct
-  include Info
+module Make (Language : Language.S) = struct
+  include Language.Info
+  module Syntax = Language.Syntax
 
   (* This is the init we will pass in with a functor later *)
   let acc = ""
