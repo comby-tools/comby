@@ -254,7 +254,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
           (Regex, (p (Some left) >> regex_body separator right () << p (Some right)))::acc
       )
 
-  let reserved_holes () =
+  let reserved_holes () : ((bool * id), 'a) parser list  =
     List.map hole_parsers ~f:(fun (_, parser) -> parser)
 
   let reserved_delimiters () =
@@ -826,7 +826,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
         | Success Unit -> acc (* for comment *)
         | Success _ -> failwith "Hole expected")
 
-  let hole_parser sort dimension ?at_depth =
+  let hole_parser ?at_depth sort dimension =
     let open Hole in
     let hole_parser =
       let open Polymorphic_compare in
@@ -850,23 +850,21 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
       p |>> function (optional, identifier) -> skip_signal { sort; identifier; dimension; optional; at_depth }
 
   let generate_hole_for_literal dimension ~contents ~left_delimiter ~right_delimiter s =
-    let holes =
-      hole_parsers
-      |> List.map ~f:(fun (kind, _) -> attempt (hole_parser kind dimension))
-    in
+    let holes = choice @@ List.map hole_parsers ~f:(fun (kind, _) -> attempt (hole_parser kind dimension)) in
     let reserved_holes =
       reserved_holes ()
       |> List.map ~f:skip
       |> List.map ~f:attempt
       |> choice
     in
-
     let p =
-      many
-        (choice holes
-         <|> (spaces1 |>> generate_pure_spaces_parser)
-         <|> ((many1 (is_not (choice [reserved_holes; skip (space)] ))
-               |>> String.of_char_list) |>> generate_string_token_parser))
+      many @@
+      choice
+        [ holes
+        ; (spaces1 |>> generate_pure_spaces_parser)
+        ; ((many1 (is_not (choice [reserved_holes; skip space] ))
+            |>> String.of_char_list) |>> generate_string_token_parser)
+        ]
     in
     match parse_string p contents (Match.create ()) with
     | Success p ->
