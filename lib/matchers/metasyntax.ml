@@ -18,7 +18,10 @@ let default_identifier =
   | '_' -> true
   | _ -> false
 
-let default_metasyntax = { syntax = default_syntax; identifier = default_identifier }
+let default_metasyntax =
+  { syntax = default_syntax
+  ; identifier = default_identifier
+  }
 
 let create { syntax; identifier } =
   let module Metasyntax = struct
