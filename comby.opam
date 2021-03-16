@@ -34,6 +34,8 @@ depends: [
   "core"
   "lwt"
   "lwt_react"
+  "mparser"
+  "mparser-pcre"
   "opium"
   "cohttp-lwt-unix"
   "parany"
