@@ -1007,7 +1007,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
   let first' shift p source : Match.t Or_error.t =
     let set_start_pos p = fun s -> p (advance_state s shift) in
     let p = set_start_pos p in
-    match parse_string' p source (Match.create ()) with
+    match parse_string (pair p get_user_state) source (Match.create ()) with
     | Success (_, result) ->
       if String.is_empty source then
         (* If source is empty and p succeeds, it's the trivial case. We set
