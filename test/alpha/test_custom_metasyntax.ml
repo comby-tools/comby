@@ -15,7 +15,7 @@ let run (module M : Matchers.Matcher) source match_template _rewrite_template =
 
 let%expect_test "custom_metasyntax_everything" =
   let matcher = create
-      [ Delimited (Everything, Some "$", None)
+      [ Hole (Everything, Delimited (Some "$", None))
       ]
   in
 
@@ -46,8 +46,8 @@ let%expect_test "custom_metasyntax_regex" =
 
 let%expect_test "custom_metasyntax_multiple_holes" =
   let matcher = create
-      [ Delimited (Everything, Some "$", None)
-      ; Delimited (Alphanum, Some "?", None)
+      [ Hole (Everything, Delimited (Some "$", None))
+      ; Hole (Alphanum, Delimited (Some "?", None))
       ]
   in
 
@@ -61,8 +61,8 @@ let%expect_test "custom_metasyntax_multiple_holes" =
 
 
   let matcher = create
-      [ Delimited (Everything, Some "$", None)
-      ; Delimited (Alphanum, Some "$$", None)
+      [ Hole (Everything, Delimited (Some "$", None))
+      ; Hole (Alphanum, Delimited (Some "$$", None))
       ]
   in
 
@@ -72,19 +72,31 @@ let%expect_test "custom_metasyntax_multiple_holes" =
 
   (* Expect no matches: Everything parser takes precedence. Allow folding over list to define order. *)
   let matcher = create
-      [ Delimited (Everything, Some "$", None)
-      ; Delimited (Alphanum, Some "$$", None)
+      [ Hole (Everything, Delimited (Some "$", None))
+      ; Hole (Alphanum, Delimited (Some "$$", None))
       ; Regex ("$", ':', " ")
       ]
   in
 
-  run matcher "foo(bar.baz)" {|$M:\w+|} "";
+  run matcher "foo(bar.baz)" {|$M:\w+ |} "";
+  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}},"environment":[{"variable":"M","value":"foo","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}}}],"matched":"foo"},{"range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}},"environment":[{"variable":"M","value":"bar","range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}}}],"matched":"bar"},{"range":{"start":{"offset":8,"line":1,"column":9},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"M","value":"baz","range":{"start":{"offset":8,"line":1,"column":9},"end":{"offset":11,"line":1,"column":12}}}],"matched":"baz"}]}
+|}];
+
+  let matcher = create
+      [ Regex ("$", ':', " ")
+      ; Hole (Everything, Delimited (Some "$", None))
+      ; Hole (Alphanum, Delimited (Some "$$", None))
+      ]
+  in
+
+  run matcher "foo(bar.baz)" {|$M:\w+ |} "";
   [%expect_exact {|No matches.|}]
+
 
 let%expect_test "custom_metasyntax_underscore" =
   let matcher = create
-      [ Delimited (Everything, Some "$", None)
-      ; Delimited (Alphanum, Some "?", None)
+      [ Hole (Everything, Delimited (Some "$", None))
+      ; Hole (Alphanum, Delimited (Some "?", None))
       ]
   in
 

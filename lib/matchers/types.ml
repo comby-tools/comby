@@ -87,9 +87,13 @@ end
 type hole = Hole.t
 
 module Metasyntax = struct
+
+  type hole_definition =
+    (*| Prefix of string*)
+    | Delimited of string option * string option
+
   type hole_syntax =
-    | Prefix of Hole.sort * string
-    | Delimited of Hole.sort * string option * string option
+    | Hole of Hole.sort * hole_definition
     | Regex of string * char * string
 
   type t =
@@ -98,13 +102,7 @@ module Metasyntax = struct
     }
 
   module type S = sig
-    val everything : (string option * string option) option
-    val expression : (string option * string option) option
-    val alphanum : (string option * string option) option
-    val non_space : (string option * string option) option
-    val line : (string option * string option) option
-    val blank : (string option * string option) option
-    val regex : (string * char * string) option
+    val definition : hole_syntax list
     val identifier : char -> bool
   end
 end

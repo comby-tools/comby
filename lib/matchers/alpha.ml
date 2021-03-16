@@ -222,68 +222,10 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
   let identifier () =
     (many1 (identifier ()) |>> String.of_char_list)
 
-  let p = function
-    | Some delim -> skip (string delim)
-    | None -> return ()
-
   let hole_body () =
     is_optional () >>= fun optional ->
     identifier () >>= fun identifier ->
     return (optional, identifier)
-
-  let everything_hole_parser () =
-    match Metasyntax.everything with
-    | None -> None
-    | Some (left, right) ->
-      Some (
-        p left >> hole_body () << p right
-        |>> Option.some
-      )
-
-  let expression_hole_parser () =
-    match Metasyntax.expression with
-    | None -> None
-    | Some (left, right) ->
-      Some (
-        p left >> hole_body () << p right
-        |>> Option.some
-      )
-
-  let non_space_hole_parser () =
-    match Metasyntax.non_space with
-    | None -> None
-    | Some (left, right) ->
-      Some (
-        p left >> hole_body () << p right
-        |>> Option.some
-      )
-
-  let line_hole_parser () =
-    match Metasyntax.line with
-    | None -> None
-    | Some (left, right) ->
-      Some (
-        p left >> hole_body () << p right
-        |>> Option.some
-      )
-
-  let blank_hole_parser () =
-    match Metasyntax.blank with
-    | None -> None
-    | Some (left, right) ->
-      Some (
-        p left >> hole_body () << p right
-        |>> Option.some
-      )
-
-  let alphanum_hole_parser () : ('a,'b) parser option =
-    match Metasyntax.alphanum with
-    | None -> None
-    | Some (left, right) ->
-      Some (
-        p left >> hole_body () << p right
-        |>> Option.some
-      )
 
   let regex_body separator suffix () =
     let rec expr s =
@@ -300,25 +242,20 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
     if debug then Format.printf "Regex accepts %s@." identifier;
     return (false, identifier)
 
-  let regex_hole_parser () : ('a,'b) parser option =
-    match Metasyntax.regex with
-    | None -> None
-    | Some (left, separator, right) ->
-      Some (
-        p (Some left) >> regex_body separator right () << p (Some right)
-        |>> Option.some
+  let p = function
+    | Some delim -> skip (string delim)
+    | None -> return ()
+
+  let hole_parsers =
+    List.fold ~init:[] Metasyntax.definition ~f:(fun acc -> function
+        | Hole (sort, Delimited (left, right)) ->
+          (sort, (p left >> hole_body () << p right))::acc
+        | Regex (left, separator, right) ->
+          (Regex, (p (Some left) >> regex_body separator right () << p (Some right)))::acc
       )
 
   let reserved_holes () =
-    List.filter_map ~f:ident
-      [ everything_hole_parser ()
-      ; expression_hole_parser ()
-      ; alphanum_hole_parser ()
-      ; non_space_hole_parser ()
-      ; line_hole_parser ()
-      ; blank_hole_parser ()
-      ; regex_hole_parser ()
-      ]
+    List.map hole_parsers ~f:(fun (_, parser) -> parser)
 
   let reserved_delimiters () =
     let required_from_suffix = not_alphanum in
@@ -679,7 +616,10 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
           begin
             match sort with
             | Regex ->
-              let _, separator, _ = Option.value_exn Metasyntax.regex in
+              let separator = List.find_map_exn Metasyntax.definition ~f:(function
+                  | Hole _ -> None
+                  | Regex (_, separator, _) -> Some separator)
+              in
               let identifier, pattern = String.lsplit2_exn identifier ~on:separator in
               let identifier = if String.(identifier = "") then "_" else identifier in
               if debug then Format.printf "Regex: Id: %s Pat: %s@." identifier pattern;
@@ -889,14 +829,9 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
   let hole_parser sort dimension ?at_depth =
     let open Hole in
     let hole_parser =
-      match sort with
-      | Everything -> everything_hole_parser ()
-      | Expression -> expression_hole_parser ()
-      | Alphanum -> alphanum_hole_parser ()
-      | Non_space -> non_space_hole_parser ()
-      | Line -> line_hole_parser ()
-      | Blank -> blank_hole_parser ()
-      | Regex -> regex_hole_parser ()
+      let open Polymorphic_compare in
+      List.find_map hole_parsers ~f:(fun (sort', parser) ->
+          if sort' = sort then Some parser else None)
     in
     let skip_signal hole = skip (string "_signal_hole") |>> fun () -> Hole hole in
     let at_depth =
@@ -912,14 +847,12 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
     match hole_parser with
     | None -> fail "none" (* not defined *)
     | Some p ->
-      p |>> function
-      | None -> fail "none" (* defined but didn't match *)
-      | Some (optional, identifier) -> skip_signal { sort; identifier; dimension; optional; at_depth }
+      p |>> function (optional, identifier) -> skip_signal { sort; identifier; dimension; optional; at_depth }
 
-  let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter s =
+  let generate_hole_for_literal dimension ~contents ~left_delimiter ~right_delimiter s =
     let holes =
-      Hole.sorts ()
-      |> List.map ~f:(fun kind -> attempt (hole_parser kind sort))
+      hole_parsers
+      |> List.map ~f:(fun (kind, _) -> attempt (hole_parser kind dimension))
     in
     let reserved_holes =
       reserved_holes ()
@@ -935,10 +868,10 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
          <|> ((many1 (is_not (choice [reserved_holes; skip (space)] ))
                |>> String.of_char_list) |>> generate_string_token_parser))
     in
-    match parse_string p contents "" with
+    match parse_string p contents (Match.create ()) with
     | Success p ->
       begin
-        match sort with
+        match dimension with
         | Escapable_string_literal
         | Raw_string_literal ->
           (turn_holes_into_matchers_for_this_level ~left_delimiter ~right_delimiter p
@@ -956,8 +889,8 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
 
   and common _s =
     let holes at_depth =
-      Hole.sorts ()
-      |> List.map ~f:(fun kind -> attempt (hole_parser kind Code ~at_depth))
+      hole_parsers
+      |> List.map ~f:(fun (kind, _) -> attempt (hole_parser kind Code ~at_depth))
     in
     choice
       [ (choice (holes !depth) >>= fun result -> if debug then Format.printf "Depth hole %d@." !depth; return result)
