@@ -14,6 +14,8 @@ module Matchers = struct
 end
 
 module Specification = Configuration.Specification
+type specification = Specification.t
+
 
 module Pipeline = Pipeline
 module Language = Language

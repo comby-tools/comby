@@ -589,7 +589,7 @@ let%expect_test "test_top_level_hole_crosses_newlines_for_html_by_default" =
   let rewrite_template = ":[x]" in
   run_all ~m:(module Matchers.Alpha.Html) ~configuration source match_template rewrite_template;
   [%expect_exact {|
-
+      
       stuff
-
+      
     |}]

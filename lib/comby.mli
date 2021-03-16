@@ -106,7 +106,13 @@ module Matchers : sig
 *)
 end
 
-module Specification : module type of Configuration.Specification
+module Specification : sig
+  type t
+
+  val create : ?rewrite_template:string -> ?rule:Language.Rule.t -> match_template:string -> unit -> t
+end
+
+type specification = Specification.t
 
 module Pipeline : sig
 
@@ -119,7 +125,8 @@ module Pipeline : sig
     -> ?substitute_in_place:bool
     -> configuration:Matchers.Configuration.t
     -> source:string
-    -> specification:Specification.t  -> unit
+    -> specification:specification
+    -> unit
     -> Match.t list
 end
 
