@@ -1,3 +1,5 @@
+open Core
+
 module Matchers : sig
   module Configuration : sig
     type t
@@ -15,7 +17,34 @@ module Matchers : sig
       -> t
   end
 
-  module Syntax : module type of Matchers.Syntax
+  module Syntax : sig
+    type escapable_string_literals =
+      { delimiters : string list
+      ; escape_character: char
+      }
+
+    type comment_kind =
+      | Multiline of string * string
+      | Nested_multiline of string * string
+      | Until_newline of string
+
+    type t =
+      { user_defined_delimiters : (string * string) list
+      ; escapable_string_literals : escapable_string_literals option [@default None]
+      ; raw_string_literals : (string * string) list
+      ; comments : comment_kind list
+      }
+
+    val to_yojson : t -> Yojson.Safe.json
+    val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+
+    module type S = sig
+      val user_defined_delimiters : (string * string) list
+      val escapable_string_literals : escapable_string_literals option
+      val raw_string_literals : (string * string) list
+      val comments : comment_kind list
+    end
+  end
 
   module Hole : sig
     type sort =
@@ -55,15 +84,37 @@ module Matchers : sig
     module Default : S
   end
 
-  module Matcher : sig module type S end
+  module Matcher : sig
+    module type S = sig
+      val all
+        :  ?configuration:Configuration.t
+        -> ?nested: bool
+        -> template:string
+        -> source:string
+        -> unit
+        -> Match.t list
+
+      val first
+        :  ?configuration:Configuration.t
+        -> ?shift:int
+        -> string
+        -> string
+        -> Match.t Or_error.t
+
+      val name : string
+
+      val extensions : string list
+
+      val set_rewrite_template : string -> unit
+    end
+  end
 
   module Alpha : sig
-
-    val all : (module Matcher.S) list
+    val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matcher.S) option
 
     val create : ?metasyntax:Metasyntax.t -> Syntax.t -> (module Matcher.S)
 
-    val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matcher.S) option
+    val all : (module Matcher.S) list
 
     module Text : Matcher.S
     module Paren : Matcher.S
@@ -153,6 +204,5 @@ module Language = Language
 module Match = Match
 module Replacement = Replacement
 module Rewriter = Rewriter
-module Server_types = Server_types
 module Statistics = Statistics
 module Configuration = Configuration

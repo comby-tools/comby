@@ -113,7 +113,13 @@ type production =
 
 module Matcher = struct
   module type S = sig
-    include Info.S
+    val all
+      :  ?configuration:Configuration.t
+      -> ?nested: bool
+      -> template:string
+      -> source:string
+      -> unit
+      -> Match.t list
 
     val first
       :  ?configuration:Configuration.t
@@ -122,15 +128,10 @@ module Matcher = struct
       -> string
       -> Match.t Or_error.t
 
+    include Info.S
+
     val set_rewrite_template : string -> unit
 
-    val all
-      :  ?configuration:Configuration.t
-      -> ?nested: bool
-      -> template:string
-      -> source:string
-      -> unit
-      -> Match.t list
   end
 end
 
