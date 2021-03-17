@@ -88,7 +88,6 @@ module Match : sig
   val pp_json_lines : Format.formatter -> string option * t list -> unit
 
   val pp_match_count : Format.formatter -> string option * t list -> unit
-
 end
 
 module Matchers : sig
@@ -291,6 +290,33 @@ module Pipeline : sig
     -> Match.t list
 end
 
+module Replacement : sig
+  type t =
+    { range : Match.range
+    ; replacement_content : string
+    ; environment : Match.environment
+    }
+
+  type result =
+    { rewritten_source : string
+    ; in_place_substitutions : t list
+    }
+
+  val to_yojson : t -> Yojson.Safe.json
+  val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+
+  val to_json
+    :  ?path:string
+    -> ?replacements:t list
+    -> ?rewritten_source:string
+    -> diff:string
+    -> unit
+    -> Yojson.Safe.json
+
+  val empty_result : result
+end
+
+
 module Rewriter : sig
   module Rewrite : sig
     val all
@@ -320,6 +346,5 @@ module Rewriter : sig
 end
 
 module Language = Language
-module Replacement = Replacement
 module Statistics = Statistics
 module Configuration = Configuration
