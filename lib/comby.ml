@@ -15,10 +15,10 @@ end
 
 module Specification = Configuration.Specification
 
-
+module Configuration = struct
+  include Configuration.Command_input
+end
 module Pipeline = Pipeline
 module Language = Language
 module Replacement = Replacement
 module Rewriter = Rewriter
-module Statistics = Statistics
-module Configuration = Configuration

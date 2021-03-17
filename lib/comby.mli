@@ -263,6 +263,29 @@ module Matchers : sig
 *)
 end
 
+(*
+module Rule : sig
+  type t
+
+  val options : t -> Options.t
+
+  val sat : result -> bool
+
+  val result_env : result -> environment option
+
+  val create : string -> expression list Or_error.t
+
+  val apply
+    :  ?matcher:(module Matcher.S)
+    -> ?substitute_in_place:bool
+    -> t
+    -> environment
+    -> result
+end
+*)
+
+module Language = Language
+
 module Specification : sig
   type t
 
@@ -274,9 +297,14 @@ module Specification : sig
     -> t
 end
 
-module Pipeline : sig
+module Configuration : sig
+  type single_source =
+    | Path of string
+    | String of string
+end
 
-  val with_timeout : int -> Configuration.Command_input.single_source -> f:(unit -> 'a list) -> 'a list
+module Pipeline : sig
+  val with_timeout : int -> Configuration.single_source -> f:(unit -> 'a list) -> 'a list
 
   val timed_run
     :  (module Matchers.Matcher.S)
@@ -344,7 +372,3 @@ module Rewriter : sig
     val get_offsets_after_substitution : (string * int) list -> Match.Environment.t -> (string * int) list
   end
 end
-
-module Language = Language
-module Statistics = Statistics
-module Configuration = Configuration
