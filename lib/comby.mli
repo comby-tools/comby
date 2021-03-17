@@ -263,28 +263,23 @@ module Matchers : sig
 *)
 end
 
-(*
 module Rule : sig
   type t
-
-  val options : t -> Options.t
+  type result
 
   val sat : result -> bool
 
-  val result_env : result -> environment option
+  val result_env : result -> Match.environment option
 
-  val create : string -> expression list Or_error.t
+  val create : string -> t Or_error.t
 
   val apply
-    :  ?matcher:(module Matcher.S)
+    :  ?matcher:(module Matchers.Matcher.S)
     -> ?substitute_in_place:bool
     -> t
-    -> environment
+    -> Match.environment
     -> result
 end
-*)
-
-module Language = Language
 
 module Specification : sig
   type t
