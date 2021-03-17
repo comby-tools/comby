@@ -13,12 +13,12 @@ module Syntax = struct
     | Until_newline of string
   [@@deriving yojson]
 
-  type t = {
-    user_defined_delimiters : (string * string) list;
-    escapable_string_literals : escapable_string_literals option; [@default None]
-    raw_string_literals : (string * string) list;
-    comments : comment_kind list;
-  }
+  type t =
+    { user_defined_delimiters : (string * string) list
+    ; escapable_string_literals : escapable_string_literals option [@default None]
+    ; raw_string_literals : (string * string) list
+    ; comments : comment_kind list
+    }
   [@@deriving yojson]
 
   module type S = sig

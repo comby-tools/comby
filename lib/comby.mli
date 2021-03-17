@@ -1,6 +1,7 @@
 module Matchers : sig
   module Configuration : sig
     type t
+
     type match_kind =
       | Exact
       | Fuzzy
