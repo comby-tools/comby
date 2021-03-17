@@ -81,16 +81,25 @@ module Match : sig
 
   val create : ?range:range -> unit -> t
 
+  (** [convert_offset] populates line and column information for a [source] file
+      associated with the match (by default, only the offset is computed
+      matches). For matches [fast] is an experimental option that uses a binary
+      search to perform the conversion quickly. *)
   val convert_offset : fast:bool -> source:string -> t -> t
 
+  (** [pp] is a grep-like formatted printer for matches. It accepts a (optional
+      file path * match list) *)
   val pp : Format.formatter -> string option * t list -> unit
 
+  (** [pp] is a JSON formatted printer for (optional file path * match list).
+      One line printed per match. *)
   val pp_json_lines : Format.formatter -> string option * t list -> unit
-
-  val pp_match_count : Format.formatter -> string option * t list -> unit
 end
 
+type match' = Match.t
+
 module Matchers : sig
+
   module Configuration : sig
     type t
 
@@ -106,6 +115,8 @@ module Matchers : sig
       -> unit
       -> t
   end
+
+  type configuration = Configuration.t
 
   module Syntax : sig
     type escapable_string_literals =
@@ -135,6 +146,8 @@ module Matchers : sig
       val comments : comment_kind list
     end
   end
+
+  type syntax = Syntax.t
 
   module Hole : sig
     type sort =
@@ -174,22 +187,24 @@ module Matchers : sig
     module Default : S
   end
 
+  type metasyntax = Metasyntax.t
+
   module Matcher : sig
     module type S = sig
       val all
-        :  ?configuration:Configuration.t
+        :  ?configuration:configuration
         -> ?nested: bool
         -> template:string
         -> source:string
         -> unit
-        -> Match.t list
+        -> match' list
 
       val first
-        :  ?configuration:Configuration.t
+        :  ?configuration:configuration
         -> ?shift:int
         -> string
         -> string
-        -> Match.t Or_error.t
+        -> match' Or_error.t
 
       val name : string
 
@@ -200,9 +215,9 @@ module Matchers : sig
   end
 
   module Alpha : sig
-    val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matcher.S) option
+    val select_with_extension : ?metasyntax:metasyntax -> string -> (module Matcher.S) option
 
-    val create : ?metasyntax:Metasyntax.t -> Syntax.t -> (module Matcher.S)
+    val create : ?metasyntax:metasyntax -> syntax -> (module Matcher.S)
 
     val all : (module Matcher.S) list
 
@@ -256,11 +271,6 @@ module Matchers : sig
     module Solidity : Matcher.S
     module C_nested_comments : Matcher.S
   end
-
-(*
-  module Omega = Omega
-  module Languages = Languages
-*)
 end
 
 module Rule : sig
@@ -310,7 +320,7 @@ module Pipeline : sig
     -> source:string
     -> specification:Specification.t
     -> unit
-    -> Match.t list
+    -> match' list
 end
 
 module Replacement : sig
@@ -335,35 +345,39 @@ module Replacement : sig
     -> diff:string
     -> unit
     -> Yojson.Safe.json
-
-  val empty_result : result
 end
 
 
 module Rewriter : sig
   module Rewrite : sig
+    (** [all] rewrites a list of matches to an output result. Each match is
+        substituted in the [rewrite_template] to create a rewrite result. If
+        [source] is specified, each rewrite result is substituted in-place in the
+        source. If [source] is not specified, rewritten matches are
+        newline-separated.
+
+        If the rewrite template contains the syntax :[id()], then it is
+        substituted with fresh values. [sequential] determines whether fresh
+        values are monitonically increasing or a random hash. See [substitute]
+        for more. *)
+
     val all
       :  ?source:string
       -> ?sequential:bool
       -> rewrite_template:string
-      -> Match.t list
+      -> match' list
       -> Replacement.result option
   end
 
   module Rewrite_template : sig
-    (** if [sequential] is true, then substitute the pattern :[id()] starting at 1,
-        and incrementing subsequent IDs. if [sequential] is false, then substitute
-        the pattern :[id()] with a fresh hex string based on the last 48-bit part of
-        a UUID v3 identifier *)
-    val substitute_fresh : ?sequential:bool -> string -> string
+    (** [substitute] takes a template and match environment and substitutes
+        variables in the template for values.
 
-    (** substitute returns the result and variables substituted for *)
-    val substitute : ?sequential:bool -> string -> Match.Environment.t -> (string * string list)
-
-    val of_match_context : Match.t -> source:string -> (string * string)
-
-    val get_offsets_for_holes : string -> string list -> (string * int) list
-
-    val get_offsets_after_substitution : (string * int) list -> Match.Environment.t -> (string * int) list
+        The syntax :[id()] is substituted with fresh values. If [sequential] is
+        true, it substitutes :[id()] starting with 1, and subsequent :[id()]
+        values increment the ID. Otherwise if [sequential] is false, it
+        substitutes the pattern :[id()] with a fresh hex string based on the last
+        48-bit part of a UUID v3 identifier. *)
+    val substitute : ?sequential:bool -> string -> Match.environment -> (string * string list)
   end
 end
