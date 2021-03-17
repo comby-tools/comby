@@ -4,7 +4,20 @@ open Angstrom
 
 open Parser
 open Types
-open Omega
+
+type omega_match_production =
+  { offset : int
+  ; identifier : string
+  ; text : string
+  }
+[@@deriving yojson]
+
+type production =
+  | Unit
+  | String of string
+  | Template_string of string
+  | Hole of hole
+  | Match of omega_match_production
 
 let configuration_ref = ref (Configuration.create ())
 let matches_ref : Match.t list ref = ref []

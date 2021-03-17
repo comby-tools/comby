@@ -106,22 +106,6 @@ module Metasyntax = struct
   end
 end
 
-module Omega = struct
-  type omega_match_production =
-    { offset : int
-    ; identifier : string
-    ; text : string
-    }
-  [@@deriving yojson]
-
-  type production =
-    | Unit
-    | String of string
-    | Template_string of string
-    | Hole of hole
-    | Match of omega_match_production
-end
-
 type production =
   | Unit
   | String of string

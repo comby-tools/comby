@@ -1,5 +1,19 @@
 module Matchers : sig
-  module Configuration : module type of Matchers.Configuration
+  module Configuration : sig
+    type t
+    type match_kind =
+      | Exact
+      | Fuzzy
+
+    val create
+      :  ?disable_substring_matching:bool
+      -> ?match_kind:match_kind
+      -> ?significant_whitespace:bool
+      -> ?match_newline_toplevel:bool
+      -> unit
+      -> t
+  end
+
   module Syntax : module type of Matchers.Syntax
 
   module Hole : sig
@@ -43,6 +57,13 @@ module Matchers : sig
   module Matcher : sig module type S end
 
   module Alpha : sig
+
+    val all : (module Matcher.S) list
+
+    val create : ?metasyntax:Metasyntax.t -> Syntax.t -> (module Matcher.S)
+
+    val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matcher.S) option
+
     module Text : Matcher.S
     module Paren : Matcher.S
     module Dyck : Matcher.S
@@ -92,12 +113,6 @@ module Matchers : sig
     module Move : Matcher.S
     module Solidity : Matcher.S
     module C_nested_comments : Matcher.S
-
-    val all : (module Matcher.S) list
-
-    val create : ?metasyntax:Metasyntax.t -> Syntax.t -> (module Matcher.S)
-
-    val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matcher.S) option
   end
 
 (*
@@ -109,23 +124,26 @@ end
 module Specification : sig
   type t
 
-  val create : ?rewrite_template:string -> ?rule:Language.Rule.t -> match_template:string -> unit -> t
+  val create
+    :  ?rewrite_template:string
+    -> ?rule:Language.Rule.t
+    -> match_template:string
+    -> unit
+    -> t
 end
-
-type specification = Specification.t
 
 module Pipeline : sig
 
   val with_timeout : int -> Configuration.Command_input.single_source -> f:(unit -> 'a list) -> 'a list
 
   val timed_run
-    : (module Matchers.Matcher.S)
+    :  (module Matchers.Matcher.S)
     -> ?fast_offset_conversion:bool
     -> ?omega:bool
     -> ?substitute_in_place:bool
     -> configuration:Matchers.Configuration.t
     -> source:string
-    -> specification:specification
+    -> specification:Specification.t
     -> unit
     -> Match.t list
 end
