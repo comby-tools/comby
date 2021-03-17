@@ -51,7 +51,7 @@ let perform_match request =
     in
     let run ?rule () =
       let configuration = Matchers.Configuration.create ~match_kind:Fuzzy () in
-      let matches =
+      let matches : Match.t list =
         Pipeline.with_timeout timeout (String "") ~f:(fun () ->
             let specification = Comby.Specification.create ~match_template ?rule () in
             Pipeline.timed_run matcher ~configuration ~specification ~source ())

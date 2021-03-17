@@ -1,9 +1,9 @@
 open Core
 
+open Comby
 open Match
 
 module In = struct
-
   type substitution_request =
     { rewrite_template : string [@key "rewrite"]
     ; environment : Environment.t

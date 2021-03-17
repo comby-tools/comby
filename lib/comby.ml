@@ -1,3 +1,5 @@
+module Match = Match
+
 module Matchers = struct
   module Matcher = Matchers.Matcher
   module Configuration = Matchers.Configuration
@@ -16,7 +18,6 @@ module Specification = Configuration.Specification
 
 module Pipeline = Pipeline
 module Language = Language
-module Match = Match
 module Replacement = Replacement
 module Rewriter = Rewriter
 module Statistics = Statistics

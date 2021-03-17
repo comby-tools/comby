@@ -1,5 +1,96 @@
 open Core
 
+module Match : sig
+  module Location : sig
+    type t =
+      { offset : int
+      ; line : int
+      ; column : int
+      }
+    [@@deriving eq, sexp]
+
+    val to_yojson : t -> Yojson.Safe.json
+    val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+
+    val default : t
+  end
+
+  type location = Location.t
+  [@@deriving eq, sexp]
+
+  module Range : sig
+    type t =
+      { match_start : location [@key "start"]
+      ; match_end : location [@key "end"]
+      }
+    [@@deriving eq, sexp]
+
+    val to_yojson : t -> Yojson.Safe.json
+    val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+
+    val default : t
+  end
+
+  type range = Range.t
+  [@@deriving eq, sexp]
+
+  module Environment : sig
+    type t
+    [@@deriving eq]
+
+    val to_yojson : t -> Yojson.Safe.json
+    val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+
+    val create : unit -> t
+
+    val vars : t -> string list
+
+    val add : ?range:range -> t -> string -> string -> t
+
+    val lookup : t -> string -> string option
+
+    val update : t -> string -> string -> t
+
+    val lookup_range : t -> string -> range option
+
+    val update_range : t -> string -> range -> t
+
+    val furthest_match : t -> int
+
+    val equal : t -> t -> bool
+
+    val copy : t -> t
+
+    val merge : t -> t -> t
+
+    val to_string : t -> string
+
+    val exists : t -> string -> bool
+  end
+
+  type environment = Environment.t
+
+  type t =
+    { range : range
+    ; environment : environment
+    ; matched : string
+    }
+
+  val to_yojson : t -> Yojson.Safe.json
+  val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+
+  val create : ?range:range -> unit -> t
+
+  val convert_offset : fast:bool -> source:string -> t -> t
+
+  val pp : Format.formatter -> string option * t list -> unit
+
+  val pp_json_lines : Format.formatter -> string option * t list -> unit
+
+  val pp_match_count : Format.formatter -> string option * t list -> unit
+
+end
+
 module Matchers : sig
   module Configuration : sig
     type t
@@ -200,9 +291,35 @@ module Pipeline : sig
     -> Match.t list
 end
 
+module Rewriter : sig
+  module Rewrite : sig
+    val all
+      :  ?source:string
+      -> ?sequential:bool
+      -> rewrite_template:string
+      -> Match.t list
+      -> Replacement.result option
+  end
+
+  module Rewrite_template : sig
+    (** if [sequential] is true, then substitute the pattern :[id()] starting at 1,
+        and incrementing subsequent IDs. if [sequential] is false, then substitute
+        the pattern :[id()] with a fresh hex string based on the last 48-bit part of
+        a UUID v3 identifier *)
+    val substitute_fresh : ?sequential:bool -> string -> string
+
+    (** substitute returns the result and variables substituted for *)
+    val substitute : ?sequential:bool -> string -> Match.Environment.t -> (string * string list)
+
+    val of_match_context : Match.t -> source:string -> (string * string)
+
+    val get_offsets_for_holes : string -> string list -> (string * int) list
+
+    val get_offsets_after_substitution : (string * int) list -> Match.Environment.t -> (string * int) list
+  end
+end
+
 module Language = Language
-module Match = Match
 module Replacement = Replacement
-module Rewriter = Rewriter
 module Statistics = Statistics
 module Configuration = Configuration
