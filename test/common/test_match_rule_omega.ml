@@ -6,7 +6,7 @@ open Match
 
 open Test_helpers
 
-include Test_alpha
+include Test_omega
 
 let rule_parses rule =
   match Rule.create rule with

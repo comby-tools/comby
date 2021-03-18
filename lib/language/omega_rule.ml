@@ -42,7 +42,7 @@ type rewrite_context =
   { variable : string }
 
 let rec apply
-    ?(matcher = (module Matchers.Omega.Generic : Matchers.Matcher))
+    ?(matcher = (module Matchers.Omega.Generic : Matchers.Matcher.S))
     ?(substitute_in_place = true)
     predicates
     env =

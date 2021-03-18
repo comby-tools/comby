@@ -13,12 +13,12 @@ module Syntax = struct
     | Until_newline of string
   [@@deriving yojson]
 
-  type t = {
-    user_defined_delimiters : (string * string) list;
-    escapable_string_literals : escapable_string_literals option; [@default None]
-    raw_string_literals : (string * string) list;
-    comments : comment_kind list;
-  }
+  type t =
+    { user_defined_delimiters : (string * string) list
+    ; escapable_string_literals : escapable_string_literals option [@default None]
+    ; raw_string_literals : (string * string) list
+    ; comments : comment_kind list
+    }
   [@@deriving yojson]
 
   module type S = sig
@@ -106,22 +106,6 @@ module Metasyntax = struct
   end
 end
 
-module Omega = struct
-  type omega_match_production =
-    { offset : int
-    ; identifier : string
-    ; text : string
-    }
-  [@@deriving yojson]
-
-  type production =
-    | Unit
-    | String of string
-    | Template_string of string
-    | Hole of hole
-    | Match of omega_match_production
-end
-
 type production =
   | Unit
   | String of string
@@ -129,7 +113,13 @@ type production =
 
 module Matcher = struct
   module type S = sig
-    include Info.S
+    val all
+      :  ?configuration:Configuration.t
+      -> ?nested: bool
+      -> template:string
+      -> source:string
+      -> unit
+      -> Match.t list
 
     val first
       :  ?configuration:Configuration.t
@@ -138,15 +128,10 @@ module Matcher = struct
       -> string
       -> Match.t Or_error.t
 
+    include Info.S
+
     val set_rewrite_template : string -> unit
 
-    val all
-      :  ?configuration:Configuration.t
-      -> ?nested: bool
-      -> template:string
-      -> source:string
-      -> unit
-      -> Match.t list
   end
 end
 

@@ -19,7 +19,7 @@ let run ?(configuration = configuration) source match_template rewrite_template 
     (* this is too annoying to fix every time the grammar changes. *)
     print_string ""
 
-let run_all ?(m = (module Generic : Matchers.Matcher)) ?(configuration = configuration) source match_template rewrite_template =
+let run_all ?(m = (module Generic : Matchers.Matcher.S)) ?(configuration = configuration) source match_template rewrite_template =
   let (module M) = m in
   M.all ~configuration ~template:match_template ~source ()
   |> function

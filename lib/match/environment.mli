@@ -15,8 +15,6 @@ val lookup_range : t -> string -> Range.t option
 
 val update_range : t -> string -> Range.t -> t
 
-val furthest_match : t -> int
-
 val equal : t -> t -> bool
 
 val merge : t -> t -> t

@@ -2,9 +2,7 @@ open Core
 open Opium
 
 open Comby
-open Language
 open Matchers
-open Rewriter
 open Server_types
 
 let (>>|) = Lwt.Infix.(>|=)
@@ -51,15 +49,21 @@ let perform_match request =
     in
     let run ?rule () =
       let configuration = Matchers.Configuration.create ~match_kind:Fuzzy () in
+      let specification = Pipeline.Specification.create ~match_template ?rule () in
       let matches =
-        Pipeline.with_timeout timeout (String "") ~f:(fun () ->
-            let specification = Comby.Configuration.Specification.create ~match_template ?rule () in
-            Pipeline.timed_run matcher ~configuration ~specification ~source ())
+        Pipeline.execute
+          matcher
+          configuration
+          (String source)
+          specification
+        |> function
+        | Matches (m, _) -> m
+        | _ -> []
       in
       Out.Matches.to_string { matches; source; id }
     in
     let code, result =
-      match Option.map rule ~f:Rule.Alpha.create with
+      match Option.map rule ~f:Rule.create with
       | None -> 200, run ()
       | Some Ok rule -> 200, run ~rule ()
       | Some Error error -> 400, Error.to_string_hum error
@@ -97,16 +101,17 @@ let perform_rewrite request =
     in
     let run ?rule () =
       let configuration = Configuration.create ~match_kind:Fuzzy () in
+      let specification = Pipeline.Specification.create ~match_template ?rule () in
       let matches =
-        Pipeline.with_timeout timeout (String "") ~f:(fun () ->
-            let specification = Comby.Configuration.Specification.create ~match_template ?rule () in
-            Pipeline.timed_run
-              matcher
-              ~substitute_in_place
-              ~configuration
-              ~source
-              ~specification
-              ())
+        Pipeline.execute
+          matcher
+          ~substitute_in_place
+          configuration
+          (String source)
+          specification
+        |> function
+        | Matches (m, _) -> m
+        | _ -> []
       in
       Rewrite.all matches ?source:source_substitution ~rewrite_template
       |> Option.value_map ~default ~f:(fun Replacement.{ rewritten_source; in_place_substitutions } ->
@@ -117,7 +122,7 @@ let perform_rewrite request =
             })
     in
     let code, result =
-      match Option.map rule ~f:Rule.Alpha.create with
+      match Option.map rule ~f:Rule.create with
       | None -> 200, run ()
       | Some Ok rule -> 200, run ~rule ()
       | Some Error error -> 400, Error.to_string_hum error
@@ -138,7 +143,7 @@ let perform_environment_substitution request =
     let code, result =
       200,
       Out.Substitution.to_string
-        { result = fst @@ Rewrite_template.substitute rewrite_template environment
+        { result = fst @@ Rewrite.substitute rewrite_template environment
         ; id
         }
     in

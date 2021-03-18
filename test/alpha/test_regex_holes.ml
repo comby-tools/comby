@@ -7,7 +7,7 @@ open Matchers.Alpha
 
 let configuration = Configuration.create ~match_kind:Fuzzy ()
 
-let run ?(configuration = configuration) (module M : Matchers.Matcher) source match_template ?rule rewrite_template =
+let run ?(configuration = configuration) (module M : Matchers.Matcher.S) source match_template ?rule rewrite_template =
   let open Language in
   let rule =
     match rule with
