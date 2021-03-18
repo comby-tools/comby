@@ -20,10 +20,6 @@ module Matchers = struct
   module Languages = Matchers.Languages
 end
 
-module Specification = Configuration.Specification
-
-module Configuration = Configuration.Command_input
-
 module Rule = struct
   open Language
   type t = Rule.t
@@ -36,6 +32,11 @@ module Rule = struct
 end
 type rule = Rule.t
 
-module Pipeline = Pipeline
 module Replacement = Replacement
 module Rewriter = Rewriter
+
+module Pipeline = struct
+  module Specification = Configuration.Specification
+  include Configuration.Command_input
+  include Pipeline
+end

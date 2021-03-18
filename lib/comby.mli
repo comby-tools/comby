@@ -483,46 +483,6 @@ end
 
 type rule = Rule.t
 
-(** {2 Specification}
-
-    Defines an internal type that represents an atomic operation for matching,
-    rule application and rewriting *)
-module Specification : sig
-  type t
-
-  (** [create rewrite_template rule match_template] creates a new specification.
-      If [rule] is supplied, it will be applied to matches of [match_template].
-      If [rewrite_template] is supplied, running a specification will return
-      replacements rather than just matches (see [process_single_source] below). *)
-  val create
-    :  ?rewrite_template:string
-    -> ?rule:rule
-    -> match_template:string
-    -> unit
-    -> t
-end
-
-module Configuration : sig
-  type single_source =
-    | Path of string
-    | String of string
-end
-
-module Pipeline : sig
-  val with_timeout : int -> Configuration.single_source -> f:(unit -> 'a list) -> 'a list
-
-  val timed_run
-    :  (module Matchers.Matcher.S)
-    -> ?fast_offset_conversion:bool
-    -> ?omega:bool
-    -> ?substitute_in_place:bool
-    -> configuration:Matchers.Configuration.t
-    -> source:string
-    -> specification:Specification.t
-    -> unit
-    -> match' list
-end
-
 module Replacement : sig
   type t =
     { range : Match.range
@@ -546,7 +506,6 @@ module Replacement : sig
     -> unit
     -> Yojson.Safe.json
 end
-
 
 module Rewriter : sig
   module Rewrite : sig
@@ -580,4 +539,55 @@ module Rewriter : sig
         48-bit part of a UUID v3 identifier. *)
     val substitute : ?sequential:bool -> string -> Match.environment -> (string * string list)
   end
+end
+
+(** {2 Pipeline}
+
+    Exposes top level functions for running matchers and generating
+    replacements. For finer control over matching and rewriting, use Matcher.all
+    generate output with a Rewriter. *)
+module Pipeline : sig
+  (** Source inputs for a pipeline is either a string, or a file path. *)
+  type single_source =
+    | Path of string
+    | String of string
+
+  (** {2 Specification}
+
+      Defines an internal type that represents an atomic operation for matching,
+      rule application and rewriting *)
+  module Specification : sig
+    type t
+
+    (** [create rewrite_template rule match_template] creates a new specification.
+        If [rule] is supplied, it will be applied to matches of [match_template].
+        If [rewrite_template] is supplied, running a specification will return
+        replacements rather than just matches (see [process_single_source] below).
+    *)
+    val create
+      :  ?rewrite_template:string
+      -> ?rule:rule
+      -> match_template:string
+      -> unit
+      -> t
+  end
+
+  (** The output of running a specification *)
+  type processed_source_result =
+    | Matches of (Match.t list * int)
+    | Replacement of (Replacement.t list * string * int)
+    | Nothing
+
+  val process_single_source
+    :  (module Matchers.Matcher.S)
+    -> ?sequential:bool
+    -> ?omega:bool
+    -> ?fast_offset_conversion:bool
+    -> ?substitute_in_place:bool
+    -> ?verbose:bool
+    -> ?timeout:int
+    -> Matchers.Configuration.t
+    -> single_source
+    -> Specification.t
+    -> processed_source_result
 end

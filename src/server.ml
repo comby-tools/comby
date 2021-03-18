@@ -50,10 +50,17 @@ let perform_match request =
     in
     let run ?rule () =
       let configuration = Matchers.Configuration.create ~match_kind:Fuzzy () in
-      let matches : Match.t list =
-        Pipeline.with_timeout timeout (String "") ~f:(fun () ->
-            let specification = Specification.create ~match_template ?rule () in
-            Pipeline.timed_run matcher ~configuration ~specification ~source ())
+      let specification = Pipeline.Specification.create ~match_template ?rule () in
+      let matches =
+        Pipeline.process_single_source
+          matcher
+          ~sequential:true
+          configuration
+          (String source)
+          specification
+        |> function
+        | Matches (m, _) -> m
+        | _ -> []
       in
       Out.Matches.to_string { matches; source; id }
     in
@@ -96,16 +103,18 @@ let perform_rewrite request =
     in
     let run ?rule () =
       let configuration = Configuration.create ~match_kind:Fuzzy () in
+      let specification = Pipeline.Specification.create ~match_template ?rule () in
       let matches =
-        Pipeline.with_timeout timeout (String "") ~f:(fun () ->
-            let specification = Specification.create ~match_template ?rule () in
-            Pipeline.timed_run
-              matcher
-              ~substitute_in_place
-              ~configuration
-              ~source
-              ~specification
-              ())
+        Pipeline.process_single_source
+          matcher
+          ~substitute_in_place
+          ~sequential:true
+          configuration
+          (String source)
+          specification
+        |> function
+        | Matches (m, _) -> m
+        | _ -> []
       in
       Rewrite.all matches ?source:source_substitution ~rewrite_template
       |> Option.value_map ~default ~f:(fun Replacement.{ rewritten_source; in_place_substitutions } ->

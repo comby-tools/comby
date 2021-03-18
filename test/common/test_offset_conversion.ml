@@ -16,13 +16,15 @@ let run source match_template format : (string * string) =
   let specification = Configuration.Specification.create ~match_template () in
   let run ~fast =
     let result =
-      Pipeline.timed_run
+      Pipeline.process_single_source
         (module Omega.C)
         ~fast_offset_conversion:fast
-        ~configuration
-        ~specification
-        ~source
-        ()
+        configuration
+        (String source)
+        specification
+      |> function
+      | Matches (m, _) -> m
+      | _ -> []
     in
     to_string format result
   in

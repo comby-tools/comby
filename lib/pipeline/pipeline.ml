@@ -79,12 +79,12 @@ let log_to_file path =
 
 let process_single_source
     matcher
-    ~sequential
-    ~omega
-    ~fast_offset_conversion
-    ~substitute_in_place
-    ~verbose
-    ~timeout
+    ?(sequential = false)
+    ?(omega = false)
+    ?(fast_offset_conversion = false)
+    ?(substitute_in_place = false)
+    ?(verbose = false)
+    ?(timeout = 3000)
     configuration
     source
     (Specification.{ rewrite_template; _ } as specification)
