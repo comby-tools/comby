@@ -84,7 +84,7 @@ let process_single_source
     ?(fast_offset_conversion = false)
     ?(substitute_in_place = false)
     ?(verbose = false)
-    ?(timeout = 3000)
+    ?(timeout = 3)
     configuration
     source
     (Specification.{ rewrite_template; _ } as specification)
@@ -334,4 +334,23 @@ let run
         compute_mode
         interactive_review
   in
-  if dump_statistics then write_statistics count sources start_time;
+  if dump_statistics then write_statistics count sources start_time
+
+let execute
+    matcher
+    ?substitute_in_place
+    ?timeout
+    configuration
+    source
+    specification =
+  process_single_source
+    matcher
+    ~sequential:true
+    ~omega:false
+    ~fast_offset_conversion:false
+    ?substitute_in_place
+    ~verbose:false
+    ?timeout
+    configuration
+    source
+    specification

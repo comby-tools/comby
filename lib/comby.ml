@@ -33,10 +33,16 @@ end
 type rule = Rule.t
 
 module Replacement = Replacement
-module Rewriter = Rewriter
+type replacement = Replacement.result
+
+module Rewrite = struct
+  include Rewriter.Rewrite
+  include Rewriter.Rewrite_template
+end
 
 module Pipeline = struct
   module Specification = Configuration.Specification
+  type specification = Specification.t
   include Configuration.Command_input
   include Pipeline
 end

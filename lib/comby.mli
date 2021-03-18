@@ -483,13 +483,20 @@ end
 
 type rule = Rule.t
 
+(** {2 Replacement}
+
+    Defines the result of a rewrite operation. *)
 module Replacement : sig
+  (** A replacement consists of the replaced range, the replacement content, and
+      the environment associated with the replacement content. *)
   type t =
     { range : Match.range
     ; replacement_content : string
     ; environment : Match.environment
     }
 
+  (** A replacement result is the rewritten source, and the replacements of
+      fragments. *)
   type result =
     { rewritten_source : string
     ; in_place_substitutions : t list
@@ -497,55 +504,45 @@ module Replacement : sig
 
   val to_yojson : t -> Yojson.Safe.json
   val of_yojson : Yojson.Safe.json -> (t, string) Result.t
-
-  val to_json
-    :  ?path:string
-    -> ?replacements:t list
-    -> ?rewritten_source:string
-    -> diff:string
-    -> unit
-    -> Yojson.Safe.json
 end
 
-module Rewriter : sig
-  module Rewrite : sig
-    (** [all] rewrites a list of matches to an output result. Each match is
-        substituted in the [rewrite_template] to create a rewrite result. If
-        [source] is specified, each rewrite result is substituted in-place in the
-        source. If [source] is not specified, rewritten matches are
-        newline-separated.
+type replacement = Replacement.result
 
-        If the rewrite template contains the syntax :[id()], then it is
-        substituted with fresh values. [sequential] determines whether fresh
-        values are monitonically increasing or a random hash. See [substitute]
-        for more. *)
+module Rewrite : sig
+  (** [all source sequential rewrite_template matches] substitutes
+      [rewrite_template] with each match in [matches] to create a rewrite result.
+      If [source] is specified, each rewrite result is substituted in-place in
+      the source. If [source] is not specified, rewritten matches are
+      newline-separated.
 
-    val all
-      :  ?source:string
-      -> ?sequential:bool
-      -> rewrite_template:string
-      -> match' list
-      -> Replacement.result option
-  end
+      If the rewrite template contains the syntax :[id()], then it is
+      substituted with fresh values. [sequential] determines whether fresh values
+      are monitonically increasing or a random hash. See [substitute] for more. *)
+  val all
+    :  ?source:string
+    -> ?sequential:bool
+    -> rewrite_template:string
+    -> match' list
+    -> replacement option
 
-  module Rewrite_template : sig
-    (** [substitute] takes a template and match environment and substitutes
-        variables in the template for values.
+  (** [substitute sequential template environment] substitutes [template] with
+      the variable and value pairs in the [environment]. It returns the result
+      after substitution, and the list of variables in [environment] that were
+      substituted for.
 
-        The syntax :[id()] is substituted with fresh values. If [sequential] is
-        true, it substitutes :[id()] starting with 1, and subsequent :[id()]
-        values increment the ID. Otherwise if [sequential] is false, it
-        substitutes the pattern :[id()] with a fresh hex string based on the last
-        48-bit part of a UUID v3 identifier. *)
-    val substitute : ?sequential:bool -> string -> Match.environment -> (string * string list)
-  end
+      The syntax :[id()] is substituted with fresh values. If [sequential] is
+      true, it substitutes :[id()] starting with 1, and subsequent :[id()] values
+      increment the ID. Otherwise if [sequential] is false, it substitutes the
+      pattern :[id()] with a fresh hex string based on the last 48-bit part of a
+      UUID v3 identifier. *)
+  val substitute : ?sequential:bool -> string -> Match.environment -> (string * string list)
 end
 
 (** {2 Pipeline}
 
     Exposes top level functions for running matchers and generating
     replacements. For finer control over matching and rewriting, use Matcher.all
-    generate output with a Rewriter. *)
+    to generate matches, and then process matches with Rewrite functions. *)
 module Pipeline : sig
   (** Source inputs for a pipeline is either a string, or a file path. *)
   type single_source =
@@ -572,22 +569,25 @@ module Pipeline : sig
       -> t
   end
 
+  type specification = Specification.t
+
   (** The output of running a specification *)
   type processed_source_result =
-    | Matches of (Match.t list * int)
+    | Matches of (match' list * int)
     | Replacement of (Replacement.t list * string * int)
     | Nothing
 
-  val process_single_source
+  (** [execute matcher subst timeout config source spec] runs a [matcher] on
+      [source] for [spec] parameterized by [config]. [substitute_in_place] sets
+      whether rewrite output should substitute rewritten values in place.
+      [timeout] specifies a timeout in seconds (default 3).
+  *)
+  val execute
     :  (module Matchers.Matcher.S)
-    -> ?sequential:bool
-    -> ?omega:bool
-    -> ?fast_offset_conversion:bool
     -> ?substitute_in_place:bool
-    -> ?verbose:bool
     -> ?timeout:int
-    -> Matchers.Configuration.t
+    -> Matchers.configuration
     -> single_source
-    -> Specification.t
+    -> specification
     -> processed_source_result
 end

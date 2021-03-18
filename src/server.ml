@@ -3,7 +3,6 @@ open Opium
 
 open Comby
 open Matchers
-open Rewriter
 open Server_types
 
 let (>>|) = Lwt.Infix.(>|=)
@@ -52,9 +51,8 @@ let perform_match request =
       let configuration = Matchers.Configuration.create ~match_kind:Fuzzy () in
       let specification = Pipeline.Specification.create ~match_template ?rule () in
       let matches =
-        Pipeline.process_single_source
+        Pipeline.execute
           matcher
-          ~sequential:true
           configuration
           (String source)
           specification
@@ -105,10 +103,9 @@ let perform_rewrite request =
       let configuration = Configuration.create ~match_kind:Fuzzy () in
       let specification = Pipeline.Specification.create ~match_template ?rule () in
       let matches =
-        Pipeline.process_single_source
+        Pipeline.execute
           matcher
           ~substitute_in_place
-          ~sequential:true
           configuration
           (String source)
           specification
@@ -146,7 +143,7 @@ let perform_environment_substitution request =
     let code, result =
       200,
       Out.Substitution.to_string
-        { result = fst @@ Rewrite_template.substitute rewrite_template environment
+        { result = fst @@ Rewrite.substitute rewrite_template environment
         ; id
         }
     in
