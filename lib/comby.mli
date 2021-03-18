@@ -493,7 +493,7 @@ module Specification : sig
   (** [create rewrite_template rule match_template] creates a new specification.
       If [rule] is supplied, it will be applied to matches of [match_template].
       If [rewrite_template] is supplied, running a specification will return
-      replacements rather than just matches. *)
+      replacements rather than just matches (see [process_single_source] below). *)
   val create
     :  ?rewrite_template:string
     -> ?rule:rule

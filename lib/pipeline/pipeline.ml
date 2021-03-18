@@ -78,16 +78,17 @@ let log_to_file path =
       Out_channel.output_lines out_channel [Format.sprintf "Processing %s%!" path])
 
 let process_single_source
-    sequential
     matcher
-    omega
-    fast_offset_conversion
-    substitute_in_place
+    ~sequential
+    ~omega
+    ~fast_offset_conversion
+    ~substitute_in_place
+    ~verbose
+    ~timeout
     configuration
     source
     (Specification.{ rewrite_template; _ } as specification)
-    verbose
-    timeout =
+  =
   try
     let input_text =
       match source with
@@ -225,7 +226,7 @@ let run_interactive
     substitute_in_place
     match_configuration
     verbose
-    match_timeout
+    timeout
     sources
     compute_mode
     interactive_review =
@@ -234,16 +235,16 @@ let run_interactive
       specifications
       (fun (input : single_source) specification ->
          process_single_source
-           sequential
            matcher
-           omega
-           fast_offset_conversion
-           substitute_in_place
+           ~sequential
+           ~omega
+           ~fast_offset_conversion
+           ~substitute_in_place
+           ~verbose
+           ~timeout
            match_configuration
            input
-           specification
-           verbose
-           match_timeout)
+           specification)
       input
   in
   let paths =
@@ -267,7 +268,7 @@ let run
     ; specifications
     ; run_options =
         { verbose
-        ; match_timeout
+        ; match_timeout = timeout
         ; dump_statistics
         ; substitute_in_place
         ; disable_substring_matching
@@ -298,16 +299,16 @@ let run
       output_printer
       (fun input specification ->
          process_single_source
-           sequential
            matcher
-           omega
-           fast_offset_conversion
-           substitute_in_place
+           ~sequential
+           ~omega
+           ~fast_offset_conversion
+           ~substitute_in_place
+           ~verbose
+           ~timeout
            match_configuration
            input
-           specification
-           verbose
-           match_timeout)
+           specification)
       input
       output_path
   in
@@ -328,7 +329,7 @@ let run
         substitute_in_place
         match_configuration
         verbose
-        match_timeout
+        timeout
         sources
         compute_mode
         interactive_review
