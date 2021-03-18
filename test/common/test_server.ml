@@ -47,7 +47,11 @@ let kill () =
     | `Ok -> ()
     | `No_such_process -> ()
 
-let () = launch ()
+let with_server f =
+  launch ();
+  let result = f () in
+  kill ();
+  result
 
 module In = struct
   type substitution_request =
@@ -127,10 +131,13 @@ let%expect_test "post_request" =
   let rule = Some {|where :[1] == "world"|} in
   let language = "generic" in
 
-  In.{ source; match_template; rule; language; id = 0 }
-  |> In.match_request_to_yojson
-  |> Yojson.Safe.to_string
-  |> post `Match
+  let f () =
+    In.{ source; match_template; rule; language; id = 0 }
+    |> In.match_request_to_yojson
+    |> Yojson.Safe.to_string
+    |> post `Match
+  in
+  with_server f
   |> print_string;
 
   [%expect {|
@@ -189,10 +196,13 @@ let%expect_test "post_request" =
   let rewrite_template = ":[1], hello" in
   let language = "generic" in
 
-  In.{ source; match_template; rewrite_template; rule; language; substitution_kind; id = 0}
-  |> In.rewrite_request_to_yojson
-  |> Yojson.Safe.to_string
-  |> post `Rewrite
+  let f () =
+    In.{ source; match_template; rewrite_template; rule; language; substitution_kind; id = 0}
+    |> In.rewrite_request_to_yojson
+    |> Yojson.Safe.to_string
+    |> post `Rewrite
+  in
+  with_server f
   |> print_string;
 
   [%expect {|
@@ -227,10 +237,13 @@ let%expect_test "post_request" =
   let rewrite_template = ":[1], hello" in
   let language = "generic" in
 
-  In.{ source; match_template; rewrite_template; rule; language; substitution_kind; id = 0}
-  |> In.rewrite_request_to_yojson
-  |> Yojson.Safe.to_string
-  |> post `Rewrite
+  let f () =
+    In.{ source; match_template; rewrite_template; rule; language; substitution_kind; id = 0}
+    |> In.rewrite_request_to_yojson
+    |> Yojson.Safe.to_string
+    |> post `Rewrite
+  in
+  with_server f
   |> print_string;
 
   [%expect {|
@@ -266,12 +279,13 @@ let%expect_test "post_substitute" =
   let environment = Environment.add environment "1" "oh" in
   let environment = Environment.add environment "2" "there" in
 
-  In.{ rewrite_template; environment; id = 0 }
-  |> In.substitution_request_to_yojson
-  |> Yojson.Safe.to_string
-  |> post `Substitute
+  let f () =
+    In.{ rewrite_template; environment; id = 0 }
+    |> In.substitution_request_to_yojson
+    |> Yojson.Safe.to_string
+    |> post `Substitute
+  in
+  with_server f
   |> print_string;
 
   [%expect {| { "result": "oh hi there", "id": 0 } |}]
-
-let () = kill ()
