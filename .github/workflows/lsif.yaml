@@ -28,3 +28,4 @@
 #             endpoint: https://sourcegraph.com
 #             github_token: ${{ secrets.GITHUB_TOKEN }}
 #             file: dump.lsif
+#
