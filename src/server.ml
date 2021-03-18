@@ -2,7 +2,6 @@ open Core
 open Opium
 
 open Comby
-open Language
 open Matchers
 open Rewriter
 open Server_types
@@ -53,13 +52,13 @@ let perform_match request =
       let configuration = Matchers.Configuration.create ~match_kind:Fuzzy () in
       let matches : Match.t list =
         Pipeline.with_timeout timeout (String "") ~f:(fun () ->
-            let specification = Comby.Specification.create ~match_template ?rule () in
+            let specification = Specification.create ~match_template ?rule () in
             Pipeline.timed_run matcher ~configuration ~specification ~source ())
       in
       Out.Matches.to_string { matches; source; id }
     in
     let code, result =
-      match Option.map rule ~f:Rule.Alpha.create with
+      match Option.map rule ~f:Rule.create with
       | None -> 200, run ()
       | Some Ok rule -> 200, run ~rule ()
       | Some Error error -> 400, Error.to_string_hum error
@@ -99,7 +98,7 @@ let perform_rewrite request =
       let configuration = Configuration.create ~match_kind:Fuzzy () in
       let matches =
         Pipeline.with_timeout timeout (String "") ~f:(fun () ->
-            let specification = Comby.Specification.create ~match_template ?rule () in
+            let specification = Specification.create ~match_template ?rule () in
             Pipeline.timed_run
               matcher
               ~substitute_in_place
@@ -117,7 +116,7 @@ let perform_rewrite request =
             })
     in
     let code, result =
-      match Option.map rule ~f:Rule.Alpha.create with
+      match Option.map rule ~f:Rule.create with
       | None -> 200, run ()
       | Some Ok rule -> 200, run ~rule ()
       | Some Error error -> 400, Error.to_string_hum error

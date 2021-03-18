@@ -43,8 +43,6 @@ module Environment : sig
 
   val update_range : t -> string -> range -> t
 
-  val furthest_match : t -> int
-
   val equal : t -> t -> bool
 
   val copy : t -> t

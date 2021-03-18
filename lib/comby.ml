@@ -34,6 +34,7 @@ module Rule = struct
   let create = Rule.Alpha.create
   let apply = Rule.Alpha.apply
 end
+type rule = Rule.t
 
 module Pipeline = Pipeline
 module Replacement = Replacement

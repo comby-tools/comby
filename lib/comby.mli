@@ -1,5 +1,13 @@
 open Core
 
+(** {2 Match}
+
+    A match is a result of matching a template pattern in an input source.
+
+    A match comprises:
+    (1) an environment of metavariables to values, where values have an associated range.
+    (2) the entire string matched by a match template.
+    (3) the range of the entire matched string. *)
 module Match : sig
   module Location : sig
     type t =
@@ -34,6 +42,9 @@ module Match : sig
   type range = Range.t
   [@@deriving eq, sexp]
 
+  (** {3Environment}
+
+      A match environment maps metavariables to values for a given match. *)
   module Environment : sig
     type t
     [@@deriving eq]
@@ -41,21 +52,30 @@ module Match : sig
     val to_yojson : t -> Yojson.Safe.json
     val of_yojson : Yojson.Safe.json -> (t, string) Result.t
 
+    (** [create] creates a new, empty environment *)
     val create : unit -> t
 
+    (** [vars env] returns all metavariables for this environment. *)
     val vars : t -> string list
 
+    (** [add range env var value] adds a metavariable [var] to [env] with value
+        [value] and range [range]. If [var] already exists, this function has no
+        effect and returns the existing environment. *)
     val add : ?range:range -> t -> string -> string -> t
 
+    (** [lookup env ar] returns the value assocated with a metavariable [var]. *)
     val lookup : t -> string -> string option
 
+    (** [update env var value] updates the [value] of a metavariable [var] in [env]. If
+        the metavariable does not exist, the entry is added. *)
     val update : t -> string -> string -> t
 
+    (** [lookup_range env var] returns the range associated with metavariable [var] in [env]. *)
     val lookup_range : t -> string -> range option
 
+    (** [update_range env var value range] updates [env] with the [range]
+        associated with the [value] of [var] *)
     val update_range : t -> string -> range -> t
-
-    val furthest_match : t -> int
 
     val equal : t -> t -> bool
 
@@ -70,6 +90,10 @@ module Match : sig
 
   type environment = Environment.t
 
+  (** A match t is:
+      (1) an environment of metavariables to values, where values have an associated range.
+      (2) the entire string matched by a match template.
+      (3) the range of the entire matched string. *)
   type t =
     { range : range
     ; environment : environment
@@ -79,6 +103,7 @@ module Match : sig
   val to_yojson : t -> Yojson.Safe.json
   val of_yojson : Yojson.Safe.json -> (t, string) Result.t
 
+  (** [create] creates a new match with empty range by default. *)
   val create : ?range:range -> unit -> t
 
   (** [convert_offset] populates line and column information for a [source] file
@@ -98,8 +123,15 @@ end
 
 type match' = Match.t
 
+(** {2 Matchers}
+
+    Defines modules for matching a pattern in input sources to produce
+    matches. *)
 module Matchers : sig
 
+  (** {3 Configuration}
+
+      Defines some parameters for changing match behavior. *)
   module Configuration : sig
     type t
 
@@ -107,6 +139,22 @@ module Matchers : sig
       | Exact
       | Fuzzy
 
+    (** [create] creates a new configuration based for some parts of matching
+        behavior. These options are for uncommon use cases and the defaults are
+        usually the right choice.
+
+        - [disable_substring_matching] determines whether a pattern like "a"
+          matches inside a substring, or whole words. Default: [false].
+
+        - [match_kind] determines whether a match template can match anywhere
+          inside a source file (Fuzzy), or must match it exactly (Exact). Default:
+          [Fuzzy].
+
+        - [significant_whitespace] is currently has no effect.
+
+        - [match_newline_toplevel] determines whether matching should terminate
+          on newlines if a hole is not specified inside a recognized block syntax.
+          Default: [false]. *)
     val create
       :  ?disable_substring_matching:bool
       -> ?match_kind:match_kind
@@ -118,17 +166,40 @@ module Matchers : sig
 
   type configuration = Configuration.t
 
+  (** {3 Syntax}
+
+      Defines the syntax structures for the target language (C, Go, etc.) that
+      are significant for matching. *)
   module Syntax : sig
+
+    (** Defines a set of quoted syntax for strings based on one or more
+        delimiters and associated escape chracter.
+
+        E.g., this supports single and double quotes with escape character '\'
+        as: { delimiters = [ {|"|}, {|'|} ]; escape_character = '\\' } *)
     type escapable_string_literals =
       { delimiters : string list
       ; escape_character: char
       }
 
+    (** Defines comment syntax as one of Multiline, Nested_multiline with
+        associated left and right delimiters, or Until_newline that defines a
+        comment prefix. associated prefix. *)
     type comment_kind =
       | Multiline of string * string
       | Nested_multiline of string * string
       | Until_newline of string
 
+    (** Defines syntax as:
+
+        - [user_defined_delimiters] are delimiters treated as code structures
+          (parentheses, brackets, braces, alphabetic words) -
+          [escapable_string_literals] are escapable quoted strings
+
+        - [raw_string literals] are raw quoted strings that have no escape
+          character
+
+        - [comments] are comment structures  *)
     type t =
       { user_defined_delimiters : (string * string) list
       ; escapable_string_literals : escapable_string_literals option [@default None]
@@ -139,6 +210,7 @@ module Matchers : sig
     val to_yojson : t -> Yojson.Safe.json
     val of_yojson : Yojson.Safe.json -> (t, string) Result.t
 
+    (** The module signature that defines language syntax for a matcher *)
     module type S = sig
       val user_defined_delimiters : (string * string) list
       val escapable_string_literals : escapable_string_literals option
@@ -149,6 +221,29 @@ module Matchers : sig
 
   type syntax = Syntax.t
 
+  (** {3 Hole}
+
+      The kinds of holes with associated matching behavior:
+
+      - [Everything] is the default hole that matches across newlines and within
+        the bounds of code blocks or strings, and lazily between prefix and suffix
+        strings in a given template.
+
+      - [Expression] matches expression-like syntax that corresponds to
+        contiguous well-formed code structures or strings that are whitespace
+        separated.
+
+      - [Alphanum] matches alphanumeric characters and underscore.
+
+      - [Non_space] matches one or more alphanumeric characters and punctuation
+        like ., ;, and - that do not affect balanced syntax. Language dependent.
+
+      - [Line] matches zero or more characters up to a newline, including the
+        newline.
+
+      - [Blank] matches one or more spaces or tabs.
+
+      - [Regex] matches a string based on a regular expression. *)
   module Hole : sig
     type sort =
       | Everything
@@ -160,37 +255,103 @@ module Matchers : sig
       | Regex
   end
 
+  (** {3 Metasyntax}
+
+      Defines the metasyntax recognized in templates and associates the
+      metasyntax with the matching behavior of holes. *)
   module Metasyntax : sig
+
+    (** A hole definition should comprise either a string prefix, suffix, or
+        both which encloses an variable identifier. See example below. *)
     type hole_definition =
         Delimited of string option * string option
 
+    (** Defines syntax definitions for holes. Zero or more Hole sorts, excluding
+        [Regex] should have an associated [hole_definition]. The [Regex] hole
+        must define a prefix, separator, and  suffix. See example below. *)
     type hole_syntax =
       | Hole of Hole.sort * hole_definition
       | Regex of string * char * string
 
+    (** A metasyntax comprises:
+
+        - [identifier] that's a function returning true for characters
+          are allowed in identifiers. For example, to allow only contiguous
+          capitalized letters as recognized identifiers within some hole
+          syntax, use the function:
+
+          function | 'A' .. 'Z' | '_' -> true | _ -> false
+
+        - [syntax] with one or more hole definitions. For example, the
+          default metasyntax for the [Everything] hole is defined as:
+
+          [ Hole (Everything, Delimited (Some ":[", Some "]")) ]
+
+          A Regex hole must define a prefix, separator, and suffix. The
+          current convention is taken to parse Regex holes as:
+
+          <prefix><identifier><separator><regular expression><suffix>
+
+          A separator is required to syntactically distinguish arbitrary
+          identifier syntax from regular exressions. A suffix is required
+          to syntactically distinguish when to stop parsing a regular
+          expression and resume parsing the rest of the template. *)
     type t =
       { syntax : hole_syntax list
       ; identifier : char -> bool
       }
 
+    (** A module signature for metasyntax to parameterize a matcher *)
     module type S = sig
       val syntax : hole_syntax list
       val identifier : char -> bool
     end
 
+
+    (** The default metasyntax. It is defined as:
+
+        let default_syntax =
+          [ Hole (Everything, Delimited (Some ":[", Some "]"))
+          ; Hole (Expression, Delimited (Some ":[", Some ":e]"))
+          ; Hole (Alphanum, Delimited (Some ":[[", Some "]]"))
+          ; Hole (Non_space, Delimited (Some ":[", Some ".]"))
+          ; Hole (Line, Delimited (Some ":[", Some "\\n]"))
+          ; Hole (Blank, Delimited (Some ":[ ", Some "]"))
+          ; Regex (":[", '~', "]")
+          ]
+
+        let default_identifier =
+          function
+          | 'a' .. 'z'
+          | 'A' .. 'Z'
+          | '0' .. '9'
+          | '_' -> true
+          | _ -> false
+
+        let default_metasyntax =
+          { syntax = default_syntax
+          ; identifier = default_identifier
+          }
+    *)
     val default_metasyntax : t
 
+    (** [create definition] creates a metasyntax module from a definition *)
     val create : t -> (module S)
 
+    (** [default] returns the default metasyntax module *)
     val default : (module S)
-
-    module Default : S
   end
 
   type metasyntax = Metasyntax.t
 
+  (** {3 Matcher}
+
+      Defines the functions that a matcher can perform. *)
   module Matcher : sig
     module type S = sig
+      (** [all conf nested template source] finds all matches of [template] in
+          [source]. If [nested] is true, template matching will descend
+          recursively on matched content. *)
       val all
         :  ?configuration:configuration
         -> ?nested: bool
@@ -199,6 +360,8 @@ module Matchers : sig
         -> unit
         -> match' list
 
+      (** [first conf shift template source] finds the first match of [template] in [source] starting
+          at position [shift] (default 0). *)
       val first
         :  ?configuration:configuration
         -> ?shift:int
@@ -206,21 +369,39 @@ module Matchers : sig
         -> string
         -> match' Or_error.t
 
+      (** [name] returns the name of this matcher (e.g., "C", "Go", etc.). *)
       val name : string
 
+      (** [extensions] returns the file extensions associated with the language
+          that this matcher supports (e.g., ".c" and "h" for C). *)
       val extensions : string list
 
+      (** [set_rewrite_template] is currently unused. *)
       val set_rewrite_template : string -> unit
     end
   end
 
+  (** {3 Alpha Matcher}
+
+      Alpha is the match engine that defines default matchers for languages.
+  *)
   module Alpha : sig
+    (** [select_with_extension metasyntax file_extension] is a convenience
+        function that returns a matcher associated with a [file_extension]. E.g.,
+        use ".c" to get the C matcher. For a full list of extensions associated
+        with matchers, run comby -list. If [metasyntax] is specified, the matcher
+        will use a custom metasyntax definition instead of the default. *)
     val select_with_extension : ?metasyntax:metasyntax -> string -> (module Matcher.S) option
 
+    (** [create metasyntax syntax] creates a matcher for a language defined by
+        [syntax]. If [metasyntax] is specified, the matcher will use a custom
+        metasyntax definition instead of the default. *)
     val create : ?metasyntax:metasyntax -> syntax -> (module Matcher.S)
 
+    (** [all] returns all default matchers. *)
     val all : (module Matcher.S) list
 
+    (** {4 Supported Matchers} *)
     module Text : Matcher.S
     module Paren : Matcher.S
     module Dyck : Matcher.S
@@ -273,16 +454,25 @@ module Matchers : sig
   end
 end
 
+(** {2 Rule}
+
+    Defines types and operations for match rules. *)
 module Rule : sig
   type t
   type result
 
+  (** [sat result] returns true if a result of a rule is satisfied. *)
   val sat : result -> bool
 
+  (** [result_env] returns a match environment associated with a rule result. *)
   val result_env : result -> Match.environment option
 
+  (** [create] parses and creates a rule. *)
   val create : string -> t Or_error.t
 
+  (** [apply matcher substitute_in_place rule env] applies a [rule] according to
+      some [matcher] for existing matches in [env]. If [substitute_in_place] is
+      true, rewrite rules substitute their values in place (default true). *)
   val apply
     :  ?matcher:(module Matchers.Matcher.S)
     -> ?substitute_in_place:bool
@@ -291,12 +481,22 @@ module Rule : sig
     -> result
 end
 
+type rule = Rule.t
+
+(** {2 Specification}
+
+    Defines an internal type that represents an atomic operation for matching,
+    rule application and rewriting *)
 module Specification : sig
   type t
 
+  (** [create rewrite_template rule match_template] creates a new specification.
+      If [rule] is supplied, it will be applied to matches of [match_template].
+      If [rewrite_template] is supplied, running a specification will return
+      replacements rather than just matches. *)
   val create
     :  ?rewrite_template:string
-    -> ?rule:Language.Rule.t
+    -> ?rule:rule
     -> match_template:string
     -> unit
     -> t
