@@ -42,7 +42,7 @@ module Match : sig
   type range = Range.t
   [@@deriving eq, sexp]
 
-  (** {3Environment}
+  (** {3 Environment}
 
       A match environment maps metavariables to values for a given match. *)
   module Environment : sig
@@ -508,6 +508,9 @@ end
 
 type replacement = Replacement.result
 
+(** {2 Rewrite}
+
+    Defines rewrite operations.  *)
 module Rewrite : sig
   (** [all source sequential rewrite_template matches] substitutes
       [rewrite_template] with each match in [matches] to create a rewrite result.
