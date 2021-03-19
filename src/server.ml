@@ -53,7 +53,7 @@ let perform_match request =
       let matches =
         Pipeline.execute
           matcher
-          configuration
+          ~configuration
           (String source)
           specification
         |> function
@@ -106,7 +106,7 @@ let perform_rewrite request =
         Pipeline.execute
           matcher
           ~substitute_in_place
-          configuration
+          ~configuration
           (String source)
           specification
         |> function
