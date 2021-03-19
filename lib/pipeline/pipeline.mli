@@ -1,7 +1,7 @@
 open Configuration
 open Command_input
 
-type processed_source_result =
+type output =
   | Matches of (Match.t list * int)
   | Replacement of (Replacement.t list * string * int)
   | Nothing
@@ -14,19 +14,21 @@ val process_single_source
   -> ?substitute_in_place:bool
   -> ?verbose:bool
   -> ?timeout:int
+  -> ?metasyntax:Matchers.Metasyntax.t
   -> Matchers.Configuration.t
   -> single_source
   -> Specification.t
-  -> processed_source_result
+  -> output
 
 val execute
   :  (module Matchers.Matcher.S)
   -> ?substitute_in_place:bool
   -> ?timeout:int
-  -> Matchers.Configuration.t
+  -> ?metasyntax:Matchers.Metasyntax.t
+  -> ?configuration:Matchers.Configuration.t
   -> single_source
   -> Specification.t
-  -> processed_source_result
+  -> output
 
 val with_timeout : int -> Command_input.single_source -> f:(unit -> 'a list) -> 'a list
 

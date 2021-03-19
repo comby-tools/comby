@@ -60,7 +60,7 @@ let timed_run
   let matches = apply_rule ?substitute_in_place (module Matcher) omega rule matches in
   List.map matches ~f:(Match.convert_offset ~fast:fast_offset_conversion ~source)
 
-type processed_source_result =
+type output =
   | Matches of (Match.t list * int)
   | Replacement of (Replacement.t list * string * int)
   | Nothing
@@ -85,6 +85,7 @@ let process_single_source
     ?(substitute_in_place = false)
     ?(verbose = false)
     ?(timeout = 3)
+    ?metasyntax
     configuration
     source
     (Specification.{ rewrite_template; _ } as specification)
@@ -117,7 +118,7 @@ let process_single_source
         (* If there are no matches, return the original source (for editor support). *)
         Replacement ([], input_text, 0)
       | matches ->
-        match Rewrite.all ~sequential ~source:input_text ~rewrite_template matches with
+        match Rewrite.all ~source:input_text ?metasyntax ~sequential ~rewrite_template matches with
         | None -> Nothing
         | Some { rewritten_source; in_place_substitutions } ->
           Replacement (in_place_substitutions, rewritten_source, List.length matches)
@@ -340,7 +341,8 @@ let execute
     matcher
     ?substitute_in_place
     ?timeout
-    configuration
+    ?metasyntax
+    ?(configuration = Matchers.Configuration.create ())
     source
     specification =
   process_single_source
@@ -351,6 +353,7 @@ let execute
     ?substitute_in_place
     ~verbose:false
     ?timeout
+    ?metasyntax
     configuration
     source
     specification

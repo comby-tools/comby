@@ -10,13 +10,28 @@ let debug =
 let uuid_for_id_counter = ref 0
 let uuid_for_sub_counter = ref 0
 
+let replacement_sentinel metasyntax =
+  let open Matchers.Metasyntax in
+  List.find_map metasyntax.syntax ~f:(function
+      | Hole (Everything, Delimited (left, right)) ->
+        let left = Option.value left ~default:"" in
+        let right = Option.value right ~default:"" in
+        Some (left, right)
+      | Regex (left, _, right) ->
+        Some (left, right)
+      | _ -> None)
+  |> function
+  | Some v -> v
+  | None -> failwith "A custom metasyntax must define syntax for an Everything hole or Regex to customize rewriting"
+
 (** Parse the first :[id(label)] label encountered in the template. *)
-let parse_first_label template =
+let parse_first_label ?(metasyntax = Matchers.Metasyntax.default_metasyntax) template =
   let label = take_while (function | '0' .. '9' | 'a' .. 'z' | 'A' .. 'Z' | '_' -> true | _ -> false) in
+  let left, right = replacement_sentinel metasyntax in
   let parser =
     many @@
     choice
-      [ (string ":[id(" *> label <* string ")]" >>= fun label -> return (Some label))
+      [ (string (left^"id(") *> label <* string (")"^right) >>= fun label -> return (Some label))
       ; any_char >>= fun _ -> return None
       ]
   in
@@ -25,10 +40,10 @@ let parse_first_label template =
   | Ok label -> List.find_map label ~f:ident
   | Error _ -> None
 
-let substitute_fresh ?(sequential = false) template =
+let substitute_fresh ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?(sequential = false) template =
   let label_table = String.Table.create () in
   let template_ref = ref template in
-  let current_label_ref = ref (parse_first_label !template_ref) in
+  let current_label_ref = ref (parse_first_label ~metasyntax !template_ref) in
   while Option.is_some !current_label_ref do
     let label = Option.value_exn !current_label_ref in
     let id =
@@ -51,29 +66,26 @@ let substitute_fresh ?(sequential = false) template =
           String.Table.add_exn label_table ~key:label ~data:id;
         id
     in
-    let pattern = ":[id(" ^ label ^ ")]" in
+    let left, right = replacement_sentinel metasyntax in
+    let pattern = left ^ "id(" ^ label ^ ")" ^ right in
     template_ref := String.substr_replace_first !template_ref ~pattern ~with_:id;
-    current_label_ref := parse_first_label !template_ref;
+    current_label_ref := parse_first_label ~metasyntax !template_ref;
   done;
   !template_ref
 
-let substitute ?sequential template env =
-  let substitution_formats =
-    [ ":[ ", "]"
-    ; ":[", ".]"
-    ; ":[", "\\n]"
-    ; ":[[", "]]"
-    ; ":[", "]"
-    (* optional syntax *)
-    ; ":[? ", "]"
-    ; ":[ ?", "]"
-    ; ":[?", ".]"
-    ; ":[?", "\\n]"
-    ; ":[[?", "]]"
-    ; ":[?", "]"
-    ]
-  in
-  let template = substitute_fresh ?sequential template in
+let formats_of_metasyntax metasyntax =
+  let open Matchers.Metasyntax in
+  List.filter_map metasyntax ~f:(function
+      | Hole (_, Delimited (left, right)) ->
+        let left = Option.value left ~default:"" in
+        let right = Option.value right ~default:"" in
+        Some [(left, right); (left^"?", right)]
+      | _ -> None)
+  |> List.concat
+
+let substitute ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?sequential template env =
+  let substitution_formats = formats_of_metasyntax metasyntax.syntax in
+  let template = substitute_fresh ~metasyntax ?sequential template in
   Environment.vars env
   |> List.fold ~init:(template, []) ~f:(fun (acc, vars) variable ->
       match Environment.lookup env variable with
@@ -88,6 +100,7 @@ let substitute ?sequential template env =
       | None -> acc, vars)
 
 let of_match_context
+    ?(metasyntax = Matchers.Metasyntax.default_metasyntax)
     { range =
         { match_start = { offset = start_index; _ }
         ; match_end = { offset = end_index; _ } }
@@ -103,14 +116,16 @@ let of_match_context
   in
   let after_part = String.slice source end_index (String.length source) in
   let hole_id = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
-  let rewrite_template = String.concat [before_part; ":["; hole_id;  "]"; after_part] in
+  let left, right = replacement_sentinel metasyntax in
+  let rewrite_template = String.concat [before_part; left; hole_id; right; after_part] in
   hole_id, rewrite_template
 
 (* return the offset for holes (specified by variables) in a given match template *)
-let get_offsets_for_holes rewrite_template variables =
+let get_offsets_for_holes ?(metasyntax = Matchers.Metasyntax.default_metasyntax) rewrite_template variables =
+  let left, right = replacement_sentinel metasyntax in
   let sorted_variables =
     List.fold variables ~init:[] ~f:(fun acc variable ->
-        match String.substr_index rewrite_template ~pattern:(":["^variable^"]") with
+        match String.substr_index rewrite_template ~pattern:(left^variable^right) with
         | Some index ->
           (variable, index)::acc
         | None -> acc)
@@ -118,10 +133,10 @@ let get_offsets_for_holes rewrite_template variables =
     |> List.map ~f:fst
   in
   List.fold sorted_variables ~init:(rewrite_template, []) ~f:(fun (rewrite_template, acc) variable ->
-      match String.substr_index rewrite_template ~pattern:(":["^variable^"]") with
+      match String.substr_index rewrite_template ~pattern:(left^variable^right) with
       | Some index ->
         let rewrite_template =
-          String.substr_replace_all rewrite_template ~pattern:(":["^variable^"]") ~with_:"" in
+          String.substr_replace_all rewrite_template ~pattern:(left^variable^right) ~with_:"" in
         rewrite_template, (variable, index)::acc
       | None -> rewrite_template, acc)
   |> snd

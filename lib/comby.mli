@@ -495,7 +495,7 @@ module Replacement : sig
     ; environment : Match.environment
     }
 
-  (** A replacement result is the rewritten source, and the replacements of
+  (** A replacement result is the rewritten source, and the replacement
       fragments. *)
   type result =
     { rewritten_source : string
@@ -512,33 +512,36 @@ type replacement = Replacement.result
 
     Defines rewrite operations.  *)
 module Rewrite : sig
-  (** [all source sequential rewrite_template matches] substitutes
+  (** [all source metasyntax sequential rewrite_template matches] substitutes
       [rewrite_template] with each match in [matches] to create a rewrite result.
       If [source] is specified, each rewrite result is substituted in-place in
       the source. If [source] is not specified, rewritten matches are
-      newline-separated.
+      newline-separated. If [metasyntax] is defined, the
+      rewrite template will respect custom metasyntax definitions.
 
       If the rewrite template contains the syntax :[id()], then it is
       substituted with fresh values. [sequential] determines whether fresh values
       are monitonically increasing or a random hash. See [substitute] for more. *)
   val all
     :  ?source:string
+    -> ?metasyntax:Matchers.metasyntax
     -> ?sequential:bool
     -> rewrite_template:string
     -> match' list
     -> replacement option
 
-  (** [substitute sequential template environment] substitutes [template] with
-      the variable and value pairs in the [environment]. It returns the result
-      after substitution, and the list of variables in [environment] that were
-      substituted for.
+  (** [substitute metasyntax sequential template environment] substitutes
+      [template] with the variable and value pairs in the [environment]. It
+      returns the result after substitution, and the list of variables in
+      [environment] that were substituted for. If [metasyntax] is defined, the
+      rewrite template will respect custom metasyntax definitions.
 
       The syntax :[id()] is substituted with fresh values. If [sequential] is
       true, it substitutes :[id()] starting with 1, and subsequent :[id()] values
       increment the ID. Otherwise if [sequential] is false, it substitutes the
       pattern :[id()] with a fresh hex string based on the last 48-bit part of a
       UUID v3 identifier. *)
-  val substitute : ?sequential:bool -> string -> Match.environment -> (string * string list)
+  val substitute : ?metasyntax:Matchers.metasyntax -> ?sequential:bool -> string -> Match.environment -> (string * string list)
 end
 
 (** {2 Pipeline}
@@ -555,7 +558,7 @@ module Pipeline : sig
   (** {2 Specification}
 
       Defines an internal type that represents an atomic operation for matching,
-      rule application and rewriting *)
+      rule application and rewriting. *)
   module Specification : sig
     type t
 
@@ -574,23 +577,30 @@ module Pipeline : sig
 
   type specification = Specification.t
 
-  (** The output of running a specification *)
-  type processed_source_result =
+  (** The output of running a specification. Matches are a list of matches and
+      the number of matches found. A Replacement consists of the list of
+      replacement fragments, the rewrite output, and the number of replacements
+      made. *)
+  type output =
     | Matches of (match' list * int)
     | Replacement of (Replacement.t list * string * int)
     | Nothing
 
-  (** [execute matcher subst timeout config source spec] runs a [matcher] on
-      [source] for [spec] parameterized by [config]. [substitute_in_place] sets
-      whether rewrite output should substitute rewritten values in place.
-      [timeout] specifies a timeout in seconds (default 3).
-  *)
+  (** [execute matcher metasyntax subst timeout config source spec] runs a
+      [matcher] on [source] for [spec] parameterized by [config].
+      [substitute_in_place] sets whether rewrite output should substitute
+      rewritten values in place. [timeout] specifies a timeout in seconds
+      (default 3). If [metasyntax] is defined, rewrite operations will respect
+      custom metasyntax definitions. Note that [metasyntax] here does not affect
+      matching: [matcher] should be defined with a metasyntax definition if
+      desired. *)
   val execute
     :  (module Matchers.Matcher.S)
     -> ?substitute_in_place:bool
     -> ?timeout:int
-    -> Matchers.configuration
+    -> ?metasyntax:Matchers.metasyntax
+    -> ?configuration:Matchers.configuration
     -> single_source
     -> specification
-    -> processed_source_result
+    -> output
 end

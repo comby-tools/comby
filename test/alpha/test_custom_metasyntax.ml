@@ -1,7 +1,6 @@
 open Core
-open Matchers
 
-let configuration = Configuration.create ~match_kind:Fuzzy ()
+let configuration = Matchers.Configuration.create ~match_kind:Fuzzy ()
 
 let create syntax =
   let metasyntax = Matchers.Metasyntax.{ syntax; identifier = function | 'A' .. 'Z' | '_' -> true | _ -> false } in
@@ -102,4 +101,34 @@ let%expect_test "custom_metasyntax_underscore" =
 
   run matcher "simple(bar)" {|$_(?_)|} "";
   [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"_","value":"simple","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}}}],"matched":"simple(bar)"}]}
-|}];
+|}]
+
+let%expect_test "custom_metasyntax_rewrite" =
+  let syntax =
+    let open Matchers.Metasyntax in
+    [ Hole (Everything, Delimited (Some "$", None))
+    ; Hole (Alphanum, Delimited (Some "?", None))
+    ]
+  in
+  let metasyntax = Matchers.Metasyntax.{ syntax; identifier = function | 'A' .. 'Z' | '_' -> true | _ -> false } in
+  let matcher = Option.value_exn (Matchers.Alpha.select_with_extension ~metasyntax ".go") in
+
+  let specification = Configuration.Specification.create ~match_template:"$A(?B)" ~rewrite_template:"??B -> $A$A" () in
+  let result = Pipeline.execute matcher ~metasyntax (String "simple(bar)") specification in
+  let output = match result with
+    | Replacement (_, result, _) -> result
+    | Matches _ -> "matches"
+    | Nothing -> "nothing"
+  in
+  print_string output;
+  [%expect_exact {|?bar -> simplesimple|}];
+
+  let specification = Configuration.Specification.create ~match_template:"$A(?B)" ~rewrite_template:"$id() $id(a) $id(a)" () in
+  let result = Pipeline.execute matcher ~metasyntax (String "simple(bar)") specification in
+  let output = match result with
+    | Replacement (_, result, _) -> result
+    | Matches _ -> "matches"
+    | Nothing -> "nothing"
+  in
+  print_string output;
+  [%expect_exact {|1 2 2|}];
