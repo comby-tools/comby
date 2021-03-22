@@ -6,7 +6,7 @@
   test_alpha
   test_omega
   test_cli
-  test_server
+  ; test_server
   test_statistics
   test_offset_conversion
 
