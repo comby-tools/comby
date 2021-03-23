@@ -624,15 +624,14 @@ let custom_metasyntax metasyntax_path =
           exit 1)
 
 let of_custom (module M : Matchers.Engine) custom_metasyntax_path custom_matcher_path =
-  let matcher_path = Option.value_exn custom_matcher_path in
   let syntax =
     match
-      Sys.file_exists matcher_path with
+      Sys.file_exists custom_matcher_path with
     | `No | `Unknown ->
-      Format.eprintf "Could not open file: %s@." matcher_path;
+      Format.eprintf "Could not open file: %s@." custom_matcher_path;
       exit 1
     | `Yes ->
-      Yojson.Safe.from_file matcher_path
+      Yojson.Safe.from_file custom_matcher_path
       |> Matchers.Syntax.of_yojson
       |> function
       | Ok c -> c
@@ -644,16 +643,15 @@ let of_custom (module M : Matchers.Engine) custom_metasyntax_path custom_matcher
   M.create ?metasyntax syntax, None, metasyntax
 
 let of_override_matcher (module M : Matchers.Engine) override_matcher =
-  let matcher_override = Option.value_exn override_matcher in
-  let matcher =
-    match M.select_with_extension matcher_override with
+  let (module Language) =
+    match Matchers.Languages.select_with_extension override_matcher with
     | Some matcher -> matcher
-    | None when matcher_override <> ".generic" ->
-      Format.eprintf "The matcher %S is not supported. See -list for supported matchers@." matcher_override;
+    | None when override_matcher <> ".generic" ->
+      Format.eprintf "The matcher %S is not supported. See -list for supported matchers@." override_matcher;
       exit 1
-    | None -> (module M.Generic)
+    | None -> (module Matchers.Languages.Generic)
   in
-  matcher, None, None
+  (module (M.Make (Language) (Matchers.Metasyntax.Default)) : Matchers.Matcher.S), None, None
 
 let of_extension (module M : Matchers.Engine) file_filters =
   let extension =
@@ -675,11 +673,12 @@ let select_matcher custom_metasyntax custom_matcher override_matcher file_filter
     else
       (module Matchers.Alpha)
   in
-  if Option.is_some custom_matcher then
+  match custom_matcher, override_matcher, custom_metasyntax with
+  | Some custom_matcher, _, None ->
     of_custom engine custom_metasyntax custom_matcher
-  else if Option.is_some override_matcher then
+  | _, Some override_matcher, None ->
     of_override_matcher engine override_matcher
-  else
+  | _ ->
     of_extension engine file_filters
 
 let regex_of_specifications specifications =

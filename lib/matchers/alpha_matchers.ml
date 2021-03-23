@@ -3,6 +3,8 @@ open Languages
 
 module Matcher = Alpha
 
+module Make = Matcher.Make
+
 let create
     ?(metasyntax = Metasyntax.default_metasyntax)
     Types.Syntax.

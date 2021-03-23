@@ -141,6 +141,8 @@ end
 
 module Match_engine = struct
   module type S = sig
+    module Make : Language.S -> Metasyntax.S -> Matcher.S
+
     module Text : Matcher.S
     module Paren : Matcher.S
     module Dyck : Matcher.S

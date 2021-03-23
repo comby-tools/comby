@@ -1,21 +1,19 @@
 open Core
 
-open Matchers
 open Rewriter
 
 open Matchers.Alpha
 
-let configuration = Configuration.create ~match_kind:Fuzzy ()
+let configuration = Matchers.Configuration.create ~match_kind:Fuzzy ()
 
 let run ?(configuration = configuration) (module M : Matchers.Matcher.S) source match_template ?rule rewrite_template =
-  let open Language in
   let rule =
     match rule with
-    | Some rule -> Rule.Alpha.create rule |> Or_error.ok_exn
-    | None -> Rule.Alpha.create "where true" |> Or_error.ok_exn
+    | Some rule -> Language.Rule.Alpha.create rule |> Or_error.ok_exn
+    | None -> Language.Rule.Alpha.create "where true" |> Or_error.ok_exn
   in
   M.all ~configuration ~template:match_template ~source ()
-  |> List.filter ~f:(fun { Match.environment; _ } -> Rule.Alpha.(sat @@ apply rule environment))
+  |> List.filter ~f:(fun { Match.environment; _ } -> Language.Rule.Alpha.(sat @@ apply rule environment))
   |> function
   | [] -> print_string "No matches."
   | results ->

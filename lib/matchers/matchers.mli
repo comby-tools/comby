@@ -11,4 +11,7 @@ module Omega : Engine
 module Syntax : module type of Types.Syntax
 module Hole : module type of Types.Hole
 module Languages : module type of Languages
+module Language : sig
+  module type S = Types.Language.S
+end
 module Metasyntax : module type of Metasyntax
