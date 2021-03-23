@@ -623,7 +623,7 @@ let custom_metasyntax metasyntax_path =
           Format.eprintf "%s@." error;
           exit 1)
 
-let of_custom (module M : Matchers.Engine) custom_metasyntax_path custom_matcher_path =
+let of_custom (module M : Matchers.Engine.S) custom_metasyntax_path custom_matcher_path =
   let syntax =
     match
       Sys.file_exists custom_matcher_path with
@@ -642,7 +642,7 @@ let of_custom (module M : Matchers.Engine) custom_metasyntax_path custom_matcher
   let metasyntax : Matchers.Metasyntax.t option = custom_metasyntax custom_metasyntax_path in
   M.create ?metasyntax syntax, None, metasyntax
 
-let of_override_matcher (module M : Matchers.Engine) override_matcher =
+let of_override_matcher (module M : Matchers.Engine.S) override_matcher =
   let (module Language) =
     match Matchers.Languages.select_with_extension override_matcher with
     | Some matcher -> matcher
@@ -653,7 +653,7 @@ let of_override_matcher (module M : Matchers.Engine) override_matcher =
   in
   (module (M.Make (Language) (Matchers.Metasyntax.Default)) : Matchers.Matcher.S), None, None
 
-let of_extension (module M : Matchers.Engine) file_filters =
+let of_extension (module M : Matchers.Engine.S) file_filters =
   let extension =
     match file_filters with
     | None | Some [] -> ".generic"
@@ -667,7 +667,7 @@ let of_extension (module M : Matchers.Engine) file_filters =
   | None -> (module M.Generic), Some extension, None
 
 let select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega =
-  let engine : (module Matchers.Engine) =
+  let engine : (module Matchers.Engine.S) =
     if omega then
       (module Matchers.Omega)
     else

@@ -3,10 +3,12 @@ module Matcher : sig
   module type S = Types.Matcher.S
 end
 
-module type Engine = Types.Match_engine.S
+module Engine : sig
+  module type S = Types.Engine.S
+end
 
-module Alpha : Engine
-module Omega : Engine
+module Alpha : Engine.S
+module Omega : Engine.S
 
 module Syntax : module type of Types.Syntax
 module Hole : module type of Types.Hole

@@ -139,7 +139,7 @@ module Matcher = struct
   end
 end
 
-module Match_engine = struct
+module Engine = struct
   module type S = sig
     module Make : Language.S -> Metasyntax.S -> Matcher.S
 

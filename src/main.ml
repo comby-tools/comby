@@ -23,7 +23,7 @@ let paths_with_file_size paths =
       (path, length))
 
 let list_supported_languages_and_exit omega =
-  let (module Matcher : Matchers.Engine) =
+  let (module Matcher : Matchers.Engine.S) =
     if omega then
       (module Matchers.Omega)
     else
