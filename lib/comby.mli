@@ -275,36 +275,35 @@ module Matchers : sig
 
     (** A metasyntax comprises:
 
-        - [identifier] that's a function returning true for characters
-          are allowed in identifiers. For example, to allow only contiguous
-          capitalized letters as recognized identifiers within some hole
-          syntax, use the function:
+        - [identifier] where the list of characters are allowed in identifiers.
+          For example, to allow only contiguous capitalized letters as recognized
+          identifiers within some hole syntax, use:
 
-          function | 'A' .. 'Z' | '_' -> true | _ -> false
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-        - [syntax] with one or more hole definitions. For example, the
-          default metasyntax for the [Everything] hole is defined as:
+        - [syntax] with one or more hole definitions. For example, the default
+          metasyntax for the [Everything] hole is defined as:
 
           [ Hole (Everything, Delimited (Some ":[", Some "]")) ]
 
-          A Regex hole must define a prefix, separator, and suffix. The
-          current convention is taken to parse Regex holes as:
+          A Regex hole must define a prefix, separator, and suffix. The current
+          convention is taken to parse Regex holes as:
 
           <prefix><identifier><separator><regular expression><suffix>
 
           A separator is required to syntactically distinguish arbitrary
-          identifier syntax from regular exressions. A suffix is required
-          to syntactically distinguish when to stop parsing a regular
-          expression and resume parsing the rest of the template. *)
+          identifier syntax from regular exressions. A suffix is required to
+          syntactically distinguish when to stop parsing a regular expression and
+          resume parsing the rest of the template. *)
     type t =
       { syntax : hole_syntax list
-      ; identifier : char -> bool
+      ; identifier : string
       }
 
     (** A module signature for metasyntax to parameterize a matcher *)
     module type S = sig
       val syntax : hole_syntax list
-      val identifier : char -> bool
+      val identifier : string
     end
 
 
@@ -328,10 +327,8 @@ module Matchers : sig
           | '_' -> true
           | _ -> false
 
-        let default_metasyntax =
-          { syntax = default_syntax
-          ; identifier = default_identifier
-          }
+        let default_identifier =
+          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
     *)
     val default_metasyntax : t
 

@@ -80,6 +80,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and templates = flag "templates" ~aliases:["config"; "configuration"] (optional (Arg_type.comma_separated string)) ~doc:"paths CSV of directories containing templates, or TOML configuration files"
     and file_filters = flag "extensions" ~aliases:["e"; "file-extensions"; "f"] (optional (Arg_type.comma_separated string)) ~doc:"extensions Comma-separated extensions to include, like \".go\" or \".c,.h\". It is just a file suffix, so you can use it to filter file names like \"main.go\". The extension will be used to infer a matcher, unless -custom-matcher or -matcher is specified"
     and override_matcher = flag "matcher" ~aliases:["m"; "lang"; "l"; "language"] (optional string) ~doc:"extension Use this matcher on all files regardless of their file extension, unless a -custom-matcher is specified"
+    and custom_metasyntax = flag "custom-metasyntax" (optional string) ~doc:"path Path to a JSON file that contains a custom metasyntax definition"
     and custom_matcher = flag "custom-matcher" (optional string) ~doc:"path Path to a JSON file that contains a custom matcher"
     and zip_file = flag "zip" ~aliases:["z"] (optional string) ~doc:"zipfile A zip file containing files to rewrite"
     and json_lines = flag "json-lines" no_arg ~doc:"Output JSON line format"
@@ -203,6 +204,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; directory_depth
             ; exclude_directory_prefix
             ; exclude_file_prefix
+            ; custom_metasyntax
             ; custom_matcher
             ; override_matcher
             ; regex_pattern

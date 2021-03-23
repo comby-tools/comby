@@ -225,6 +225,7 @@ type user_input_options =
   ; directory_depth : int option
   ; exclude_directory_prefix : string list
   ; exclude_file_prefix : string list
+  ; custom_metasyntax : string option
   ; custom_matcher : string option
   ; override_matcher : string option
   ; regex_pattern : bool
@@ -606,20 +607,38 @@ let filter_zip_entries file_filters exclude_directory_prefix exclude_file_prefix
         && not (exclude_the_file exclude_file_prefix (Filename.basename filename))
         && has_acceptable_suffix filename)
 
-let of_custom_matcher (module M : Matchers.Engine) custom_matcher =
+let of_custom (module M : Matchers.Engine) custom_metasyntax custom_matcher =
   let matcher_path = Option.value_exn custom_matcher in
-  match Sys.file_exists matcher_path with
-  | `No | `Unknown ->
-    Format.eprintf "Could not open file: %s@." matcher_path;
-    exit 1
-  | `Yes ->
-    Yojson.Safe.from_file matcher_path
-    |> Matchers.Syntax.of_yojson
-    |> function
-    | Ok c -> M.create c, None
-    | Error error ->
-      Format.eprintf "%s@." error;
+  let syntax =
+    match Sys.file_exists matcher_path with
+    | `No | `Unknown ->
+      Format.eprintf "Could not open file: %s@." matcher_path;
       exit 1
+    | `Yes ->
+      Yojson.Safe.from_file matcher_path
+      |> Matchers.Syntax.of_yojson
+      |> function
+      | Ok c -> c
+      | Error error ->
+        Format.eprintf "%s@." error;
+        exit 1
+  in
+  let metasyntax : Matchers.Metasyntax.t option =
+    Option.bind custom_metasyntax ~f:(fun metasyntax_path ->
+        match Sys.file_exists metasyntax_path with
+        | `No | `Unknown ->
+          Format.eprintf "Could not open file: %s@." matcher_path;
+          exit 1
+        | `Yes ->
+          Yojson.Safe.from_file metasyntax_path
+          |> Matchers.Metasyntax.of_yojson
+          |> function
+          | Ok c -> Option.return c
+          | Error error ->
+            Format.eprintf "%s@." error;
+            exit 1)
+  in
+  M.create ?metasyntax syntax, None
 
 let of_override_matcher (module M : Matchers.Engine) override_matcher =
   let matcher_override = Option.value_exn override_matcher in
@@ -646,7 +665,7 @@ let of_extension (module M : Matchers.Engine) file_filters =
   | Some matcher -> matcher, Some extension
   | None -> (module M.Generic), Some extension
 
-let select_matcher custom_matcher override_matcher file_filters omega =
+let select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega =
   let engine : (module Matchers.Engine) =
     if omega then
       (module Matchers.Omega)
@@ -654,7 +673,7 @@ let select_matcher custom_matcher override_matcher file_filters omega =
       (module Matchers.Alpha)
   in
   if Option.is_some custom_matcher then
-    of_custom_matcher engine custom_matcher
+    of_custom engine custom_metasyntax custom_matcher
   else if Option.is_some override_matcher then
     of_override_matcher engine override_matcher
   else
@@ -693,6 +712,7 @@ let create
          ; directory_depth
          ; exclude_directory_prefix
          ; exclude_file_prefix
+         ; custom_metasyntax
          ; custom_matcher
          ; override_matcher
          ; regex_pattern
@@ -807,7 +827,7 @@ let create
       else
         Printer.Rewrite.print replacement_output source_path replacements result source_content
   in
-  let (module M) as matcher, extension = select_matcher custom_matcher override_matcher file_filters omega in
+  let (module M) as matcher, extension = select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega in
   return
     { matcher
     ; extension

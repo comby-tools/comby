@@ -64,6 +64,7 @@ module Hole = struct
     | Line
     | Blank
     | Regex
+  [@@deriving yojson]
 
   type t =
     { sort : sort
@@ -90,19 +91,22 @@ module Metasyntax = struct
 
   type hole_definition =
     | Delimited of string option * string option
+  [@@deriving yojson]
 
   type hole_syntax =
     | Hole of Hole.sort * hole_definition
     | Regex of string * char * string
+  [@@deriving yojson]
 
   type t =
     { syntax : hole_syntax list
-    ; identifier : char -> bool
+    ; identifier : string
     }
+  [@@deriving of_yojson]
 
   module type S = sig
     val syntax : hole_syntax list
-    val identifier : char -> bool
+    val identifier : string
   end
 end
 

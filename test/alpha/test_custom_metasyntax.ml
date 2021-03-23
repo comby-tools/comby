@@ -3,7 +3,7 @@ open Core
 let configuration = Matchers.Configuration.create ~match_kind:Fuzzy ()
 
 let create syntax =
-  let metasyntax = Matchers.Metasyntax.{ syntax; identifier = function | 'A' .. 'Z' | '_' -> true | _ -> false } in
+  let metasyntax = Matchers.Metasyntax.{ syntax; identifier = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_" } in
   Option.value_exn (Matchers.Alpha.select_with_extension ~metasyntax ".go")
 
 let run (module M : Matchers.Matcher.S) source match_template _rewrite_template =
@@ -110,7 +110,7 @@ let%expect_test "custom_metasyntax_rewrite" =
     ; Hole (Alphanum, Delimited (Some "?", None))
     ]
   in
-  let metasyntax = Matchers.Metasyntax.{ syntax; identifier = function | 'A' .. 'Z' | '_' -> true | _ -> false } in
+  let metasyntax = Matchers.Metasyntax.{ syntax; identifier = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_" } in
   let matcher = Option.value_exn (Matchers.Alpha.select_with_extension ~metasyntax ".go") in
 
   let specification = Configuration.Specification.create ~match_template:"$A(?B)" ~rewrite_template:"??B -> $A$A" () in

@@ -51,6 +51,7 @@ type user_input_options =
   ; directory_depth : int option
   ; exclude_directory_prefix : string list
   ; exclude_file_prefix : string list
+  ; custom_metasyntax : string option
   ; custom_matcher : string option
   ; override_matcher : string option
   ; regex_pattern : bool
