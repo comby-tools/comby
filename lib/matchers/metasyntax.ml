@@ -29,3 +29,6 @@ let create { syntax; identifier } =
 let default = create default_metasyntax
 
 module Default = (val default)
+
+let json metasyntax =
+  Yojson.Safe.pretty_to_string @@ to_yojson metasyntax

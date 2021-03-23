@@ -282,6 +282,7 @@ let run
     ; output_printer
     ; interactive_review
     ; extension = _ (* FIXME *)
+    ; metasyntax
     }
   =
   let sequential = match compute_mode with | `Sequential -> true | _ -> false in
@@ -301,6 +302,7 @@ let run
       (fun input specification ->
          process_single_source
            matcher
+           ?metasyntax
            ~sequential
            ~omega
            ~fast_offset_conversion

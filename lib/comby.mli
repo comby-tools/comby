@@ -306,7 +306,6 @@ module Matchers : sig
       val identifier : string
     end
 
-
     (** The default metasyntax. It is defined as:
 
         let default_syntax =
@@ -331,6 +330,9 @@ module Matchers : sig
           "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
     *)
     val default_metasyntax : t
+
+    (** A JSON representation of the metasyntax defintion *)
+    val json : t -> string
 
     (** [create definition] creates a metasyntax module from a definition *)
     val create : t -> (module S)

@@ -441,6 +441,7 @@ type t =
   ; interactive_review : interactive_review option
   ; matcher : (module Matchers.Matcher.S)
   ; extension : string option
+  ; metasyntax : Matchers.Metasyntax.t option
   }
 
 let emit_errors { input_options; run_options; output_options } =
@@ -607,8 +608,23 @@ let filter_zip_entries file_filters exclude_directory_prefix exclude_file_prefix
         && not (exclude_the_file exclude_file_prefix (Filename.basename filename))
         && has_acceptable_suffix filename)
 
-let of_custom (module M : Matchers.Engine) custom_metasyntax custom_matcher =
-  let matcher_path = Option.value_exn custom_matcher in
+let custom_metasyntax metasyntax_path =
+  Option.bind metasyntax_path ~f:(fun metasyntax_path ->
+      match Sys.file_exists metasyntax_path with
+      | `No | `Unknown ->
+        Format.eprintf "Could not open file: %s@." metasyntax_path;
+        exit 1
+      | `Yes ->
+        Yojson.Safe.from_file metasyntax_path
+        |> Matchers.Metasyntax.of_yojson
+        |> function
+        | Ok c -> Option.return c
+        | Error error ->
+          Format.eprintf "%s@." error;
+          exit 1)
+
+let of_custom (module M : Matchers.Engine) custom_metasyntax_path custom_matcher_path =
+  let matcher_path = Option.value_exn custom_matcher_path in
   let syntax =
     match Sys.file_exists matcher_path with
     | `No | `Unknown ->
@@ -623,22 +639,8 @@ let of_custom (module M : Matchers.Engine) custom_metasyntax custom_matcher =
         Format.eprintf "%s@." error;
         exit 1
   in
-  let metasyntax : Matchers.Metasyntax.t option =
-    Option.bind custom_metasyntax ~f:(fun metasyntax_path ->
-        match Sys.file_exists metasyntax_path with
-        | `No | `Unknown ->
-          Format.eprintf "Could not open file: %s@." matcher_path;
-          exit 1
-        | `Yes ->
-          Yojson.Safe.from_file metasyntax_path
-          |> Matchers.Metasyntax.of_yojson
-          |> function
-          | Ok c -> Option.return c
-          | Error error ->
-            Format.eprintf "%s@." error;
-            exit 1)
-  in
-  M.create ?metasyntax syntax, None
+  let metasyntax : Matchers.Metasyntax.t option = custom_metasyntax custom_metasyntax_path in
+  M.create ?metasyntax syntax, None, metasyntax
 
 let of_override_matcher (module M : Matchers.Engine) override_matcher =
   let matcher_override = Option.value_exn override_matcher in
@@ -650,7 +652,7 @@ let of_override_matcher (module M : Matchers.Engine) override_matcher =
       exit 1
     | None -> (module M.Generic)
   in
-  matcher, None
+  matcher, None, None
 
 let of_extension (module M : Matchers.Engine) file_filters =
   let extension =
@@ -662,8 +664,8 @@ let of_extension (module M : Matchers.Engine) file_filters =
       | extension, None -> "." ^ extension
   in
   match M.select_with_extension extension with
-  | Some matcher -> matcher, Some extension
-  | None -> (module M.Generic), Some extension
+  | Some matcher -> matcher, Some extension, None
+  | None -> (module M.Generic), Some extension, None
 
 let select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega =
   let engine : (module Matchers.Engine) =
@@ -827,7 +829,8 @@ let create
       else
         Printer.Rewrite.print replacement_output source_path replacements result source_content
   in
-  let (module M) as matcher, extension = select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega in
+  let (module M) as matcher, extension, metasyntax =
+    select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega in
   return
     { matcher
     ; extension
@@ -836,4 +839,5 @@ let create
     ; run_options
     ; output_printer
     ; interactive_review
+    ; metasyntax
     }

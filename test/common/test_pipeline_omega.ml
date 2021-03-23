@@ -22,6 +22,7 @@ let configuration =
   ; output_printer = (fun _ -> ())
   ; interactive_review = None
   ; extension = None
+  ; metasyntax = None
   }
 
 let configuration =

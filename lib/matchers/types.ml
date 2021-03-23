@@ -102,7 +102,7 @@ module Metasyntax = struct
     { syntax : hole_syntax list
     ; identifier : string
     }
-  [@@deriving of_yojson]
+  [@@deriving yojson]
 
   module type S = sig
     val syntax : hole_syntax list
