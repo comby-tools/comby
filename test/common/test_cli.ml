@@ -295,55 +295,55 @@ let%expect_test "list_languages" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_output command in
   print_string result;
-  [%expect_exact {|Option              Language  
- -matcher .s        Assembly  
- -matcher .sh       Bash      
- -matcher .c        C         
- -matcher .cs       C#        
- -matcher .css      CSS       
- -matcher .dart     Dart      
- -matcher .dyck     Dyck      
- -matcher .clj      Clojure   
- -matcher .v        Coq       
- -matcher .elm      Elm       
- -matcher .erl      Erlang    
- -matcher .ex       Elixir    
- -matcher .f        Fortran   
- -matcher .fsx      F#        
- -matcher .go       Go        
- -matcher .html     HTML      
- -matcher .hs       Haskell   
- -matcher .java     Java      
+  [%expect_exact {|Option              Language
+ -matcher .s        Assembly
+ -matcher .sh       Bash
+ -matcher .c        C
+ -matcher .cs       C#
+ -matcher .css      CSS
+ -matcher .dart     Dart
+ -matcher .dyck     Dyck
+ -matcher .clj      Clojure
+ -matcher .v        Coq
+ -matcher .elm      Elm
+ -matcher .erl      Erlang
+ -matcher .ex       Elixir
+ -matcher .f        Fortran
+ -matcher .fsx      F#
+ -matcher .go       Go
+ -matcher .html     HTML
+ -matcher .hs       Haskell
+ -matcher .java     Java
  -matcher .js       JavaScript
- -matcher .jsx      JSX       
- -matcher .json     JSON      
- -matcher .jsonc    JSONC     
- -matcher .gql      GraphQL   
- -matcher .dhall    Dhall     
- -matcher .jl       Julia     
- -matcher .kt       Kotlin    
- -matcher .tex      LaTeX     
- -matcher .lisp     Lisp      
- -matcher .move     Move      
- -matcher .nim      Nim       
- -matcher .ml       OCaml     
- -matcher .paren    Paren     
- -matcher .pas      Pascal    
- -matcher .php      PHP       
- -matcher .py       Python    
- -matcher .re       Reason    
- -matcher .rb       Ruby      
- -matcher .rs       Rust      
- -matcher .scala    Scala     
- -matcher .sol      Solidity  
- -matcher .sql      SQL       
- -matcher .swift    Swift     
- -matcher .txt      Text      
+ -matcher .jsx      JSX
+ -matcher .json     JSON
+ -matcher .jsonc    JSONC
+ -matcher .gql      GraphQL
+ -matcher .dhall    Dhall
+ -matcher .jl       Julia
+ -matcher .kt       Kotlin
+ -matcher .tex      LaTeX
+ -matcher .lisp     Lisp
+ -matcher .move     Move
+ -matcher .nim      Nim
+ -matcher .ml       OCaml
+ -matcher .paren    Paren
+ -matcher .pas      Pascal
+ -matcher .php      PHP
+ -matcher .py       Python
+ -matcher .re       Reason
+ -matcher .rb       Ruby
+ -matcher .rs       Rust
+ -matcher .scala    Scala
+ -matcher .sol      Solidity
+ -matcher .sql      SQL
+ -matcher .swift    Swift
+ -matcher .txt      Text
  -matcher .ts       TypeScript
- -matcher .tsx      TSX       
- -matcher .xml      XML       
- -matcher .zig      Zig       
- -matcher .generic  Generic   
+ -matcher .tsx      TSX
+ -matcher .xml      XML
+ -matcher .zig      Zig
+ -matcher .generic  Generic
 |}]
 
 
@@ -1229,27 +1229,3 @@ let%expect_test "dot_comby_with_flags" =
     [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
     [0;41;30m-|[0m[0m[0;2mmain([0m[0;31mvoid[0m[0;2m)[0m[0m
     [0;42;30m+|[0m[0mmain([0;32mrewrite[0m)[0m|}]
-
-(*
-let%expect_test "test_custom_metasyntax" =
-  let metasyntax =
-    {|
-{
-  "syntax": [ [ "Hole", [ "Everything" ], [ "Delimited", "$", null ] ] ],
-  "identifier": "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"
-}
-|}
-  in
-  let metasyntax_file = Stdlib.Filename.temp_file "metasyntax" ".json" in
-  Out_channel.write_all metasyntax_file ~data:metasyntax;
-  let source = "main(void)\n" in
-  let match_ = "$A($B)" in
-  let rewrite = "$B" in
-  let command_args =
-    Format.sprintf "-stdin -sequential -custom-metasyntax %s -stdout -matcher .c '%s' '%s'" metasyntax_file match_ rewrite
-  in
-  let command = Format.sprintf "%s %s" binary_path command_args in
-  let result = read_expect_stdin_and_stdout command source in
-  print_string result;
-  [%expect{|main(rewrite)|}]
-*)
