@@ -1,19 +1,13 @@
 module Configuration = Configuration
-module Matcher : sig
-  module type S = Types.Matcher.S
-end
+module Languages : module type of Languages
+module Metasyntax : module type of Metasyntax
 
-module Engine : sig
-  module type S = Types.Engine.S
-end
+module Matcher : module type of Types.Matcher
+module Engine : module type of Types.Engine
 
 module Alpha : Engine.S
 module Omega : Engine.S
 
 module Syntax : module type of Types.Syntax
 module Hole : module type of Types.Hole
-module Languages : module type of Languages
-module Language : sig
-  module type S = Types.Language.S
-end
-module Metasyntax : module type of Metasyntax
+module Language : module type of Types.Language
