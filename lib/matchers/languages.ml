@@ -914,3 +914,6 @@ let all: (module Types.Language.S) list =
   ; (module Zig)
   ; (module Generic)
   ]
+
+let select_with_extension extension : (module Types.Language.S) option =
+  List.find all ~f:(fun (module M) -> List.exists M.Info.extensions ~f:(String.(=) extension))

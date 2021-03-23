@@ -133,9 +133,7 @@ let all : (module Types.Matcher.S) list =
   ]
 
 let select_with_extension ?(metasyntax = Metasyntax.default_metasyntax) extension : (module Types.Matcher.S) option =
-  List.find_map Languages.all ~f:(fun (module M) ->
-      if List.exists M.Info.extensions ~f:(String.(=) extension) then
-        let (module Metasyntax) = Metasyntax.(create metasyntax) in
-        Some (module (Matcher.Make (M) (Metasyntax)) : Types.Matcher.S)
-      else
-        None)
+  let open Option in
+  Languages.select_with_extension extension >>| fun (module M) ->
+  let (module Metasyntax) = Metasyntax.(create metasyntax) in
+  (module (Matcher.Make (M) (Metasyntax)) : Types.Matcher.S)

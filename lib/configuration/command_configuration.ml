@@ -626,7 +626,8 @@ let custom_metasyntax metasyntax_path =
 let of_custom (module M : Matchers.Engine) custom_metasyntax_path custom_matcher_path =
   let matcher_path = Option.value_exn custom_matcher_path in
   let syntax =
-    match Sys.file_exists matcher_path with
+    match
+      Sys.file_exists matcher_path with
     | `No | `Unknown ->
       Format.eprintf "Could not open file: %s@." matcher_path;
       exit 1
