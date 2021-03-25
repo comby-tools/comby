@@ -36,7 +36,7 @@ depends: [
   "lwt_react"
   "mparser"
   "mparser-pcre"
-  "opium"
+  "opium" {>= "0.19.0"}
   "cohttp-lwt-unix"
   "parany"
   "patience_diff" {>= "v0.14" & < "v0.15"}
