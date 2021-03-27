@@ -1,3 +1,0 @@
-(library (name patdiff_kernel_test)
- (libraries core_kernel expect_test_helpers_core patdiff_kernel)
- (preprocess (pps ppx_jane)))

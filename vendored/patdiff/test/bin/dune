@@ -1,2 +1,0 @@
-(alias (name DEFAULT) (deps (glob_files *.sh))
- (action (bash "%{bin:shellcheck} -x *.sh")))

@@ -1,5 +1,5 @@
 (executables
- (libraries comby core ppx_deriving_yojson ppx_deriving_yojson.runtime camlzip patdiff
+ (libraries comby core ppx_deriving_yojson ppx_deriving_yojson.runtime
     (select if_hack_parallel.ml from
       (hack_parallel -> if_hack_parallel.available.ml)
       (!hack_parallel -> if_hack_parallel.unavailable.ml))
@@ -41,10 +41,12 @@
  (section bin)
  (files (main.exe as comby)))
 
-(install
- (section bin)
- (files (benchmark.exe as benchmark)))
+;   (install
+;    (section bin)
+;    (files (server.exe as comby-server)))
 
-(install
- (section bin)
- (files (server.exe as comby-server)))
+;   (install
+;    (section bin)
+;    (files (benchmark.exe as benchmark)))
+
+
