@@ -11,12 +11,7 @@ let default_syntax =
   ]
 
 let default_identifier =
-  function
-  | 'a' .. 'z'
-  | 'A' .. 'Z'
-  | '0' .. '9'
-  | '_' -> true
-  | _ -> false
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 
 let default_metasyntax =
   { syntax = default_syntax
@@ -34,3 +29,6 @@ let create { syntax; identifier } =
 let default = create default_metasyntax
 
 module Default = (val default)
+
+let json metasyntax =
+  Yojson.Safe.pretty_to_string @@ to_yojson metasyntax

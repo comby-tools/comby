@@ -51,6 +51,7 @@ type user_input_options =
   ; directory_depth : int option
   ; exclude_directory_prefix : string list
   ; exclude_file_prefix : string list
+  ; custom_metasyntax : string option
   ; custom_matcher : string option
   ; override_matcher : string option
   ; regex_pattern : bool
@@ -90,6 +91,7 @@ type t =
   ; interactive_review : interactive_review option
   ; matcher : (module Matchers.Matcher.S)
   ; extension : string option
+  ; metasyntax :  Matchers.Metasyntax.t option
   }
 
 val create : user_input -> t Or_error.t

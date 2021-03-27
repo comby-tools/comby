@@ -64,6 +64,7 @@ module Hole = struct
     | Line
     | Blank
     | Regex
+  [@@deriving yojson]
 
   type t =
     { sort : sort
@@ -90,19 +91,22 @@ module Metasyntax = struct
 
   type hole_definition =
     | Delimited of string option * string option
+  [@@deriving yojson]
 
   type hole_syntax =
     | Hole of Hole.sort * hole_definition
     | Regex of string * char * string
+  [@@deriving yojson]
 
   type t =
     { syntax : hole_syntax list
-    ; identifier : char -> bool
+    ; identifier : string
     }
+  [@@deriving yojson]
 
   module type S = sig
     val syntax : hole_syntax list
-    val identifier : char -> bool
+    val identifier : string
   end
 end
 
@@ -135,8 +139,10 @@ module Matcher = struct
   end
 end
 
-module Match_engine = struct
+module Engine = struct
   module type S = sig
+    module Make : Language.S -> Metasyntax.S -> Matcher.S
+
     module Text : Matcher.S
     module Paren : Matcher.S
     module Dyck : Matcher.S

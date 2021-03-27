@@ -225,6 +225,7 @@ type user_input_options =
   ; directory_depth : int option
   ; exclude_directory_prefix : string list
   ; exclude_file_prefix : string list
+  ; custom_metasyntax : string option
   ; custom_matcher : string option
   ; override_matcher : string option
   ; regex_pattern : bool
@@ -440,6 +441,7 @@ type t =
   ; interactive_review : interactive_review option
   ; matcher : (module Matchers.Matcher.S)
   ; extension : string option
+  ; metasyntax : Matchers.Metasyntax.t option
   }
 
 let emit_errors { input_options; run_options; output_options } =
@@ -606,59 +608,88 @@ let filter_zip_entries file_filters exclude_directory_prefix exclude_file_prefix
         && not (exclude_the_file exclude_file_prefix (Filename.basename filename))
         && has_acceptable_suffix filename)
 
-let of_custom_matcher (module M : Matchers.Engine) custom_matcher =
-  let matcher_path = Option.value_exn custom_matcher in
-  match Sys.file_exists matcher_path with
+let metasyntax metasyntax_path =
+  match metasyntax_path with
+  | None -> Matchers.Metasyntax.default_metasyntax
+  | Some metasyntax_path ->
+    match Sys.file_exists metasyntax_path with
+    | `No | `Unknown ->
+      Format.eprintf "Could not open file: %s@." metasyntax_path;
+      exit 1
+    | `Yes ->
+      Yojson.Safe.from_file metasyntax_path
+      |> Matchers.Metasyntax.of_yojson
+      |> function
+      | Ok c -> c
+      | Error error ->
+        Format.eprintf "%s@." error;
+        exit 1
+
+let syntax custom_matcher_path =
+  match
+    Sys.file_exists custom_matcher_path with
   | `No | `Unknown ->
-    Format.eprintf "Could not open file: %s@." matcher_path;
+    Format.eprintf "Could not open file: %s@." custom_matcher_path;
     exit 1
   | `Yes ->
-    Yojson.Safe.from_file matcher_path
+    Yojson.Safe.from_file custom_matcher_path
     |> Matchers.Syntax.of_yojson
     |> function
-    | Ok c -> M.create c, None
+    | Ok c -> c
     | Error error ->
       Format.eprintf "%s@." error;
       exit 1
 
-let of_override_matcher (module M : Matchers.Engine) override_matcher =
-  let matcher_override = Option.value_exn override_matcher in
-  let matcher =
-    match M.select_with_extension matcher_override with
-    | Some matcher -> matcher
-    | None when matcher_override <> ".generic" ->
-      Format.eprintf "The matcher %S is not supported. See -list for supported matchers@." matcher_override;
-      exit 1
-    | None -> (module M.Generic)
-  in
-  matcher, None
+let force_language language =
+  match Matchers.Languages.select_with_extension language with
+  | Some matcher -> matcher
+  | None when language <> ".generic" ->
+    Format.eprintf "The matcher %S is not supported. See -list for supported matchers@." language;
+    exit 1
+  | None -> (module Matchers.Languages.Generic)
 
-let of_extension (module M : Matchers.Engine) file_filters =
-  let extension =
-    match file_filters with
-    | None | Some [] -> ".generic"
-    | Some (filter::_) ->
-      match Filename.split_extension filter with
-      | _, Some extension -> "." ^ extension
-      | extension, None -> "." ^ extension
-  in
-  match M.select_with_extension extension with
-  | Some matcher -> matcher, Some extension
-  | None -> (module M.Generic), Some extension
+let extension file_filters =
+  match file_filters with
+  | None | Some [] -> ".generic"
+  | Some (filter::_) ->
+    match Filename.split_extension filter with
+    | _, Some extension -> "." ^ extension
+    | extension, None -> "." ^ extension
 
-let select_matcher custom_matcher override_matcher file_filters omega =
-  let engine : (module Matchers.Engine) =
+let of_extension (module E : Matchers.Engine.S) file_filters =
+  let extension = extension file_filters in
+  match E.select_with_extension extension with
+  | Some matcher -> matcher, Some extension, None
+  | None -> (module E.Generic), Some extension, None
+
+let select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega =
+  let (module E : Matchers.Engine.S) =
     if omega then
       (module Matchers.Omega)
     else
       (module Matchers.Alpha)
   in
-  if Option.is_some custom_matcher then
-    of_custom_matcher engine custom_matcher
-  else if Option.is_some override_matcher then
-    of_override_matcher engine override_matcher
-  else
-    of_extension engine file_filters
+  match custom_matcher, override_matcher, custom_metasyntax with
+  | Some custom_matcher, _, custom_metasyntax ->
+    (* custom matcher, optional custom metasyntax *)
+    let metasyntax = metasyntax custom_metasyntax in
+    let syntax = syntax custom_matcher in
+    E.create ~metasyntax syntax, None, Some metasyntax
+  (* forced language, optional custom metasyntax *)
+  | _, Some language, custom_metasyntax ->
+    let metasyntax = metasyntax custom_metasyntax in
+    let (module Metasyntax) = Matchers.Metasyntax.create metasyntax in
+    let (module Language) = force_language language in
+    (module (E.Make (Language) (Metasyntax)) : Matchers.Matcher.S), None, Some metasyntax
+  (* infer language from file filters, definite custom metasyntax *)
+  | _, _, Some custom_metasyntax ->
+    let metasyntax = metasyntax (Some custom_metasyntax) in
+    let (module Metasyntax) = Matchers.Metasyntax.create metasyntax in
+    let (module Language) = force_language (extension file_filters) in
+    (module (E.Make (Language) (Metasyntax)) : Matchers.Matcher.S), None, Some metasyntax
+  (* infer language from file filters, use default metasyntax *)
+  | _, _, None ->
+    of_extension (module E) file_filters
 
 let regex_of_specifications specifications =
   Format.sprintf "(%s)"
@@ -693,6 +724,7 @@ let create
          ; directory_depth
          ; exclude_directory_prefix
          ; exclude_file_prefix
+         ; custom_metasyntax
          ; custom_matcher
          ; override_matcher
          ; regex_pattern
@@ -807,7 +839,8 @@ let create
       else
         Printer.Rewrite.print replacement_output source_path replacements result source_content
   in
-  let (module M) as matcher, extension = select_matcher custom_matcher override_matcher file_filters omega in
+  let (module M) as matcher, extension, metasyntax =
+    select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega in
   return
     { matcher
     ; extension
@@ -816,4 +849,5 @@ let create
     ; run_options
     ; output_printer
     ; interactive_review
+    ; metasyntax
     }

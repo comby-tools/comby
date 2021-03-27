@@ -51,3 +51,5 @@ module Solidity : Language.S
 module C_nested_comments : Language.S
 
 val all : (module Language.S) list
+
+val select_with_extension : string -> (module Language.S) option

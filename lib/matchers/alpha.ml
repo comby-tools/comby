@@ -214,7 +214,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
     opt false (char '?' |>> fun _ -> true)
 
   let identifier () =
-    satisfy Metasyntax.identifier
+    choice @@ List.map ~f:char (String.to_list Metasyntax.identifier)
 
   let optional_identifier () =
     many (identifier ()) |>> String.of_char_list

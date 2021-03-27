@@ -9,3 +9,5 @@ val create : Metasyntax.t -> (module Metasyntax.S)
 val default : (module Metasyntax.S)
 
 module Default : Metasyntax.S
+
+val json : Metasyntax.t -> string

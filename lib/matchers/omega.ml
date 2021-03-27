@@ -95,7 +95,7 @@ let record_match_context pos_before pos_after =
   if rewrite then Buffer.add_string actual result;
   matches_ref := match_context :: !matches_ref
 
-module Make (Language : Language.S) = struct
+module Make (Language : Language.S) (_ : Metasyntax.S) = struct
   include Language.Info
   module Syntax = Language.Syntax
 

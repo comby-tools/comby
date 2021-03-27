@@ -6,7 +6,6 @@ open Command_input
 open Rewriter
 open Statistics
 
-open Matchers
 open Match
 open Language
 
@@ -43,7 +42,7 @@ let apply_rule ?(substitute_in_place = true) matcher omega rule matches =
       >>| fun environment -> { matched with environment })
 
 let timed_run
-    (module Matcher : Matcher.S)
+    (module Matcher : Matchers.Matcher.S)
     ?(fast_offset_conversion = false)
     ?(omega = false)
     ?substitute_in_place
@@ -282,11 +281,12 @@ let run
     ; output_printer
     ; interactive_review
     ; extension = _ (* FIXME *)
+    ; metasyntax
     }
   =
   let sequential = match compute_mode with | `Sequential -> true | _ -> false in
   let match_configuration =
-    Configuration.create
+    Matchers.Configuration.create
       ~disable_substring_matching
       ~match_kind:Fuzzy
       ~match_newline_toplevel
@@ -301,6 +301,7 @@ let run
       (fun input specification ->
          process_single_source
            matcher
+           ?metasyntax
            ~sequential
            ~omega
            ~fast_offset_conversion
