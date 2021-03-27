@@ -26,7 +26,6 @@ COPY docs /home/comby/docs
 COPY src /home/comby/src
 COPY lib /home/comby/lib
 COPY test /home/comby/test
-COPY vendored /home/comby/vendored
 COPY push-coverage-report.sh /home/comby/
 
 # Prepare for build.
