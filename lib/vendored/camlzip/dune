@@ -1,16 +1,15 @@
 (library
  (name camlzip)
- (public_name camlzip)
+ (public_name comby.camlzip)
  (synopsis "OCaml ZIP interface")
  (modules gzip zip zlib)
  ; the next library stanza isn't strictly required to compile, 
  ; as long as the unix parts are not needed, but I want it to 
  ; compile executables for tests
  (libraries unix)
- (c_names zlibstubs)
- (c_flags
-  (:include c_flags.sexp))
+ (foreign_stubs (language c) (names zlibstubs))
  (c_library_flags
+  (:include c_flags.sexp)
   (:include c_library_flags.sexp)))
 
 (rule
