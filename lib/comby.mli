@@ -319,14 +319,6 @@ module Matchers : sig
           ]
 
         let default_identifier =
-          function
-          | 'a' .. 'z'
-          | 'A' .. 'Z'
-          | '0' .. '9'
-          | '_' -> true
-          | _ -> false
-
-        let default_identifier =
           "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
     *)
     val default_metasyntax : t
