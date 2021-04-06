@@ -1,0 +1,35 @@
+opam-version: "2.0"
+maintainer: "rvantonder@gmail.com"
+authors: "Rijnard van Tonder"
+homepage: "https://github.com/comby-tools/comby"
+bug-reports: "https://github.com/comby-tools/comby/issues"
+dev-repo: "git+https://github.com/comby-tools/comby.git"
+license: "Apache-2.0"
+build: [
+    [
+      "dune"
+      "build"
+      "-p"
+      name
+      "-j"
+      jobs
+      "@install"
+      "@runtest" {with-test}
+    ]
+]
+depends: [
+  "dune" {>= "2.7.0"}
+  "ocaml" {>= "4.08.1"}
+  "angstrom" {>= "0.15.0"}
+  "core_kernel"
+  "mparser"
+  "mparser-pcre"
+  "ppx_deriving"
+  "ppx_deriving_yojson" {>= "3.6.0"}
+  "pcre"
+  "bisect_ppx" {with-test & dev & >= "2.5.0"}
+]
+synopsis: "A match engine for structural code search and replace that supports ~every language"
+description: """
+Comby-kernel is the library that exposes the core matching engine for the comby application tool.
+"""

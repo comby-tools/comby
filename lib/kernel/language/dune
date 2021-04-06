@@ -1,0 +1,6 @@
+(library
+  (name language)
+  (public_name comby-kernel.language)
+  (instrumentation (backend bisect_ppx))
+  (preprocess (pps ppx_sexp_conv))
+  (libraries comby-kernel.parsers comby-kernel.match comby-kernel.rewriter core_kernel))

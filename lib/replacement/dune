@@ -1,6 +1,0 @@
-(library
-  (name replacement)
-  (public_name comby.replacement)
-  (instrumentation (backend bisect_ppx))
-  (preprocess (pps ppx_deriving_yojson))
-  (libraries comby.match core yojson ppx_deriving_yojson ppx_deriving_yojson.runtime))

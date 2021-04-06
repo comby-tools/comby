@@ -1,6 +1,0 @@
-(library
-  (name language)
-  (public_name comby.language)
-  (instrumentation (backend bisect_ppx))
-  (preprocess (pps ppx_sexp_conv))
-  (libraries comby.parsers comby.match comby.rewriter core core.uuid))

@@ -1,6 +1,0 @@
-(library
-  (name matchers)
-  (public_name comby.matchers)
-  (instrumentation (backend bisect_ppx))
-  (preprocess (pps ppx_here ppx_sexp_conv ppx_sexp_message ppx_deriving_yojson))
-  (libraries comby.parsers comby.match angstrom core core.uuid mparser mparser-pcre yojson ppx_deriving_yojson))
