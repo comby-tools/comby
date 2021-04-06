@@ -21,6 +21,7 @@ module type Engine = sig
   val apply
     :  ?matcher:(module Matcher.S)
     -> ?substitute_in_place:bool
+    -> ?fresh:(unit -> string)
     -> t
     -> environment
     -> result

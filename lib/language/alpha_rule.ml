@@ -39,9 +39,16 @@ let merge_match_environments matches environment' =
 type rewrite_context =
   { variable : string }
 
+let counter =
+  let uuid_for_id_counter = ref 0 in
+  fun () ->
+    uuid_for_id_counter := !uuid_for_id_counter + 1;
+    Format.sprintf "gu3ssme_%012d" !uuid_for_id_counter
+
 let rec apply
     ?(matcher = (module Matchers.Alpha.Generic : Matchers.Matcher.S))
     ?(substitute_in_place = true)
+    ?(fresh = counter)
     predicates
     env =
   let open Option in
@@ -104,7 +111,7 @@ let rec apply
       Option.value_map result ~f:ident ~default:(false, Some env)
     | Match (String template, cases) ->
       let source, _ = Rewriter.Rewrite_template.substitute template env in
-      let fresh_var = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
+      let fresh_var = fresh () in
       let env = Environment.add env fresh_var source in
       rule_match env (Match (Variable fresh_var, cases))
     | RewriteTemplate rewrite_template ->

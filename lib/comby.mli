@@ -154,12 +154,16 @@ module Matchers : sig
 
         - [match_newline_toplevel] determines whether matching should terminate
           on newlines if a hole is not specified inside a recognized block syntax.
-          Default: [false]. *)
+          Default: [false].
+
+        - [fresh] is a generator for fresh values, used to evaluate equality
+          relations. *)
     val create
       :  ?disable_substring_matching:bool
       -> ?match_kind:match_kind
       -> ?significant_whitespace:bool
       -> ?match_newline_toplevel:bool
+      -> ?fresh:(unit -> string)
       -> unit
       -> t
   end
@@ -461,12 +465,15 @@ module Rule : sig
   (** [create] parses and creates a rule. *)
   val create : string -> t Or_error.t
 
-  (** [apply matcher substitute_in_place rule env] applies a [rule] according to
-      some [matcher] for existing matches in [env]. If [substitute_in_place] is
-      true, rewrite rules substitute their values in place (default true). *)
+  (** [apply matcher substitute_in_place fresh rule env] applies a [rule]
+      according to some [matcher] for existing matches in [env]. If
+      [substitute_in_place] is true, rewrite rules substitute their values in
+      place (default true). [fresh] introduces fresh variables for evaluating
+      rules. *)
   val apply
     :  ?matcher:(module Matchers.Matcher.S)
     -> ?substitute_in_place:bool
+    -> ?fresh:(unit -> string)
     -> t
     -> Match.environment
     -> result

@@ -370,7 +370,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
          let environment =
            if Environment.exists environment identifier && String.(identifier <> "_") then
              let fresh_hole_id =
-               Format.sprintf "%s_%s_equal" Uuid_unix.(Fn.compose Uuid.to_string create ()) identifier
+               Format.sprintf "%s_%s_equal" (!configuration_ref.fresh ()) identifier
              in
              Environment.add ~range environment fresh_hole_id (String.concat matched)
            else

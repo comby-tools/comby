@@ -37,7 +37,8 @@ let apply_rule ?(substitute_in_place = true) matcher omega rule matches =
         else
           Rule.Alpha.apply
       in
-      let sat, env = apply ~substitute_in_place ~matcher rule environment in
+      let fresh () = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
+      let sat, env = apply ~fresh ~substitute_in_place ~matcher rule environment in
       (if sat then env else None)
       >>| fun environment -> { matched with environment })
 
@@ -282,19 +283,20 @@ let run
     ; metasyntax
     }
   =
+  let fresh = match compute_mode with
+    | `Sequential -> None
+    | _ -> Some (fun () -> Uuid_unix.(Fn.compose Uuid.to_string create ()))
+  in
+
   let match_configuration =
     Matchers.Configuration.create
       ~disable_substring_matching
       ~match_kind:Fuzzy
       ~match_newline_toplevel
+      ?fresh
       ()
   in
   let start_time = Statistics.Time.start () in
-
-  let fresh = match compute_mode with
-    | `Sequential -> None
-    | _ -> Some (fun () -> Uuid_unix.(Fn.compose Uuid.to_string create ()))
-  in
 
   let per_unit ~(input : single_source) ~output_path =
     run_on_specifications
