@@ -95,7 +95,7 @@ let record_match_context pos_before pos_after =
   if rewrite then Buffer.add_string actual result;
   matches_ref := match_context :: !matches_ref
 
-module Make (Language : Language.S) (_ : Metasyntax.S) = struct
+module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
   include Language.Info
   module Syntax = Language.Syntax
 
@@ -133,11 +133,10 @@ module Make (Language : Language.S) (_ : Metasyntax.S) = struct
       let range = { match_start = before; match_end = after } in
       let add identifier = Environment.add ~range !current_environment_ref identifier content in
       let environment =
-        match Environment.exists !current_environment_ref identifier with
+        match Environment.exists !current_environment_ref identifier && String.(identifier <> "_") with
         | true ->
-          (* FIXME: get rid of UUID *)
           let fresh_hole_id =
-            Format.sprintf "%s_%s_equal" Uuid_unix.(Fn.compose Uuid.to_string create ()) identifier
+            Format.sprintf "%s_%s_equal" (!configuration_ref.fresh ()) identifier
           in
           add fresh_hole_id
         | false -> add identifier

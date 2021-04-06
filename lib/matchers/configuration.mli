@@ -7,6 +7,7 @@ type t =
   ; significant_whitespace : bool
   ; disable_substring_matching : bool
   ; match_newline_toplevel : bool
+  ; fresh : unit -> string
   }
 
 val create
@@ -14,5 +15,6 @@ val create
   -> ?match_kind:match_kind
   -> ?significant_whitespace:bool
   -> ?match_newline_toplevel:bool
+  -> ?fresh:(unit -> string)
   -> unit
   -> t

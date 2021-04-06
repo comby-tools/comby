@@ -7,7 +7,6 @@ let debug =
   Sys.getenv "DEBUG_COMBY"
   |> Option.is_some
 
-
 let substitute_match_contexts ?fresh ?metasyntax (matches: Match.t list) source replacements =
   if debug then Format.printf "Matches: %d | Replacements: %d@." (List.length matches) (List.length replacements);
   let rewrite_template, environment =
