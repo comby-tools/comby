@@ -503,36 +503,42 @@ type replacement = Replacement.result
 
     Defines rewrite operations.  *)
 module Rewrite : sig
-  (** [all source metasyntax sequential rewrite_template matches] substitutes
+  (** [all source metasyntax fresh rewrite_template matches] substitutes
       [rewrite_template] with each match in [matches] to create a rewrite result.
       If [source] is specified, each rewrite result is substituted in-place in
       the source. If [source] is not specified, rewritten matches are
-      newline-separated. If [metasyntax] is defined, the
-      rewrite template will respect custom metasyntax definitions.
+      newline-separated. If [metasyntax] is defined, the rewrite template will
+      respect custom metasyntax definitions.
 
       If the rewrite template contains the syntax :[id()], then it is
-      substituted with fresh values. [sequential] determines whether fresh values
-      are monitonically increasing or a random hash. See [substitute] for more. *)
+      substituted with fresh values. [fresh] may be specified to supply custom
+      fresh values. If not specified, fresh variables are generated in increasing
+      rank starting with 1, and incremented. See [substitute] for more. *)
   val all
     :  ?source:string
     -> ?metasyntax:Matchers.metasyntax
-    -> ?sequential:bool
+    -> ?fresh:(unit -> string)
     -> rewrite_template:string
     -> match' list
     -> replacement option
 
-  (** [substitute metasyntax sequential template environment] substitutes
-      [template] with the variable and value pairs in the [environment]. It
-      returns the result after substitution, and the list of variables in
-      [environment] that were substituted for. If [metasyntax] is defined, the
-      rewrite template will respect custom metasyntax definitions.
+  (** [substitute metasyntax fresh template environment] substitutes [template]
+      with the variable and value pairs in the [environment]. It returns the
+      result after substitution, and the list of variables in [environment] that
+      were substituted for. If [metasyntax] is defined, the rewrite template will
+      respect custom metasyntax definitions.
 
-      The syntax :[id()] is substituted with fresh values. If [sequential] is
-      true, it substitutes :[id()] starting with 1, and subsequent :[id()] values
-      increment the ID. Otherwise if [sequential] is false, it substitutes the
-      pattern :[id()] with a fresh hex string based on the last 48-bit part of a
-      UUID v3 identifier. *)
-  val substitute : ?metasyntax:Matchers.metasyntax -> ?sequential:bool -> string -> Match.environment -> (string * string list)
+      The syntax :[id()] is substituted with fresh values. If [fresh] is not
+      specified, the default behavior substitutes :[id()] starting with 1, and
+      subsequent :[id()] values increment the ID. If [fresh] is set, substitutes
+      the pattern :[id()] with the value of fresh () as the hole is encountered,
+      left to right. *)
+  val substitute
+    :  ?metasyntax:Matchers.metasyntax
+    -> ?fresh:(unit -> string)
+    -> string
+    -> Match.environment
+    -> (string * string list)
 end
 
 (** {2 Pipeline}
@@ -577,19 +583,21 @@ module Pipeline : sig
     | Replacement of (Replacement.t list * string * int)
     | Nothing
 
-  (** [execute matcher metasyntax subst timeout config source spec] runs a
-      [matcher] on [source] for [spec] parameterized by [config].
-      [substitute_in_place] sets whether rewrite output should substitute
-      rewritten values in place. [timeout] specifies a timeout in seconds
-      (default 3). If [metasyntax] is defined, rewrite operations will respect
-      custom metasyntax definitions. Note that [metasyntax] here does not affect
-      matching: [matcher] should be defined with a metasyntax definition if
-      desired. *)
+  (** [execute matcher subst timeout metasyntax fresh config source spec] runs a
+      [matcher] on [source] for [spec] parameterized by [config]. [subst] sets
+      whether rewrite output should substitute rewritten values in place.
+      [timeout] specifies a timeout in seconds (default 3). If [metasyntax] is
+      defined, rewrite operations will respect custom metasyntax definitions.
+      Note that [metasyntax] here does not affect matching: [matcher] should be
+      defined with a metasyntax definition if desired. A custom [fresh] variable
+      generator may supply values to use for substitution; see
+      [Rewrite.substitute] for more. *)
   val execute
     :  (module Matchers.Matcher.S)
     -> ?substitute_in_place:bool
     -> ?timeout:int
     -> ?metasyntax:Matchers.metasyntax
+    -> ?fresh:(unit -> string)
     -> ?configuration:Matchers.configuration
     -> single_source
     -> specification

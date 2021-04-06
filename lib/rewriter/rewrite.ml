@@ -8,7 +8,7 @@ let debug =
   |> Option.is_some
 
 
-let substitute_match_contexts ?sequential ?metasyntax (matches: Match.t list) source replacements =
+let substitute_match_contexts ?fresh ?metasyntax (matches: Match.t list) source replacements =
   if debug then Format.printf "Matches: %d | Replacements: %d@." (List.length matches) (List.length replacements);
   let rewrite_template, environment =
     List.fold2_exn
@@ -18,7 +18,8 @@ let substitute_match_contexts ?sequential ?metasyntax (matches: Match.t list) so
            ({ environment = _match_environment; _ } as match_)
            { replacement_content; _ } ->
            (* create a hole in the rewrite template based on this match context *)
-           let hole_id, rewrite_template = Rewrite_template.of_match_context ?metasyntax match_ ~source:rewrite_template in
+           let sub_fresh = Option.map fresh ~f:(fun f -> fun () -> ("sub_" ^ f ())) in (* ensure custom fresh function is unique for substition. *)
+           let hole_id, rewrite_template = Rewrite_template.of_match_context ?metasyntax ?fresh:sub_fresh match_ ~source:rewrite_template in
            if debug then Format.printf "Hole: %s in %s@." hole_id rewrite_template;
            (* add this match context replacement to the environment *)
            let accumulator_environment = Environment.add accumulator_environment hole_id replacement_content in
@@ -27,7 +28,7 @@ let substitute_match_contexts ?sequential ?metasyntax (matches: Match.t list) so
   in
   if debug then Format.printf "Env:@.%s" (Environment.to_string environment);
   if debug then Format.printf "Rewrite in:@.%s@." rewrite_template;
-  let rewritten_source = Rewrite_template.substitute ?metasyntax ?sequential rewrite_template environment |> fst in
+  let rewritten_source = Rewrite_template.substitute ?metasyntax ?fresh rewrite_template environment |> fst in
   let offsets = Rewrite_template.get_offsets_for_holes ?metasyntax rewrite_template (Environment.vars environment) in
   if debug then
     Format.printf "Replacements: %d | Offsets 1: %d@." (List.length replacements) (List.length offsets);
@@ -52,11 +53,11 @@ let substitute_match_contexts ?sequential ?metasyntax (matches: Match.t list) so
    (b) its replacement context (to calculate the range)
    (c) an environment of values that are updated to reflect their relative offset in the rewrite template
    *)
-let substitute_in_rewrite_template ?sequential ?metasyntax rewrite_template ({ environment; _ } : Match.t) =
+let substitute_in_rewrite_template ?fresh ?metasyntax rewrite_template ({ environment; _ } : Match.t) =
   let replacement_content, vars_substituted_for =
     Rewrite_template.substitute
       ?metasyntax
-      ?sequential
+      ?fresh
       rewrite_template
       environment
   in
@@ -92,20 +93,20 @@ let substitute_in_rewrite_template ?sequential ?metasyntax rewrite_template ({ e
       }
   }
 
-let all ?source ?metasyntax ?sequential ~rewrite_template matches : result option =
+let all ?source ?metasyntax ?fresh ~rewrite_template matches : result option =
   if List.is_empty matches then None else
     match source with
     (* in-place substitution *)
     | Some source ->
       let matches : Match.t list = List.rev matches in
       matches
-      |> List.map ~f:(substitute_in_rewrite_template ?metasyntax ?sequential rewrite_template)
-      |> substitute_match_contexts ?metasyntax ?sequential matches source
+      |> List.map ~f:(substitute_in_rewrite_template ?metasyntax ?fresh rewrite_template)
+      |> substitute_match_contexts ?metasyntax ?fresh matches source
       |> Option.some
     (* no in place substitution, emit result separated by newlines *)
     | None ->
       matches
-      |> List.map ~f:(substitute_in_rewrite_template ?metasyntax ?sequential rewrite_template)
+      |> List.map ~f:(substitute_in_rewrite_template ?metasyntax ?fresh rewrite_template)
       |> List.map ~f:(fun { replacement_content; _ } -> replacement_content)
       |> String.concat ~sep:"\n"
       |> (fun rewritten_source -> { rewritten_source; in_place_substitutions = [] })

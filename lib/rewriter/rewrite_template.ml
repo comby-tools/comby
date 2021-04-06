@@ -7,8 +7,18 @@ let debug =
   Sys.getenv "DEBUG_COMBY"
   |> Option.is_some
 
-let uuid_for_id_counter = ref 0
-let uuid_for_sub_counter = ref 0
+
+let counter =
+  let uuid_for_id_counter = ref 0 in
+  fun () ->
+    uuid_for_id_counter := !uuid_for_id_counter + 1;
+    Format.sprintf "%d" !uuid_for_id_counter
+
+let sub_counter =
+  let uuid_for_sub_counter = ref 0 in
+  fun () ->
+    uuid_for_sub_counter := !uuid_for_sub_counter + 1;
+    Format.sprintf "sub_%d" !uuid_for_sub_counter
 
 let replacement_sentinel metasyntax =
   let open Matchers.Metasyntax in
@@ -40,7 +50,7 @@ let parse_first_label ?(metasyntax = Matchers.Metasyntax.default_metasyntax) tem
   | Ok label -> List.find_map label ~f:ident
   | Error _ -> None
 
-let substitute_fresh ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?(sequential = false) template =
+let substitute_fresh ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?(fresh = counter) template =
   let label_table = String.Table.create () in
   let template_ref = ref template in
   let current_label_ref = ref (parse_first_label ~metasyntax !template_ref) in
@@ -50,18 +60,7 @@ let substitute_fresh ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?(se
       match String.Table.find label_table label with
       | Some id -> id
       | None ->
-        let id =
-          if sequential then
-            (
-              uuid_for_id_counter := !uuid_for_id_counter + 1;
-              Format.sprintf "%d" !uuid_for_id_counter
-            )
-          else
-            (
-              let uuid = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
-              String.suffix uuid 12
-            )
-        in
+        let id = fresh () in
         if String.(label <> "") then
           String.Table.add_exn label_table ~key:label ~data:id;
         id
@@ -83,9 +82,9 @@ let formats_of_metasyntax metasyntax =
       | _ -> None)
   |> List.concat
 
-let substitute ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?sequential template env =
+let substitute ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?fresh template env =
   let substitution_formats = formats_of_metasyntax metasyntax.syntax in
-  let template = substitute_fresh ~metasyntax ?sequential template in
+  let template = substitute_fresh ~metasyntax ?fresh template in
   Environment.vars env
   |> List.fold ~init:(template, []) ~f:(fun (acc, vars) variable ->
       match Environment.lookup env variable with
@@ -101,6 +100,7 @@ let substitute ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?sequentia
 
 let of_match_context
     ?(metasyntax = Matchers.Metasyntax.default_metasyntax)
+    ?(fresh = sub_counter)
     { range =
         { match_start = { offset = start_index; _ }
         ; match_end = { offset = end_index; _ } }
@@ -115,7 +115,7 @@ let of_match_context
       String.slice source 0 start_index
   in
   let after_part = String.slice source end_index (String.length source) in
-  let hole_id = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
+  let hole_id = fresh () in
   let left, right = replacement_sentinel metasyntax in
   let rewrite_template = String.concat [before_part; left; hole_id; right; after_part] in
   hole_id, rewrite_template
