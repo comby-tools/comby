@@ -8,13 +8,13 @@ type output =
 
 val process_single_source
   :  (module Matchers.Matcher.S)
-  -> ?sequential:bool
   -> ?omega:bool
   -> ?fast_offset_conversion:bool
   -> ?substitute_in_place:bool
   -> ?verbose:bool
   -> ?timeout:int
   -> ?metasyntax:Matchers.Metasyntax.t
+  -> ?fresh:(unit -> string)
   -> Matchers.Configuration.t
   -> single_source
   -> Specification.t
@@ -25,6 +25,7 @@ val execute
   -> ?substitute_in_place:bool
   -> ?timeout:int
   -> ?metasyntax:Matchers.Metasyntax.t
+  -> ?fresh:(unit -> string)
   -> ?configuration:Matchers.Configuration.t
   -> single_source
   -> Specification.t

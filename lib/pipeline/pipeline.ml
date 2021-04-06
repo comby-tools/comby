@@ -78,13 +78,13 @@ let log_to_file path =
 
 let process_single_source
     matcher
-    ?(sequential = false)
     ?(omega = false)
     ?(fast_offset_conversion = false)
     ?(substitute_in_place = false)
     ?(verbose = false)
     ?(timeout = 3)
     ?metasyntax
+    ?fresh
     configuration
     source
     (Specification.{ rewrite_template; _ } as specification)
@@ -117,7 +117,7 @@ let process_single_source
         (* If there are no matches, return the original source (for editor support). *)
         Replacement ([], input_text, 0)
       | matches ->
-        match Rewrite.all ~source:input_text ?metasyntax ~sequential ~rewrite_template matches with
+        match Rewrite.all ~source:input_text ?metasyntax ?fresh ~rewrite_template matches with
         | None -> Nothing
         | Some { rewritten_source; in_place_substitutions } ->
           Replacement (in_place_substitutions, rewritten_source, List.length matches)
@@ -219,7 +219,6 @@ let run_batch ~f:per_unit sources compute_mode bound_count =
 
 let run_interactive
     specifications
-    sequential
     matcher
     omega
     fast_offset_conversion
@@ -236,7 +235,6 @@ let run_interactive
       (fun (input : single_source) specification ->
          process_single_source
            matcher
-           ~sequential
            ~omega
            ~fast_offset_conversion
            ~substitute_in_place
@@ -284,7 +282,6 @@ let run
     ; metasyntax
     }
   =
-  let sequential = match compute_mode with | `Sequential -> true | _ -> false in
   let match_configuration =
     Matchers.Configuration.create
       ~disable_substring_matching
@@ -294,6 +291,11 @@ let run
   in
   let start_time = Statistics.Time.start () in
 
+  let fresh = match compute_mode with
+    | `Sequential -> None
+    | _ -> Some (fun () -> Uuid_unix.(Fn.compose Uuid.to_string create ()))
+  in
+
   let per_unit ~(input : single_source) ~output_path =
     run_on_specifications
       specifications
@@ -301,13 +303,13 @@ let run
       (fun input specification ->
          process_single_source
            matcher
-           ?metasyntax
-           ~sequential
            ~omega
            ~fast_offset_conversion
            ~substitute_in_place
            ~verbose
            ~timeout
+           ?metasyntax
+           ?fresh
            match_configuration
            input
            specification)
@@ -324,7 +326,6 @@ let run
     | Some interactive_review ->
       run_interactive
         specifications
-        sequential
         matcher
         omega
         fast_offset_conversion
@@ -343,18 +344,19 @@ let execute
     ?substitute_in_place
     ?timeout
     ?metasyntax
+    ?fresh
     ?(configuration = Matchers.Configuration.create ())
     source
     specification =
   process_single_source
     matcher
-    ~sequential:true
     ~omega:false
     ~fast_offset_conversion:false
     ?substitute_in_place
     ~verbose:false
     ?timeout
     ?metasyntax
+    ?fresh
     configuration
     source
     specification

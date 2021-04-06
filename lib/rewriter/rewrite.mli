@@ -3,7 +3,7 @@
 val all
   :  ?source:string
   -> ?metasyntax:Matchers.Metasyntax.t
-  -> ?sequential:bool
+  -> ?fresh:(unit -> string)
   -> rewrite_template:string
   -> Match.t list
   -> Replacement.result option
