@@ -1,0 +1,9 @@
+(library
+  (name comby)
+  (public_name comby)
+  (instrumentation (backend bisect_ppx))
+  (preprocess (pps ppx_deriving.show ppx_deriving.eq ppx_sexp_conv))
+  (libraries 
+   core 
+   comby-kernel
+   comby.pipeline))

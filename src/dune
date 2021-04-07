@@ -38,6 +38,7 @@
  (deps benchmark.exe))
 
 (install
+ (package comby)
  (section bin)
  (files (main.exe as comby)))
 

@@ -1,6 +1,0 @@
-(library
-  (name parsers)
-  (public_name comby.parsers)
-  (instrumentation (backend bisect_ppx))
-  (preprocess (pps ppx_sexp_conv))
-  (libraries angstrom core mparser))
