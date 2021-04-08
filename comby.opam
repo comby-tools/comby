@@ -18,7 +18,7 @@ build: [
     ]
 ]
 depends: [
-  "dune" {>= "2.7.0"}
+  "dune" {>= "2.8.0"}
   "ocaml" {>= "4.08.1"}
   "conf-autoconf"
   "conf-gmp"
