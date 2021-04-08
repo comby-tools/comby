@@ -30,7 +30,7 @@ depends: [
   "conf-zlib" {os = "linux"}
   "angstrom" {>= "0.15.0"}
   "cohttp-lwt-unix"
-  "comby-kernel"
+  "comby-kernel" {= "1.4.1"}
   "conduit-lwt-unix"
   "core"
   "hack_parallel" {arch != "arm32" & arch != "arm64"}

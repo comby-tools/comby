@@ -1,5 +1,6 @@
 (library
  (name omega_test_integration)
+ (package comby)
  (modules
 ;
 ; TODO

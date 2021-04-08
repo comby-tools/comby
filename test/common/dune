@@ -1,5 +1,6 @@
 (library
  (name common_test_integration)
+ (package comby)
  (modules
   test_helpers
   test_extract_regex

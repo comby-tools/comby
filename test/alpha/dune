@@ -1,5 +1,6 @@
 (library
  (name alpha_test_integration)
+ (package comby)
  (modules
   test_custom_metasyntax
   test_optional_holes
