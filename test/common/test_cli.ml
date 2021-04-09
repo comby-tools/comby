@@ -290,63 +290,6 @@ let with_zip f =
   f file;
   Unix.remove file
 
-let%expect_test "list_languages" =
-  let command_args = "-list" in
-  let command = Format.sprintf "%s %s" binary_path command_args in
-  let result = read_output command in
-  print_string result;
-  [%expect_exact {|Option              Language  
- -matcher .s        Assembly  
- -matcher .sh       Bash      
- -matcher .c        C         
- -matcher .cs       C#        
- -matcher .css      CSS       
- -matcher .dart     Dart      
- -matcher .dyck     Dyck      
- -matcher .clj      Clojure   
- -matcher .v        Coq       
- -matcher .elm      Elm       
- -matcher .erl      Erlang    
- -matcher .ex       Elixir    
- -matcher .f        Fortran   
- -matcher .fsx      F#        
- -matcher .go       Go        
- -matcher .html     HTML      
- -matcher .hs       Haskell   
- -matcher .java     Java      
- -matcher .js       JavaScript
- -matcher .jsx      JSX       
- -matcher .json     JSON      
- -matcher .jsonc    JSONC     
- -matcher .gql      GraphQL   
- -matcher .dhall    Dhall     
- -matcher .jl       Julia     
- -matcher .kt       Kotlin    
- -matcher .tex      LaTeX     
- -matcher .lisp     Lisp      
- -matcher .move     Move      
- -matcher .nim      Nim       
- -matcher .ml       OCaml     
- -matcher .paren    Paren     
- -matcher .pas      Pascal    
- -matcher .php      PHP       
- -matcher .py       Python    
- -matcher .re       Reason    
- -matcher .rb       Ruby      
- -matcher .rs       Rust      
- -matcher .scala    Scala     
- -matcher .sol      Solidity  
- -matcher .sql      SQL       
- -matcher .swift    Swift     
- -matcher .txt      Text      
- -matcher .ts       TypeScript
- -matcher .tsx      TSX       
- -matcher .xml      XML       
- -matcher .zig      Zig       
- -matcher .generic  Generic   
-|}]
-
-
 let%expect_test "patdiff_and_zip" =
   with_zip (fun file ->
       let match_template = ":[[2]] :[[1]]" in
@@ -1217,11 +1160,46 @@ let%expect_test "test_toml_rule" =
   print_string result;
   [%expect{|main(rewrite)|}]
 
+let%expect_test "test_toml_match_only_multi" =
+  let source = "foo\nbar\nbaz\n" in
+  let config = "example" ^/ "toml" ^/ "match-only-multi" ^/ "config.toml" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -config %s -stdout -matcher .c -match-only" config
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|
+    1:foo
+    2:bar
+    3:baz|}]
+
+let%expect_test "test_toml_multi_rewrite_with_match_only_in_config" =
+  let source = "foo\nbar\nbaz" in
+  let config = "example" ^/ "toml" ^/ "match-only-multi" ^/ "config.toml" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -config %s -matcher .c" config
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|
+    [0;31m------ [0m[0;1m/dev/null[0m
+    [0;32m++++++ [0m[0;1m/dev/null[0m
+    [0;100;30m@|[0m[0;1m-1,3 +1,3[0m ============================================================
+    [0;100;30m |[0mfoo
+    [0;41;30m-|[0m[0m[0;31mbar[0m[0m
+    [0;42;30m+|[0m[0m[0;32madsf[0m[0m
+    [0;100;30m |[0mbaz
+    WARNING: input configuration specifies both rewrite and match templates. I am choosing to only process the configurations with both a 'match' and 'rewrite' part. If you only want to see matches, add -match-only to suppress this warning
+    WARNING: input configuration specifies both rewrite and match templates. I am choosing to only process the configurations with both a 'match' and 'rewrite' part. If you only want to see matches, add -match-only to suppress this warning|}]
+
 let%expect_test "dot_comby_with_flags" =
   let source = "main(void)\n" in
   Sys.chdir ("example" ^/ "dot-comby");
   let command = Format.sprintf "../../%s %s" binary_path "" in
   let result = read_expect_stdin_and_stdout command source in
+  Sys.chdir "../..";
   print_string result;
   [%expect{|
     [0;31m------ [0m[0;1m/dev/null[0m
