@@ -141,21 +141,35 @@ let output_result output_printer source_path source_content result =
     output_printer (Printer.Replacements { source_path; replacements; result; source_content })
 
 let run_on_specifications specifications output_printer process (input : single_source) output_file =
-  let result, count =
-    List.fold specifications ~init:(Nothing, 0) ~f:(fun (result, count) specification ->
+  let result =
+    List.fold specifications ~init:Nothing ~f:(fun result specification ->
         let input =
           match result with
-          | Nothing | Matches _ -> input
+          | Nothing
+          | Matches _ -> input
           | Replacement (_, content, _) -> String content
         in
-        process input specification
-        |> function
-        | Nothing -> Nothing, count
-        | Matches (l, number_of_matches) ->
-          Matches (l, number_of_matches), count + number_of_matches
-        | Replacement (l, content, number_of_matches) ->
-          Replacement (l, content, number_of_matches),
-          count + number_of_matches)
+        match result, process input specification with
+        | any, Nothing
+        | Nothing, any -> any
+
+        | Matches (l, n), Matches (l', n')  ->
+          Matches (l@l', n+n')
+
+        | Replacement (l, _, n), Replacement (l', content, n') ->
+          Replacement (l@l', content, n+n')
+
+        | Matches _, Replacement (l, content, n)
+        | Replacement (l, content, n), Matches _ ->
+          Format.eprintf "WARNING: input configuration specifies both rewrite and match templates. I am choosing to only process the configurations with both a 'match' and 'rewrite' part. If you only want to see matches, add -match-only to suppress this warning@.";
+          Replacement (l, content, n)
+      )
+  in
+  let count =
+    match result with
+    | Nothing -> 0
+    | Matches (_, n)
+    | Replacement (_, _, n) -> n
   in
   output_result output_printer output_file input result;
   count

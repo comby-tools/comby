@@ -769,6 +769,13 @@ let create
         { spec with match_template =
                       String.substr_replace_all match_template ~pattern:"..." ~with_:":[_]" })
   in
+  let specifications =
+    if match_only then
+      List.map specifications ~f:(fun {match_template; rule; _ } ->
+          Specification.create ~match_template ?rule ())
+    else
+      specifications
+  in
   if regex_pattern then (Format.printf "%s@." (regex_of_specifications specifications); exit 0);
   let file_filters_from_anonymous_args =
     match anonymous_arguments with

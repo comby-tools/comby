@@ -1,0 +1,10 @@
+[a]
+match='foo'
+
+[b]
+match='bar'
+rewrite='adsf'
+
+[c]
+match='baz'
+
