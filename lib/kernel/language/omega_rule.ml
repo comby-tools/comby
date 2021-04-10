@@ -199,59 +199,59 @@ let spaces1 =
   take_while is_whitespace >>= fun s ->
   return (Format.sprintf "%c%s" c s)
 
-let create rule =
-  let operator_parser =
-    spaces *> atom_parser >>= fun left ->
-    spaces *> operator_parser >>= fun operator ->
-    spaces *> atom_parser >>= fun right ->
-    make_equality_expression operator left right <* spaces
-  in
-  let true' = spaces *> string Syntax.true' <* spaces |>> fun _ -> True in
-  let false' = spaces *> string Syntax.false' <* spaces |>> fun _ -> False in
-  let option_parser = spaces *> string Syntax.option_nested <* spaces |>> fun _ -> Option "nested" in
-  let expression_parser =
-    fix (fun expression_parser ->
-        let match_pattern_parser =
-          let case_parser =
-            spaces *> string Syntax.pipe_operator *>
-            spaces *> atom_parser <* spaces <* string Syntax.arrow <* spaces >>= fun antecedent ->
-            spaces *> sep_by (char ',') expression_parser <* spaces |>> fun consequent ->
-            antecedent, consequent
-          in
-          let pattern keyword =
-            string keyword *> spaces *> atom_parser <* spaces <* char '{' <* spaces
-            >>= fun atom ->
-            many1 case_parser
-            <* char '}' <* spaces
-            >>= fun cases -> return (atom, cases)
-          in
-          pattern Syntax.start_match_pattern |>> fun (atom, cases) ->
-          Match (atom, cases)
+let operator_parser =
+  spaces *> atom_parser >>= fun left ->
+  spaces *> operator_parser >>= fun operator ->
+  spaces *> atom_parser >>= fun right ->
+  make_equality_expression operator left right <* spaces
+
+let true' = spaces *> string Syntax.true' <* spaces |>> fun _ -> True
+
+let false' = spaces *> string Syntax.false' <* spaces |>> fun _ -> False
+
+let option_parser = spaces *> string Syntax.option_nested <* spaces |>> fun _ -> Option "nested"
+
+let expression_parser =
+  fix (fun expression_parser ->
+      let match_pattern_parser =
+        let case_parser =
+          spaces *> string Syntax.pipe_operator *>
+          spaces *> atom_parser <* spaces <* string Syntax.arrow <* spaces >>= fun antecedent ->
+          spaces *> sep_by (char ',') expression_parser <* spaces |>> fun consequent ->
+          antecedent, consequent
         in
-        let rewrite_pattern_parser =
-          string Syntax.start_rewrite_pattern *> spaces *> atom_parser <* spaces <* char '{' <* spaces
+        let pattern keyword =
+          string keyword *> spaces *> atom_parser <* spaces <* char '{' <* spaces
           >>= fun atom ->
-          atom_parser <* spaces <* string Syntax.arrow <* spaces >>= fun match_template ->
-          spaces *> rewrite_template_parser <* spaces <* char '}' <* spaces
-          |>> fun rewrite_template ->
-          Rewrite (atom, (match_template, rewrite_template))
+          many1 case_parser
+          <* char '}' <* spaces
+          >>= fun cases -> return (atom, cases)
         in
-        choice
-          [ match_pattern_parser
-          ; rewrite_pattern_parser
-          ; operator_parser
-          ; true'
-          ; false'
-          ; option_parser
-          ])
-  in
-  let rule_parser =
-    spaces
-    *> string Syntax.rule_prefix
-    *> spaces1
-    *> sep_by1 (spaces *> char ',' <* spaces) expression_parser
-    <* end_of_input
-  in
-  match parse_string ~consume:All rule_parser rule with
+        pattern Syntax.start_match_pattern |>> fun (atom, cases) ->
+        Match (atom, cases)
+      in
+      let rewrite_pattern_parser =
+        string Syntax.start_rewrite_pattern *> spaces *> atom_parser <* spaces <* char '{' <* spaces
+        >>= fun atom ->
+        atom_parser <* spaces <* string Syntax.arrow <* spaces >>= fun match_template ->
+        spaces *> rewrite_template_parser <* spaces <* char '}' <* spaces
+        |>> fun rewrite_template ->
+        Rewrite (atom, (match_template, rewrite_template))
+      in
+      choice
+        [ match_pattern_parser
+        ; rewrite_pattern_parser
+        ; operator_parser
+        ; true'
+        ; false'
+        ; option_parser
+        ])
+
+let rule_parser =
+  let prefix = spaces *> string Syntax.rule_prefix in
+  prefix *> spaces1 *> sep_by1 (spaces *> char ',' <* spaces) expression_parser
+
+let create rule =
+  match parse_string ~consume:All (rule_parser <* end_of_input) rule with
   | Ok rule -> Ok rule
   | Error error -> Or_error.error_string error
