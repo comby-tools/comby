@@ -26,7 +26,7 @@ let char_token_s =
   (char '\\' *> escaped_char_s >>= fun c -> return (Format.sprintf {|\%c|} c))
   <|> (any_char |>> String.of_char)
 
-let value_parser =
+let quoted_parser =
   (string {|"|}
    *> (many_till char_token_s (string {|"|})))
   |>> String.concat
@@ -37,11 +37,39 @@ let operator_parser =
     ; string Syntax.not_equal
     ]
 
-let atom_parser =
+let any_char_except ~reserved =
+  List.fold reserved
+    ~init:(return `OK)
+    ~f:(fun acc reserved_sequence ->
+        option `End_of_input
+          (peek_string (String.length reserved_sequence)
+           >>= fun s ->
+           if String.equal s reserved_sequence then
+             return `Reserved_sequence
+           else
+             acc))
+  >>= function
+  | `OK -> any_char
+  | `End_of_input -> any_char
+  | `Reserved_sequence -> fail "reserved sequence hit"
+
+let value_parser ~reserved () =
+  match reserved with
+  | [] -> fail "no value allowed to scan here"
+  | reserved -> many (any_char_except ~reserved)
+
+let antecedent_parser ?(reserved = []) () =
+  choice
+    [ (quoted_parser >>= fun value -> return (String value))
+    ; (value_parser ~reserved () >>= fun value -> return (String (String.of_char_list value)))
+    ]
+
+let atom_parser ?(reserved = []) () =
   choice
     [ (variable_parser >>= fun variable -> return (Variable variable))
-    ; (value_parser >>= fun value -> return (String value))
+    ; (quoted_parser >>= fun value -> return (String value))
+    ; (value_parser ~reserved () >>= fun value -> return (String (String.of_char_list value)))
     ]
 
 let rewrite_template_parser =
-  value_parser >>= fun value -> return (RewriteTemplate value)
+  quoted_parser >>= fun value -> return (RewriteTemplate value)

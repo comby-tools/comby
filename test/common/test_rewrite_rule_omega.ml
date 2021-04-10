@@ -115,3 +115,25 @@ let%expect_test "haskell_example" =
      ++ "blah"
      )
 |}]
+
+let%expect_test "rewrite_freeform_antecedent_pattern" =
+  let source = {|
+     (concat
+     [ "blah blah blah"
+     , "blah"
+     ])
+|} in
+  let match_template = {|:[contents]|} in
+  let rewrite_template = {|(:[contents])|} in
+  let rule =
+    {|
+      where rewrite :[contents] { concat [:[x]] -> "nice" }
+    |}
+    |> Rule.create
+    |> Or_error.ok_exn
+  in
+
+  run_rule source match_template rewrite_template rule;
+  [%expect_exact {|(
+     (nice)
+)|}]

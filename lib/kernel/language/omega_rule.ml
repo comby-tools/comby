@@ -200,9 +200,9 @@ let spaces1 =
   return (Format.sprintf "%c%s" c s)
 
 let operator_parser =
-  spaces *> atom_parser >>= fun left ->
+  spaces *> atom_parser () >>= fun left ->
   spaces *> operator_parser >>= fun operator ->
-  spaces *> atom_parser >>= fun right ->
+  spaces *> atom_parser () >>= fun right ->
   make_equality_expression operator left right <* spaces
 
 let true' = spaces *> string Syntax.true' <* spaces |>> fun _ -> True
@@ -218,12 +218,12 @@ let expression_parser =
       let match_pattern_parser =
         let case_parser =
           spaces *> string Syntax.pipe_operator *>
-          spaces *> atom_parser <* spaces <* string Syntax.arrow <* spaces >>= fun antecedent ->
+          spaces *> antecedent_parser ~reserved:[" ->"] () <* spaces <* string Syntax.arrow <* spaces >>= fun antecedent ->
           spaces *> sep_by (char ',') expression_parser <* spaces <* optional_trailing ',' <* spaces |>> fun consequent ->
           antecedent, consequent
         in
         let pattern keyword =
-          string keyword *> spaces *> atom_parser <* spaces <* char '{' <* spaces
+          string keyword *> spaces *> atom_parser () <* spaces <* char '{' <* spaces
           >>= fun atom ->
           many1 case_parser
           <* char '}' <* spaces
@@ -233,9 +233,9 @@ let expression_parser =
         Match (atom, cases)
       in
       let rewrite_pattern_parser =
-        string Syntax.start_rewrite_pattern *> spaces *> atom_parser <* spaces <* char '{' <* spaces
+        string Syntax.start_rewrite_pattern *> spaces *> atom_parser () <* spaces <* char '{' <* spaces
         >>= fun atom ->
-        atom_parser <* spaces <* string Syntax.arrow <* spaces >>= fun match_template ->
+        antecedent_parser ~reserved:[" ->"] () <* spaces <* string Syntax.arrow <* spaces >>= fun match_template ->
         spaces *> rewrite_template_parser <* spaces <* char '}' <* spaces
         |>> fun rewrite_template ->
         Rewrite (atom, (match_template, rewrite_template))

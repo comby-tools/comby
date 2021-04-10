@@ -81,6 +81,49 @@ let%expect_test "parse_case_optional_trailing" =
    (((String case_one) (True)) ((String case_two) (False))))))
 "]
 
+let%expect_test "parse_case_optional_trailing" =
+  Rule.create
+    {| where
+       match "match_me" {
+       | "case_one" -> true,
+       | "case_two" -> false
+       }
+    |}
+  |> Or_error.ok_exn
+  |> fun rule -> print_s [%message (rule : Ast.expression list)];
+  [%expect_exact "(rule
+ ((Match (String match_me)
+   (((String case_one) (True)) ((String case_two) (False))))))
+"]
+
+let%expect_test "parse_freeform_antecedent_pattern" =
+  Rule.create
+    {| where
+       match "match_me" {
+       | case one -> true,
+       | case two -> false
+       | :[template] :[example] -> false
+       }
+    |}
+  |> Or_error.ok_exn
+  |> fun rule -> print_s [%message (rule : Ast.expression list)];
+  [%expect_exact "(rule
+ ((Match (String match_me)
+   (((String \"case one\") (True)) ((String \"case two\") (False))
+    ((String \":[template] :[example]\") (False))))))
+"]
+
+let%expect_test "parse_freeform_antecedent_pattern_TODO_REGEX" =
+  Rule.create
+    {| where
+       match "match_me" {
+       | ~(match_me) -> true,
+       }
+    |}
+  |> Or_error.ok_exn
+  |> fun rule -> print_s [%message (rule : Ast.expression list)];
+  [%expect_exact "(rule ((Match (String match_me) (((String \"~(match_me)\") (True))))))
+"]
 
 let sat ?(env = Environment.create ()) rule =
   let rule = Rule.create rule |> Or_error.ok_exn in

@@ -17,8 +17,8 @@ let spec =
   let match_rewrite_parser =
     let open Omega_parser in
     both
-      (spaces *> atom_parser)
-      (option None (spaces *> string Syntax.arrow *> spaces *> atom_parser >>| fun x -> Some x))
+      (spaces *> atom_parser ())
+      (option None (spaces *> string Syntax.arrow *> spaces *> atom_parser () >>| fun x -> Some x))
   in
   match_rewrite_parser >>= fun (match_template_atom, rewrite_template_atom) ->
   (option None (spaces1 *> Omega_rule.rule_parser >>| fun x -> Some x)) >>= fun rule ->
