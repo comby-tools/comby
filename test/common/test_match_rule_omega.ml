@@ -113,16 +113,59 @@ let%expect_test "parse_freeform_antecedent_pattern" =
     ((String \":[template] :[example]\") (False))))))
 "]
 
-let%expect_test "parse_freeform_antecedent_pattern_TODO_REGEX" =
+let%expect_test "optional_first_pipe_one_case" =
   Rule.create
-    {| where
-       match "match_me" {
-       | ~(match_me) -> true,
+    {|
+       where match "match_me" { thing -> true, }
+    |}
+  |> Or_error.ok_exn
+  |> fun rule -> print_s [%message (rule : Ast.expression list)];
+  [%expect_exact "(rule ((Match (String match_me) (((String thing) (True))))))
+"]
+
+let%expect_test "optional_first_pipe_multiple_cases" =
+  Rule.create
+    {|
+       where match "match_me" { thing -> true, | other -> true }
+    |}
+  |> Or_error.ok_exn
+  |> fun rule -> print_s [%message (rule : Ast.expression list)];
+  [%expect_exact "(rule
+ ((Match (String match_me) (((String thing) (True)) ((String other) (True))))))
+"]
+
+let%expect_test "parse_freeform_antecedent_pattern_single_quote" =
+  Rule.create
+    {|
+       where match "match_me" {
+         '"ni\'ce"' -> true
+         | `multi
+line
+` -> true
        }
     |}
   |> Or_error.ok_exn
   |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule ((Match (String match_me) (((String \"~(match_me)\") (True))))))
+  [%expect_exact "(rule
+ ((Match (String match_me)
+   (((String \"\\\"ni\\\\'ce\\\"\") (True)) ((String  \"multi\\
+                                             \\nline\\
+                                             \\n\") (True))))))
+"]
+
+let%expect_test "parse_freeform_antecedent_pattern_map_regex" =
+  Rule.create
+    {| where
+       match "match_me" {
+       | ~match_me -> true,
+       | _ -> false,
+       }
+    |}
+  |> Or_error.ok_exn
+  |> fun rule -> print_s [%message (rule : Ast.expression list)];
+  [%expect_exact "(rule
+ ((Match (String match_me)
+   (((Variable :[_~match_me]) (True)) ((Variable :[_]) (False))))))
 "]
 
 let sat ?(env = Environment.create ()) rule =

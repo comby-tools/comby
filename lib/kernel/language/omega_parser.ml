@@ -26,10 +26,12 @@ let char_token_s =
   (char '\\' *> escaped_char_s >>= fun c -> return (Format.sprintf {|\%c|} c))
   <|> (any_char |>> String.of_char)
 
-let quoted_parser =
-  (string {|"|}
-   *> (many_till char_token_s (string {|"|})))
+let quote s =
+  (string s *> (many_till char_token_s (string s)))
   |>> String.concat
+
+let quoted_parser =
+  choice [ quote {|"|}; quote {|'|}; quote {|`|} ]
 
 let operator_parser =
   choice
@@ -58,18 +60,26 @@ let value_parser ~reserved () =
   | [] -> fail "no value allowed to scan here"
   | reserved -> many (any_char_except ~reserved)
 
+let map_special s =
+  if String.is_prefix s ~prefix:"~" then
+    Variable (Format.sprintf ":[_%s]" s)
+  else if String.equal s "_" then
+    Variable ":[_]"
+  else
+    String s
+
 let antecedent_parser ?(reserved = []) () =
   choice
-    [ (quoted_parser >>= fun value -> return (String value))
-    ; (value_parser ~reserved () >>= fun value -> return (String (String.of_char_list value)))
+    [ (quoted_parser >>| fun value -> String value)
+    ; (value_parser ~reserved () >>| fun value -> map_special (String.of_char_list value))
     ]
 
 let atom_parser ?(reserved = []) () =
   choice
-    [ (variable_parser >>= fun variable -> return (Variable variable))
-    ; (quoted_parser >>= fun value -> return (String value))
-    ; (value_parser ~reserved () >>= fun value -> return (String (String.of_char_list value)))
+    [ (variable_parser >>| fun variable -> Variable variable)
+    ; (quoted_parser >>| fun value -> String value)
+    ; (value_parser ~reserved () >>| fun value -> String (String.of_char_list value))
     ]
 
 let rewrite_template_parser =
-  quoted_parser >>= fun value -> return (RewriteTemplate value)
+  quoted_parser >>| fun value -> RewriteTemplate value
