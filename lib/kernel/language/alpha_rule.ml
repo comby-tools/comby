@@ -1,6 +1,5 @@
 open Core_kernel
 open MParser
-open MParser_PCRE.Tokens
 
 open Match
 open Rewriter
@@ -209,7 +208,8 @@ let create rule =
     let case_parser : (atom * expression list, unit) parser =
       spaces >> string Syntax.pipe_operator >>
       spaces >> atom_parser << spaces << string Syntax.arrow << spaces >>= fun antecedent ->
-      spaces >> comma_sep expression_parser << spaces |>> fun consequent ->
+      spaces >>
+      sep_end_by expression_parser (spaces >> char ',' << spaces) << spaces |>> fun consequent ->
       antecedent, consequent
     in
     let match_pattern =
@@ -238,9 +238,8 @@ let create rule =
   let rule_parser s =
     (spaces
      >> string Syntax.rule_prefix
-     >> spaces1
-     >> comma_sep1 expression_parser
-        << eof)
+     >> spaces1 >> sep_end_by1 expression_parser (spaces >> char ',' >> spaces)
+                   << eof)
       s
   in
   match parse_string rule_parser rule () with

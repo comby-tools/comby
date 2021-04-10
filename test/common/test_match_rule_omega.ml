@@ -24,6 +24,10 @@ let%expect_test "parse_rule" =
 
   let rule =  {| where :[1] != :[3] |} in
   rule_parses rule |> print_string;
+  [%expect_exact {|true|}];
+
+  let rule =  {| where :[1] != :[3], |} in
+  rule_parses rule |> print_string;
   [%expect_exact {|true|}]
 
 let%expect_test "parse_basic" =
@@ -61,6 +65,22 @@ let%expect_test "parse_match_multi_case" =
  ((Match (String match_me)
    (((String case_one) (True)) ((String case_two) (False))))))
 "]
+
+let%expect_test "parse_case_optional_trailing" =
+  Rule.create
+    {| where
+       match "match_me" {
+       | "case_one" -> true,
+       | "case_two" -> false
+       }
+    |}
+  |> Or_error.ok_exn
+  |> fun rule -> print_s [%message (rule : Ast.expression list)];
+  [%expect_exact "(rule
+ ((Match (String match_me)
+   (((String case_one) (True)) ((String case_two) (False))))))
+"]
+
 
 let sat ?(env = Environment.create ()) rule =
   let rule = Rule.create rule |> Or_error.ok_exn in

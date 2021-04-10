@@ -211,13 +211,15 @@ let false' = spaces *> string Syntax.false' <* spaces |>> fun _ -> False
 
 let option_parser = spaces *> string Syntax.option_nested <* spaces |>> fun _ -> Option "nested"
 
+let optional_trailing c = option () (skip (Char.equal c))
+
 let expression_parser =
   fix (fun expression_parser ->
       let match_pattern_parser =
         let case_parser =
           spaces *> string Syntax.pipe_operator *>
           spaces *> atom_parser <* spaces <* string Syntax.arrow <* spaces >>= fun antecedent ->
-          spaces *> sep_by (char ',') expression_parser <* spaces |>> fun consequent ->
+          spaces *> sep_by (char ',') expression_parser <* spaces <* optional_trailing ',' <* spaces |>> fun consequent ->
           antecedent, consequent
         in
         let pattern keyword =
@@ -248,8 +250,11 @@ let expression_parser =
         ])
 
 let rule_parser =
-  let prefix = spaces *> string Syntax.rule_prefix in
-  prefix *> spaces1 *> sep_by1 (spaces *> char ',' <* spaces) expression_parser
+  spaces *>
+  string Syntax.rule_prefix *>
+  spaces1 *> sep_by1 (spaces *> char ',' <* spaces) expression_parser
+  <* optional_trailing ','
+  <* spaces
 
 let create rule =
   match parse_string ~consume:All (rule_parser <* end_of_input) rule with
