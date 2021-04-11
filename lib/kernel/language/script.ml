@@ -3,9 +3,13 @@ open Angstrom
 open Ast
 open Script
 
-let optional_trailing c = option () (skip (Char.equal c))
+let ignore p =
+  p *> return ()
+
 let spaces = many @@ satisfy (function ' ' | '\n' | '\r' | '\t' -> true | _ -> false)
 let spaces1 = many1 @@ satisfy (function ' ' | '\n' | '\r' | '\t' -> true | _ -> false)
+
+let optional s = option () (ignore @@ string s)
 
 let chainl1 e op =
   let rec parse acc = (lift2 (fun f x -> f acc x) op e >>= parse) <|> return acc in
@@ -41,9 +45,11 @@ let exp_parser =
       let exp_parser = fix (fun exp' -> parens exp <|> unop ["NOT"; "not"] exp' <|> spec) in
       let and_parser = chainl1 exp_parser @@ binop ["AND"; "and"] And in
       let seq_parser = chainl1 and_parser @@ binop ["OR"; "or"] Or in
-      sep_by1 (spaces *> char ';' <* spaces) seq_parser <* optional_trailing ';' <* spaces >>| List.concat)
+      sep_by1 (spaces *> string Syntax.separator <* spaces) seq_parser >>| List.concat)
 
-let parser = exp_parser <* end_of_input
+let parser =
+  spaces *> optional Syntax.separator *>
+  exp_parser <* optional Syntax.separator <* spaces <* end_of_input
 
 let parse script =
   parse_string ~consume:All parser script

@@ -5,6 +5,9 @@ open Ast
 
 open Omega_parser
 
+let ignore p =
+  p *> return ()
+
 let make_equality_expression left operator right =
   if String.equal operator Syntax.equal then
     Equal (left, right)
@@ -22,9 +25,6 @@ let spaces1 =
   satisfy is_whitespace *>
   take_while is_whitespace *>
   return ()
-
-let ignore p =
-  p *> return ()
 
 let optional_trailing c = option () (skip (Char.equal c))
 

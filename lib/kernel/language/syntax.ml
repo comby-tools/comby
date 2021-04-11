@@ -10,3 +10,5 @@ let false' = "false"
 let option_nested = "nested"
 let pipe_operator = "|"
 let arrow = "->"
+
+let separator = "---"
