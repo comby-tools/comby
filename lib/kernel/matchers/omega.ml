@@ -351,7 +351,24 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
           | Ok (Hole { sort; identifier; dimension; _ }, user_state) ->
             begin
               match sort with
-              | Regex -> failwith "Not supported (seq chain)"
+              | Regex ->
+                let identifier, pattern = String.lsplit2_exn identifier ~on:'~' in
+                let identifier = if String.(identifier = "") then "_" else identifier in
+                if debug then Format.printf "Regex: Id: %s Pat: %s@." identifier pattern;
+                let compiled_regexp = Regexp.PCRE.make_regexp pattern in
+                let regexp_parser = Regexp.PCRE.regexp compiled_regexp in
+                let base_parser = [ regexp_parser; end_of_input >>= fun () -> return "" ] in
+                pos >>= fun offset ->
+                choice base_parser
+                >>= fun value ->
+                acc >>= fun _ ->
+                let m =
+                  { offset
+                  ; identifier
+                  ; text = value
+                  }
+                in
+                r user_state (Match m)
               | Alphanum ->
                 pos >>= fun offset ->
                 many1 (generate_single_hole_parser ())
@@ -618,6 +635,23 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
     *> identifier_parser ()
     <* string "]"
 
+  let regex_expression () =
+    fix (fun expr ->
+        choice
+          [ lift (fun x -> Format.sprintf "[%s]" @@ String.concat x) (char '[' *> many1 expr <* char ']')
+          ; lift (fun c -> Format.sprintf {|\%c|} c) (char '\\' *> any_char)
+          ; lift Char.to_string (not_char ']')
+          ])
+
+  let regex_body () =
+    lift2
+      (fun v e -> Format.sprintf "%s~%s" v (String.concat e))
+      (identifier_parser ())
+      (char '~' *> many1 (regex_expression ()))
+
+  let regex_hole_parser () =
+    string ":[" *> regex_body () <* string "]"
+
   let hole_parser sort dimension : (production * 'a) t t =
     let open Hole in
     let hole_parser =
@@ -628,7 +662,7 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
       | Line -> line_hole_parser ()
       | Non_space -> non_space_hole_parser ()
       | Expression -> expression_hole_parser ()
-      | Regex -> single_hole_parser ()
+      | Regex -> regex_hole_parser ()
     in
     let skip_signal hole = skip_unit (string "_signal_hole") |>> fun () -> (Hole hole, acc) in
     hole_parser |>> fun identifier -> skip_signal { sort; identifier; dimension; optional = false; at_depth = None }
@@ -672,7 +706,9 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
 
   let general_parser_generator : (production * 'a) t t =
     let spaces : (production * 'a) t t =
-      many1 (comment_parser <|> spaces1) |>> fun result -> generate_spaces_parser (String.concat result)
+      lift
+        (fun result -> generate_spaces_parser (String.concat result))
+        (many1 (comment_parser <|> spaces1))
     in
     let other =
       (many1 (Parser.Deprecate.any_char_except ~reserved:Deprecate.reserved) |>> String.of_char_list)
@@ -740,36 +776,38 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
             ; any_char |>> Char.to_string
             ]
         in
+        let match_one =
+          pos >>= fun start_pos ->
+          let matched =
+            matcher >>= fun production ->
+            if debug then Format.printf "Full match context result@.";
+            pos >>= fun end_pos ->
+            record_match_context start_pos end_pos;
+            current_environment_ref := Match.Environment.create ();
+            return production
+          in
+          let no_match =
+            (* Reset any partial binds of holes in environment. *)
+            if debug then Format.printf "Failed to match and not at end.@.";
+            current_environment_ref := Match.Environment.create ();
+            (* cannot return: we must try some other parser or else we'll
+               infini loop! We can't advance because we haven't
+               successfully parsed the character at the current position.
+               So: fail and try another parser in the choice. *)
+            fail "no match, try something else"
+          in
+          choice [ matched; no_match ]
+        in
         (* many1 may be appropriate *)
+        let prefix = (prefix >>= fun s -> r acc (String s)) in
         let matches =
           many @@
-          many_till (prefix >>= fun s -> r acc (String s))
+          many_till prefix
             begin
               at_end_of_input >>= fun at_end ->
               if debug then Format.printf "We are at the end? %b.@." at_end;
               if at_end then fail "end"
-              else
-                (* We may have found a match *)
-                pos >>= fun start_pos ->
-                let matched =
-                  matcher >>= fun production ->
-                  if debug then Format.printf "Full match context result@.";
-                  pos >>= fun end_pos ->
-                  record_match_context start_pos end_pos;
-                  current_environment_ref := Match.Environment.create ();
-                  return production
-                in
-                let no_match =
-                  (* Reset any partial binds of holes in environment. *)
-                  if debug then Format.printf "Failed to match and not at end.@.";
-                  current_environment_ref := Match.Environment.create ();
-                  (* cannot return: we must try some other parser or else we'll
-                     infini loop! We can't advance because we haven't
-                     successfully parsed the character at the current position.
-                     So: fail and try another parser in the choice. *)
-                  fail "no match, try something else"
-                in
-                choice [ matched; no_match ]
+              else match_one
             end
         in
         matches >>= fun _result ->
@@ -907,7 +945,6 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
     else
       (* Don't reverse the list for non-nested matches--it matters for rewriting. *)
       aux_all ?configuration ~nested ~template ~source:original_source ()
-
 
   let first ?configuration ?shift:_ template source : Match.t Or_error.t =
     configuration_ref := Option.value configuration ~default:!configuration_ref;
