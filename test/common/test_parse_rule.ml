@@ -159,7 +159,7 @@ let%expect_test "parse_freeform_antecedent_pattern_map_regex" =
   |> fun rule -> print_s [%message (rule : Ast.expression list)];
   [%expect_exact "(rule
  ((Match (String match_me)
-   (((Variable :[_~match_me]) (True)) ((Variable :[_]) (False))))))
+   (((Variable :[~match_me]) (True)) ((Variable :[_]) (False))))))
 "]
 
 let%expect_test "parse_regex_hole" =

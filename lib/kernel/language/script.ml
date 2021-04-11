@@ -1,5 +1,7 @@
 open Angstrom
 
+open Parser
+
 open Ast
 open Script
 
@@ -19,7 +21,6 @@ let parens p = char '(' *> (p <|> return []) <* char ')'
 
 let spec =
   let match_rewrite_parser =
-    let open Omega_parser in
     both
       (spaces *> atom_parser ())
       (option None (spaces *> string Syntax.arrow *> spaces *> atom_parser () >>| fun x -> Some x))
