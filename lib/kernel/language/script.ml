@@ -21,7 +21,7 @@ let spec =
       (option None (spaces *> string Syntax.arrow *> spaces *> atom_parser () >>| fun x -> Some x))
   in
   match_rewrite_parser >>= fun (match_template_atom, rewrite_template_atom) ->
-  (option None (spaces1 *> Rule_parser.rule_parser >>| fun x -> Some x)) >>= fun rule ->
+  (option None (spaces1 *> Parser.parse >>| fun x -> Some x)) >>= fun rule ->
   let match_template = Sexplib.Sexp.to_string_hum (sexp_of_atom match_template_atom) in
   let rewrite_template =
     match rewrite_template_atom with

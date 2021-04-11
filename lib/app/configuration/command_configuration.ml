@@ -1,5 +1,4 @@
 open Core
-open Toml
 open Camlzip
 
 open Polymorphic_compare
@@ -115,7 +114,7 @@ let create_rule rule =
 
 let parse_toml path =
   let open Toml.Types in
-  let toml = Parser.(from_filename path |> unsafe) in
+  let toml = Toml.Parser.(from_filename path |> unsafe) in
   let toml = Table.remove (Toml.Min.key "flags") toml in
   let to_specification (key : Table.key) (value : Toml.Types.value) acc =
     let name = Table.Key.to_string key in
@@ -486,7 +485,7 @@ let emit_errors { input_options; output_options; _ } =
          | Some inputs ->
            List.find_map inputs ~f:(fun input ->
                if Sys.is_file input = `Yes then
-                 (match Parser.from_filename input with
+                 (match Toml.Parser.from_filename input with
                   | `Error (s, _) -> Some s
                   | _ -> None)
                else if not (Sys.is_directory input = `Yes) then

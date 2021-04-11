@@ -99,13 +99,13 @@ let expression_parser =
         ])
 
 (** where <expression> [,] *)
-let rule_parser =
+let parse =
   spaces *> string Syntax.rule_prefix *>
   spaces1 *> sep_by1 (spaces *> char ',' <* spaces) expression_parser
   <* optional_trailing ','
   <* spaces
 
 let create rule =
-  match parse_string ~consume:All (rule_parser <* end_of_input) rule with
+  match parse_string ~consume:All (parse <* end_of_input) rule with
   | Ok rule -> Ok rule
   | Error error -> Or_error.error_string error
