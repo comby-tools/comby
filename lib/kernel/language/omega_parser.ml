@@ -68,7 +68,7 @@ let value_parser ~reserved () =
 
 let map_special s =
   if String.is_prefix s ~prefix:"~" then
-    Variable (Format.sprintf ":[_%s]" s)
+    Variable (Format.sprintf ":[%s]" s)
   else if String.equal s "_" then
     Variable ":[_]"
   else
