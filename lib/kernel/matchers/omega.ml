@@ -27,6 +27,9 @@ let current_environment_ref : Match.Environment.t ref = ref (Match.Environment.c
 let (|>>) p f =
   p >>= fun x -> return (f x)
 
+let ignore p =
+  p *> return ()
+
 let debug =
   match Sys.getenv "DEBUG_COMBY" with
   | exception Not_found -> false
@@ -532,10 +535,10 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
                      it in the template. So it should always match to
                      end_of_input (not empty string) *)
                   if !i = 0 then
-                    (if debug then Format.printf "hole until: match to the end of this level@.";
+                    (if debug then Format.printf "hole everything until: match to the end of this level@.";
                      end_of_input)
                   else
-                    (if debug then Format.printf "hole until: append suffix@.";
+                    (if debug then Format.printf "hole everything until: append suffix@.";
                      skip_unit acc)
                 in
                 let first_pos = ref (-1) in
@@ -584,6 +587,7 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
                   ; text
                   }
                 in
+                if debug then Format.printf "Recording!@.";
                 r user_state (Match m)
             end
           | Ok (_, _user_state) -> failwith "unreachable: _signal_hole parsed but not handled by Hole variant"
@@ -778,38 +782,18 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
         in
         let match_one =
           pos >>= fun start_pos ->
-          let matched =
-            matcher >>= fun production ->
-            if debug then Format.printf "Full match context result@.";
-            pos >>= fun end_pos ->
-            record_match_context start_pos end_pos;
-            current_environment_ref := Match.Environment.create ();
-            return production
-          in
-          let no_match =
-            (* Reset any partial binds of holes in environment. *)
-            if debug then Format.printf "Failed to match and not at end.@.";
-            current_environment_ref := Match.Environment.create ();
-            (* cannot return: we must try some other parser or else we'll
-               infini loop! We can't advance because we haven't
-               successfully parsed the character at the current position.
-               So: fail and try another parser in the choice. *)
-            fail "no match, try something else"
-          in
-          choice [ matched; no_match ]
+          current_environment_ref := Match.Environment.create ();
+          matcher >>= fun production ->
+          if debug then Format.printf "Full match context result@.";
+          pos >>= fun end_pos ->
+          record_match_context start_pos end_pos;
+          current_environment_ref := Match.Environment.create ();
+          return production
         in
         (* many1 may be appropriate *)
         let prefix = (prefix >>= fun s -> r acc (String s)) in
-        let matches =
-          many @@
-          many_till prefix
-            begin
-              at_end_of_input >>= fun at_end ->
-              if debug then Format.printf "We are at the end? %b.@." at_end;
-              if at_end then fail "end"
-              else match_one
-            end
-        in
+        let first_match_attempt = choice [match_one; prefix] in (* consumes a character in prefix if no match *)
+        let matches = many_till first_match_attempt end_of_input in
         matches >>= fun _result ->
         r acc Unit
 

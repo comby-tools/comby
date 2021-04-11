@@ -2,6 +2,7 @@
  (name common_test_integration)
  (package comby)
  (modules
+  ; test_server ; disabled, factor out.
   test_helpers
   test_cli_helper
   test_script
@@ -10,7 +11,6 @@
   test_omega
   test_cli
   test_cli_list
-  ; test_server
   test_statistics
   test_offset_conversion
   test_parse_rule
