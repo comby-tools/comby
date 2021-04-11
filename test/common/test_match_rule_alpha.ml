@@ -1,6 +1,5 @@
 open Core
 
-open Language
 open Matchers
 open Match
 
@@ -8,81 +7,8 @@ open Test_helpers
 
 include Test_alpha
 
-let rule_parses rule =
-  match Rule.create rule with
-  | Ok _ -> "true"
-  | Error e -> Error.to_string_hum e
-
-let%expect_test "parse_rule" =
-  let rule = {| where :[1] == :[2], :[3] == "y" |} in
-  rule_parses rule |> print_string;
-  [%expect_exact {|true|}];
-
-  let rule = {| where :[1] == :[2], :[3] != "x" |} in
-  rule_parses rule |> print_string;
-  [%expect_exact {|true|}];
-
-  let rule =  {| where :[1] != :[3] |} in
-  rule_parses rule |> print_string;
-  [%expect_exact {|true|}];
-
-  let rule =  {| where :[1] != :[3]   ,  |} in
-  rule_parses rule |> print_string;
-  [%expect_exact {|true|}]
-
-let%expect_test "parse_basic" =
-  Rule.create {|where "a" == "a"|}
-  |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact {|(rule ((Equal (String a) (String a))))
-|}]
-
-let%expect_test "parse_option_nested" =
-  Rule.create {|where nested, "a" == "a" |}
-  |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact {|(rule ((Option nested) (Equal (String a) (String a))))
-|}]
-
-let%expect_test "parse_match_one_case" =
-  Rule.create {|where match "match_me" { | "case_one" -> true }|}
-  |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule ((Match (String match_me) (((String case_one) (True))))))
-"]
-
-let%expect_test "parse_match_multi_case" =
-  Rule.create
-    {| where
-       match "match_me" {
-       | "case_one" -> true
-       | "case_two" -> false
-       }
-    |}
-  |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Match (String match_me)
-   (((String case_one) (True)) ((String case_two) (False))))))
-"]
-
-let%expect_test "parse_case_optional_trailing" =
-  Rule.create
-    {| where
-       match "match_me" {
-       | "case_one" -> true
-       | "case_two" -> false
-       }
-    |}
-  |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Match (String match_me)
-   (((String case_one) (True)) ((String case_two) (False))))))
-"]
-
 let sat ?(env = Environment.create ()) rule =
-  let rule = Rule.create rule |> Or_error.ok_exn in
+  let rule = create rule |> Or_error.ok_exn in
   Format.sprintf "%b" (Rule.(sat @@ apply rule env))
 
 let make_env bindings =
@@ -165,7 +91,7 @@ let%expect_test "where_true" =
   let rule =
     {| where true
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -214,7 +140,7 @@ let%expect_test "match_sat" =
        | ":[_],:[_]" -> false
        }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -230,7 +156,7 @@ let%expect_test "match_sat" =
        | ":[_],:[_]" -> true
        }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -273,7 +199,7 @@ let%expect_test "match_sat" =
        | ":[_]" -> true
        }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -309,7 +235,7 @@ let%expect_test "match_sat" =
        | ":[_]" -> :[1] == "a"
        }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -344,7 +270,7 @@ let%expect_test "match_sat" =
        | ":[_]" -> :[1] == "b"
        }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -363,7 +289,7 @@ let%expect_test "match_s_suffix" =
   let rule =
     {| where true
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -399,7 +325,7 @@ let%expect_test "match_s_suffix" =
   let rule =
     {| where true
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -437,7 +363,7 @@ let%expect_test "configuration_choice_based_on_case" =
        | "ame" -> true
        }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -456,7 +382,7 @@ let%expect_test "configuration_choice_based_on_case" =
        | "names" -> true
        }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -493,7 +419,7 @@ let%expect_test "configuration_choice_based_on_case" =
        | "names" -> true
        }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -514,7 +440,7 @@ let%expect_test "match_using_environment_merge" =
   let rule =
     {| where match :[1] { | "{ :[x] : :[y] }" -> :[x] == :[y] }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -549,7 +475,7 @@ let%expect_test "match_using_environment_merge" =
   let rule =
     {| where match :[1] { | "{ :[x] : :[y] }" -> :[x] == :[y] }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -574,7 +500,7 @@ let%expect_test "nested_matches" =
                      }
        }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -615,7 +541,7 @@ let%expect_test "nested_matches" =
                      }
        }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -636,7 +562,7 @@ let%expect_test "match_on_template" =
        | "poodles" -> true
        }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -673,7 +599,7 @@ let%expect_test "match_on_template" =
        | "poodles" -> true
        }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 
@@ -710,7 +636,7 @@ let%expect_test "match_on_template" =
        | "poodle" -> true
        }
     |}
-    |> Rule.create
+    |> create
     |> Or_error.ok_exn
   in
 

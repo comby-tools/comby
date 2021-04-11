@@ -13,6 +13,7 @@
   ; test_server
   test_statistics
   test_offset_conversion
+  test_parse_rule
 
   test_rewrite_rule_alpha
   test_rewrite_rule_omega

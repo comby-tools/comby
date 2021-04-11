@@ -105,21 +105,15 @@ let read filename =
   String.chop_suffix template ~suffix:"\n"
   |> Option.value ~default:template
 
-let create_rule omega rule =
-  let create =
-    if omega then
-      Rule.Omega.create
-    else
-      Rule.Alpha.create
-  in
-  match Option.map rule ~f:create with
+let create_rule rule =
+  match Option.map rule ~f:Rule.create with
   | None -> None
   | Some Ok rule -> Some rule
   | Some Error error ->
     Format.eprintf "Rule parse error: %s@." (Error.to_string_hum error);
     exit 1
 
-let parse_toml omega path =
+let parse_toml path =
   let open Toml.Types in
   let toml = Parser.(from_filename path |> unsafe) in
   let toml = Table.remove (Toml.Min.key "flags") toml in
@@ -142,7 +136,7 @@ let parse_toml omega path =
           Format.eprintf "A 'match' key is required for entry %s@." name;
           exit 1
       in
-      let rule = Table.find_opt (Toml.Min.key "rule") t |> to_string |> create_rule omega in
+      let rule = Table.find_opt (Toml.Min.key "rule") t |> to_string |> create_rule in
       let rewrite_template = Table.find_opt (Toml.Min.key "rewrite") t |> to_string in
       if debug then Format.printf "Processed ->%s<-@." match_template;
       (name, (Specification.create ~match_template ?rule ?rewrite_template ()))::acc
@@ -154,7 +148,7 @@ let parse_toml omega path =
   |> List.sort ~compare:(fun x y -> String.compare (fst x) (fst y))
   |> List.map ~f:snd
 
-let parse_templates ?(warn_for_missing_file_in_dir = false) omega paths =
+let parse_templates ?(warn_for_missing_file_in_dir = false) paths =
   let parse_directory path =
     let read_optional filename =
       match read filename with
@@ -166,7 +160,7 @@ let parse_templates ?(warn_for_missing_file_in_dir = false) omega paths =
       if warn_for_missing_file_in_dir then Format.eprintf "WARNING: Could not read required match file in %s@." path;
       None
     | Some match_template ->
-      let rule = create_rule omega @@ read_optional (path ^/ "rule") in
+      let rule = create_rule @@ read_optional (path ^/ "rule") in
       let rewrite_template = read_optional (path ^/ "rewrite") in
       Specification.create ~match_template ?rule ?rewrite_template ()
       |> Option.some
@@ -188,7 +182,7 @@ let parse_templates ?(warn_for_missing_file_in_dir = false) omega paths =
       if Sys.is_directory path = `Yes then
         fold_directory path ~sorted:true ~init:[] ~f
       else
-        parse_toml omega path)
+        parse_toml path)
 
 type interactive_review =
   { editor : string
@@ -444,7 +438,7 @@ type t =
   ; metasyntax : Matchers.Metasyntax.t option
   }
 
-let emit_errors { input_options; run_options; output_options } =
+let emit_errors { input_options; output_options; _ } =
   let error_on =
     [ input_options.stdin && Option.is_some input_options.zip_file
     , "-zip may not be used with -stdin."
@@ -506,12 +500,7 @@ let emit_errors { input_options; run_options; output_options } =
          Option.value_exn message
        else
          "UNREACHABLE")
-    ; (let result =
-         if run_options.omega then
-           Rule.Omega.create input_options.rule
-         else
-           Rule.Alpha.create input_options.rule
-       in
+    ; (let result = Rule.create input_options.rule in
        Or_error.is_error result
      , if Or_error.is_error result then
          Format.sprintf "Match rule parse error: %s@." @@
@@ -540,14 +529,14 @@ let emit_errors { input_options; run_options; output_options } =
       in
       Error.of_string message)
 
-let emit_warnings { input_options; run_options; output_options } =
+let emit_warnings { input_options; output_options; _ } =
   let warn_on =
     [ (let match_templates =
          match input_options.templates, input_options.anonymous_arguments with
          | None, Some { match_template; _ } ->
            [ match_template ]
          | Some templates, _ ->
-           List.map (parse_templates run_options.omega templates) ~f:(fun { match_template; _ } -> match_template)
+           List.map (parse_templates templates) ~f:(fun { match_template; _ } -> match_template)
          | _ -> assert false
        in
        List.exists match_templates ~f:(fun match_template ->
@@ -744,14 +733,8 @@ let create
   emit_errors configuration >>= fun () ->
   emit_warnings configuration >>= fun () ->
   let rule =
-    let create =
-      if omega then
-        Rule.Omega.create
-      else
-        Rule.Alpha.create
-    in
     let rule = String.substr_replace_all rule ~pattern:"..." ~with_:":[_]" in
-    create rule |> Or_error.ok_exn
+    Rule.create rule |> Or_error.ok_exn
   in
   let specifications =
     match templates, anonymous_arguments with
@@ -761,7 +744,7 @@ let create
       else
         [ Specification.create ~match_template ~rewrite_template ~rule () ]
     | Some templates, _ ->
-      parse_templates ~warn_for_missing_file_in_dir:true omega templates
+      parse_templates ~warn_for_missing_file_in_dir:true templates
     | _ -> assert false
   in
   let specifications =
@@ -771,7 +754,7 @@ let create
   in
   let specifications =
     if match_only then
-      List.map specifications ~f:(fun {match_template; rule; _ } ->
+      List.map specifications ~f:(fun { match_template; rule; _ } ->
           Specification.create ~match_template ?rule ())
     else
       specifications

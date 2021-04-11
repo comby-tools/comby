@@ -8,7 +8,7 @@ open Test_helpers
 include Test_omega
 
 let run ?(rule = "where true") source match_template rewrite_template =
-  let rule = Rule.create rule |> Or_error.ok_exn in
+  let rule = Language.Rule.create rule |> Or_error.ok_exn in
   Go.first ~configuration match_template source
   |> function
   | Ok ({environment; _ } as result) ->

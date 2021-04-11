@@ -27,7 +27,7 @@ module Rule = struct
 
   let sat = Rule.Alpha.sat
   let result_env = Rule.Alpha.result_env
-  let create = Rule.Alpha.create
+  let create = Rule.create
   let apply = Rule.Alpha.apply
 end
 type rule = Rule.t

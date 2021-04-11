@@ -1,5 +1,3 @@
-open Core_kernel
-
 open Matchers
 open Match
 
@@ -15,8 +13,6 @@ module type Engine = sig
   val sat : result -> bool
 
   val result_env : result -> environment option
-
-  val create : string -> t Or_error.t
 
   val apply
     :  ?matcher:(module Matcher.S)

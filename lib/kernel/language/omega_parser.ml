@@ -4,9 +4,6 @@ open Angstrom
 
 open Ast
 
-let (|>>) p f =
-  p >>= fun x -> return (f x)
-
 let alphanum =
   satisfy (function
       | 'a' .. 'z'
@@ -16,22 +13,31 @@ let alphanum =
 
 let variable_parser =
   (string Syntax.variable_left_delimiter
-   *> (many (alphanum <|> char '_') |>> String.of_char_list)
+   *> (many (alphanum <|> char '_') >>| String.of_char_list)
    <* string Syntax.variable_right_delimiter)
 
-let escaped_char_s  =
-  any_char
-
+(** Interpret escape sequences inside quotes *)
 let char_token_s =
-  (char '\\' *> escaped_char_s >>= fun c -> return (Format.sprintf {|\%c|} c))
-  <|> (any_char |>> String.of_char)
+  (char '\\' *> any_char >>|
+   function
+   | 'r' -> Char.to_string '\r'
+   | 'n' -> Char.to_string '\n'
+   | 't' -> Char.to_string '\t'
+   | '\\' -> Char.to_string '\\'
+   | c -> Format.sprintf {|\%c|} c)
+  <|> (any_char >>| String.of_char)
 
+(** With escape sequences *)
 let quote s =
   (string s *> (many_till char_token_s (string s)))
-  |>> String.concat
+  >>| String.concat
+
+let raw s =
+  (string s *> (many_till any_char (string s)))
+  >>| String.of_char_list
 
 let quoted_parser =
-  choice [ quote {|"|}; quote {|'|}; quote {|`|} ]
+  choice [ quote {|"|}; quote {|'|}; raw {|`|} ]
 
 let operator_parser =
   choice
