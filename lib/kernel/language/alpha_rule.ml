@@ -1,12 +1,9 @@
 open Core_kernel
-open MParser
-open MParser_PCRE.Tokens
 
 open Match
 open Rewriter
 
 open Ast
-open Alpha_parser
 
 module Configuration = Matchers.Configuration
 
@@ -167,82 +164,3 @@ let rec apply
         rule_match env predicate
       else
         (sat, out))
-
-
-let make_equality_expression operator left right =
-  if String.equal operator Syntax.equal then
-    return (Equal (left, right))
-  else if
-    String.equal operator Syntax.not_equal then
-    return (Not_equal (left, right))
-  else
-    let message =
-      Format.sprintf
-        "Unhandled operator %s. Did you mean %s or %s?"
-        operator
-        Syntax.equal
-        Syntax.not_equal in
-    fail message
-
-let create rule =
-  let operator_parser =
-    spaces >> atom_parser >>= fun left ->
-    spaces >> operator_parser >>= fun operator ->
-    spaces >> atom_parser << spaces >>= fun right ->
-    make_equality_expression operator left right << spaces
-  in
-  let true' = spaces >> string Syntax.true' << spaces |>> fun _ -> True in
-  let false' = spaces >> string Syntax.false' << spaces |>> fun _ -> False in
-  let option_parser = spaces >> string Syntax.option_nested << spaces |>> fun _ -> Option "nested" in
-  let rec expression_parser s =
-    choice
-      [ match_pattern_parser
-      ; rewrite_pattern_parser
-      (* string literals are ambiguous, so attempt to parse operator first *)
-      ; attempt operator_parser
-      ; true'
-      ; false'
-      ; option_parser
-      ]
-      s
-  and match_pattern_parser s =
-    let case_parser : (atom * expression list, unit) parser =
-      spaces >> string Syntax.pipe_operator >>
-      spaces >> atom_parser << spaces << string Syntax.arrow << spaces >>= fun antecedent ->
-      spaces >> comma_sep expression_parser << spaces |>> fun consequent ->
-      antecedent, consequent
-    in
-    let match_pattern =
-      let pattern keyword =
-        string keyword << spaces >> atom_parser << spaces << char '{' << spaces
-        >>= fun atom ->
-        many1 case_parser
-        << char '}' << spaces
-        >>= fun cases -> return (atom, cases)
-      in
-      pattern Syntax.start_match_pattern |>> fun (atom, cases) ->
-      Match (atom, cases)
-    in
-    match_pattern s
-  and rewrite_pattern_parser s =
-    let rewrite_pattern =
-      string Syntax.start_rewrite_pattern << spaces >> atom_parser << spaces << char '{' << spaces
-      >>= fun atom ->
-      atom_parser << spaces << string Syntax.arrow << spaces >>= fun match_template ->
-      spaces >> rewrite_template_parser << char '}' << spaces
-      |>> fun rewrite_template ->
-      Rewrite (atom, (match_template, rewrite_template))
-    in
-    rewrite_pattern s
-  in
-  let rule_parser s =
-    (spaces
-     >> string Syntax.rule_prefix
-     >> spaces1
-     >> comma_sep1 expression_parser
-        << eof)
-      s
-  in
-  match parse_string rule_parser rule () with
-  | Success rule -> Ok rule
-  | Failed (error, _) -> Or_error.error_string error

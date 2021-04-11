@@ -2,8 +2,9 @@
  (name common_test_integration)
  (package comby)
  (modules
-  test_cli_helper
   test_helpers
+  test_cli_helper
+  test_script
   test_extract_regex
   test_alpha
   test_omega
@@ -12,6 +13,7 @@
   ; test_server
   test_statistics
   test_offset_conversion
+  test_parse_rule
 
   test_rewrite_rule_alpha
   test_rewrite_rule_omega

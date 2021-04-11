@@ -16,7 +16,7 @@ let run
     match rule with
     | None -> true
     | Some rule ->
-      let options = Rule.create rule |> Or_error.ok_exn |> Rule.options in
+      let options = create rule |> Or_error.ok_exn |> Rule.options in
       options.nested
   in
   M.all ~configuration ~nested ~template:match_template ~source ()
