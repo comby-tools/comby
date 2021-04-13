@@ -1,4 +1,3 @@
-(*
 open Core
 
 open Rewriter
@@ -111,7 +110,7 @@ let%expect_test "regex_holes_optional_doesnt_work_outside_regex" =
   let rewrite_template = {|(:[x])|} in
 
   run (module Generic) source match_template rewrite_template;
-  [%expect_exact {|No matches.|}];
+  [%expect_exact {|()|}];
 
   let source = "foo bar foobar" in
   let match_template = {|:[x~\s*?]|} in
@@ -144,6 +143,7 @@ let%expect_test "regex_holes_optional_strip_no_from_november_inside_regex" =
   run (module Generic) source match_template rewrite_template;
   [%expect_exact {|(no)(november) (no) (november) (no) vember|}]
 
+(*
 let%expect_test "leading_spaces_beginning_line_anchor" =
   let source = {|
        a
@@ -157,6 +157,7 @@ let%expect_test "leading_spaces_beginning_line_anchor" =
   run (module Generic) source match_template rewrite_template;
   [%expect_exact {|(       )a(   )b(            )c
 |}]
+*)
 
 let%expect_test "spaces_star" =
   let source = {|
@@ -178,6 +179,7 @@ let%expect_test "spaces_star" =
      )()d(
 )|}]
 
+(*
 let%expect_test "end_line_anchor" =
   let source = {|
 aaa bbb
@@ -193,6 +195,7 @@ ccc ddd
 (aaa bbb)aaa bbb ccc
 ccc ddd
 |}]
+*)
 
 let%expect_test "word_boundaries" =
   let source = {|
@@ -295,4 +298,3 @@ setScore( /*CHECK ME*/ 4/3.0)
 setScore( /*CHECK ME*/ 4.0/3.0)
 setScore( /*CHECK ME*/ 4/3)
 |}]
-*)

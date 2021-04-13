@@ -360,15 +360,16 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
                 if debug then Format.printf "Regex: Id: %s Pat: %s@." identifier pattern;
                 let compiled_regexp = Regexp.PCRE.make_regexp pattern in
                 let regexp_parser = Regexp.PCRE.regexp compiled_regexp in
-                let base_parser = [ regexp_parser; end_of_input >>= fun () -> return "" ] in
+                let base_parser = [ regexp_parser; end_of_input >>= fun () -> return "" ] in (* the eof matters here for that one tricky test case *)
+                (*let base_parser = [ regexp_parser >>= fun v -> return v ] in*)
                 pos >>= fun offset ->
+                if debug then Format.printf "(X)@.";
                 choice base_parser
                 >>= fun value ->
-                acc >>= fun _ ->
                 if debug then Format.printf "Regex match @@ %d value %s@." offset value;
                 let offset =
                   if String.length value = 0 then
-                    offset +1 (*offset + 1 this may not matter, if we correct for the whole match conext *)
+                    offset (*offset + 1 this may not matter, if we correct for the whole match conext *)
                   else
                     offset
                 in
@@ -377,6 +378,8 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
                    advance 0
                  else
                    advance @@ String.length value) >>= fun () ->
+                if debug then Format.printf "(Y)@.";
+                acc >>= fun _ ->
                 let m =
                   { offset
                   ; identifier

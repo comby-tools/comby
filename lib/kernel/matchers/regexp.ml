@@ -46,12 +46,18 @@ module Make (Regexp: Regexp_engine_intf) = struct
         (* This still does a copy :( *)
         let bytes = Bytes.create len in
         Bigstringaf.unsafe_blit_to_bytes buffer ~src_off:off bytes ~dst_off:0 ~len;
+        if debug then Format.printf "Matching regex against string: %S@." @@ Bytes.to_string bytes;
         match Regexp.exec ~rex ~pos:0 bytes with
-        | None -> None
+        | None ->
+          if debug then Format.printf "None (1)@.";
+          None
         | Some substrings ->
           match Regexp.get_substring substrings 0 with
-          | None -> None
+          | None ->
+            if debug then Format.printf "None (2)@.";
+            None
           | Some result ->
+            if debug then Format.printf "Matchy Matchy (3)@.";
             Some (result, String.length result))
     >>= function
     | Some (result, _n) ->
@@ -61,6 +67,7 @@ module Make (Regexp: Regexp_engine_intf) = struct
          defining the match context *)
       (* let n = if n > 0 then n else 1 in
          advance n >>= fun () -> *)
+      if debug then Format.printf "Result indeed: %s len %d@." result _n;
       return result
     | None ->
       fail "No match"
