@@ -798,13 +798,17 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
           consumed matcher >>= fun value ->
           if debug then Format.printf "Full match context result: %s@." value;
           pos >>= fun end_pos ->
-          (*
+          let start_pos =
+            if String.length value = 0 then
+              start_pos (*offset + 1 this may not matter, if we correct for the whole match conext *)
+            else
+              start_pos
+          in
           (if String.length value = 0 then
              advance 1
            else
-             advance @@ String.length value) >>= fun () ->
-*)
-          Format.printf "Calculated end_pos %d@." end_pos;
+             return ()) >>= fun () ->
+          if debug then Format.printf "Calculated end_pos %d@." end_pos;
           record_match_context start_pos (end_pos);
           current_environment_ref := Match.Environment.create ();
           return (Unit, "")
