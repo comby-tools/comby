@@ -76,7 +76,7 @@ let substitute template env =
 let record_match_context pos_before pos_after =
   let open Match.Location in
   if debug then Format.printf "match context start pos: %d@." pos_before;
-  if debug then Format.printf "match context end pos %d@." pos_after;
+  if debug then Format.printf "match context end pos (this is wrong) %d@." pos_after;
   let extract_matched_text source { offset = match_start; _ } { offset = match_end; _ } =
     String.slice source match_start match_end
   in
@@ -371,6 +371,11 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
                   ; text = value
                   }
                 in
+                if debug then Format.printf "Regex match @@ %d value %s@." offset value;
+                (if String.length value = 0 then
+                   advance 1
+                 else
+                   advance @@ String.length value) >>= fun () ->
                 r user_state (Match m)
               | Alphanum ->
                 pos >>= fun offset ->
@@ -786,6 +791,7 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
           matcher >>= fun production ->
           if debug then Format.printf "Full match context result@.";
           pos >>= fun end_pos ->
+          Format.printf "Calculated end_pos %d@." end_pos;
           record_match_context start_pos end_pos;
           current_environment_ref := Match.Environment.create ();
           return production

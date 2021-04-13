@@ -1,5 +1,10 @@
 open Angstrom
 
+let debug =
+  match Sys.getenv "DEBUG_COMBY" with
+  | exception Not_found -> false
+  | _ -> true
+
 module type Regexp_engine_intf = sig
   type t
   type substrings
