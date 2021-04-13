@@ -365,17 +365,24 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
                 choice base_parser
                 >>= fun value ->
                 acc >>= fun _ ->
+                if debug then Format.printf "Regex match @@ %d value %s@." offset value;
+                let offset =
+                  if String.length value = 0 then
+                    offset +1 (*offset + 1 this may not matter, if we correct for the whole match conext *)
+                  else
+                    offset
+                in
+                (if String.length value = 0 then
+                   (*advance 1*)
+                   advance 0
+                 else
+                   advance @@ String.length value) >>= fun () ->
                 let m =
                   { offset
                   ; identifier
                   ; text = value
                   }
                 in
-                if debug then Format.printf "Regex match @@ %d value %s@." offset value;
-                (if String.length value = 0 then
-                   advance 1
-                 else
-                   advance @@ String.length value) >>= fun () ->
                 r user_state (Match m)
               | Alphanum ->
                 pos >>= fun offset ->
@@ -788,13 +795,19 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
         let match_one =
           pos >>= fun start_pos ->
           current_environment_ref := Match.Environment.create ();
-          matcher >>= fun production ->
-          if debug then Format.printf "Full match context result@.";
+          consumed matcher >>= fun value ->
+          if debug then Format.printf "Full match context result: %s@." value;
           pos >>= fun end_pos ->
+          (*
+          (if String.length value = 0 then
+             advance 1
+           else
+             advance @@ String.length value) >>= fun () ->
+*)
           Format.printf "Calculated end_pos %d@." end_pos;
-          record_match_context start_pos end_pos;
+          record_match_context start_pos (end_pos);
           current_environment_ref := Match.Environment.create ();
-          return production
+          return (Unit, "")
         in
         (* many1 may be appropriate *)
         let prefix = (prefix >>= fun s -> r acc (String s)) in
