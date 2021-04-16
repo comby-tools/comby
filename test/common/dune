@@ -2,6 +2,7 @@
  (name common_test_integration)
  (package comby)
  (modules
+  ; test_server ; disabled, factor out.
   test_helpers
   test_cli_helper
   test_script
@@ -10,7 +11,6 @@
   test_omega
   test_cli
   test_cli_list
-  ; test_server
   test_statistics
   test_offset_conversion
   test_parse_rule
@@ -65,6 +65,9 @@
 
   test_nested_matches_alpha
   test_nested_matches_omega
+
+  test_regex_holes_alpha
+  test_regex_holes_omega
   )
  (inline_tests)
  (preprocess (pps ppx_expect ppx_sexp_message ppx_deriving_yojson))
