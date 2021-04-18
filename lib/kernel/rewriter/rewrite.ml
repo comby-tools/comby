@@ -38,9 +38,11 @@ let substitute_match_contexts ?fresh ?metasyntax (matches: Match.t list) source 
   in
   let rewritten_source = Rewrite_template.substitute ~metasyntax ?fresh rewrite_template environment |> fst in
   if debug then Format.printf "Rewritten source:@.%s@." rewritten_source;
+  (* TODO parse rewrite_template *)
   let offsets = Rewrite_template.get_offsets_for_holes ~metasyntax rewrite_template (Environment.vars environment) in
   if debug then
     Format.printf "Replacements: %d | Offsets 1: %d@." (List.length replacements) (List.length offsets);
+  (* TODO parse rewrite_template *)
   let offsets = Rewrite_template.get_offsets_after_substitution offsets environment in
   if debug then
     Format.printf "Replacements: %d | Offsets 2: %d@." (List.length replacements) (List.length offsets);
