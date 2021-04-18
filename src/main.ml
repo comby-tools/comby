@@ -39,7 +39,25 @@ let list_supported_languages_and_exit omega =
   Format.printf "%s%!" list;
   exit 0
 
-let substitute_environment_only_and_exit anonymous_arguments json_environment =
+let substitute_environment_only_and_exit metasyntax_path anonymous_arguments json_environment =
+  let metasyntax =
+    (* FIXME this is copy pasta of command_configuration *)
+    match metasyntax_path with
+    | None -> Matchers.Metasyntax.default_metasyntax
+    | Some metasyntax_path ->
+      match Sys.file_exists metasyntax_path with
+      | `No | `Unknown ->
+        Format.eprintf "Could not open file: %s@." metasyntax_path;
+        exit 1
+      | `Yes ->
+        Yojson.Safe.from_file metasyntax_path
+        |> Matchers.Metasyntax.of_yojson
+        |> function
+        | Ok c -> c
+        | Error error ->
+          Format.eprintf "%s@." error;
+          exit 1
+  in
   let rewrite_template =
     match anonymous_arguments with
     | Some { rewrite_template; _ } -> rewrite_template
@@ -56,7 +74,7 @@ let substitute_environment_only_and_exit anonymous_arguments json_environment =
       Match.Environment.of_yojson json
       |> function
       | Ok environment ->
-        let substituted, _ = Rewriter.Rewrite_template.substitute rewrite_template environment in
+        let substituted, _ = Rewriter.Rewrite_template.substitute ~metasyntax rewrite_template environment in
         Format.printf "%s@." substituted;
         exit 0
       | Error err ->
@@ -152,7 +170,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     in
     if list then list_supported_languages_and_exit omega;
     if Option.is_some substitute_environment then
-      substitute_environment_only_and_exit anonymous_arguments substitute_environment;
+      substitute_environment_only_and_exit custom_metasyntax anonymous_arguments substitute_environment;
     let interactive_review =
       let default_editor =
         let f = Option.some in

@@ -203,3 +203,23 @@ let%expect_test "multiple_contextual_substitutions" =
     }
   ]
 }|}]
+
+(*
+module Template_parser = Rewrite_template.Make(Matchers.Metasyntax.Default)
+
+let%expect_test "parse_rewrite_template" =
+  let template = {|:[[?x]] a(b:[c~d])|} in
+  let extracted = Option.value_exn (Template_parser.parse template) in
+  print_s [%message (extracted : Rewrite_template.extracted list)];
+  [%expect_exact {|(extracted ((Hole :[x.]) (Constant " a(b") (Hole c) (Constant ")")))
+|}]
+*)
+
+(*
+let%expect_test "parse_rewrite_template" =
+  let template = {|:[x.] a(b:[c~d])|} in
+  let extracted = Option.value_exn (Template_parser.parse template) in
+  print_s [%message (extracted : Rewrite_template.extracted list)];
+  [%expect_exact {|(extracted ((Hole :[x.]) (Constant " a(b") (Hole c) (Constant ")")))
+|}]
+*)

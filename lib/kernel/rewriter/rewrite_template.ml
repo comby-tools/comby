@@ -8,6 +8,119 @@ let debug =
   | exception Not_found -> false
   | _ -> true
 
+type syntax = { variable: string; pattern: string }
+[@@deriving sexp_of]
+
+type extracted =
+  | Hole of syntax
+  | Constant of string
+[@@deriving sexp_of]
+
+module Make (Metasyntax : Matchers.Metasyntax.S) = struct
+
+  let alphanum =
+    satisfy (function
+        | 'a' .. 'z'
+        | 'A' .. 'Z'
+        | '0' .. '9' -> true
+        | _ -> false)
+
+  let blank =
+    choice
+      [ char ' '
+      ; char '\t'
+      ]
+
+  let ignore p =
+    p *> return ()
+
+  let p = function
+    | Some delim -> ignore @@ (string delim)
+    | None -> return ()
+
+  let any_char_except ~reserved =
+    List.fold reserved
+      ~init:(return `OK)
+      ~f:(fun acc reserved_sequence ->
+          option `End_of_input
+            (peek_string (String.length reserved_sequence)
+             >>= fun s ->
+             if String.equal s reserved_sequence then
+               return `Reserved_sequence
+             else
+               acc))
+    >>= function
+    | `OK -> any_char
+    | `End_of_input -> any_char
+    | `Reserved_sequence -> fail "reserved sequence hit"
+
+  let identifier () =
+    choice @@ List.map ~f:char (String.to_list Metasyntax.identifier)
+
+  let identifier () =
+    both
+      (option false (char '?' >>| fun _ -> true))
+      (many1 (identifier ()) >>| String.of_char_list)
+
+  let regex_expression suffix =
+    fix (fun expr ->
+        choice
+          [ lift (fun x -> Format.sprintf "[%s]" @@ String.concat x) (char '[' *> many1 expr <* char ']')
+          ; lift (fun c -> Format.sprintf {|\%c|} c) (char '\\' *> any_char)
+          ; lift String.of_char (any_char_except ~reserved:[suffix])
+          ])
+
+  let regex_body separator suffix =
+    lift2
+      (fun v e -> v, e)
+      (identifier ())
+      (char separator *> many1 (regex_expression suffix))
+
+  let hole_parsers =
+    List.fold ~init:[] Metasyntax.syntax ~f:(fun acc v ->
+        let v =
+          match v with
+          | Hole (_, Delimited (left, right)) ->
+            p left *> identifier () <* p right >>|
+            fun (o, v) ->
+            Format.sprintf "%s%s%s%s" (Option.value left ~default:"") (if o then "?" else "") v (Option.value right ~default:""),
+            v
+          | Regex (left, separator, right) ->
+            p (Some left) *> regex_body separator right <* p (Some right) >>|
+            fun ((_, v), expr) ->
+            (Format.sprintf "%s%s%c%s%s" left v separator (String.concat expr) right),
+            v
+        in
+        v::acc)
+
+  let hole_prefixes =
+    List.map Metasyntax.syntax ~f:(function
+        | Hole (_, Delimited (Some left, _))
+        | Regex (left, _, _) -> Some left
+        | _ -> None)
+    |> List.filter_opt
+
+  (** Not smart enough: only looks for hole prefix to stop scanning constant,
+      because there isn't a good 'not' parser *)
+  let parse_template : extracted list Angstrom.t =
+    let hole = choice hole_parsers in
+    many @@ choice
+      [ (hole >>| fun (pattern, variable) -> Hole { pattern; variable } )
+      ; ((many1 @@ any_char_except ~reserved:hole_prefixes)) >>| fun c -> Constant (String.of_char_list c)
+      ]
+
+  let parse template =
+    match parse_string ~consume:All parse_template template with
+    | Ok result -> Some result
+    | _ -> None (*failwith (Format.sprintf "no parse for %s" template)*)
+
+  let variables template =
+    parse template
+    |> function
+    | Some result -> List.filter_map result ~f:(function | Hole { pattern; variable } -> Some { pattern; variable } | _ -> None)
+    | None -> []
+end
+
 let counter =
   let uuid_for_id_counter = ref 0 in
   fun () ->
@@ -50,7 +163,10 @@ let parse_first_label ?(metasyntax = Matchers.Metasyntax.default_metasyntax) tem
   | Ok label -> List.find_map label ~f:ident
   | Error _ -> None
 
-let substitute_fresh ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?(fresh = counter) template =
+let substitute_fresh
+    ?(metasyntax = Matchers.Metasyntax.default_metasyntax)
+    ?(fresh = counter)
+    template =
   let label_table = String.Table.create () in
   let template_ref = ref template in
   let current_label_ref = ref (parse_first_label ~metasyntax !template_ref) in
@@ -83,21 +199,36 @@ let formats_of_metasyntax metasyntax =
   |> List.concat
 
 let substitute ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?fresh template env =
-  let substitution_formats = formats_of_metasyntax metasyntax.syntax in
+  let (module M) = Matchers.Metasyntax.create metasyntax in
+  let module Template_parser = Make(M) in
+  let _vars_from_parsing = Template_parser.variables template in
+  let _vars_from_env = Environment.vars env in
+  (*if debug then Format.printf "Got:: %s@." @@ String.concat _vars_from_parsing;*)
+  if debug then Format.printf "Want vars from env: %s@." @@ String.concat _vars_from_env;
+
+  (*  let _substitution_formats = formats_of_metasyntax metasyntax.syntax in*)
   let template = substitute_fresh ~metasyntax ?fresh template in
-  Environment.vars env
-  |> List.fold ~init:(template, []) ~f:(fun (acc, vars) variable ->
+  if debug then Format.printf "Template afer substituting fresh: %s@." template;
+
+  _vars_from_parsing
+  |> List.fold ~init:(template, []) ~f:(fun (acc, vars) { variable; pattern } ->
+      if debug then Format.printf "Fold for %s@." variable;
       match Environment.lookup env variable with
       | Some value ->
-        List.find_map substitution_formats ~f:(fun (left,right) ->
-            let pattern = left^variable^right in
-            if Option.is_some (String.substr_index template ~pattern) then
-              Some (String.substr_replace_all acc ~pattern ~with_:value, variable::vars)
-            else
-              None)
-        |> Option.value ~default:(acc,vars)
-      | None -> acc, vars)
+        if debug then Format.printf "Hit: %s@." value;
+        if Option.is_some (String.substr_index template ~pattern) then
+          String.substr_replace_all acc ~pattern ~with_:value, variable::vars
+        else
+          (if debug then Format.printf "None1";
+           acc, vars)
+      | None ->
+        if debug then Format.printf "None2";
+        acc, vars)
 
+(** Uses metasyntax to substitute fresh variables in the match_context that
+    will be replaced. It returns (id * rewrite_template) where id is the part
+    that will be substituted with match_context, and rewrite_template is the
+    source that's been templatized. *)
 let of_match_context
     ?(metasyntax = Matchers.Metasyntax.default_metasyntax)
     ?(fresh = sub_counter)
@@ -120,14 +251,16 @@ let of_match_context
   let rewrite_template = String.concat [before_part; left; hole_id; right; after_part] in
   hole_id, rewrite_template
 
-(* return the offset for holes (specified by variables) in a given match template *)
-let get_offsets_for_holes ?(metasyntax = Matchers.Metasyntax.default_metasyntax) rewrite_template variables =
+(** return the offset for holes (specified by variables) in a given match template *)
+let get_offsets_for_holes
+    ?(metasyntax = Matchers.Metasyntax.default_metasyntax)
+    rewrite_template
+    variables =
   let left, right = replacement_sentinel metasyntax in
   let sorted_variables =
     List.fold variables ~init:[] ~f:(fun acc variable ->
         match String.substr_index rewrite_template ~pattern:(left^variable^right) with
-        | Some index ->
-          (variable, index)::acc
+        | Some index -> (variable, index)::acc
         | None -> acc)
     |> List.sort ~compare:(fun (_, i1) (_, i2) -> i1 - i2)
     |> List.map ~f:fst
@@ -141,7 +274,7 @@ let get_offsets_for_holes ?(metasyntax = Matchers.Metasyntax.default_metasyntax)
       | None -> rewrite_template, acc)
   |> snd
 
-(* pretend we substituted vars in offsets with environment. return what the offsets are after *)
+(** pretend we substituted vars in offsets with environment. return what the offsets are after *)
 let get_offsets_after_substitution offsets environment =
   List.fold_right offsets ~init:([],0) ~f:(fun (var, offset) (acc, shift)  ->
       match Environment.lookup environment var with

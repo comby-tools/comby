@@ -1,6 +1,19 @@
 open Matchers
 open Match
 
+type syntax = { variable: string; pattern: string }
+[@@deriving sexp_of]
+
+type extracted =
+  | Hole of syntax
+  | Constant of string
+[@@deriving sexp_of]
+
+module Make : Metasyntax.S -> sig
+    val parse : string -> extracted list option
+    val variables : string -> syntax list
+  end
+
 (** if [fresh] is set, then substitute the pattern :[id()] starting at 1, and
     incrementing subsequent IDs. If [fresh] is unset, then by default substitute
     the pattern :[id()] starting at 1, and increment for each occurence of

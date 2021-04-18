@@ -28,8 +28,17 @@ let substitute_match_contexts ?fresh ?metasyntax (matches: Match.t list) source 
   in
   if debug then Format.printf "Env:@.%s" (Environment.to_string environment);
   if debug then Format.printf "Rewrite in:@.%s@." rewrite_template;
-  let rewritten_source = Rewrite_template.substitute ?metasyntax ?fresh rewrite_template environment |> fst in
-  let offsets = Rewrite_template.get_offsets_for_holes ?metasyntax rewrite_template (Environment.vars environment) in
+  let metasyntax =
+    (* override custom metasyntax for identifiers to accomodate fresh variable generation and UUID
+       identifiers that contain -, etc. *)
+    let identifier ="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" in
+    match metasyntax with
+    | None -> { Matchers.Metasyntax.default_metasyntax with identifier }
+    | Some metasyntax -> { metasyntax with identifier }
+  in
+  let rewritten_source = Rewrite_template.substitute ~metasyntax ?fresh rewrite_template environment |> fst in
+  if debug then Format.printf "Rewritten source:@.%s@." rewritten_source;
+  let offsets = Rewrite_template.get_offsets_for_holes ~metasyntax rewrite_template (Environment.vars environment) in
   if debug then
     Format.printf "Replacements: %d | Offsets 1: %d@." (List.length replacements) (List.length offsets);
   let offsets = Rewrite_template.get_offsets_after_substitution offsets environment in
@@ -47,21 +56,25 @@ let substitute_match_contexts ?fresh ?metasyntax (matches: Match.t list) source 
   ; in_place_substitutions
   }
 
-  (*
+(**
    store range information for this match_context replacement:
    (a) its offset in the original source
    (b) its replacement context (to calculate the range)
    (c) an environment of values that are updated to reflect their relative offset in the rewrite template
-   *)
-let substitute_in_rewrite_template ?fresh ?metasyntax rewrite_template ({ environment; _ } : Match.t) =
+*)
+let substitute_in_rewrite_template
+    ?fresh
+    ?(metasyntax = Matchers.Metasyntax.default_metasyntax)
+    rewrite_template
+    ({ environment; _ } : Match.t) =
   let replacement_content, vars_substituted_for =
     Rewrite_template.substitute
-      ?metasyntax
+      ~metasyntax
       ?fresh
       rewrite_template
       environment
   in
-  let offsets = Rewrite_template.get_offsets_for_holes ?metasyntax rewrite_template (Environment.vars environment) in
+  let offsets = Rewrite_template.get_offsets_for_holes ~metasyntax rewrite_template (Environment.vars environment) in
   let offsets = Rewrite_template.get_offsets_after_substitution offsets environment in
   let environment =
     List.fold offsets ~init:(Environment.create ()) ~f:(fun acc (var, relative_offset) ->

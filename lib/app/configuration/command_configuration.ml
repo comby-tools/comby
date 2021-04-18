@@ -663,20 +663,20 @@ let select_matcher custom_metasyntax custom_matcher override_matcher file_filter
     let metasyntax = metasyntax custom_metasyntax in
     let syntax = syntax custom_matcher in
     E.create ~metasyntax syntax, None, Some metasyntax
-  (* forced language, optional custom metasyntax *)
   | _, Some language, custom_metasyntax ->
+    (* forced language, optional custom metasyntax *)
     let metasyntax = metasyntax custom_metasyntax in
     let (module Metasyntax) = Matchers.Metasyntax.create metasyntax in
     let (module Language) = force_language language in
     (module (E.Make (Language) (Metasyntax)) : Matchers.Matcher.S), None, Some metasyntax
-  (* infer language from file filters, definite custom metasyntax *)
   | _, _, Some custom_metasyntax ->
+    (* infer language from file filters, definite custom metasyntax *)
     let metasyntax = metasyntax (Some custom_metasyntax) in
     let (module Metasyntax) = Matchers.Metasyntax.create metasyntax in
     let (module Language) = force_language (extension file_filters) in
     (module (E.Make (Language) (Metasyntax)) : Matchers.Matcher.S), None, Some metasyntax
-  (* infer language from file filters, use default metasyntax *)
   | _, _, None ->
+    (* infer language from file filters, use default metasyntax *)
     of_extension (module E) file_filters
 
 let regex_of_specifications specifications =
