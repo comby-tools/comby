@@ -1220,6 +1220,17 @@ let%expect_test "test_custom_metasyntax_replace" =
   print_string result;
   [%expect "a b"]
 
+let%expect_test "test_custom_metasyntax_replace" =
+  let source = "a(b)" in
+  let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
+  let command_args =
+    Format.sprintf "'$A($B~\\w+$)' '$A~x$ $B~\\w+$' -stdin -sequential -custom-metasyntax %s -stdout" metasyntax_path
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect "a b"]
+
 let%expect_test "test_custom_metasyntax_substitute" =
   let source = "IGNORED" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
@@ -1232,16 +1243,13 @@ let%expect_test "test_custom_metasyntax_substitute" =
   print_string result;
   [%expect "$A hello"]
 
-(*echo 'a(b)' | ./comby '$A($B)' '$A $B' -rule 'where rewrite :[A] { "a" -> "qqq" }' -stdin -custom-metasyntax*)
-
 let%expect_test "test_custom_metasyntax_partial_rule_support" =
-  let source = "IGNORED" in
+  let source = "a(b)" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
-  let env = {|[{"variable":"B", "value":"hello" }]|} in
   let command_args =
-    Format.sprintf "'IGNORED' '$A $B~\\w+$' -stdin -sequential -custom-metasyntax %s -substitute-only '%s'" metasyntax_path env
+    Format.sprintf {|'$A($B)' '$A $B' -rule 'where rewrite :[A] { "$C~a$" -> "$C" }' -stdin -custom-metasyntax %s -stdout|} metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "$A hello"]
+  [%expect "a b"]
