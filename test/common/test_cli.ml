@@ -215,6 +215,7 @@ let%expect_test "with_rewrite_rule" =
 |}]
 
 let%expect_test "with_rewrite_rule_stdin_default_no_extension" =
+  (* echo "hello world" | ./comby ':[[2]] :[[1]]' ':[1]' -rule 'where rewrite :[1] { ":[_]" -> ":[2]" }' -stdin *)
   let source = "hello world" in
   let match_template = ":[[2]] :[[1]]" in
   let rewrite_template = ":[1]" in

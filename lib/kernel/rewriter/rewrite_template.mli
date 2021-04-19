@@ -25,6 +25,6 @@ val substitute : ?metasyntax:Metasyntax.t -> ?fresh:(unit -> string) -> string -
 
 val of_match_context : ?metasyntax:Metasyntax.t -> ?fresh:(unit -> string) -> Match.t -> source:string -> (string * string)
 
-val get_offsets_for_holes : ?metasyntax:Metasyntax.t -> string -> string list -> (string * int) list
+val get_offsets_for_holes : ?metasyntax:Metasyntax.t -> string -> (string * int) list
 
 val get_offsets_after_substitution : (string * int) list -> Environment.t -> (string * int) list

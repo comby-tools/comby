@@ -1064,7 +1064,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
               else
                 shift, extract_matched_text original_source match_start match_end
             in
-            if debug then Format.printf "Extracted matched: %s" matched;
+            if debug then Format.printf "Extracted matched: %s@." matched;
             let result = { result with matched } in
             if shift >= String.length original_source then
               result :: acc

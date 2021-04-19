@@ -228,7 +228,7 @@ let substitute ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?fresh tem
 
   (*  let _substitution_formats = formats_of_metasyntax metasyntax.syntax in*)
   let template = substitute_fresh ~metasyntax ?fresh template in
-  if debug then Format.printf "Template afer substituting fresh: %s@." template;
+  if debug then Format.printf "Template after substituting fresh: %s@." template;
 
   _vars_from_parsing
   |> List.fold ~init:(template, []) ~f:(fun (acc, vars) { variable; pattern } ->
@@ -239,10 +239,10 @@ let substitute ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?fresh tem
         if Option.is_some (String.substr_index template ~pattern) then
           String.substr_replace_all acc ~pattern ~with_:value, variable::vars
         else
-          (if debug then Format.printf "None1";
+          (if debug then Format.printf "No match for pattern %s in template@." pattern;
            acc, vars)
       | None ->
-        if debug then Format.printf "None2";
+        if debug then Format.printf "No match for variable %s in environment@." variable;
         acc, vars)
 
 (** Uses metasyntax to substitute fresh variables in the match_context that
@@ -274,31 +274,34 @@ let of_match_context
 (** return the offset for holes (specified by variables) in a given match template *)
 let get_offsets_for_holes
     ?(metasyntax = Matchers.Metasyntax.default_metasyntax)
-    rewrite_template
-    variables =
-  let left, right = replacement_sentinel metasyntax in
+    rewrite_template =
+  let (module M) = Matchers.Metasyntax.create metasyntax in
+  let module Template_parser = Make(M) in
+  let vars = Template_parser.variables rewrite_template in
+
   let sorted_variables =
-    List.fold variables ~init:[] ~f:(fun acc variable ->
-        match String.substr_index rewrite_template ~pattern:(left^variable^right) with
-        | Some index -> (variable, index)::acc
+    List.fold vars ~init:[] ~f:(fun acc { variable; pattern } ->
+        match String.substr_index rewrite_template ~pattern with
+        | Some index -> ((variable, pattern), index)::acc
         | None -> acc)
     |> List.sort ~compare:(fun (_, i1) (_, i2) -> i1 - i2)
     |> List.map ~f:fst
   in
-  List.fold sorted_variables ~init:(rewrite_template, []) ~f:(fun (rewrite_template, acc) variable ->
-      match String.substr_index rewrite_template ~pattern:(left^variable^right) with
+  List.fold sorted_variables ~init:(rewrite_template, []) ~f:(fun (rewrite_template, acc) (variable, pattern) ->
+      match String.substr_index rewrite_template ~pattern with
       | Some index ->
         let rewrite_template =
-          String.substr_replace_all rewrite_template ~pattern:(left^variable^right) ~with_:"" in
+          String.substr_replace_all rewrite_template ~pattern ~with_:"" in
         rewrite_template, (variable, index)::acc
       | None -> rewrite_template, acc)
   |> snd
 
 (** pretend we substituted vars in offsets with environment. return what the offsets are after *)
 let get_offsets_after_substitution offsets environment =
-  List.fold_right offsets ~init:([],0) ~f:(fun (var, offset) (acc, shift)  ->
+  if debug then Format.printf "Environment: %s@." @@ Match.Environment.to_string environment;
+  List.fold_right offsets ~init:([],0 ) ~f:(fun (var, offset) (acc, shift)  ->
       match Environment.lookup environment var with
-      | None -> failwith "Expected var"
+      | None -> acc, shift
       | Some s ->
         let offset' = offset + shift in
         let shift = shift + String.length s in
