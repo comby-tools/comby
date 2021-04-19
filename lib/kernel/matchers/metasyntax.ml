@@ -1,5 +1,6 @@
 include Types.Metasyntax
 
+(* Format.printf "%s@." @@ Matchers.Metasyntax.(json Matchers.Metasyntax.default_metasyntax);; *)
 let default_syntax =
   [ Hole (Everything, Delimited (Some ":[", Some "]"))
   ; Hole (Expression, Delimited (Some ":[", Some ":e]"))
@@ -7,6 +8,8 @@ let default_syntax =
   ; Hole (Non_space, Delimited (Some ":[", Some ".]"))
   ; Hole (Line, Delimited (Some ":[", Some "\\n]"))
   ; Hole (Blank, Delimited (Some ":[ ", Some "]"))
+  ; Hole (Expression, Reserved_identifiers ["α"; "β"; "γ"; "δ"; "ε"; "ζ"; "η"; "θ"; "ι"; "κ"; "λ"; "μ"; "ξ"; "π"; "ρ"; "ς"; "σ"; "τ"; "υ"; "φ"; "χ"; "ψ"; "ω"])
+  ; Hole (Everything, Reserved_identifiers ["Γ"; "Δ"; "Θ"; "Λ"; "Ξ"; "Π"; "Σ"; "Φ"; "Ψ"; "Ω"])
   ; Regex (":[", '~', "]")
   ]
 

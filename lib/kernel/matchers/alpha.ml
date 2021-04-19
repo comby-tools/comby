@@ -253,6 +253,8 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
     List.fold ~init:[] Metasyntax.syntax ~f:(fun acc -> function
         | Hole (sort, Delimited (left, right)) ->
           (sort, (p left >> hole_body () << p right))::acc
+        | Hole (sort, Reserved_identifiers l) ->
+          (sort, choice (List.map ~f:(fun s -> string s |>> fun s -> (false, s)) l))::acc
         | Regex (left, separator, right) ->
           (Regex, (p (Some left) >> regex_body separator right () << p (Some right)))::acc)
 
@@ -832,7 +834,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
     let open Hole in
     let hole_parser =
       let open Polymorphic_compare in
-      List.find_map hole_parsers ~f:(fun (sort', parser) -> Option.some_if (sort' = sort) parser)
+      List.fold ~init:[] hole_parsers ~f:(fun acc (sort', parser) -> if sort' = sort then parser::acc else acc)
     in
     let skip_signal hole = skip (string "_signal_hole") |>> fun () -> Hole hole in
     let at_depth =
@@ -846,9 +848,10 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
         | _ -> at_depth
     in
     match hole_parser with
-    | None -> fail "none" (* not defined *)
-    | Some p ->
-      p |>> function (optional, identifier) -> skip_signal { sort; identifier; dimension; optional; at_depth }
+    | [] -> fail "none" (* not defined *)
+    | l ->
+      choice l |>> function (optional, identifier) ->
+        skip_signal { sort; identifier; dimension; optional; at_depth }
 
   let generate_hole_for_literal dimension ~contents ~left_delimiter ~right_delimiter s =
     let holes = choice @@ List.map hole_parsers ~f:(fun (kind, _) -> attempt (hole_parser kind dimension)) in
@@ -863,8 +866,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
       choice
         [ holes
         ; (spaces1 |>> generate_pure_spaces_parser)
-        ; ((many1 (is_not (choice [reserved_holes; skip space] ))
-            |>> String.of_char_list) |>> generate_string_token_parser)
+        ; ((many1 (is_not (choice [reserved_holes; skip space] )) |>> String.of_char_list) |>> generate_string_token_parser)
         ]
     in
     match parse_string p contents (Match.create ()) with

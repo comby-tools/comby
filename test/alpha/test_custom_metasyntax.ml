@@ -165,4 +165,25 @@ let%expect_test "custom_metasyntax_rewrite" =
     | Nothing -> "nothing"
   in
   print_string output;
-  [%expect_exact {|1 2 2|}];
+  [%expect_exact {|1 2 2|}]
+
+let%expect_test "custom_metasyntax_greek_letters" =
+  let matcher = create
+      [ Hole (Alphanum, Reserved_identifiers ["α"; "β"])
+      ]
+  in
+
+  run matcher "simple(bar)" {|α(β)|} "";
+  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"α","value":"simple","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}}},{"variable":"β","value":"bar","range":{"start":{"offset":7,"line":1,"column":8},"end":{"offset":10,"line":1,"column":11}}}],"matched":"simple(bar)"}]}
+|}]
+
+let%expect_test "custom_metasyntax_alphanum_test" =
+  let matcher = create
+      [ Hole (Alphanum, Delimited (Some "[:", Some ":]"))
+      ; Hole (Alphanum, Reserved_identifiers ["α"; "β"])
+      ]
+  in
+
+  run matcher "simple(bar)" {|[:A:](α)|} "";
+  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"A","value":"simple","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}}},{"variable":"α","value":"bar","range":{"start":{"offset":7,"line":1,"column":8},"end":{"offset":10,"line":1,"column":11}}}],"matched":"simple(bar)"}]}
+|}]

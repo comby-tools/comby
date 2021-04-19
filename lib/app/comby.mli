@@ -268,7 +268,8 @@ module Matchers : sig
     (** A hole definition should comprise either a string prefix, suffix, or
         both which encloses an variable identifier. See example below. *)
     type hole_definition =
-        Delimited of string option * string option
+      | Delimited of string option * string option
+      | Reserved_identifiers of string list
 
     (** Defines syntax definitions for holes. Zero or more Hole sorts, excluding
         [Regex] should have an associated [hole_definition]. The [Regex] hole
