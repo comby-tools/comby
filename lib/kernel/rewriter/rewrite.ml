@@ -20,7 +20,7 @@ let substitute_match_contexts ?fresh ?metasyntax (matches: Match.t list) source 
            (* create a hole in the rewrite template based on this match context *)
            let sub_fresh = Option.map fresh ~f:(fun f -> fun () -> ("sub_" ^ f ())) in (* ensure custom fresh function is unique for substition. *)
            let hole_id, rewrite_template = Rewrite_template.of_match_context ?metasyntax ?fresh:sub_fresh match_ ~source:rewrite_template in
-           if debug then Format.printf "Hole: %s in %s@." hole_id rewrite_template;
+           if debug then Format.printf "Created rewrite template with hole var %s: %s @." hole_id rewrite_template;
            (* add this match context replacement to the environment *)
            let accumulator_environment = Environment.add accumulator_environment hole_id replacement_content in
            (* update match context replacements offset *)
