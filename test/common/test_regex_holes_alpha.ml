@@ -1,25 +1,7 @@
 open Core
 
-open Rewriter
-
+open Test_helpers
 open Matchers.Alpha
-
-let configuration = Matchers.Configuration.create ~match_kind:Fuzzy ()
-
-let run ?(configuration = configuration) (module M : Matchers.Matcher.S) source match_template ?rule rewrite_template =
-  let rule =
-    match rule with
-    | Some rule -> Language.Rule.create rule |> Or_error.ok_exn
-    | None -> Language.Rule.create "where true" |> Or_error.ok_exn
-  in
-  M.all ~configuration ~template:match_template ~source ()
-  |> List.filter ~f:(fun { Match.environment; _ } -> Language.Rule.Alpha.(sat @@ apply rule environment))
-  |> function
-  | [] -> print_string "No matches."
-  | results ->
-    Option.value_exn (Rewrite.all ~source ~rewrite_template results)
-    |> (fun { rewritten_source; _ } -> rewritten_source)
-    |> print_string
 
 let%expect_test "regex_holes_simple" =
   let source = {|foo|} in

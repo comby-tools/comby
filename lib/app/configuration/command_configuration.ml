@@ -223,6 +223,7 @@ type user_input_options =
   ; override_matcher : string option
   ; regex_pattern : bool
   ; ripgrep_args : string option
+  ; omega : bool
   }
 
 type number_of_workers = int
@@ -239,7 +240,6 @@ type run_options =
   ; dump_statistics : bool
   ; substitute_in_place : bool
   ; disable_substring_matching : bool
-  ; omega : bool
   ; fast_offset_conversion : bool
   ; match_newline_toplevel : bool
   ; bound_count : int option
@@ -717,8 +717,9 @@ let create
          ; override_matcher
          ; regex_pattern
          ; ripgrep_args
+         ; omega
          }
-     ; run_options = ({ omega; _ } as run_options)
+     ; run_options
      ; output_options =
          ({ overwrite_file_in_place
           ; color

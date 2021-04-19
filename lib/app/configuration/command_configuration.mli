@@ -56,6 +56,7 @@ type user_input_options =
   ; override_matcher : string option
   ; regex_pattern : bool
   ; ripgrep_args : string option
+  ; omega : bool
   }
 
 type compute_mode =
@@ -70,7 +71,6 @@ type run_options =
   ; dump_statistics : bool
   ; substitute_in_place : bool
   ; disable_substring_matching : bool
-  ; omega : bool
   ; fast_offset_conversion : bool
   ; match_newline_toplevel : bool
   ; bound_count : int option

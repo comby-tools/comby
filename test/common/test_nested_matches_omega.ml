@@ -2,30 +2,7 @@ open Core
 
 open Test_helpers
 
-include Test_omega
-
-let run
-    ?(m = (module Generic : Matchers.Matcher.S))
-    ?(configuration = configuration)
-    ?rule
-    source
-    match_template
-    () =
-  let (module M) = m in
-  let nested =
-    match rule with
-    | None -> true
-    | Some rule ->
-      let options = create rule |> Or_error.ok_exn |> Rule.options in
-      options.nested
-  in
-  M.all ~configuration ~nested ~template:match_template ~source ()
-  |> function
-  | [] -> print_string "No matches."
-  | matches ->
-    let matches = List.map matches ~f:(Match.convert_offset ~fast:true ~source) in
-    Format.asprintf "%a" Match.pp (None, matches)
-    |> print_string
+let run = run_nested (module Matchers.Omega.Generic)
 
 let%expect_test "nested_matches" =
   let source = {|

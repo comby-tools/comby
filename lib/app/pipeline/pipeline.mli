@@ -8,7 +8,6 @@ type output =
 
 val process_single_source
   :  (module Matchers.Matcher.S)
-  -> ?omega:bool
   -> ?fast_offset_conversion:bool
   -> ?substitute_in_place:bool
   -> ?verbose:bool

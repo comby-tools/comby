@@ -34,7 +34,7 @@ let%expect_test "rewrite_rule" =
     {|
       where rewrite :[1] { "int" -> "expect" }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -52,7 +52,7 @@ let%expect_test "sequenced_rewrite_rule" =
       rewrite :[a] { "a" -> "qqq" },
       rewrite :[rest] { "{ b : { :[other] } }" -> "{ :[other] }" }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -68,7 +68,7 @@ let%expect_test "rewrite_rule_for_list" =
     {|
       where rewrite :[contents] { ":[[x]]," -> ":[[x]];" }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -84,7 +84,7 @@ let%expect_test "rewrite_rule_for_list_strip_last" =
     {|
       where rewrite :[contents] { ":[x], " -> ":[x]; " }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -105,7 +105,7 @@ let%expect_test "haskell_example" =
     {|
       where rewrite :[contents] { "," -> "++" }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -129,7 +129,7 @@ let%expect_test "rewrite_freeform_antecedent_pattern" =
     {|
       where rewrite :[contents] { concat [:[x]] -> "nice" }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 

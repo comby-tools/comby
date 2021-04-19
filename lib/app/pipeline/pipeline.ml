@@ -27,25 +27,18 @@ let infer_equality_constraints environment =
       else
         acc)
 
-let apply_rule ?(substitute_in_place = true) ?metasyntax matcher omega rule matches =
+let apply_rule ?(substitute_in_place = true) ?metasyntax matcher rule matches =
   let open Option in
   List.filter_map matches ~f:(fun ({ environment; _ } as matched) ->
       let rule = rule @ infer_equality_constraints environment in
-      let apply =
-        if omega then
-          Rule.Omega.apply ?metasyntax
-        else
-          Rule.Alpha.apply ?metasyntax
-      in
       let fresh () = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
-      let sat, env = apply ~fresh ~substitute_in_place ~matcher rule environment in
+      let sat, env = Rule.apply ?metasyntax ~fresh ~substitute_in_place ~matcher rule environment in
       (if sat then env else None)
       >>| fun environment -> { matched with environment })
 
 let timed_run
     (module Matcher : Matchers.Matcher.S)
     ?(fast_offset_conversion = false)
-    ?(omega = false)
     ?substitute_in_place
     ?metasyntax
     ~configuration
@@ -56,9 +49,9 @@ let timed_run
    | Some template -> Matcher.set_rewrite_template template;
    | None -> ());
   let rule = Option.value rule ~default:[Ast.True] in
-  let options = if omega then Rule.Omega.options rule else Rule.Alpha.options rule in
+  let options = Rule.options rule in
   let matches = Matcher.all ~nested:options.nested ~configuration ~template ~source () in
-  let matches = apply_rule ?substitute_in_place ?metasyntax (module Matcher) omega rule matches in
+  let matches = apply_rule ?substitute_in_place ?metasyntax (module Matcher) rule matches in
   List.map matches ~f:(Match.convert_offset ~fast:fast_offset_conversion ~source)
 
 type output =
@@ -80,7 +73,6 @@ let log_to_file path =
 
 let process_single_source
     matcher
-    ?(omega = false)
     ?(fast_offset_conversion = false)
     ?(substitute_in_place = false)
     ?(verbose = false)
@@ -105,7 +97,6 @@ let process_single_source
             matcher
             ?metasyntax
             ~substitute_in_place
-            ~omega
             ~fast_offset_conversion
             ~configuration
             ~specification
@@ -237,7 +228,6 @@ let run_batch ~f:per_unit sources compute_mode bound_count =
 let run_interactive
     specifications
     matcher
-    omega
     fast_offset_conversion
     substitute_in_place
     match_configuration
@@ -252,7 +242,6 @@ let run_interactive
       (fun (input : single_source) specification ->
          process_single_source
            matcher
-           ~omega
            ~fast_offset_conversion
            ~substitute_in_place
            ~verbose
@@ -287,7 +276,6 @@ let run
         ; dump_statistics
         ; substitute_in_place
         ; disable_substring_matching
-        ; omega
         ; fast_offset_conversion
         ; match_newline_toplevel
         ; bound_count
@@ -321,7 +309,6 @@ let run
       (fun input specification ->
          process_single_source
            matcher
-           ~omega
            ~fast_offset_conversion
            ~substitute_in_place
            ~verbose
@@ -345,7 +332,6 @@ let run
       run_interactive
         specifications
         matcher
-        omega
         fast_offset_conversion
         substitute_in_place
         match_configuration
@@ -368,7 +354,6 @@ let execute
     specification =
   process_single_source
     matcher
-    ~omega:false
     ~fast_offset_conversion:false
     ?substitute_in_place
     ~verbose:false

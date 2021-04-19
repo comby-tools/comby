@@ -28,7 +28,7 @@ let %expect_test "statistics" =
   let rule =
     {| where true
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
   Go.all ~configuration ~template ~source ()
