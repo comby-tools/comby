@@ -15,7 +15,8 @@ let run ?(rule = "where true") source match_template rewrite_template =
     if Rule.(sat @@ apply rule environment) then
       Rewrite.all ~source ~rewrite_template [result]
       |> (fun x -> Option.value_exn x)
-      |> (fun { rewritten_source; _ } -> rewritten_source)    |> print_string
+      |> (fun { rewritten_source; _ } -> rewritten_source)
+      |> print_string
     else
       assert false
   | Error _ ->

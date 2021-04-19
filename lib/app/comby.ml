@@ -25,11 +25,12 @@ module Rule = struct
   type t = Rule.t
   type result = Rule.result
 
-  let sat = Rule.Alpha.sat
-  let result_env = Rule.Alpha.result_env
+  let sat = Rule.sat
+  let result_env = Rule.result_env
   let create = Rule.create
-  let apply = Rule.Alpha.apply
+  let apply = Rule.apply
 end
+
 type rule = Rule.t
 
 module Replacement = Replacement

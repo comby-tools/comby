@@ -1,20 +1,10 @@
 open Core
 
-open Matchers
 open Match
 
 open Test_helpers
 
 include Test_alpha
-
-let sat ?(env = Environment.create ()) rule =
-  let rule = create rule |> Or_error.ok_exn in
-  Format.sprintf "%b" (Rule.(sat @@ apply rule env))
-
-let make_env bindings =
-  List.fold bindings
-    ~init:(Environment.create ())
-    ~f:(fun env (var, value) -> Environment.add env var value)
 
 let%expect_test "rule_sat" =
   let rule = {| where "x" != "y" |} in
@@ -60,19 +50,6 @@ let%expect_test "rule_sat_with_env" =
   sat ~env rule |> print_string;
   [%expect_exact {|false|}]
 
-let configuration = Configuration.create ~match_kind:Fuzzy ()
-
-let format s =
-  let s = s |> String.chop_prefix_exn ~prefix:"\n" in
-  let leading_indentation =
-    Option.value_exn (String.lfindi s ~f:(fun _ c -> not (Char.equal c ' '))) in
-  s
-  |> String.split ~on:'\n'
-  |> List.map ~f:(Fn.flip String.drop_prefix leading_indentation)
-  |> String.concat ~sep:"\n"
-  |> String.chop_suffix_exn ~suffix:"\n"
-
-
 let%expect_test "where_true" =
   let template =
     {|
@@ -91,7 +68,7 @@ let%expect_test "where_true" =
   let rule =
     {| where true
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -140,7 +117,7 @@ let%expect_test "match_sat" =
        | ":[_],:[_]" -> false
        }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -156,7 +133,7 @@ let%expect_test "match_sat" =
        | ":[_],:[_]" -> true
        }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -199,7 +176,7 @@ let%expect_test "match_sat" =
        | ":[_]" -> true
        }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -235,7 +212,7 @@ let%expect_test "match_sat" =
        | ":[_]" -> :[1] == "a"
        }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -270,7 +247,7 @@ let%expect_test "match_sat" =
        | ":[_]" -> :[1] == "b"
        }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -289,7 +266,7 @@ let%expect_test "match_s_suffix" =
   let rule =
     {| where true
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -325,7 +302,7 @@ let%expect_test "match_s_suffix" =
   let rule =
     {| where true
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -363,7 +340,7 @@ let%expect_test "configuration_choice_based_on_case" =
        | "ame" -> true
        }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -382,7 +359,7 @@ let%expect_test "configuration_choice_based_on_case" =
        | "names" -> true
        }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -419,7 +396,7 @@ let%expect_test "configuration_choice_based_on_case" =
        | "names" -> true
        }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -440,7 +417,7 @@ let%expect_test "match_using_environment_merge" =
   let rule =
     {| where match :[1] { | "{ :[x] : :[y] }" -> :[x] == :[y] }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -475,7 +452,7 @@ let%expect_test "match_using_environment_merge" =
   let rule =
     {| where match :[1] { | "{ :[x] : :[y] }" -> :[x] == :[y] }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -500,7 +477,7 @@ let%expect_test "nested_matches" =
                      }
        }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -541,7 +518,7 @@ let%expect_test "nested_matches" =
                      }
        }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -562,7 +539,7 @@ let%expect_test "match_on_template" =
        | "poodles" -> true
        }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -599,7 +576,7 @@ let%expect_test "match_on_template" =
        | "poodles" -> true
        }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 
@@ -636,7 +613,7 @@ let%expect_test "match_on_template" =
        | "poodle" -> true
        }
     |}
-    |> create
+    |> Language.Rule.create
     |> Or_error.ok_exn
   in
 

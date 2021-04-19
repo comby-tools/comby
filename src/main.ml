@@ -227,6 +227,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; override_matcher
             ; regex_pattern
             ; ripgrep_args
+            ; omega
             }
         ; run_options =
             { verbose
@@ -234,7 +235,6 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; dump_statistics
             ; substitute_in_place
             ; disable_substring_matching
-            ; omega
             ; fast_offset_conversion
             ; match_newline_toplevel
             ; bound_count

@@ -13,7 +13,6 @@ let configuration =
       ; dump_statistics = false
       ; substitute_in_place = true
       ; disable_substring_matching = false
-      ; omega = false
       ; fast_offset_conversion = false
       ; match_newline_toplevel = false
       ; bound_count = None
@@ -23,12 +22,6 @@ let configuration =
   ; interactive_review = None
   ; extension = None
   ; metasyntax = None
-  }
-
-let configuration =
-  { configuration with
-    run_options =
-      { configuration.run_options with omega = true }
   }
 
 (* TODO restore this, can't access the Parallel_hack module *)
