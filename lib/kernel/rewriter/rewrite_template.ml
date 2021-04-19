@@ -90,6 +90,8 @@ module Make (Metasyntax : Matchers.Metasyntax.S) = struct
             fun (o, v) ->
             Format.sprintf "%s%s%s%s" (Option.value left ~default:"") (if o then "?" else "") v (Option.value right ~default:""),
             v
+          | Hole (_, Reserved_identifiers l) ->
+            choice (List.map l ~f:string) >>| fun v -> v, v
           | Regex (left, separator, right) ->
             p (Some left) *> regex_body separator right <* p (Some right) >>|
             fun ((_, v), expr) ->

@@ -91,6 +91,7 @@ module Metasyntax = struct
 
   type hole_definition =
     | Delimited of string option * string option
+    | Reserved_identifiers of string list
   [@@deriving yojson]
 
   type hole_syntax =

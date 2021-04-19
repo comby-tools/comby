@@ -1253,3 +1253,14 @@ let%expect_test "test_custom_metasyntax_partial_rule_support" =
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect "a b"]
+
+let%expect_test "test_custom_metasyntax_reserved_identifiers" =
+  let source = "fun f -> (fun x -> f (x x)) (fun x -> f (x x))" in
+  let metasyntax_path = "example" ^/ "metasyntax" ^/ "default.json" in
+  let command_args =
+    Format.sprintf {|'λ f -> α α' 'α' -stdin -custom-metasyntax %s -stdout|} metasyntax_path
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect "(fun x -> f (x x))"]
