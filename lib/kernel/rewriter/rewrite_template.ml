@@ -77,7 +77,10 @@ module Make (Metasyntax : Matchers.Metasyntax.S) = struct
       (char separator *> many1 (regex_expression suffix))
 
   let hole_parsers =
-    List.fold ~init:[] Metasyntax.syntax ~f:(fun acc v ->
+    (* Fold right to respect order of definitions in custom metasyntax, where we
+       attempt to parse in order. This is significant if a syntax like $X~regex
+       should be tried before shortcircuiting on $X. *)
+    List.fold_right ~init:[] Metasyntax.syntax ~f:(fun v acc ->
         let v =
           match v with
           | Hole (_, Delimited (left, right)) ->
@@ -106,19 +109,24 @@ module Make (Metasyntax : Matchers.Metasyntax.S) = struct
     let hole = choice hole_parsers in
     many @@ choice
       [ (hole >>| fun (pattern, variable) -> Hole { pattern; variable } )
-      ; ((many1 @@ any_char_except ~reserved:hole_prefixes)) >>| fun c -> Constant (String.of_char_list c)
+      ; (((many1 @@ any_char_except ~reserved:hole_prefixes)) >>| fun c -> Constant (String.of_char_list c))
+      ; any_char >>| fun c -> Constant (Char.to_string c) (* accept anything as constant not accepted by attempting holes above *)
       ]
 
   let parse template =
     match parse_string ~consume:All parse_template template with
     | Ok result -> Some result
-    | _ -> None (*failwith (Format.sprintf "no parse for %s" template)*)
+    | Error e -> failwith ("No rewrite template parse: "^e)
 
   let variables template =
     parse template
     |> function
-    | Some result -> List.filter_map result ~f:(function | Hole { pattern; variable } -> Some { pattern; variable } | _ -> None)
-    | None -> []
+    | Some result ->
+      List.filter_map result ~f:(function
+          | Hole { pattern; variable } -> Some { pattern; variable }
+          | _ -> None)
+    | None ->
+      []
 end
 
 let counter =
@@ -198,12 +206,24 @@ let formats_of_metasyntax metasyntax =
       | _ -> None)
   |> List.concat
 
+let print_template_tree template metasyntax =
+  let (module M) = Matchers.Metasyntax.create metasyntax in
+  let module Template_parser = Make(M) in
+  let tree = Template_parser.parse template in
+  match tree with
+  | Some tree ->
+    Format.printf "%s@." @@ Sexp.to_string_hum (sexp_of_list sexp_of_extracted tree)
+  | None ->
+    Format.printf "Failed to parse template@."
+
+
 let substitute ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?fresh template env =
   let (module M) = Matchers.Metasyntax.create metasyntax in
   let module Template_parser = Make(M) in
   let _vars_from_parsing = Template_parser.variables template in
   let _vars_from_env = Environment.vars env in
   (*if debug then Format.printf "Got:: %s@." @@ String.concat _vars_from_parsing;*)
+  if debug then print_template_tree template metasyntax;
   if debug then Format.printf "Want vars from env: %s@." @@ String.concat _vars_from_env;
 
   (*  let _substitution_formats = formats_of_metasyntax metasyntax.syntax in*)
