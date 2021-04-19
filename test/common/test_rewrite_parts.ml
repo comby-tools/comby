@@ -1,19 +1,29 @@
 open Core
 
 open Match
-open Matchers
 open Rewriter
+
+open Test_helpers
+
+include Test_alpha
+
+let all ?(configuration = configuration) template source =
+  C.all ~configuration ~template ~source ()
+
+module Template_parser = Rewrite_template.Make(Matchers.Metasyntax.Default)
 
 let%expect_test "get_offsets_for_holes" =
   let rewrite_template = {|1234:[1]1234:[2]|} in
-  let result = Rewrite_template.get_offsets_for_holes rewrite_template ["1"; "2"] in
-  print_s [%message (result : (string * int) list)];
-  [%expect_exact {|(result ((2 8) (1 4)))
+  let variables = Template_parser.variables rewrite_template in
+  let offsets = Rewrite_template.get_offsets_for_holes variables rewrite_template in
+  print_s [%message (offsets : (string * int) list)];
+  [%expect_exact {|(offsets ((2 8) (1 4)))
 |}]
 
 let%expect_test "get_offsets_for_holes_after_substitution_1" =
   let rewrite_template = {|1234:[1]1234:[2]|} in
-  let offsets = Rewrite_template.get_offsets_for_holes rewrite_template ["1"; "2"] in
+  let variables = Template_parser.variables rewrite_template in
+  let offsets = Rewrite_template.get_offsets_for_holes variables rewrite_template in
   let environment =
     Environment.create ()
     |> (fun environment -> Environment.add environment "1" "333")
@@ -26,7 +36,8 @@ let%expect_test "get_offsets_for_holes_after_substitution_1" =
 
 let%expect_test "get_offsets_for_holes_after_substitution_1" =
   let rewrite_template = {|1234:[1]1234:[3]11:[2]|} in
-  let offsets = Rewrite_template.get_offsets_for_holes rewrite_template ["1"; "3"; "2"] in
+  let variables = Template_parser.variables rewrite_template in
+  let offsets = Rewrite_template.get_offsets_for_holes variables rewrite_template in
   let environment =
     Environment.create ()
     |> (fun environment -> Environment.add environment "1" "333")
@@ -37,12 +48,6 @@ let%expect_test "get_offsets_for_holes_after_substitution_1" =
   print_s [%message (result : (string * int) list)];
   [%expect_exact {|(result ((2 16) (3 11) (1 4)))
 |}]
-
-
-let configuration = Configuration.create ~match_kind:Fuzzy ()
-
-let all ?(configuration = configuration) template source =
-  C.all ~configuration ~template ~source
 
 let%expect_test "comments_in_string_literals_should_not_be_treated_as_comments_by_fuzzy" =
   let source = {|123433312343331122|} in

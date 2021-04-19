@@ -465,15 +465,16 @@ module Rule : sig
   (** [create] parses and creates a rule. *)
   val create : string -> t Or_error.t
 
-  (** [apply matcher substitute_in_place fresh rule env] applies a [rule]
+  (** [apply matcher substitute_in_place fresh metasyntax rule env] applies a [rule]
       according to some [matcher] for existing matches in [env]. If
       [substitute_in_place] is true, rewrite rules substitute their values in
       place (default true). [fresh] introduces fresh variables for evaluating
-      rules. *)
+      rules. [metasyntax] uses the custom metasyntax definition. *)
   val apply
     :  ?matcher:(module Matchers.Matcher.S)
     -> ?substitute_in_place:bool
     -> ?fresh:(unit -> string)
+    -> ?metasyntax:Matchers.Metasyntax.t
     -> t
     -> Match.environment
     -> result

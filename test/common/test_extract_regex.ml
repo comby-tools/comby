@@ -7,4 +7,4 @@ let%expect_test "basic" =
   let spec = Specification.create ~match_template () in
   let result = Specification.to_regex spec in
   print_string result;
-  [%expect_exact {|(for\s+)(?s:.)*?(,\s+)(?s:.)*?(\s+:=\s+range\s+)(?s:.)*?(\s+\{)(?s:.)*?(\})|}];
+  [%expect_exact {|(for\s+)(\n|.)*?(,\s+)(\n|.)*?(\s+:=\s+range\s+)(\n|.)*?(\s+\{)(\n|.)*?(\})|}];

@@ -14,6 +14,9 @@
   test_statistics
   test_offset_conversion
   test_parse_rule
+  test_rewrite_parts
+  test_parse_rewrite_template
+  test_substitute
 
   test_rewrite_rule_alpha
   test_rewrite_rule_omega
@@ -56,9 +59,6 @@
 
   test_pipeline_alpha
   test_pipeline_omega
-
-  test_rewrite_parts_alpha
-  test_rewrite_parts_omega
 
   test_user_defined_language_alpha
   test_user_defined_language_omega

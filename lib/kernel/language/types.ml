@@ -18,6 +18,7 @@ module type Engine = sig
     :  ?matcher:(module Matcher.S)
     -> ?substitute_in_place:bool
     -> ?fresh:(unit -> string)
+    -> ?metasyntax:Matchers.Metasyntax.t
     -> t
     -> environment
     -> result

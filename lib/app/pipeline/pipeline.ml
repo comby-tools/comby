@@ -27,15 +27,15 @@ let infer_equality_constraints environment =
       else
         acc)
 
-let apply_rule ?(substitute_in_place = true) matcher omega rule matches =
+let apply_rule ?(substitute_in_place = true) ?metasyntax matcher omega rule matches =
   let open Option in
   List.filter_map matches ~f:(fun ({ environment; _ } as matched) ->
       let rule = rule @ infer_equality_constraints environment in
       let apply =
         if omega then
-          Rule.Omega.apply
+          Rule.Omega.apply ?metasyntax
         else
-          Rule.Alpha.apply
+          Rule.Alpha.apply ?metasyntax
       in
       let fresh () = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
       let sat, env = apply ~fresh ~substitute_in_place ~matcher rule environment in
@@ -47,6 +47,7 @@ let timed_run
     ?(fast_offset_conversion = false)
     ?(omega = false)
     ?substitute_in_place
+    ?metasyntax
     ~configuration
     ~source
     ~specification:(Specification.{ match_template = template; rule; rewrite_template })
@@ -57,7 +58,7 @@ let timed_run
   let rule = Option.value rule ~default:[Ast.True] in
   let options = if omega then Rule.Omega.options rule else Rule.Alpha.options rule in
   let matches = Matcher.all ~nested:options.nested ~configuration ~template ~source () in
-  let matches = apply_rule ?substitute_in_place (module Matcher) omega rule matches in
+  let matches = apply_rule ?substitute_in_place ?metasyntax (module Matcher) omega rule matches in
   List.map matches ~f:(Match.convert_offset ~fast:fast_offset_conversion ~source)
 
 type output =
@@ -102,6 +103,7 @@ let process_single_source
       with_timeout timeout source ~f:(fun () ->
           timed_run
             matcher
+            ?metasyntax
             ~substitute_in_place
             ~omega
             ~fast_offset_conversion

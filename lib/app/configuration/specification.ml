@@ -135,7 +135,7 @@ let to_regex { match_template; _ } =
   let extracted = List.map extracted ~f:(fun part -> Str.global_replace match_spaces {|\s+|} part) in
   (* ?s is modifier metasyntax where . matches all chars including newlines. See
      regular-expressions.info/modifier.html *)
-  Format.sprintf "(%s)" @@ String.concat extracted ~sep:")(?s:.)*?("
+  Format.sprintf "(%s)" @@ String.concat extracted ~sep:")(\\n|.)*?("
 
 let create ?rewrite_template ?rule ~match_template () =
   { match_template; rule; rewrite_template }

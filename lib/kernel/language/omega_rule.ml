@@ -51,6 +51,7 @@ let rec apply
     ?(matcher = (module Matchers.Omega.Generic : Matchers.Matcher.S))
     ?(substitute_in_place = true)
     ?(fresh = counter)
+    ?metasyntax
     predicates
     env =
   let open Option in
@@ -112,7 +113,7 @@ let rec apply
       in
       Option.value_map result ~f:ident ~default:(false, Some env)
     | Match (String template, cases) ->
-      let source, _ = Rewriter.Rewrite_template.substitute template env in
+      let source, _ = Rewriter.Rewrite_template.substitute ?metasyntax template env in
       let fresh_var = fresh () in
       let env = Environment.add env fresh_var source in
       rule_match env (Match (Variable fresh_var, cases))
@@ -123,7 +124,7 @@ let rec apply
         | Some { variable; _ } ->
           (* FIXME(RVT) assumes only contextual rewrite for now. *)
           let env =
-            Rewrite_template.substitute rewrite_template env
+            Rewrite_template.substitute ?metasyntax rewrite_template env
             |> fst
             |> fun replacement' ->
             Environment.update env variable replacement'
@@ -144,7 +145,7 @@ let rec apply
             let configuration = Configuration.create ~match_kind:Fuzzy () in
             let matches = Matcher.all ~configuration ~template ~source () in
             let source = if substitute_in_place then Some source else None in
-            let result = Rewrite.all ?source ~rewrite_template matches in
+            let result = Rewrite.all ?metasyntax ?source ~rewrite_template matches in
             match result with
             | Some { rewritten_source; _ } ->
               (* substitute for variables that are in the outside scope *)
