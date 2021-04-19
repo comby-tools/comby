@@ -25,9 +25,9 @@ let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
   let metasyntax =
     Matchers.Metasyntax.{
       syntax =
-        [ Regex ("$", ':', " ")
-        ; Hole (Everything, Delimited (Some "$", None))
+        [ Hole (Everything, Delimited (Some "$", None))
         ; Hole (Alphanum, Delimited (Some "$$", None))
+        ; Regex ("$", ':', " ")
         ]
     ; identifier = "AB"
     }

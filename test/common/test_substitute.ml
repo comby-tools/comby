@@ -16,34 +16,16 @@ let%expect_test "substitute_entire_regex_pattern_in_custom_metasyntax" =
   let metasyntax =
     Matchers.Metasyntax.{
       syntax =
-        [ Regex ("$", ':', " ")
-        ; Hole (Everything, Delimited (Some "$", None))
+        [ Hole (Everything, Delimited (Some "$", None))
         ; Hole (Alphanum, Delimited (Some "$$", None))
+        ; Regex ("$", ':', " ")
         ]
     ; identifier = "AB"
     }
   in
-  let template = {|$A $B:\w+ |} in (* Don't just substitute for `$B`, but for `$B:\w+ ` *)
+  (* Don't just substitute for `$B`, but for `$B:\w+ `. This depends on Regex (more specific syntax) being defined _after_ the general syntax. *)
+  let template = {|$A $B:\w+ |} in
   let environment = Environment.add (Environment.create ()) "B" "hello" in
   let result, _ = Rewrite_template.substitute ~metasyntax template environment in
   print_string result;
   [%expect_exact {|$A hello|}]
-
-(*
-let%expect_test "offsets_for_holes" =
-  let metasyntax =
-    Matchers.Metasyntax.{
-      syntax =
-        [ Regex ("$", ':', " ")
-        ; Hole (Everything, Delimited (Some "$", None))
-        ; Hole (Alphanum, Delimited (Some "$$", None))
-        ]
-    ; identifier = "AB"
-    }
-  in
-  let template = {|$A $B:\w+ |} in
-  let environment = Environment.add (Environment.create ()) "B" "hello" in
-  let result, _ = Rewrite_template.get_offsets_for_holes ~metasyntax template environment in
-  print_string result;
-  [%expect_exact {|$A hello|}];
-*)

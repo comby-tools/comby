@@ -77,10 +77,12 @@ module Make (Metasyntax : Matchers.Metasyntax.S) = struct
       (char separator *> many1 (regex_expression suffix))
 
   let hole_parsers =
-    (* Fold right to respect order of definitions in custom metasyntax, where we
-       attempt to parse in order. This is significant if a syntax like $X~regex
-       should be tried before shortcircuiting on $X. *)
-    List.fold_right ~init:[] Metasyntax.syntax ~f:(fun v acc ->
+    (* Fold left to respect order of definitions in custom metasyntax for
+       matching, where we attempt to parse in order. Note this is significant if
+       a syntax like $X~regex should be tried before shortcircuiting on $X, in
+       which case it should be defined _after_ the $X syntax (most general
+       should be first). *)
+    List.fold ~init:[] Metasyntax.syntax ~f:(fun acc v ->
         let v =
           match v with
           | Hole (_, Delimited (left, right)) ->
@@ -196,53 +198,21 @@ let substitute_fresh
   done;
   !template_ref
 
-let formats_of_metasyntax metasyntax =
-  let open Matchers.Metasyntax in
-  List.filter_map metasyntax ~f:(function
-      | Hole (_, Delimited (left, right)) ->
-        let left = Option.value left ~default:"" in
-        let right = Option.value right ~default:"" in
-        Some [(left, right); (left^"?", right)]
-      | _ -> None)
-  |> List.concat
-
-let print_template_tree template metasyntax =
-  let (module M) = Matchers.Metasyntax.create metasyntax in
-  let module Template_parser = Make(M) in
-  let tree = Template_parser.parse template in
-  match tree with
-  | Some tree ->
-    Format.printf "%s@." @@ Sexp.to_string_hum (sexp_of_list sexp_of_extracted tree)
-  | None ->
-    Format.printf "Failed to parse template@."
-
-
 let substitute ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?fresh template env =
   let (module M) = Matchers.Metasyntax.create metasyntax in
   let module Template_parser = Make(M) in
-  let _vars_from_parsing = Template_parser.variables template in
-  let _vars_from_env = Environment.vars env in
-  (*if debug then Format.printf "Got:: %s@." @@ String.concat _vars_from_parsing;*)
-  if debug then print_template_tree template metasyntax;
-  if debug then Format.printf "Want vars from env: %s@." @@ String.concat _vars_from_env;
-
-  (*  let _substitution_formats = formats_of_metasyntax metasyntax.syntax in*)
+  let vars = Template_parser.variables template in
   let template = substitute_fresh ~metasyntax ?fresh template in
   if debug then Format.printf "Template after substituting fresh: %s@." template;
 
-  _vars_from_parsing
-  |> List.fold ~init:(template, []) ~f:(fun (acc, vars) { variable; pattern } ->
-      if debug then Format.printf "Fold for %s@." variable;
+  List.fold vars ~init:(template, []) ~f:(fun (acc, vars) { variable; pattern } ->
       match Environment.lookup env variable with
       | Some value ->
-        if debug then Format.printf "Hit: %s@." value;
         if Option.is_some (String.substr_index template ~pattern) then
           String.substr_replace_all acc ~pattern ~with_:value, variable::vars
         else
-          (if debug then Format.printf "No match for pattern %s in template@." pattern;
-           acc, vars)
+          acc, vars
       | None ->
-        if debug then Format.printf "No match for variable %s in environment@." variable;
         acc, vars)
 
 (** Uses metasyntax to substitute fresh variables in the match_context that
@@ -250,7 +220,6 @@ let substitute ?(metasyntax = Matchers.Metasyntax.default_metasyntax) ?fresh tem
     that will be substituted with match_context, and rewrite_template is the
     source that's been templatized. *)
 let of_match_context
-    ?(metasyntax = Matchers.Metasyntax.default_metasyntax)
     ?(fresh = sub_counter)
     { range =
         { match_start = { offset = start_index; _ }
@@ -267,20 +236,16 @@ let of_match_context
   in
   let after_part = String.slice source end_index (String.length source) in
   let hole_id = fresh () in
-  let left, right = replacement_sentinel metasyntax in
+  let left, right = replacement_sentinel Matchers.Metasyntax.default_metasyntax in
   let rewrite_template = String.concat [before_part; left; hole_id; right; after_part] in
   hole_id, rewrite_template
 
 (** return the offset for holes (specified by variables) in a given match template *)
 let get_offsets_for_holes
-    ?(metasyntax = Matchers.Metasyntax.default_metasyntax)
+    variables
     rewrite_template =
-  let (module M) = Matchers.Metasyntax.create metasyntax in
-  let module Template_parser = Make(M) in
-  let vars = Template_parser.variables rewrite_template in
-
   let sorted_variables =
-    List.fold vars ~init:[] ~f:(fun acc { variable; pattern } ->
+    List.fold variables ~init:[] ~f:(fun acc { variable; pattern } ->
         match String.substr_index rewrite_template ~pattern with
         | Some index -> ((variable, pattern), index)::acc
         | None -> acc)

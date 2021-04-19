@@ -1208,3 +1208,40 @@ let%expect_test "dot_comby_with_flags" =
     [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
     [0;41;30m-|[0m[0m[0;2mmain([0m[0;31mvoid[0m[0;2m)[0m[0m
     [0;42;30m+|[0m[0mmain([0;32mrewrite[0m)[0m|}]
+
+let%expect_test "test_custom_metasyntax_replace" =
+  let source = "a(b)" in
+  let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
+  let command_args =
+    Format.sprintf "'$A($B~\\w+$)' '$A $B' -stdin -sequential -custom-metasyntax %s -stdout" metasyntax_path
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect "a b"]
+
+let%expect_test "test_custom_metasyntax_substitute" =
+  let source = "IGNORED" in
+  let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
+  let env = {|[{"variable":"B", "value":"hello" }]|} in
+  let command_args =
+    Format.sprintf "'IGNORED' '$A $B~\\w+$' -stdin -sequential -custom-metasyntax %s -substitute-only '%s'" metasyntax_path env
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect "$A hello"]
+
+(*echo 'a(b)' | ./comby '$A($B)' '$A $B' -rule 'where rewrite :[A] { "a" -> "qqq" }' -stdin -custom-metasyntax*)
+
+let%expect_test "test_custom_metasyntax_partial_rule_support" =
+  let source = "IGNORED" in
+  let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
+  let env = {|[{"variable":"B", "value":"hello" }]|} in
+  let command_args =
+    Format.sprintf "'IGNORED' '$A $B~\\w+$' -stdin -sequential -custom-metasyntax %s -substitute-only '%s'" metasyntax_path env
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect "$A hello"]
