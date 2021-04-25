@@ -133,7 +133,14 @@ let output_result output_printer source_path source_content result =
     in
     output_printer (Printer.Replacements { source_path; replacements; result; source_content })
 
-let run_on_specifications specifications output_printer process (input : single_source) output_file =
+type run_mode =
+  | Interactive
+  | Command_line of
+      { output_printer : Printer.t
+      ; output_path : string option
+      }
+
+let run_on_specifications mode specifications process (input : single_source) =
   let result =
     List.fold specifications ~init:Nothing ~f:(fun result specification ->
         let input =
@@ -154,7 +161,11 @@ let run_on_specifications specifications output_printer process (input : single_
 
         | Matches _, Replacement (l, content, n)
         | Replacement (l, content, n), Matches _ ->
-          Format.eprintf "WARNING: input configuration specifies both rewrite and match templates. I am choosing to only process the configurations with both a 'match' and 'rewrite' part. If you only want to see matches, add -match-only to suppress this warning@.";
+          Format.eprintf "WARNING: input configuration specifies both rewrite \
+                          and match templates. I am choosing to only process the \
+                          configurations with both a 'match' and 'rewrite' part. \
+                          If you only want to see matches, add -match-only to \
+                          suppress this warning@.";
           Replacement (l, content, n)
       )
   in
@@ -164,32 +175,14 @@ let run_on_specifications specifications output_printer process (input : single_
     | Matches (_, n)
     | Replacement (_, _, n) -> n
   in
-  output_result output_printer output_file input result;
-  count
-
-let run_on_specifications_for_interactive specifications process (input : single_source) =
-  let result, count =
-    List.fold specifications ~init:(Nothing, 0) ~f:(fun (result, count) specification ->
-        let input =
-          match result with
-          | Nothing | Matches _ -> input
-          | Replacement (_, content, _) -> String content
-        in
-        process input specification
-        |> function
-        | Nothing -> Nothing, count
-        | Matches (m, number_of_matches) ->
-          Matches (m, number_of_matches), count + number_of_matches
-        | Replacement (r, content, number_of_matches) ->
-          if number_of_matches = 0 then
-            Nothing, count
-          else
-            Replacement (r, content, number_of_matches),
-            count + number_of_matches)
-  in
-  match result with
-  | Replacement (_, content, _) -> Some content, count
-  | _ -> None, 0
+  match mode with
+  | Command_line { output_printer; output_path } ->
+    output_result output_printer output_path input result;
+    None, count
+  | Interactive ->
+    match result with
+    | Replacement (_, content, _) -> Some content, count
+    | _ -> None, 0
 
 let write_statistics number_of_matches sources start_time =
   let total_time = Statistics.Time.stop start_time in
@@ -237,7 +230,8 @@ let run_interactive
     compute_mode
     interactive_review =
   let with_rewrites ~input ~path:_ =
-    run_on_specifications_for_interactive
+    run_on_specifications
+      Interactive
       specifications
       (fun (input : single_source) specification ->
          process_single_source
@@ -304,8 +298,8 @@ let run
 
   let per_unit ~(input : single_source) ~output_path =
     run_on_specifications
+      (Command_line { output_printer; output_path })
       specifications
-      output_printer
       (fun input specification ->
          process_single_source
            matcher
@@ -319,7 +313,7 @@ let run
            input
            specification)
       input
-      output_path
+    |> snd (* only count result for Command_line *)
   in
   let count =
     match interactive_review with
