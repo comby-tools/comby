@@ -103,9 +103,11 @@ module Make (Metasyntax : Matchers.Metasyntax.S) = struct
   let hole_prefixes =
     List.map Metasyntax.syntax ~f:(function
         | Hole (_, Delimited (Some left, _))
-        | Regex (left, _, _) -> Some left
+        | Regex (left, _, _) -> Some [left]
+        | Hole (_, Reserved_identifiers l) -> Some l
         | _ -> None)
     |> List.filter_opt
+    |> List.concat
 
   (** Not smart enough: only looks for hole prefix to stop scanning constant,
       because there isn't a good 'not' parser *)

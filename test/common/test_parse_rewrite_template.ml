@@ -34,4 +34,35 @@ let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
   in
   parse metasyntax template |> print_string;
   [%expect_exact {|((Constant $) (Constant ":x ") (Hole ((variable B) (pattern "$B:x ")))
- (Constant " ") (Hole ((variable A) (pattern $A))))|}];
+ (Constant " ") (Hole ((variable A) (pattern $A))))|}]
+
+let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
+  let template = "(  , ,  )" in
+  let metasyntax =
+    Matchers.Metasyntax.{
+      syntax =
+        [ Hole (Everything, Delimited (Some "NOTHING", None))
+        ; Hole (Everything, Reserved_identifiers ["  "; " "])
+        ]
+    ; identifier = "AB"
+    }
+  in
+  parse metasyntax template |> print_string;
+  [%expect_exact {|((Constant "(") (Hole ((variable "  ") (pattern "  "))) (Constant ,)
+ (Hole ((variable " ") (pattern " "))) (Constant ,)
+ (Hole ((variable "  ") (pattern "  "))) (Constant ")"))|}]
+
+let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
+  let template = "(..,.)" in
+  let metasyntax =
+    Matchers.Metasyntax.{
+      syntax =
+        [ Hole (Everything, Delimited (Some "NOTHING", None))
+        ; Hole (Everything, Reserved_identifiers [".."; "."])
+        ]
+    ; identifier = "AB"
+    }
+  in
+  parse metasyntax template |> print_string;
+  [%expect_exact {|((Constant "(") (Hole ((variable ..) (pattern ..))) (Constant ,)
+ (Hole ((variable .) (pattern .))) (Constant ")"))|}]

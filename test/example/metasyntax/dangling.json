@@ -1,0 +1,11 @@
+{
+  "syntax": [
+   [ "Hole", [ "Everything" ], [ "Delimited", ")", null ] ],
+   [ "Hole", [ "Expression" ], [ "Delimited", "))", null ] ]
+  ],
+  "identifier":
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+}
+//  echo 'swap(x, y)' | \
+//  ./comby -stdin -custom-metasyntax test/example/metasyntax/dangling.json \
+//  'swap()1, ))2)' 'swap()2, )1)'

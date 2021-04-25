@@ -1,0 +1,25 @@
+{
+  "syntax": [
+    [ "Hole", [ "Everything" ], [ "Delimited", "place-holder", null ] ],
+    [ "Hole", [ "Everything" ],
+        [ "Reserved_identifiers",
+            [ "Γ", "Δ", "Θ", "Λ", "Ξ", "Π", "Σ", "Φ", "Ψ", "Ω" ]
+        ]
+    ],
+    [ "Hole", [ "Expression" ],
+        [ "Reserved_identifiers",
+            [
+                "α", "β", "γ", "δ", "ε", "ζ", "η", "θ", "ι", "κ", "λ",
+                "μ", "ξ", "π", "ρ", "ς", "σ", "τ", "υ", "φ", "χ", "ψ",
+                "ω"
+            ]
+        ]
+    ]
+  ],
+  "identifier":
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+}
+//  echo 'swap(x, y)' | \
+//  ./comby -stdin -custom-metasyntax test/example/metasyntax/lambda.json \
+//  'λ(α, β)' 'λ(β, α)'
+

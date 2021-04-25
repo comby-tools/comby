@@ -1,0 +1,17 @@
+{
+  "syntax": [
+    // Currently a placeholder is needed if we only care about Reserved_idenitifersl to avoid trickery.
+    // Order is significant.
+    [ "Hole", [ "Everything" ], [ "Delimited", "place-holder", null ] ],
+    [ "Hole", [ "Everything" ],
+        [ "Reserved_identifiers",
+            [ "  ", " " ]
+        ]
+    ]
+  ],
+  "identifier":
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+}
+//  echo 'swap(x,y)' | \
+//  ./comby -stdin -custom-metasyntax test/example/metasyntax/wutspace.json \
+//  'swap( ,  )' 'swap(  , )'

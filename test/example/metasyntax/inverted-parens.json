@@ -1,0 +1,11 @@
+{
+  "syntax": [
+   [ "Hole", [ "Everything" ], [ "Delimited", ")", "(" ] ],
+   [ "Hole", [ "Expression" ], [ "Delimited", "))", "((" ] ]
+  ],
+  "identifier":
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+}
+//  echo 'swap(x, y)' | \
+//  ./comby -stdin -custom-metasyntax test/example/metasyntax/inverted-parens.json \
+//  'swap()1(, )2()' 'swap()2(, )1()'

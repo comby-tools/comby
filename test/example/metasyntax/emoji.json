@@ -1,0 +1,24 @@
+{
+  "syntax": [
+    [ "Hole", [ "Everything" ], [ "Delimited", "place-holder", null ] ],
+    [ "Hole", [ "Everything" ],
+        [ "Reserved_identifiers",
+            [ "❤️", "💙", "💚", "💜", "💛", "🧡" ]
+        ]
+    ],
+    [ "Hole", [ "Expression" ],
+        [ "Reserved_identifiers",
+            [ "😂", "🚡", "😃", "😬", "😈", "🐵", "✋", "😻", "🍌" ]
+        ]
+    ]
+  ],
+  "identifier":
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+}
+//  echo 'swap(x, y)' | \
+//  ./comby -stdin -custom-metasyntax test/example/metasyntax/emoji.json \
+//  'swap(🐵, 🍌)' 'swap(🍌, 🐵)'
+
+//  echo 'add(x, x)' | \                                                    [17:25:08]
+//  ./comby -stdin -custom-metasyntax test/example/metasyntax/emoji.json \ 
+//  'add(😂, 😂)' 'multiply(2, 😂)'
