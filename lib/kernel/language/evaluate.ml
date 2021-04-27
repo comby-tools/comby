@@ -81,30 +81,30 @@ let rec apply
     | Match (Variable variable, cases) ->
       let result =
         Environment.lookup env variable >>= fun source ->
+        let evaluate template case_expression =
+          let configuration = match_configuration_of_syntax template in
+          Matcher.all ~configuration ~template ~source () |> function
+          | [] -> None
+          | matches ->
+            (* merge environments. overwrite behavior is undefined *)
+            let fold_matches (sat, out) { environment; _ } =
+              let fold_cases (sat, out) predicate =
+                if sat then
+                  let env' = Environment.merge env environment in
+                  rule_match ?rewrite_context env' predicate
+                else
+                  (sat, out)
+              in
+              List.fold case_expression ~init:(sat, out) ~f:fold_cases
+            in
+            List.fold matches ~init:(true, None) ~f:fold_matches
+            |> Option.some
+        in
         List.find_map cases ~f:(fun (template, case_expression) ->
             match template with
-            | String template ->
-              begin
-                let configuration = match_configuration_of_syntax template in
-                Matcher.all ~configuration ~template ~source () |> function
-                | [] -> None
-                | matches ->
-                  (* merge environments. overwrite behavior is undefined *)
-                  let fold_matches (sat, out) { environment; _ } =
-                    let fold_cases (sat, out) predicate =
-                      if sat then
-                        let env' = Environment.merge env environment in
-                        rule_match ?rewrite_context env' predicate
-                      else
-                        (sat, out)
-                    in
-                    List.fold case_expression ~init:(sat, out) ~f:fold_cases
-                  in
-                  List.fold matches ~init:(true, None) ~f:fold_matches
-                  |> Option.some
-              end
-            | Variable _ ->
-              failwith "| :[hole] is invalid. Maybe you meant to put quotes")
+            | String template
+            | Variable template ->
+              evaluate template case_expression)
       in
       Option.value_map result ~f:ident ~default:(false, Some env)
     | Match (String template, cases) ->
