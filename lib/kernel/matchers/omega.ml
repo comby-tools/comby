@@ -127,7 +127,7 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
     let acc = f acc production in
     match production with
     | String s ->
-      if debug then Format.printf "Matched String: %S@." s;
+      if debug then Format.printf "Saw String: %S@." s;
       return (Unit, acc)
     | Match { offset = pos_begin; identifier; text = content } ->
       if debug then Format.printf "Match: %S @@ %d for %s@." content pos_begin identifier;
@@ -358,43 +358,42 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
                 let identifier, pattern = String.lsplit2_exn identifier ~on:'~' in
                 let identifier = if String.(identifier = "") then "_" else identifier in
                 if debug then Format.printf "Regex: Id: %s Pat: %s@." identifier pattern;
+                let pattern, prefix =
+                  if String.is_prefix pattern ~prefix:"^" then
+                    (* FIXME: match beginning of input too *)
+                    String.drop_prefix pattern 1,
+                    Some (
+                      (char '\n' *> return "")
+                      <|>
+                      (pos >>= fun p -> if p = 0 then return "" else fail "")
+                    )
+                  else
+                    pattern, None
+                in
+                let pattern, suffix =
+                  if String.is_suffix pattern ~suffix:"$" then
+                    String.drop_suffix pattern 1, Some (char '\n' *> return "" <|> end_of_input *> return "")
+                  else
+                    pattern, None
+                in
                 let compiled_regexp = Regexp.PCRE.make_regexp pattern in
                 let regexp_parser = Regexp.PCRE.regexp compiled_regexp in
-                let base_parser = [ regexp_parser; end_of_input >>= fun () -> return "" ] in (* the eof matters here for that one tricky test case *)
-                let base_parser =
-                  (* adds begin line parser if the pattern has ^ anchor *)
-                  if String.is_prefix pattern ~prefix:"^" then
-                    let p =
-                      Regexp.PCRE.make_regexp (String.drop_prefix pattern 1) |> Regexp.PCRE.regexp
-                    in
-                    (char '\n' >>= fun _ -> p)::base_parser
-                  else
-                    base_parser
+                let regexp_parser =
+                  match prefix, suffix with
+                  | Some prefix, None -> prefix *> regexp_parser
+                  | None, Some suffix -> regexp_parser <* suffix
+                  | Some prefix, Some suffix -> prefix *> regexp_parser <* suffix
+                  | None, None -> regexp_parser
                 in
+                (* the eof matters here for that one tricky test case *)
                 let base_parser =
-                  if String.is_suffix pattern ~suffix:"$" then
-                    let p = Regexp.PCRE.make_regexp (String.drop_prefix pattern 1) |> Regexp.PCRE.regexp in
-                    (p <* (ignore @@ char '\n' <|> end_of_input))::base_parser
-                  else
-                    base_parser
+                  [ regexp_parser
+                  ; end_of_input >>= fun () -> return ""
+                  ]
                 in
                 pos >>= fun offset ->
-                if debug then Format.printf "(X)@.";
-                choice base_parser
-                >>= fun value ->
+                choice base_parser >>= fun value ->
                 if debug then Format.printf "Regex match @@ %d value %s@." offset value;
-                let offset =
-                  if String.length value = 0 then
-                    offset (*offset + 1 this may not matter, if we correct for the whole match conext *)
-                  else
-                    offset
-                in
-                (if String.length value = 0 then
-                   (*advance 1*)
-                   advance 0
-                 else
-                   advance @@ String.length value) >>= fun () ->
-                if debug then Format.printf "(Y)@.";
                 acc >>= fun _ ->
                 let m =
                   { offset

@@ -60,14 +60,15 @@ module Make (Regexp: Regexp_engine_intf) = struct
             if debug then Format.printf "Matchy Matchy (3)@.";
             Some (result, String.length result))
     >>= function
-    | Some (result, _n) ->
+    | Some (result, n) ->
       (* if empty string matches, this hole like for optionals (x?), advance 1. *)
       (* we want to advance one so parsing can continue, but if we advance 1 here we will think
          that the match context is at least length 1 and not 0 if this hole is the only thing
          defining the match context *)
       (* let n = if n > 0 then n else 1 in
          advance n >>= fun () -> *)
-      if debug then Format.printf "Result indeed: %s len %d@." result _n;
+      if debug then Format.printf "Result indeed: %S len %d@." result n;
+      advance n >>= fun () ->
       return result
     | None ->
       fail "No match"

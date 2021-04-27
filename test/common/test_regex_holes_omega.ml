@@ -134,8 +134,8 @@ let%expect_test "leading_spaces_beginning_line_anchor" =
   let rewrite_template = {|(:[x])|} in
 
   run (module Generic) source match_template rewrite_template;
-  [%expect_exact {|(       )a(   )b(            )c(
-)|}]
+  [%expect_exact {|(       )a(   )b(            )c
+|}]
 
 let%expect_test "spaces_star" =
   let source = {|
@@ -157,7 +157,6 @@ let%expect_test "spaces_star" =
      )()d(
 )|}]
 
-(*
 let%expect_test "end_line_anchor" =
   let source = {|
 aaa bbb
@@ -173,7 +172,16 @@ ccc ddd
 (aaa bbb)aaa bbb ccc
 ccc ddd
 |}]
-*)
+
+let%expect_test "start_of_input_and_exact" =
+  let source = {|aaa bbb|}
+  in
+  let match_template = {|:[x~^\w+ bbb$]|} in
+  let rewrite_template = {|(:[x])|} in
+
+  run (module Generic) source match_template rewrite_template;
+  [%expect_exact {|(aaa bbb)|}]
+
 
 let%expect_test "word_boundaries" =
   let source = {|
