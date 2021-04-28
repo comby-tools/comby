@@ -70,7 +70,6 @@ module Hole = struct
     { sort : sort
     ; identifier : string
     ; dimension : dimension
-    ; optional : bool
     ; at_depth : int option
     }
 

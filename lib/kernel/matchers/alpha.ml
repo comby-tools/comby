@@ -213,9 +213,6 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
     >> string str
     >>= fun result -> f result
 
-  let is_optional () =
-    opt false (char '?' |>> fun _ -> true)
-
   let identifier () =
     choice @@ List.map ~f:char (String.to_list Metasyntax.identifier)
 
@@ -226,9 +223,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
     many1 (identifier ()) |>> String.of_char_list
 
   let hole_body () =
-    is_optional () >>= fun optional ->
-    identifier () >>= fun identifier ->
-    return (optional, identifier)
+    identifier ()
 
   let regex_body separator suffix () =
     let rec expr s =
@@ -243,7 +238,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
     in
     regex_identifier () >>= fun identifier ->
     if debug then Format.printf "Regex accepts %s@." identifier;
-    return (false, identifier)
+    return identifier
 
   let p = function
     | Some delim -> skip (string delim)
@@ -254,7 +249,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
         | Hole (sort, Delimited (left, right)) ->
           (sort, (p left >> hole_body () << p right))::acc
         | Hole (sort, Reserved_identifiers l) ->
-          (sort, choice (List.map ~f:(fun s -> string s |>> fun s -> (false, s)) l))::acc
+          (sort, choice (List.map ~f:(fun s -> string s |>> fun s -> s) l))::acc
         | Regex (left, separator, right) ->
           (Regex, (p (Some left) >> regex_body separator right () << p (Some right)))::acc)
 
@@ -613,10 +608,10 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
       fail "unsat"
 
   let turn_holes_into_matchers_for_this_level ?left_delimiter ?right_delimiter p_list =
-    List.foldi (List.rev p_list) ~init:[] ~f:(fun i acc p ->
+    List.fold (List.rev p_list) ~init:[] ~f:(fun acc p ->
         match parse_string p "_signal_hole" (Match.create ()) with
         | Failed _ -> p::acc
-        | Success Hole { sort; identifier; optional; dimension; at_depth } ->
+        | Success Hole { sort; identifier; dimension; at_depth } ->
           begin
             match sort with
             | Regex ->
@@ -661,29 +656,7 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
             | Alphanum ->
               let allowed =  choice [alphanum; char '_'] |>> String.of_char in
               let hole_semantics = many1 allowed in
-              begin match optional with
-                | false -> (record_matches identifier hole_semantics)::acc
-                | true ->
-                  if debug then Format.printf "Optional active@.";
-                  match acc with
-                  | [] ->
-                    let hole_semantics = opt [] (attempt hole_semantics) in
-                    (record_matches identifier hole_semantics)::acc
-                  | (suffix::rest) as acc ->
-                    let optional_succeeds_parser =
-                      record_matches identifier hole_semantics
-                      >> sequence_chain acc
-                    in
-                    let optional_fails_parser =
-                      record_matches identifier (return []) >>= fun _ ->
-                      if coalesce_whitespace (prefix_parser p_list i) suffix then
-                        sequence_chain rest
-                      else
-                        sequence_chain acc
-                    in
-                    [(attempt optional_succeeds_parser)
-                     <|> optional_fails_parser]
-              end
+              (record_matches identifier hole_semantics)::acc
 
             | Non_space ->
               let allowed =
@@ -698,12 +671,6 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
                 | _ -> sequence_chain acc
               in
               let hole_semantics = many1 (not_followed_by rest "" >> allowed) in
-              let hole_semantics =
-                if not optional then
-                  hole_semantics
-                else
-                  opt [] (attempt hole_semantics)
-              in
               (record_matches identifier hole_semantics)::acc
 
             | Line ->
@@ -712,23 +679,11 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
                 |>> fun x -> [(String.of_char_list x)^"\n"]
               in
               let hole_semantics = allowed << char '\n' in
-              let hole_semantics =
-                if not optional then
-                  hole_semantics
-                else
-                  opt [] (attempt hole_semantics)
-              in
               (record_matches identifier hole_semantics)::acc
 
             | Blank ->
               let allowed = blank |>> String.of_char in
               let hole_semantics = many1 allowed in
-              let hole_semantics =
-                if not optional then
-                  hole_semantics
-                else
-                  opt [] (attempt hole_semantics)
-              in
               (record_matches identifier hole_semantics)::acc
 
             | Expression ->
@@ -768,64 +723,15 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
                   raw_literal_grammar ~right_delimiter
                 | Comment -> failwith "Unimplemented"
               in
-              match optional with
-              | false ->
-                let rest =
-                  match acc with
-                  | [] -> eof >>= fun () -> f [""]
-                  | _ -> sequence_chain acc
-                in
-                (* Continue until rest, but don't consume rest. acc will
-                   propagate the rest that needs to be consumed. *)
-                let hole_semantics = many (not_followed_by rest "" >> matcher) in
-                (record_matches identifier hole_semantics)::acc
-              | true ->
-                if debug then Format.printf "Optional active@.";
+              let rest =
                 match acc with
-                | [] ->
-                  let rest = eof >>= fun () -> f [""] in
-                  let hole_semantics = many (not_followed_by rest "" >> matcher) in
-                  (* Try match ordinary hole semantics, but if the parser
-                     fails, just let it pass which leads to assigning "" to
-                     identifier *)
-                  let hole_semantics = opt [] (attempt hole_semantics) in
-                  (record_matches identifier hole_semantics)::acc
-                | (suffix::rest) as acc ->
-                  let after = sequence_chain acc in
-                  let hole_semantics = many (not_followed_by after "" >> matcher) in
-                  (* The logic goes: Try to match ordinary hole semantics, and
-                     propagate acc if it succeeds. If ordinary semantics fail,
-                     let it pass and coalesce whitespace with prefix/suffix if
-                     needed and only propagate 'rest', since we remove the
-                     suffix by coalescing. *)
-                  let optional_succeeds_parser =
-                    (* This parser can succeed but does not consume after.
-                       After must still be consumed (acc must be propagated).
-                    *)
-                    record_matches identifier hole_semantics
-                    >>= fun _ ->
-                    if debug then Format.printf "Optional record succeeds.@.";
-                    sequence_chain acc >>= fun r ->
-                    if debug then Format.printf "Rest succeeds.@.";
-                    return r
-                  in
-                  let optional_fails_parser =
-                    if debug then Format.printf "Optional fail case@.";
-                    (* The optional parser that kicks in if
-                       optional_succeeds_parser fails. It does not consume
-                       anything. *)
-                    (record_matches identifier (return [])) >>= fun _ ->
-                    (* Record matches succeeded for optional hole, empty
-                       match. No going back now. Consume suffix if prefix and
-                       suffix are whitespace and propagate rest. Otherwise,
-                       propagate acc. *)
-                    if coalesce_whitespace (prefix_parser p_list i) suffix then
-                      sequence_chain rest
-                    else
-                      sequence_chain acc
-                  in
-                  [(attempt optional_succeeds_parser)
-                   <|> optional_fails_parser]
+                | [] -> eof >>= fun () -> f [""]
+                | _ -> sequence_chain acc
+              in
+              (* Continue until rest, but don't consume rest. acc will
+                 propagate the rest that needs to be consumed. *)
+              let hole_semantics = many (not_followed_by rest "" >> matcher) in
+              (record_matches identifier hole_semantics)::acc
           end
         | Success Unit -> acc (* for comment *)
         | Success _ -> failwith "Hole expected")
@@ -850,8 +756,8 @@ module Make (Language : Language.S) (Metasyntax : Metasyntax.S) = struct
     match hole_parser with
     | [] -> fail "none" (* not defined *)
     | l ->
-      choice l |>> function (optional, identifier) ->
-        skip_signal { sort; identifier; dimension; optional; at_depth }
+      choice l |>> function identifier ->
+        skip_signal { sort; identifier; dimension; at_depth }
 
   let generate_hole_for_literal dimension ~contents ~left_delimiter ~right_delimiter s =
     let holes = choice @@ List.map hole_parsers ~f:(fun (kind, _) -> attempt (hole_parser kind dimension)) in

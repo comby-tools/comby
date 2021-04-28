@@ -32,7 +32,7 @@ let run ?(configuration = configuration) (module M : Matchers.Matcher.S) source 
     | None -> Language.Rule.create "where true" |> Or_error.ok_exn
   in
   M.all ~configuration ~template:match_template ~source ()
-  |> List.filter ~f:(fun { Match.environment; _ } -> Language.Rule.(sat @@ apply rule environment))
+  |> List.filter ~f:(fun { Match.environment; _ } -> Language.Rule.(sat @@ apply ~matcher:(module M) rule environment))
   |> function
   | [] -> print_string "No matches."
   | results ->

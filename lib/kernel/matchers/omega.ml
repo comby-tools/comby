@@ -51,13 +51,6 @@ let substitute template env =
     ; ":[", "\\n]"
     ; ":[[", "]]"
     ; ":[", "]"
-    (* optional syntax *)
-    ; ":[? ", "]"
-    ; ":[ ?", "]"
-    ; ":[?", ".]"
-    ; ":[?", "\\n]"
-    ; ":[[?", "]]"
-    ; ":[?", "]"
     ]
   in
   Match.Environment.vars env
@@ -699,7 +692,7 @@ module Make (Language : Language.S) (Unimplemented : Metasyntax.S) = struct
       | Regex -> regex_hole_parser ()
     in
     let skip_signal hole = skip_unit (string "_signal_hole") |>> fun () -> (Hole hole, acc) in
-    hole_parser |>> fun identifier -> skip_signal { sort; identifier; dimension; optional = false; at_depth = None }
+    hole_parser |>> fun identifier -> skip_signal { sort; identifier; dimension; at_depth = None }
 
   let reserved_holes () =
     [ single_hole_parser ()
