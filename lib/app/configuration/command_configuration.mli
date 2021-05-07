@@ -1,5 +1,7 @@
 open Core
 
+open Comby_kernel
+
 module Printer : sig
   type printable_result =
     | Matches of
@@ -85,7 +87,7 @@ type user_input =
 
 type t =
   { sources : Command_input.t
-  ; specifications : Specification.t list
+  ; specifications : Matchers.Specification.t list
   ; run_options : run_options
   ; output_printer : Printer.t
   ; interactive_review : interactive_review option

@@ -1,6 +1,8 @@
 open Core
 open Command.Let_syntax
 
+open Comby_kernel
+
 open Configuration
 open Command_configuration
 
@@ -74,7 +76,7 @@ let substitute_environment_only_and_exit metasyntax_path anonymous_arguments jso
       Match.Environment.of_yojson json
       |> function
       | Ok environment ->
-        let substituted, _ = Rewriter.Rewrite_template.substitute ~metasyntax rewrite_template environment in
+        let substituted, _ = Matchers.Rewrite.substitute ~metasyntax rewrite_template environment in
         Format.printf "%s@." substituted;
         exit 0
       | Error err ->

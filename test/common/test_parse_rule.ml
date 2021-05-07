@@ -1,6 +1,8 @@
 open Core
 
-open Language
+open Comby_kernel
+open Matchers
+open Rule
 
 let rule_parses rule =
   match Rule.create rule with

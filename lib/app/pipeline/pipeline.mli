@@ -1,3 +1,5 @@
+open Comby_kernel
+
 open Configuration
 open Command_input
 
@@ -9,25 +11,23 @@ type output =
 val process_single_source
   :  (module Matchers.Matcher.S)
   -> ?fast_offset_conversion:bool
-  -> ?substitute_in_place:bool
   -> ?verbose:bool
   -> ?timeout:int
   -> ?metasyntax:Matchers.Metasyntax.t
   -> ?fresh:(unit -> string)
   -> Matchers.Configuration.t
   -> single_source
-  -> Specification.t
+  -> Matchers.Specification.t
   -> output
 
 val execute
   :  (module Matchers.Matcher.S)
-  -> ?substitute_in_place:bool
   -> ?timeout:int
   -> ?metasyntax:Matchers.Metasyntax.t
   -> ?fresh:(unit -> string)
   -> ?configuration:Matchers.Configuration.t
   -> single_source
-  -> Specification.t
+  -> Matchers.Specification.t
   -> output
 
 val with_timeout : int -> Command_input.single_source -> f:(unit -> 'a list) -> 'a list

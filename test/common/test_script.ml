@@ -1,7 +1,9 @@
+open Matchers
+
 let run input =
   let result =
-    match Language.Script.parse input with
-    | Ok result -> Language.Script.to_string result
+    match Script.parse input with
+    | Ok result -> Script.to_string result
     | Error _ -> "ERROR"
   in
   print_string result

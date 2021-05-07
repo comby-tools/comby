@@ -1,6 +1,0 @@
-(library
-  (name rewriter)
-  (public_name comby-kernel.rewriter)
-  (instrumentation (backend bisect_ppx))
-  (preprocess (pps ppx_deriving_yojson ppx_sexp_message ppx_sexp_conv))
-  (libraries comby-kernel.matchers comby-kernel.replacement core_kernel))

@@ -7,8 +7,6 @@
   test_cli_helper
   test_script
   test_extract_regex
-  test_alpha
-  test_omega
   test_cli
   test_cli_list
   test_statistics
@@ -17,57 +15,23 @@
   test_rewrite_parts
   test_parse_rewrite_template
   test_substitute
-
-  test_rewrite_rule_alpha
-  test_rewrite_rule_omega
-
-  test_integration_alpha
-  test_integration_omega
-
-  test_match_rule_alpha
-  test_match_rule_omega
-
-  test_python_string_literals_alpha
-  test_python_string_literals_omega
-
-  test_hole_extensions_alpha
-  test_hole_extensions_omega
-
-  test_generic_alpha
-  test_generic_omega
-
-  test_string_literals_alpha
-  test_string_literals_omega
-
-  test_c_style_comments_alpha
-  test_c_style_comments_omega
-
-  test_nested_comments_alpha
-  test_nested_comments_omega
-
-  test_c_alpha
-  test_c_omega
-
-  test_bash_alpha
-  test_bash_omega
-
-  test_go_alpha
-  test_go_omega
-
-  test_c_separators_alpha
-  test_c_separators_omega
-
-  test_pipeline_alpha
-  test_pipeline_omega
-
-  test_user_defined_language_alpha
-  test_user_defined_language_omega
-
-  test_nested_matches_alpha
-  test_nested_matches_omega
-
-  test_regex_holes_alpha
-  test_regex_holes_omega
+  test_rewrite_rule
+  test_integration
+  test_match_rule
+  test_python_string_literals
+  test_hole_extensions
+  test_generic
+  test_string_literals
+  test_c_style_comments
+  test_nested_comments
+  test_c
+  test_bash
+  test_go
+  test_c_separators
+  test_pipeline
+  test_user_defined_language
+  test_nested_matches
+  test_regex_holes
   )
  (inline_tests)
  (preprocess (pps ppx_expect ppx_sexp_message ppx_deriving_yojson))

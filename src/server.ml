@@ -17,7 +17,6 @@ let timeout =
   | None -> 30 (* seconds *)
   | Some t -> Int.of_string t
 
-
 let max_request_length =
   match Sys.getenv "MAX_REQUEST_LENGTH" with
   | None -> Int.max_value
@@ -49,7 +48,7 @@ let perform_match request =
     in
     let run ?rule () =
       let configuration = Matchers.Configuration.create ~match_kind:Fuzzy () in
-      let specification = Pipeline.Specification.create ~match_template ?rule () in
+      let specification = Matchers.Specification.create ~match_template ?rule () in
       let matches =
         Pipeline.execute
           matcher
@@ -87,10 +86,10 @@ let perform_rewrite request =
       | Some matcher -> matcher
       | None -> (module Matchers.Alpha.Generic)
     in
-    let source_substitution, substitute_in_place =
+    let source_substitution =
       match substitution_kind with
-      | "newline_separated" -> None, false
-      | "in_place" | _ -> Some source, true
+      | "newline_separated" -> None
+      | "in_place" | _ -> Some source
     in
     let default =
       Out.Rewrite.to_string
@@ -101,11 +100,10 @@ let perform_rewrite request =
     in
     let run ?rule () =
       let configuration = Configuration.create ~match_kind:Fuzzy () in
-      let specification = Pipeline.Specification.create ~match_template ?rule () in
+      let specification = Matchers.Specification.create ~match_template ?rule () in
       let matches =
         Pipeline.execute
           matcher
-          ~substitute_in_place
           ~configuration
           (String source)
           specification
@@ -113,8 +111,8 @@ let perform_rewrite request =
         | Matches (m, _) -> m
         | _ -> []
       in
-      Rewrite.all matches ?source:source_substitution ~rewrite_template
-      |> Option.value_map ~default ~f:(fun Replacement.{ rewritten_source; in_place_substitutions } ->
+      Comby_kernel.Matchers.Rewrite.all matches ?source:source_substitution ~rewrite_template
+      |> Option.value_map ~default ~f:(fun Comby_kernel.Replacement.{ rewritten_source; in_place_substitutions } ->
           Out.Rewrite.to_string
             { rewritten_source
             ; in_place_substitutions
@@ -143,7 +141,7 @@ let perform_environment_substitution request =
     let code, result =
       200,
       Out.Substitution.to_string
-        { result = fst @@ Rewrite.substitute rewrite_template environment
+        { result = fst @@ Comby_kernel.Matchers.Rewrite.substitute rewrite_template environment
         ; id
         }
     in

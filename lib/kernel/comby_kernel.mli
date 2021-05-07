@@ -1,5 +1,3 @@
-open Core_kernel
-
 (** {2 Match}
 
     A match is a result of matching a template pattern in an input source.
@@ -119,9 +117,47 @@ module Match : sig
   (** [pp] is a JSON formatted printer for (optional file path * match list).
       One line printed per match. *)
   val pp_json_lines : Format.formatter -> string option * t list -> unit
+
+  val pp_match_count : Format.formatter -> string option * t list -> unit
 end
 
 type match' = Match.t
+
+(** {2 Replacement}
+
+    Defines the result of a rewrite operation. *)
+module Replacement : sig
+  (** A replacement consists of the replaced range, the replacement content, and
+      the environment associated with the replacement content. *)
+  type t =
+    { range : Match.range
+    ; replacement_content : string
+    ; environment : Match.environment
+    }
+
+  val to_yojson : t -> Yojson.Safe.json
+  val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+
+  val to_json
+    :  ?path:string
+    -> ?replacements:t list
+    -> ?rewritten_source:string
+    -> diff:string
+    -> unit
+    -> Yojson.Safe.json
+
+  (** A replacement result is the rewritten source, and the replacement
+      fragments. *)
+  type result =
+    { rewritten_source : string
+    ; in_place_substitutions : t list
+    }
+
+  val result_to_yojson : result -> Yojson.Safe.json
+
+end
+
+type replacement = Replacement.result
 
 (** {2 Matchers}
 
@@ -169,61 +205,6 @@ module Matchers : sig
   end
 
   type configuration = Configuration.t
-
-  (** {3 Syntax}
-
-      Defines the syntax structures for the target language (C, Go, etc.) that
-      are significant for matching. *)
-  module Syntax : sig
-
-    (** Defines a set of quoted syntax for strings based on one or more
-        delimiters and associated escape chracter.
-
-        E.g., this supports single and double quotes with escape character '\'
-        as: { delimiters = [ {|"|}, {|'|} ]; escape_character = '\\' } *)
-    type escapable_string_literals =
-      { delimiters : string list
-      ; escape_character: char
-      }
-
-    (** Defines comment syntax as one of Multiline, Nested_multiline with
-        associated left and right delimiters, or Until_newline that defines a
-        comment prefix. associated prefix. *)
-    type comment_kind =
-      | Multiline of string * string
-      | Nested_multiline of string * string
-      | Until_newline of string
-
-    (** Defines syntax as:
-
-        - [user_defined_delimiters] are delimiters treated as code structures
-          (parentheses, brackets, braces, alphabetic words) -
-          [escapable_string_literals] are escapable quoted strings
-
-        - [raw_string literals] are raw quoted strings that have no escape
-          character
-
-        - [comments] are comment structures  *)
-    type t =
-      { user_defined_delimiters : (string * string) list
-      ; escapable_string_literals : escapable_string_literals option [@default None]
-      ; raw_string_literals : (string * string) list
-      ; comments : comment_kind list
-      }
-
-    val to_yojson : t -> Yojson.Safe.json
-    val of_yojson : Yojson.Safe.json -> (t, string) Result.t
-
-    (** The module signature that defines language syntax for a matcher *)
-    module type S = sig
-      val user_defined_delimiters : (string * string) list
-      val escapable_string_literals : escapable_string_literals option
-      val raw_string_literals : (string * string) list
-      val comments : comment_kind list
-    end
-  end
-
-  type syntax = Syntax.t
 
   (** {3 Hole}
 
@@ -305,11 +286,17 @@ module Matchers : sig
       ; identifier : string
       }
 
+    val to_yojson : t -> Yojson.Safe.json
+    val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+
     (** A module signature for metasyntax to parameterize a matcher *)
     module type S = sig
       val syntax : hole_syntax list
       val identifier : string
     end
+
+    (** A module representing the default metasyntax *)
+    module Default : S
 
     (** The default metasyntax. It is defined as:
 
@@ -343,14 +330,15 @@ module Matchers : sig
   (** {3 Matcher}
 
       Defines the functions that a matcher can perform. *)
-  module Matcher : sig
+  module rec Matcher : sig
     module type S = sig
       (** [all conf nested template source] finds all matches of [template] in
           [source]. If [nested] is true, template matching will descend
           recursively on matched content. *)
       val all
         :  ?configuration:configuration
-        -> ?nested: bool
+        -> ?rule:Rule.t
+        -> ?nested:bool
         -> template:string
         -> source:string
         -> unit
@@ -363,7 +351,7 @@ module Matchers : sig
         -> ?shift:int
         -> string
         -> string
-        -> match' Or_error.t
+        -> match' Core_kernel.Or_error.t
 
       (** [name] returns the name of this matcher (e.g., "C", "Go", etc.). *)
       val name : string
@@ -377,175 +365,356 @@ module Matchers : sig
     end
   end
 
+  (** {2 Rule}
+
+      Defines types and operations for match rules. *)
+  and Rule : sig
+
+    module Ast : sig
+      type atom =
+        | Variable of string
+        | String of string
+      [@@deriving sexp]
+
+      type antecedent = atom
+      [@@deriving sexp]
+
+      type expression =
+        | True
+        | False
+        | Option of string
+        | Equal of atom * atom
+        | Not_equal of atom * atom
+        | Match of atom * (antecedent * consequent) list
+        | RewriteTemplate of string
+        | Rewrite of atom * (antecedent * expression)
+      and consequent = expression list
+      [@@deriving sexp]
+    end
+
+    type t = Ast.expression list
+    [@@deriving sexp]
+
+    type options =
+      { nested : bool
+      }
+
+    val create : string -> t Core_kernel.Or_error.t
+
+    val options : t -> options
+
+    type result
+
+    (** [sat result] returns true if a result of a rule is satisfied. *)
+    val sat : result -> bool
+
+    val result_env : result -> Match.environment option
+
+    (** [apply matcher substitute_in_place fresh metasyntax rule env] applies a [rule]
+        according to some [matcher] for existing matches in [env]. If
+        [substitute_in_place] is true, rewrite rules substitute their values in
+        place (default true). [fresh] introduces fresh variables for evaluating
+        rules. [metasyntax] uses the custom metasyntax definition. *)
+    val apply :
+      ?substitute_in_place:bool ->
+      ?fresh:(unit -> string) ->
+      ?metasyntax:Metasyntax.t ->
+      match_all:(?configuration:Configuration.t ->
+                 template:string -> source:string -> unit -> Match.t list) ->
+      Rule.Ast.expression list ->
+      Match.Environment.t -> result
+  end
+
+  type rule = Rule.t
+
+  (** {3 Specification}
+
+      Defines an internal type that represents an atomic operation for matching,
+      rule application and rewriting. *)
+  module Specification : sig
+    type t =
+      { match_template : string
+      ; rule : Rule.t option
+      ; rewrite_template : string option
+      }
+
+    (** [create rewrite_template rule match_template] creates a new specification.
+        If [rule] is supplied, it will be applied to matches of [match_template].
+        If [rewrite_template] is supplied, running a specification will return
+        replacements rather than just matches (see [process_single_source] below).
+    *)
+    val create : ?rewrite_template:string -> ?rule:rule -> match_template:string -> unit -> t
+  end
+
+  type specification = Specification.t
+
+  (** {3 Syntax}
+
+      Defines the syntax structures for the target language (C, Go, etc.) that
+      are significant for matching. *)
+  module Syntax : sig
+
+    (** Defines a set of quoted syntax for strings based on one or more
+        delimiters and associated escape chracter.
+
+        E.g., this supports single and double quotes with escape character '\'
+        as: { delimiters = [ {|"|}, {|'|} ]; escape_character = '\\' } *)
+    type escapable_string_literals =
+      { delimiters : string list
+      ; escape_character: char
+      }
+
+    (** Defines comment syntax as one of Multiline, Nested_multiline with
+        associated left and right delimiters, or Until_newline that defines a
+        comment prefix. associated prefix. *)
+    type comment_kind =
+      | Multiline of string * string
+      | Nested_multiline of string * string
+      | Until_newline of string
+
+    (** Defines syntax as:
+
+        - [user_defined_delimiters] are delimiters treated as code structures
+          (parentheses, brackets, braces, alphabetic words) -
+          [escapable_string_literals] are escapable quoted strings
+
+        - [raw_string literals] are raw quoted strings that have no escape
+          character
+
+        - [comments] are comment structures  *)
+    type t =
+      { user_defined_delimiters : (string * string) list
+      ; escapable_string_literals : escapable_string_literals option [@default None]
+      ; raw_string_literals : (string * string) list
+      ; comments : comment_kind list
+      }
+
+    val to_yojson : t -> Yojson.Safe.json
+    val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+
+    (** The module signature that defines language syntax for a matcher *)
+    module type S = sig
+      val user_defined_delimiters : (string * string) list
+      val escapable_string_literals : escapable_string_literals option
+      val raw_string_literals : (string * string) list
+      val comments : comment_kind list
+    end
+  end
+
+  type syntax = Syntax.t
+
+  module Info : sig
+    module type S = sig
+      val name : string
+      val extensions : string list
+    end
+  end
+
+  module Language : sig
+    module type S = sig
+      module Info : Info.S
+      module Syntax : Syntax.S
+    end
+  end
+
+  module Languages : sig
+    module Text : Language.S
+    module Paren : Language.S
+    module Dyck : Language.S
+    module JSON : Language.S
+    module JSONC : Language.S
+    module GraphQL : Language.S
+    module Dhall : Language.S
+    module Latex : Language.S
+    module Assembly : Language.S
+    module Clojure : Language.S
+    module Lisp : Language.S
+    module Generic : Language.S
+    module Bash : Language.S
+    module Ruby : Language.S
+    module Elixir : Language.S
+    module Python : Language.S
+    module Html : Language.S
+    module Xml : Language.S
+    module SQL : Language.S
+    module Erlang : Language.S
+    module C : Language.S
+    module Csharp : Language.S
+    module Java : Language.S
+    module CSS : Language.S
+    module Kotlin : Language.S
+    module Scala : Language.S
+    module Nim : Language.S
+    module Dart : Language.S
+    module Php : Language.S
+    module Go : Language.S
+    module Javascript : Language.S
+    module Jsx : Language.S
+    module Typescript : Language.S
+    module Tsx : Language.S
+    module Swift : Language.S
+    module Rust : Language.S
+    module OCaml : Language.S
+    module Reason : Language.S
+    module Fsharp : Language.S
+    module Pascal : Language.S
+    module Julia : Language.S
+    module Fortran : Language.S
+    module Haskell : Language.S
+    module Elm : Language.S
+    module Zig : Language.S
+    module Coq : Language.S
+    module Move : Language.S
+    module Solidity : Language.S
+    module C_nested_comments : Language.S
+
+    val all : (module Language.S) list
+
+    val select_with_extension : string -> (module Language.S) option
+  end
+
+  module Engine : sig
+    module type S = sig
+      module Make : Language.S -> Metasyntax.S -> Matcher.S
+
+      (** {4 Supported Matchers} *)
+      module Text : Matcher.S
+      module Paren : Matcher.S
+      module Dyck : Matcher.S
+      module JSON : Matcher.S
+      module JSONC : Matcher.S
+      module GraphQL : Matcher.S
+      module Dhall : Matcher.S
+      module Latex : Matcher.S
+      module Assembly : Matcher.S
+      module Clojure : Matcher.S
+      module Lisp : Matcher.S
+      module Generic : Matcher.S
+      module Bash : Matcher.S
+      module Ruby : Matcher.S
+      module Elixir : Matcher.S
+      module Python : Matcher.S
+      module Html : Matcher.S
+      module Xml : Matcher.S
+      module SQL : Matcher.S
+      module Erlang : Matcher.S
+      module C : Matcher.S
+      module Csharp : Matcher.S
+      module Java : Matcher.S
+      module CSS : Matcher.S
+      module Kotlin : Matcher.S
+      module Scala : Matcher.S
+      module Nim : Matcher.S
+      module Dart : Matcher.S
+      module Php : Matcher.S
+      module Go : Matcher.S
+      module Javascript : Matcher.S
+      module Jsx : Matcher.S
+      module Typescript : Matcher.S
+      module Tsx : Matcher.S
+      module Swift : Matcher.S
+      module Rust : Matcher.S
+      module OCaml : Matcher.S
+      module Reason : Matcher.S
+      module Fsharp : Matcher.S
+      module Pascal : Matcher.S
+      module Julia : Matcher.S
+      module Fortran : Matcher.S
+      module Haskell : Matcher.S
+      module Elm : Matcher.S
+      module Zig: Matcher.S
+      module Coq: Matcher.S
+      module Move: Matcher.S
+      module Solidity: Matcher.S
+      module C_nested_comments : Matcher.S
+
+      (** [all] returns all default matchers. *)
+      val all : (module Matcher.S) list
+
+      (** [select_with_extension metasyntax file_extension] is a convenience
+          function that returns a matcher associated with a [file_extension]. E.g.,
+          use ".c" to get the C matcher. For a full list of extensions associated
+          with matchers, run comby -list. If [metasyntax] is specified, the matcher
+          will use a custom metasyntax definition instead of the default. *)
+      val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matcher.S) option
+
+
+      (** [create metasyntax syntax] creates a matcher for a language defined by
+          [syntax]. If [metasyntax] is specified, the matcher will use a custom
+          metasyntax definition instead of the default. *)
+      val create : ?metasyntax:Metasyntax.t -> Syntax.t -> (module Matcher.S)
+    end
+  end
+
   (** {3 Alpha Matcher}
 
       Alpha is the match engine that defines default matchers for languages.
   *)
-  module Alpha : sig
-    (** [select_with_extension metasyntax file_extension] is a convenience
-        function that returns a matcher associated with a [file_extension]. E.g.,
-        use ".c" to get the C matcher. For a full list of extensions associated
-        with matchers, run comby -list. If [metasyntax] is specified, the matcher
-        will use a custom metasyntax definition instead of the default. *)
-    val select_with_extension : ?metasyntax:metasyntax -> string -> (module Matcher.S) option
+  module Alpha : Engine.S
 
-    (** [create metasyntax syntax] creates a matcher for a language defined by
-        [syntax]. If [metasyntax] is specified, the matcher will use a custom
-        metasyntax definition instead of the default. *)
-    val create : ?metasyntax:metasyntax -> syntax -> (module Matcher.S)
+  (** {3 Omega Matcher}
 
-    (** [all] returns all default matchers. *)
-    val all : (module Matcher.S) list
+      Alternative, partial, experimental match engine.
+  *)
+  module Omega : Engine.S
 
-    (** {4 Supported Matchers} *)
-    module Text : Matcher.S
-    module Paren : Matcher.S
-    module Dyck : Matcher.S
-    module JSON : Matcher.S
-    module JSONC : Matcher.S
-    module GraphQL : Matcher.S
-    module Dhall : Matcher.S
-    module Latex : Matcher.S
-    module Assembly : Matcher.S
-    module Clojure : Matcher.S
-    module Lisp : Matcher.S
-    module Generic : Matcher.S
-    module Bash : Matcher.S
-    module Ruby : Matcher.S
-    module Elixir : Matcher.S
-    module Python : Matcher.S
-    module Html : Matcher.S
-    module Xml : Matcher.S
-    module SQL : Matcher.S
-    module Erlang : Matcher.S
-    module C : Matcher.S
-    module Csharp : Matcher.S
-    module Java : Matcher.S
-    module CSS : Matcher.S
-    module Kotlin : Matcher.S
-    module Scala : Matcher.S
-    module Nim : Matcher.S
-    module Dart : Matcher.S
-    module Php : Matcher.S
-    module Go : Matcher.S
-    module Javascript : Matcher.S
-    module Jsx : Matcher.S
-    module Typescript : Matcher.S
-    module Tsx : Matcher.S
-    module Swift : Matcher.S
-    module Rust : Matcher.S
-    module OCaml : Matcher.S
-    module Reason : Matcher.S
-    module Fsharp : Matcher.S
-    module Pascal : Matcher.S
-    module Julia : Matcher.S
-    module Fortran : Matcher.S
-    module Haskell : Matcher.S
-    module Elm : Matcher.S
-    module Zig : Matcher.S
-    module Coq : Matcher.S
-    module Move : Matcher.S
-    module Solidity : Matcher.S
-    module C_nested_comments : Matcher.S
+  (** {3 Rewrite}
+
+      Defines rewrite operations.  *)
+  module Rewrite : sig
+    (** [all source metasyntax fresh rewrite_template matches] substitutes
+        [rewrite_template] with each match in [matches] to create a rewrite result.
+        If [source] is specified, each rewrite result is substituted in-place in
+        the source. If [source] is not specified, rewritten matches are
+        newline-separated. If [metasyntax] is defined, the rewrite template will
+        respect custom metasyntax definitions.
+
+        If the rewrite template contains the syntax :[id()], then it is
+        substituted with fresh values. [fresh] may be specified to supply custom
+        fresh values. If not specified, fresh variables are generated in increasing
+        rank starting with 1, and incremented. See [substitute] for more. *)
+    val all
+      :  ?source:string
+      -> ?metasyntax:metasyntax
+      -> ?fresh:(unit -> string)
+      -> rewrite_template:string
+      -> match' list
+      -> replacement option
+
+    (** [substitute metasyntax fresh template environment] substitutes [template]
+        with the variable and value pairs in the [environment]. It returns the
+        result after substitution, and the list of variables in [environment] that
+        were substituted for. If [metasyntax] is defined, the rewrite template will
+        respect custom metasyntax definitions.
+
+        The syntax :[id()] is substituted with fresh values. If [fresh] is not
+        specified, the default behavior substitutes :[id()] starting with 1, and
+        subsequent :[id()] values increment the ID. If [fresh] is set, substitutes
+        the pattern :[id()] with the value of fresh () as the hole is encountered,
+        left to right. *)
+    val substitute
+      :  ?metasyntax:metasyntax
+      -> ?fresh:(unit -> string)
+      -> string
+      -> Match.environment
+      -> (string * string list)
+
+    type syntax =
+      { variable: string
+      ; pattern: string
+      }
+
+    type extracted =
+      | Hole of syntax
+      | Constant of string
+
+    module Make : Metasyntax.S -> sig
+        val parse : string -> extracted list option
+        val variables : string -> syntax list
+      end
+
+    val get_offsets_for_holes : syntax list -> string -> (string * int) list
+
+    val get_offsets_after_substitution : (string * int) list -> Match.environment -> (string * int) list
   end
-end
-
-(** {2 Rule}
-
-    Defines types and operations for match rules. *)
-module Rule : sig
-  type t
-  type result
-
-  (** [sat result] returns true if a result of a rule is satisfied. *)
-  val sat : result -> bool
-
-  (** [result_env] returns a match environment associated with a rule result. *)
-  val result_env : result -> Match.environment option
-
-  (** [create] parses and creates a rule. *)
-  val create : string -> t Or_error.t
-
-  (** [apply matcher substitute_in_place fresh metasyntax rule env] applies a [rule]
-      according to some [matcher] for existing matches in [env]. If
-      [substitute_in_place] is true, rewrite rules substitute their values in
-      place (default true). [fresh] introduces fresh variables for evaluating
-      rules. [metasyntax] uses the custom metasyntax definition. *)
-  val apply
-    :  ?matcher:(module Matchers.Matcher.S)
-    -> ?substitute_in_place:bool
-    -> ?fresh:(unit -> string)
-    -> ?metasyntax:Matchers.Metasyntax.t
-    -> t
-    -> Match.environment
-    -> result
-end
-
-type rule = Rule.t
-
-(** {2 Replacement}
-
-    Defines the result of a rewrite operation. *)
-module Replacement : sig
-  (** A replacement consists of the replaced range, the replacement content, and
-      the environment associated with the replacement content. *)
-  type t =
-    { range : Match.range
-    ; replacement_content : string
-    ; environment : Match.environment
-    }
-
-  (** A replacement result is the rewritten source, and the replacement
-      fragments. *)
-  type result =
-    { rewritten_source : string
-    ; in_place_substitutions : t list
-    }
-
-  val to_yojson : t -> Yojson.Safe.json
-  val of_yojson : Yojson.Safe.json -> (t, string) Result.t
-end
-
-type replacement = Replacement.result
-
-(** {2 Rewrite}
-
-    Defines rewrite operations.  *)
-module Rewrite : sig
-  (** [all source metasyntax fresh rewrite_template matches] substitutes
-      [rewrite_template] with each match in [matches] to create a rewrite result.
-      If [source] is specified, each rewrite result is substituted in-place in
-      the source. If [source] is not specified, rewritten matches are
-      newline-separated. If [metasyntax] is defined, the rewrite template will
-      respect custom metasyntax definitions.
-
-      If the rewrite template contains the syntax :[id()], then it is
-      substituted with fresh values. [fresh] may be specified to supply custom
-      fresh values. If not specified, fresh variables are generated in increasing
-      rank starting with 1, and incremented. See [substitute] for more. *)
-  val all
-    :  ?source:string
-    -> ?metasyntax:Matchers.metasyntax
-    -> ?fresh:(unit -> string)
-    -> rewrite_template:string
-    -> match' list
-    -> replacement option
-
-  (** [substitute metasyntax fresh template environment] substitutes [template]
-      with the variable and value pairs in the [environment]. It returns the
-      result after substitution, and the list of variables in [environment] that
-      were substituted for. If [metasyntax] is defined, the rewrite template will
-      respect custom metasyntax definitions.
-
-      The syntax :[id()] is substituted with fresh values. If [fresh] is not
-      specified, the default behavior substitutes :[id()] starting with 1, and
-      subsequent :[id()] values increment the ID. If [fresh] is set, substitutes
-      the pattern :[id()] with the value of fresh () as the hole is encountered,
-      left to right. *)
-  val substitute
-    :  ?metasyntax:Matchers.metasyntax
-    -> ?fresh:(unit -> string)
-    -> string
-    -> Match.environment
-    -> (string * string list)
 end

@@ -1,6 +1,8 @@
 open Core
 
 open Match
+
+open Matchers
 open Rewriter
 open Rewrite_template
 

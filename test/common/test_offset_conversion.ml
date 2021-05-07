@@ -1,9 +1,7 @@
 open Core
 
 open Test_helpers
-
-module Alpha = Test_alpha
-module Omega = Test_omega
+open Comby_kernel
 
 let to_string format matches =
   let f = match format with
@@ -13,11 +11,11 @@ let to_string format matches =
   Format.asprintf "%a" f (Some "file", matches)
 
 let run source match_template format : (string * string) =
-  let specification = Configuration.Specification.create ~match_template () in
+  let specification = Matchers.Specification.create ~match_template () in
   let run ~fast =
     let result =
       Pipeline.process_single_source
-        (module Omega.C)
+        (module Matchers.Omega.C)
         ~fast_offset_conversion:fast
         configuration
         (String source)

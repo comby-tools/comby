@@ -1,6 +1,6 @@
 open Core
 
-open Comby
+open Comby_kernel
 open Match
 
 module In = struct

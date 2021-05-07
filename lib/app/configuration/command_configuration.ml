@@ -3,7 +3,7 @@ open Camlzip
 
 open Polymorphic_compare
 
-open Language
+open Comby_kernel
 
 let debug =
   Sys.getenv "DEBUG_COMBY"
@@ -105,7 +105,7 @@ let read filename =
   |> Option.value ~default:template
 
 let create_rule rule =
-  match Option.map rule ~f:Rule.create with
+  match Option.map rule ~f:Matchers.Rule.create with
   | None -> None
   | Some Ok rule -> Some rule
   | Some Error error ->
@@ -138,7 +138,7 @@ let parse_toml path =
       let rule = Table.find_opt (Toml.Min.key "rule") t |> to_string |> create_rule in
       let rewrite_template = Table.find_opt (Toml.Min.key "rewrite") t |> to_string in
       if debug then Format.printf "Processed ->%s<-@." match_template;
-      (name, (Specification.create ~match_template ?rule ?rewrite_template ()))::acc
+      (name, (Matchers.Specification.create ~match_template ?rule ?rewrite_template ()))::acc
     | v ->
       Format.eprintf "Unexpected format, could not parse ->%s<-@." (Toml.Printer.string_of_value v);
       exit 1
@@ -161,7 +161,7 @@ let parse_templates ?(warn_for_missing_file_in_dir = false) paths =
     | Some match_template ->
       let rule = create_rule @@ read_optional (path ^/ "rule") in
       let rewrite_template = read_optional (path ^/ "rewrite") in
-      Specification.create ~match_template ?rule ?rewrite_template ()
+      Matchers.Specification.create ~match_template ?rule ?rewrite_template ()
       |> Option.some
   in
   let f acc ~depth:_ ~absolute_path ~is_file =
@@ -428,7 +428,7 @@ end
 
 type t =
   { sources : Command_input.t
-  ; specifications : Specification.t list
+  ; specifications : Matchers.Specification.t list
   ; run_options : run_options
   ; output_printer : Printer.t
   ; interactive_review : interactive_review option
@@ -499,7 +499,7 @@ let emit_errors { input_options; output_options; _ } =
          Option.value_exn message
        else
          "UNREACHABLE")
-    ; (let result = Rule.create input_options.rule in
+    ; (let result = Matchers.Rule.create input_options.rule in
        Or_error.is_error result
      , if Or_error.is_error result then
          Format.sprintf "Match rule parse error: %s@." @@
@@ -532,7 +532,7 @@ let emit_warnings { input_options; output_options; _ } =
   let warn_on =
     [ (let match_templates =
          match input_options.templates, input_options.anonymous_arguments with
-         | None, Some { match_template; _ } ->
+         | None, Some ({ match_template; _ } : anonymous_arguments) ->
            [ match_template ]
          | Some templates, _ ->
            List.map (parse_templates templates) ~f:(fun { match_template; _ } -> match_template)
@@ -682,7 +682,7 @@ let select_matcher custom_metasyntax custom_matcher override_matcher file_filter
 let regex_of_specifications specifications =
   Format.sprintf "(%s)"
   @@ String.concat ~sep:")|("
-  @@ List.map specifications ~f:Specification.to_regex
+  @@ List.map specifications ~f:Regex.to_regex
 
 let ripgrep_file_filters specifications args : string list =
   let regex = regex_of_specifications specifications in
@@ -734,28 +734,28 @@ let create
   emit_warnings configuration >>= fun () ->
   let rule =
     let rule = String.substr_replace_all rule ~pattern:"..." ~with_:":[_]" in
-    Rule.create rule |> Or_error.ok_exn
+    Matchers.Rule.create rule |> Or_error.ok_exn
   in
   let specifications =
     match templates, anonymous_arguments with
     | None, Some { match_template; rewrite_template; _ } ->
       if match_only || count then
-        [ Specification.create ~match_template ~rule () ]
+        [ Matchers.Specification.create ~match_template ~rule () ]
       else
-        [ Specification.create ~match_template ~rewrite_template ~rule () ]
+        [ Matchers.Specification.create ~match_template ~rewrite_template ~rule () ]
     | Some templates, _ ->
       parse_templates ~warn_for_missing_file_in_dir:true templates
     | _ -> assert false
   in
   let specifications =
-    List.map specifications ~f:(fun ({ match_template; _ } as spec) ->
+    List.map specifications ~f:(fun ({ match_template ; _ } as spec) ->
         { spec with match_template =
                       String.substr_replace_all match_template ~pattern:"..." ~with_:":[_]" })
   in
   let specifications =
     if match_only then
       List.map specifications ~f:(fun { match_template; rule; _ } ->
-          Specification.create ~match_template ?rule ())
+          Matchers.Specification.create ~match_template ?rule ())
     else
       specifications
   in

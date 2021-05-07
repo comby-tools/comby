@@ -1,10 +1,9 @@
 open Core
 
-open Match
-
 open Test_helpers
-
-include Test_alpha
+open Comby_kernel
+open Matchers
+open Match
 
 let %expect_test "statistics" =
   let template =
@@ -28,12 +27,12 @@ let %expect_test "statistics" =
   let rule =
     {| where true
     |}
-    |> Language.Rule.create
+    |> Rule.create
     |> Or_error.ok_exn
   in
-  Go.all ~configuration ~template ~source ()
+  Alpha.Go.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } ->
-      Rule.(sat @@ apply rule environment))
+      Rule.(sat @@ apply ~match_all:(Alpha.Generic.all ~rule:[Ast.True] ~nested:false) rule environment))
   |> fun matches ->
   let statistics =
     Statistics.

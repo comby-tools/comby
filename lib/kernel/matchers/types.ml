@@ -43,7 +43,6 @@ module Language = struct
   end
 end
 
-
 type dimension =
   | Code
   | Escapable_string_literal
@@ -119,6 +118,7 @@ module Matcher = struct
   module type S = sig
     val all
       :  ?configuration:Configuration.t
+      -> ?rule:Rule.t
       -> ?nested: bool
       -> template:string
       -> source:string
@@ -135,7 +135,6 @@ module Matcher = struct
     include Info.S
 
     val set_rewrite_template : string -> unit
-
   end
 end
 

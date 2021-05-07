@@ -1,13 +1,13 @@
 open Core
 
+open Comby_kernel
+
 open Configuration
 open Command_configuration
 open Command_input
-open Rewriter
 open Statistics
 
-open Match
-open Language
+open Matchers
 
 let verbose_out_file = "/tmp/comby.out"
 
@@ -15,32 +15,9 @@ let debug =
   Sys.getenv "DEBUG_COMBY"
   |> Option.is_some
 
-let infer_equality_constraints environment =
-  let vars = Environment.vars environment in
-  List.fold vars ~init:[] ~f:(fun acc var ->
-      if String.is_suffix var ~suffix:"_equal" then
-        match String.split var ~on:'_' with
-        | _uuid :: target :: _equal ->
-          let expression = Language.Ast.Equal (Variable var, Variable target) in
-          expression::acc
-        | _ -> acc
-      else
-        acc)
-
-let apply_rule ?(substitute_in_place = true) ?metasyntax matcher rule matches =
-  let open Option in
-  List.filter_map matches ~f:(fun ({ environment; _ } as matched) ->
-      let rule = rule @ infer_equality_constraints environment in
-      let fresh () = Uuid_unix.(Fn.compose Uuid.to_string create ()) in
-      let sat, env = Rule.apply ?metasyntax ~fresh ~substitute_in_place ~matcher rule environment in
-      (if sat then env else None)
-      >>| fun environment -> { matched with environment })
-
 let timed_run
-    (module Matcher : Matchers.Matcher.S)
+    (module Matcher : Matcher.S)
     ?(fast_offset_conversion = false)
-    ?substitute_in_place
-    ?metasyntax
     ~configuration
     ~source
     ~specification:(Specification.{ match_template = template; rule; rewrite_template })
@@ -48,10 +25,9 @@ let timed_run
   (match rewrite_template with
    | Some template -> Matcher.set_rewrite_template template;
    | None -> ());
-  let rule = Option.value rule ~default:[Ast.True] in
+  let rule = Option.value rule ~default:(Rule.create "where true" |> Or_error.ok_exn) in
   let options = Rule.options rule in
-  let matches = Matcher.all ~nested:options.nested ~configuration ~template ~source () in
-  let matches = apply_rule ?substitute_in_place ?metasyntax (module Matcher) rule matches in
+  let matches = Matcher.all ~rule ~nested:options.nested ~configuration ~template ~source () in
   List.map matches ~f:(Match.convert_offset ~fast:fast_offset_conversion ~source)
 
 type output =
@@ -74,7 +50,6 @@ let log_to_file path =
 let process_single_source
     matcher
     ?(fast_offset_conversion = false)
-    ?(substitute_in_place = false)
     ?(verbose = false)
     ?(timeout = 3)
     ?metasyntax
@@ -95,8 +70,6 @@ let process_single_source
       with_timeout timeout source ~f:(fun () ->
           timed_run
             matcher
-            ?metasyntax
-            ~substitute_in_place
             ~fast_offset_conversion
             ~configuration
             ~specification
@@ -222,7 +195,6 @@ let run_interactive
     specifications
     matcher
     fast_offset_conversion
-    substitute_in_place
     match_configuration
     verbose
     timeout
@@ -237,7 +209,6 @@ let run_interactive
          process_single_source
            matcher
            ~fast_offset_conversion
-           ~substitute_in_place
            ~verbose
            ~timeout
            match_configuration
@@ -268,7 +239,7 @@ let run
         { verbose
         ; match_timeout = timeout
         ; dump_statistics
-        ; substitute_in_place
+        ; substitute_in_place = _ (* FIXME remove *)
         ; disable_substring_matching
         ; fast_offset_conversion
         ; match_newline_toplevel
@@ -304,7 +275,6 @@ let run
          process_single_source
            matcher
            ~fast_offset_conversion
-           ~substitute_in_place
            ~verbose
            ~timeout
            ?metasyntax
@@ -327,7 +297,6 @@ let run
         specifications
         matcher
         fast_offset_conversion
-        substitute_in_place
         match_configuration
         verbose
         timeout
@@ -339,7 +308,6 @@ let run
 
 let execute
     matcher
-    ?substitute_in_place
     ?timeout
     ?metasyntax
     ?fresh
@@ -349,7 +317,6 @@ let execute
   process_single_source
     matcher
     ~fast_offset_conversion:false
-    ?substitute_in_place
     ~verbose:false
     ?timeout
     ?metasyntax

@@ -1,8 +1,10 @@
 open Core
 
-open Rewriter
+open Comby_kernel
 
-let configuration = Matchers.Configuration.create ~match_kind:Fuzzy ()
+open Matchers
+
+let configuration = Configuration.create ~match_kind:Fuzzy ()
 
 let format s =
   let s = String.chop_prefix_exn ~prefix:"\n" s in
@@ -28,11 +30,10 @@ let print_only_match matches =
 let run ?(configuration = configuration) (module M : Matchers.Matcher.S) source match_template ?rule rewrite_template =
   let rule =
     match rule with
-    | Some rule -> Language.Rule.create rule |> Or_error.ok_exn
-    | None -> Language.Rule.create "where true" |> Or_error.ok_exn
+    | Some rule -> Matchers.Rule.create rule |> Or_error.ok_exn
+    | None -> Rule.create "where true" |> Or_error.ok_exn
   in
-  M.all ~configuration ~template:match_template ~source ()
-  |> List.filter ~f:(fun { Match.environment; _ } -> Language.Rule.(sat @@ apply ~matcher:(module M) rule environment))
+  M.all ~rule ~configuration ~template:match_template ~source ()
   |> function
   | [] -> print_string "No matches."
   | results ->
@@ -51,7 +52,7 @@ let run_nested
     match rule with
     | None -> true
     | Some rule ->
-      let options = Language.Rule.create rule |> Or_error.ok_exn |> Language.Rule.options in
+      let options = Rule.create rule |> Or_error.ok_exn |> Rule.options in
       options.nested
   in
   M.all ~configuration ~nested ~template:match_template ~source ()
@@ -63,10 +64,6 @@ let run_nested
     |> print_string
 
 (** Rule tests *)
-let sat ?(env = Match.Environment.create ()) rule =
-  let rule = Language.Rule.create rule |> Or_error.ok_exn in
-  Format.sprintf "%b" (Language.Rule.(sat @@ apply rule env))
-
 let make_env bindings =
   List.fold bindings
     ~init:(Match.Environment.create ())

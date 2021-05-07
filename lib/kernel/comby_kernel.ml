@@ -1,7 +1,15 @@
 module Match = Match
 type match' = Match.t
 
+module Replacement = Replacement
+type replacement = Replacement.result
+
 module Matchers = struct
+
+  module Engine = Matchers.Engine
+  module Info = Matchers.Info
+  module Language = Matchers.Language
+
   module Matcher = Matchers.Matcher
 
   module Configuration = Matchers.Configuration
@@ -18,25 +26,20 @@ module Matchers = struct
   module Omega = Matchers.Omega
 
   module Languages = Matchers.Languages
-end
 
-module Rule = struct
-  open Language
-  type t = Rule.t
-  type result = Rule.result
+  module Rule = struct
+    include Matchers.Rule
+    include Matchers.Rule.Ast
+    include Matchers.Rule.Parser
+    include Matchers.Evaluate
+  end
+  type rule = Rule.t
 
-  let sat = Rule.sat
-  let result_env = Rule.result_env
-  let create = Rule.create
-  let apply = Rule.apply
-end
+  module Specification = Matchers.Specification
+  type specification = Specification.t
 
-type rule = Rule.t
-
-module Replacement = Replacement
-type replacement = Replacement.result
-
-module Rewrite = struct
-  include Rewriter.Rewrite
-  include Rewriter.Rewrite_template
+  module Rewrite = struct
+    include Matchers.Rewriter.Rewrite
+    include Matchers.Rewriter.Rewrite_template
+  end
 end

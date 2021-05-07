@@ -1252,7 +1252,7 @@ let%expect_test "test_custom_metasyntax_partial_rule_support" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "a b"]
+  [%expect "$C b"]
 
 let%expect_test "test_custom_metasyntax_reserved_identifiers" =
   let source = "fun f -> (fun x -> f (x x)) (fun x -> f (x x))" in
