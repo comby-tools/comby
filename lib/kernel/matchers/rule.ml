@@ -17,7 +17,7 @@ module Ast = struct
     | Equal of atom * atom
     | Not_equal of atom * atom
     | Match of atom * (antecedent * consequent) list
-    | RewriteTemplate of string
+    | Substitute of atom
     | Rewrite of atom * (antecedent * expression)
   and consequent = expression list
   [@@deriving sexp]
@@ -63,7 +63,8 @@ module Parser = struct
     >>| String.of_char_list
 
   let quoted_parser =
-    choice [ quote {|"|}; quote {|'|}; raw {|`|} ]
+    choice ~failure_msg:"could not parse quoted value"
+      [ quote {|"|}; quote {|'|}; raw {|`|} ]
 
   let operator_parser =
     choice
@@ -101,20 +102,16 @@ module Parser = struct
       String s
 
   let antecedent_parser ?(reserved = []) () =
-    choice
+    choice ~failure_msg:"could not parse LHS of ->"
       [ (quoted_parser >>| fun value -> String value)
       ; (value_parser ~reserved () >>| fun value -> map_special (String.of_char_list value))
       ]
 
   let atom_parser () =
-    choice
+    choice ~failure_msg:"could not parse atom"
       [ (variable_parser >>| fun variable -> Variable variable)
       ; (quoted_parser >>| fun value -> String value)
-      ; (value_parser ~reserved:[] () >>| fun value -> String (String.of_char_list value))
       ]
-
-  let rewrite_template_parser =
-    quoted_parser >>| fun value -> RewriteTemplate value
 
   let ignore p =
     p *> return ()
@@ -155,24 +152,30 @@ module Parser = struct
     <* spaces
 
   let make_rewrite_expression atom match_template rewrite_template =
-    Rewrite (atom, (match_template, rewrite_template))
+    Rewrite (atom, (match_template, Substitute rewrite_template))
 
   let make_match_expression atom cases =
     Match (atom, cases)
+
+  let rewrite_consequent_parser () =
+    choice ~failure_msg:"could not parse atom on RHS of ->"
+      [ (atom_parser ()) <* spaces <* char '}'
+      ; (value_parser ~reserved:[" }"; "}"] () <* spaces <* char '}' >>| fun value -> String (String.of_char_list value))
+      ]
 
   (** rewrite <atom> { <atom> -> <atom> } *)
   let rewrite_pattern_parser =
     lift3
       make_rewrite_expression
       (string Syntax.start_rewrite_pattern *> spaces *> atom_parser () <* spaces <* char '{' <* spaces)
-      (antecedent_parser ~reserved:[" ->"] () <* spaces <* string Syntax.arrow <* spaces)
-      (spaces *> rewrite_template_parser <* spaces <* char '}' <* spaces)
+      (antecedent_parser ~reserved:[" ->"; "->"] () <* spaces <* string Syntax.arrow <* spaces)
+      (rewrite_consequent_parser ())
 
   (** <atom> -> atom [, <expr>], [,] *)
   let match_arrow_parser expression_parser =
     both
-      (antecedent_parser ~reserved:[" ->"] () <* spaces <* string Syntax.arrow <* spaces)
-      (spaces *> sep_by (char ',') expression_parser <* spaces <* optional_trailing ',' <* spaces)
+      (antecedent_parser ~reserved:[" ->"; "->"] () <* spaces <* string Syntax.arrow <* spaces)
+      (sep_by (char ',') expression_parser <* spaces <* optional_trailing ',' <* spaces)
 
   (** [|] <match_arrow> *)
   let first_case_parser expression_parser =
@@ -200,7 +203,7 @@ module Parser = struct
 
   let expression_parser =
     fix (fun expression_parser ->
-        choice
+        choice ~failure_msg:"could not parse expression"
           [ match_pattern_parser expression_parser
           ; rewrite_pattern_parser
           ; operator_parser

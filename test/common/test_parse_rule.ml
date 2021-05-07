@@ -196,3 +196,27 @@ b` -> false,
              \\n\\\\\") (True)) ((String  \"a\\\\n\\\\heh\\
                                      \\nb\") (False))))))
 "]
+
+let%expect_test "parse_freeform_antecedent_in_rewrite_rule" =
+  Rule.create
+    {|
+      where rewrite :[contents] { concat [:[x]] -> "nice" }
+    |}
+  |> Or_error.ok_exn
+  |> fun rule -> print_s [%message (rule : Ast.expression list)];
+  [%expect_exact "(rule
+ ((Rewrite (Variable contents)
+   ((String \"concat [:[x]]\") (Substitute (String nice))))))
+"]
+
+let%expect_test "parse_freeform_consequent_in_rewrite_rule" =
+  Rule.create
+    {| where
+       rewrite :[0] { :[1] :[2] -> :[1] a }
+    |}
+  |> Or_error.ok_exn
+  |> fun rule -> print_s [%message (rule : Ast.expression list)];
+  [%expect_exact "(rule
+ ((Rewrite (Variable 0)
+   ((String \":[1] :[2]\") (Substitute (String \":[1] a\"))))))
+"]

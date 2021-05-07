@@ -43,7 +43,8 @@ let equal_in_environment var value env =
   | None -> false, Some env
   | Some var_value -> String.equal var_value value, Some env
 
-let rec apply
+
+let apply
     ?(substitute_in_place = true)
     ?(fresh = counter)
     ?metasyntax
@@ -111,12 +112,12 @@ let rec apply
       let fresh_var = fresh () in
       let env = Environment.add env fresh_var source in
       rule_match env (Match (Variable fresh_var, cases))
-    | RewriteTemplate rewrite_template ->
+    | Substitute (String rewrite_template) ->
       begin
         match rewrite_context with
         | None -> false, None
         | Some { variable; _ } ->
-          (* FIXME(RVT) assumes only contextual rewrite for now. *)
+          (* FIXME(RVT) assumes only contextual substitution for now. *)
           let env =
             Rewrite_template.substitute rewrite_template env
             |> fst
@@ -126,9 +127,10 @@ let rec apply
           in
           true, env
       end
+    | Substitute (Variable _var) -> failwith "Unimplemented"
     | Rewrite (Variable variable, (match_template, rewrite_expression)) ->
       begin match rewrite_expression with
-        | RewriteTemplate rewrite_template ->
+        | Substitute (String rewrite_template) ->
           let template =
             match match_template with
             | Variable _ -> failwith "Invalid syntax in rewrite LHS"

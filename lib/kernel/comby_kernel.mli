@@ -386,7 +386,7 @@ module Matchers : sig
         | Equal of atom * atom
         | Not_equal of atom * atom
         | Match of atom * (antecedent * consequent) list
-        | RewriteTemplate of string
+        | Substitute of atom
         | Rewrite of atom * (antecedent * expression)
       and consequent = expression list
       [@@deriving sexp]
@@ -419,8 +419,13 @@ module Matchers : sig
       ?substitute_in_place:bool ->
       ?fresh:(unit -> string) ->
       ?metasyntax:Metasyntax.t ->
-      match_all:(?configuration:Configuration.t ->
-                 template:string -> source:string -> unit -> Match.t list) ->
+      match_all:(
+        ?configuration:Configuration.t ->
+        template:string ->
+        source:string ->
+        unit ->
+        Match.t list
+      ) ->
       Rule.Ast.expression list ->
       Match.Environment.t -> result
   end
