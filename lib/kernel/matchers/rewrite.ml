@@ -74,8 +74,8 @@ let substitute_in_rewrite_template
     ({ environment; _ } : Match.t) =
   let (module M) = Metasyntax.create metasyntax in
   let module Template_parser = Template.Make(M) in
-  let vars = Template_parser.variables template in
   let template = Rewrite_template.substitute_fresh ~metasyntax ?fresh template in
+  let vars = Template_parser.variables template in
 
   (* Fold over the template for substituting. Must do left-to-right, so that a substitution
      earlier in a template shifts the rolling template result appopriately for subsequent

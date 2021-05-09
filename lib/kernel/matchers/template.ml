@@ -85,15 +85,12 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
 
   let parse template =
     match parse_string ~consume:All parse_template template with
-    | Ok result -> Some result
+    | Ok result -> result
     | Error e -> failwith ("No rewrite template parse: "^e)
 
   let variables template =
-    let open Option in
-    Option.value
-      ~default:[]
-      (parse template
-       >>| List.filter_map ~f:(function
-           | Hole { pattern; variable; offset } -> Some { pattern; variable; offset }
-           | _ -> None))
+    parse template
+    |> List.filter_map ~f:(function
+        | Hole { pattern; variable; offset } -> Some { pattern; variable; offset }
+        | _ -> None)
 end

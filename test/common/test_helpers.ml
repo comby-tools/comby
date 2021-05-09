@@ -72,6 +72,4 @@ let parse_template metasyntax template =
   let (module M) = Matchers.Metasyntax.create metasyntax in
   let module Template_parser = Template.Make(M) in
   let tree = Template_parser.parse template in
-  match tree with
-  | Some tree -> Sexp.to_string_hum (sexp_of_list Template.sexp_of_extracted tree)
-  | None -> "ERROR: NO PARSE"
+  Sexp.to_string_hum (sexp_of_list Template.sexp_of_extracted tree)

@@ -11,6 +11,6 @@ type extracted =
 [@@deriving sexp_of]
 
 module Make : Metasyntax.S -> sig
-    val parse : string -> extracted list option
+    val parse : string -> extracted list
     val variables : string -> syntax list
   end
