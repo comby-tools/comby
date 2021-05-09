@@ -4,8 +4,8 @@ open Core_kernel
 open Omega_parser_helper
 
 type syntax =
-  { variable: string
-  ; pattern: string
+  { variable: string (* E.g., x *)
+  ; pattern: string (*E.g., the entire :[x] part *)
   }
 [@@deriving sexp_of]
 
@@ -13,10 +13,6 @@ type extracted =
   | Hole of syntax
   | Constant of string
 [@@deriving sexp_of]
-
-let ignore_some = function
-  | Some delim -> ignore @@ (string delim)
-  | None -> return ()
 
 module Make (Metasyntax : Types.Metasyntax.S) = struct
 
@@ -27,6 +23,7 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     many1 (identifier ()) >>| String.of_char_list
 
   let regex_expression suffix =
+    many1 @@
     fix (fun expr ->
         choice
           [ lift (fun x -> Format.sprintf "[%s]" @@ String.concat x) (char '[' *> many1 expr <* char ']')
@@ -36,41 +33,43 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
 
   let regex_body separator suffix =
     lift2
-      (fun v e -> v, e)
+      (fun v e -> v,e)
       (identifier ())
-      (char separator *> many1 (regex_expression suffix))
+      (char separator *> regex_expression suffix)
 
+  (** Folds left to respect order of definitions in custom metasyntax for
+      matching, where we attempt to parse in order. Note this is significant if a
+      syntax like $X~regex should be tried before shortcircuiting on $X, in which
+      case it should be defined _after_ the $X syntax (most general should be
+      first). *)
   let hole_parsers =
-    (* Fold left to respect order of definitions in custom metasyntax for
-       matching, where we attempt to parse in order. Note this is significant if
-       a syntax like $X~regex should be tried before shortcircuiting on $X, in
-       which case it should be defined _after_ the $X syntax (most general
-       should be first). *)
+    let optional d = Option.value d ~default:"" in
     List.fold ~init:[] Metasyntax.syntax ~f:(fun acc v ->
-        let v =
+        let result =
           match v with
           | Hole (_, Delimited (left, right)) ->
-            ignore_some left *> identifier () <* ignore_some right >>|
-            fun v ->
-            Format.sprintf "%s%s%s" (Option.value left ~default:"") v (Option.value right ~default:""),
-            v
+            lift3
+              (fun left v right -> Format.sprintf "%s%s%s" left v right, v)
+              (string (optional left))
+              (identifier ())
+              (string (optional right))
           | Hole (_, Reserved_identifiers l) ->
             choice (List.map l ~f:string) >>| fun v -> v, v
           | Regex (left, separator, right) ->
-            ignore_some (Some left) *> regex_body separator right <* ignore_some (Some right) >>|
-            fun (v, expr) ->
-            (Format.sprintf "%s%s%c%s%s" left v separator (String.concat expr) right),
-            v
+            lift3
+              (fun left (v, expr) right -> Format.sprintf "%s%s%c%s%s" left v separator (String.concat expr) right, v)
+              (string left)
+              (regex_body separator right)
+              (string right)
         in
-        v::acc)
+        result::acc)
 
   let hole_prefixes =
-    List.map Metasyntax.syntax ~f:(function
+    List.filter_map Metasyntax.syntax ~f:(function
         | Hole (_, Delimited (Some left, _))
         | Regex (left, _, _) -> Some [left]
         | Hole (_, Reserved_identifiers l) -> Some l
         | _ -> None)
-    |> List.filter_opt
     |> List.concat
 
   (** Not smart enough: only looks for hole prefix to stop scanning constant,
@@ -89,12 +88,11 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     | Error e -> failwith ("No rewrite template parse: "^e)
 
   let variables template =
-    parse template
-    |> function
-    | Some result ->
-      List.filter_map result ~f:(function
-          | Hole { pattern; variable } -> Some { pattern; variable }
-          | _ -> None)
-    | None ->
-      []
+    let open Option in
+    Option.value
+      ~default:[]
+      (parse template
+       >>| List.filter_map ~f:(function
+           | Hole { pattern; variable } -> Some { pattern; variable }
+           | _ -> None))
 end
