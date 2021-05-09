@@ -2,7 +2,7 @@ open Core_kernel
 
 open Angstrom
 
-open Omega_parser
+open Omega_parser_helper
 
 type omega_match_production =
   { offset : int
@@ -312,7 +312,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
       in
       fix (fun grammar ->
           let delimsx = between_nested_delims (many grammar) in
-          let other = Omega_parser.Deprecate.any_char_except ~reserved |>> String.of_char in
+          let other = Omega_parser_helper.Deprecate.any_char_except ~reserved |>> String.of_char in
           choice
             [ comment_parser
             ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
@@ -353,7 +353,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
       let inner =
         fix (fun grammar ->
             let delimsx = between_nested_delims (many grammar) in
-            let other = Omega_parser.Deprecate.any_char_except ~reserved |>> String.of_char in
+            let other = Omega_parser_helper.Deprecate.any_char_except ~reserved |>> String.of_char in
             choice
               [ comment_parser
               ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
@@ -373,11 +373,11 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         choice
           [ (string (Format.sprintf "%c%s" escape_character right_delimiter))
           ; (string (Format.sprintf "%c%c" escape_character escape_character))
-          ; (Omega_parser.Deprecate.any_char_except ~reserved:[right_delimiter] |>> String.of_char)
+          ; (Omega_parser_helper.Deprecate.any_char_except ~reserved:[right_delimiter] |>> String.of_char)
           ]
 
     let raw_literal_grammar ~right_delimiter =
-      (Omega_parser.Deprecate.any_char_except ~reserved:[right_delimiter] |>> String.of_char)
+      (Omega_parser_helper.Deprecate.any_char_except ~reserved:[right_delimiter] |>> String.of_char)
 
     let sequence_chain ?left_delimiter ?right_delimiter (p_list : (production * 'a) t list) =
       if debug then Format.printf "Sequence chain p_list size: %d@." @@ List.length p_list;
@@ -471,12 +471,12 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
                        end_of_input)
                     else
                       (if debug then Format.printf "hole until: append suffix@.";
-                       skip_unit acc)
+                       Omega_parser_helper.ignore acc)
                   in
                   (
                     pos >>= fun pos ->
                     if get_pos () = (-1) then set_pos pos;
-                    let stop_at = choice [ rest; skip_unit reserved_parsers ] in
+                    let stop_at = choice [ rest; Omega_parser_helper.ignore reserved_parsers ] in
                     many1_till_stop any_char stop_at (* Beware of this use. *)
                   )
                   >>= fun value ->
@@ -499,7 +499,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
                 | Line ->
                   pos >>= fun offset ->
                   let allowed =
-                    many (Omega_parser.Deprecate.any_char_except ~reserved:["\n"])
+                    many (Omega_parser_helper.Deprecate.any_char_except ~reserved:["\n"])
                     |>> fun x -> [(String.of_char_list x)^"\n"]
                   in
                   allowed <* char '\n' >>= fun value ->
@@ -518,21 +518,21 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
                   let _non_space : string t =
                     let rest =
                       if !i = 0 then end_of_input
-                      else skip_unit acc
+                      else Omega_parser_helper.ignore acc
                     in
                     (
                       pos >>= fun pos ->
                       if get_pos () = (-1) then set_pos pos;
-                      let stop_at = choice [ rest; skip_unit reserved_parsers ] in
+                      let stop_at = choice [ rest; Omega_parser_helper.ignore reserved_parsers ] in
                       many1_till_stop any_char stop_at (* Beware of this use. *)
                     ) |>> String.of_char_list
                   in
                   let non_space =
-                    many1 (Omega_parser.Deprecate.any_char_except ~reserved:([" "]@Deprecate.reserved_delimiters)) |>> String.of_char_list
+                    many1 (Omega_parser_helper.Deprecate.any_char_except ~reserved:([" "]@Deprecate.reserved_delimiters)) |>> String.of_char_list
                   in
                   let delimited =
                     (* IDK why this rest works without end_of_input but it's needed for non_space. *)
-                    let rest = skip_unit acc in
+                    let rest = Omega_parser_helper.ignore acc in
                     (many1_till
                        (pos >>= fun pos ->
                         if debug then Format.printf "Pos is %d@." pos;
@@ -607,7 +607,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
                        end_of_input)
                     else
                       (if debug then Format.printf "hole everything until: append suffix@.";
-                       skip_unit acc)
+                       Omega_parser_helper.ignore acc)
                   in
                   let first_pos = ref (-1) in
                   let set_pos v = first_pos := v in
@@ -735,7 +735,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         | Expression -> expression_hole_parser ()
         | Regex -> regex_hole_parser ()
       in
-      let skip_signal hole = skip_unit (string "_signal_hole") |>> fun () -> (Hole hole, acc) in
+      let skip_signal hole = Omega_parser_helper.ignore (string "_signal_hole") |>> fun () -> (Hole hole, acc) in
       hole_parser |>> fun identifier -> skip_signal { sort; identifier; dimension; at_depth = None }
 
     let reserved_holes () =
@@ -755,7 +755,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
       in
       let _reserved_holes =
         reserved_holes ()
-        |> List.map ~f:skip_unit
+        |> List.map ~f:Omega_parser_helper.ignore
         |> choice
       in
       let parser =
@@ -763,7 +763,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         choice
           [ literal_holes
           ; (spaces1 |>> generate_pure_spaces_parser)
-          ; ((many1 (Omega_parser.Deprecate.any_char_except ~reserved:[":["; " "; "\n"; "\t"; "\r"])
+          ; ((many1 (Omega_parser_helper.Deprecate.any_char_except ~reserved:[":["; " "; "\n"; "\t"; "\r"])
               |>> String.of_char_list)
              |>> generate_string_token_parser)
           ]
@@ -782,7 +782,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
           (many1 (comment_parser <|> spaces1))
       in
       let other =
-        (many1 (Omega_parser.Deprecate.any_char_except ~reserved:Deprecate.reserved) |>> String.of_char_list)
+        (many1 (Omega_parser_helper.Deprecate.any_char_except ~reserved:Deprecate.reserved) |>> String.of_char_list)
         |>> generate_string_token_parser
       in
       let code_holes =

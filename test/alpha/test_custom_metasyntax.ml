@@ -154,7 +154,7 @@ let%expect_test "custom_metasyntax_rewrite" =
     | Nothing -> "nothing"
   in
   print_string output;
-  [%expect_exact {|bar -> simplesimple|}];
+  [%expect_exact {|?bar -> simplesimple|}];
 
   let specification = Matchers.Specification.create ~match_template:"$A(?B)" ~rewrite_template:"$id() $id(a) $id(a)" () in
   let result = Pipeline.execute matcher ~metasyntax (String "simple(bar)") specification in
