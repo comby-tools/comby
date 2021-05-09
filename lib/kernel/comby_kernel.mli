@@ -327,6 +327,27 @@ module Matchers : sig
 
   type metasyntax = Metasyntax.t
 
+  (** {3 Template}
+
+      Parse a template based on metasynax *)
+
+  module Template : sig
+    type syntax =
+      { variable: string
+      ; pattern: string
+      }
+
+    type extracted =
+      | Hole of syntax
+      | Constant of string
+    [@@deriving sexp_of]
+
+    module Make : Metasyntax.S -> sig
+        val parse : string -> extracted list option
+        val variables : string -> syntax list
+      end
+  end
+
   (** {3 Matcher}
 
       Defines the functions that a matcher can perform. *)
@@ -379,6 +400,13 @@ module Matchers : sig
       type antecedent = atom
       [@@deriving sexp]
 
+      type kind =
+        | Value
+        | Length
+        | Type
+        | File
+      [@@deriving sexp]
+
       type expression =
         | True
         | False
@@ -386,8 +414,8 @@ module Matchers : sig
         | Equal of atom * atom
         | Not_equal of atom * atom
         | Match of atom * (antecedent * consequent) list
-        | Substitute of atom
         | Rewrite of atom * (antecedent * expression)
+        | Substitute of atom * kind
       and consequent = expression list
       [@@deriving sexp]
     end
@@ -505,8 +533,6 @@ module Matchers : sig
       val comments : comment_kind list
     end
   end
-
-  type syntax = Syntax.t
 
   module Info : sig
     module type S = sig
@@ -704,21 +730,7 @@ module Matchers : sig
       -> Match.environment
       -> (string * string list)
 
-    type syntax =
-      { variable: string
-      ; pattern: string
-      }
-
-    type extracted =
-      | Hole of syntax
-      | Constant of string
-
-    module Make : Metasyntax.S -> sig
-        val parse : string -> extracted list option
-        val variables : string -> syntax list
-      end
-
-    val get_offsets_for_holes : syntax list -> string -> (string * int) list
+    val get_offsets_for_holes : Template.syntax list -> string -> (string * int) list
 
     val get_offsets_after_substitution : (string * int) list -> Match.environment -> (string * int) list
   end

@@ -17,4 +17,6 @@ module Script = Script
 
 module Specification = Specification
 
+module Template = Template
+
 module Rewriter = Rewriter

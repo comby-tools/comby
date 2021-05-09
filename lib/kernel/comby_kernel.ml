@@ -27,6 +27,8 @@ module Matchers = struct
 
   module Languages = Matchers.Languages
 
+  module Template = Matchers.Template
+
   module Rule = struct
     include Matchers.Rule
     include Matchers.Rule.Ast

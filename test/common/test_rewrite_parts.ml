@@ -8,7 +8,7 @@ open Match
 let all ?(configuration = configuration) template source =
   Alpha.C.all ~configuration ~template ~source ()
 
-module Template_parser = Rewrite.Make(Metasyntax.Default)
+module Template_parser = Template.Make(Metasyntax.Default)
 
 let%expect_test "get_offsets_for_holes" =
   let rewrite_template = {|1234:[1]1234:[2]|} in

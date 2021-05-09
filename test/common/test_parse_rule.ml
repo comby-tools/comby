@@ -206,7 +206,7 @@ let%expect_test "parse_freeform_antecedent_in_rewrite_rule" =
   |> fun rule -> print_s [%message (rule : Ast.expression list)];
   [%expect_exact "(rule
  ((Rewrite (Variable contents)
-   ((String \"concat [:[x]]\") (Substitute (String nice))))))
+   ((String \"concat [:[x]]\") (Substitute (String nice) Value)))))
 "]
 
 let%expect_test "parse_freeform_consequent_in_rewrite_rule" =
@@ -218,5 +218,5 @@ let%expect_test "parse_freeform_consequent_in_rewrite_rule" =
   |> fun rule -> print_s [%message (rule : Ast.expression list)];
   [%expect_exact "(rule
  ((Rewrite (Variable 0)
-   ((String \":[1] :[2]\") (Substitute (String \":[1] a\"))))))
+   ((String \":[1] :[2]\") (Substitute (String \":[1] a\") Value)))))
 "]

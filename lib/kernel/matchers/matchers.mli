@@ -17,4 +17,6 @@ module Script : module type of Script
 
 module Specification : module type of Specification
 
+module Template = Template
+
 module Rewriter = Rewriter

@@ -10,6 +10,13 @@ module Ast = struct
   type antecedent = atom
   [@@deriving sexp]
 
+  type kind =
+    | Value
+    | Length
+    | Type
+    | File
+  [@@deriving sexp]
+
   type expression =
     | True
     | False
@@ -17,8 +24,8 @@ module Ast = struct
     | Equal of atom * atom
     | Not_equal of atom * atom
     | Match of atom * (antecedent * consequent) list
-    | Substitute of atom
     | Rewrite of atom * (antecedent * expression)
+    | Substitute of atom * kind
   and consequent = expression list
   [@@deriving sexp]
 
@@ -152,7 +159,7 @@ module Parser = struct
     <* spaces
 
   let make_rewrite_expression atom match_template rewrite_template =
-    Rewrite (atom, (match_template, Substitute rewrite_template))
+    Rewrite (atom, (match_template, Substitute (rewrite_template, Value)))
 
   let make_match_expression atom cases =
     Match (atom, cases)

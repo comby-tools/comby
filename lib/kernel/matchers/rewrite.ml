@@ -18,7 +18,7 @@ let match_context_metasyntax =
   Metasyntax.(create match_context_syntax)
 
 module Match_context_metasyntax = (val match_context_metasyntax)
-module Match_context_template = Rewrite_template.Make(Match_context_metasyntax)
+module Match_context_template = Template.Make(Match_context_metasyntax)
 
 let substitute_match_contexts ?fresh (matches: Match.t list) source replacements =
   if debug then Format.printf "Matches: %d | Replacements: %d@." (List.length matches) (List.length replacements);
@@ -73,7 +73,7 @@ let substitute_in_rewrite_template
     rewrite_template
     ({ environment; _ } : Match.t) =
   let (module M) = Metasyntax.create metasyntax in
-  let module Template_parser = Rewrite_template.Make(M) in
+  let module Template_parser = Template.Make(M) in
   let variables = Template_parser.variables rewrite_template in
 
   let replacement_content, vars_substituted_for =

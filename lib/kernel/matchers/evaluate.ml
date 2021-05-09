@@ -29,9 +29,6 @@ let merge_match_environments matches environment' =
   List.map matches ~f:(fun { environment; _ } ->
       Environment.merge environment environment')
 
-type rewrite_context =
-  { variable : string }
-
 let counter =
   let uuid_for_id_counter = ref 0 in
   fun () ->
@@ -44,6 +41,18 @@ let equal_in_environment var value env =
   | Some var_value -> String.equal var_value value, Some env
 
 
+let evaluate_substitute env atom kind =
+  let open Option in
+  let to_string n = Format.sprintf "%d" (String.length n) in
+  match atom, kind with
+  | String v, Value -> return v
+  | String v, Length -> return (to_string v)
+  | Variable v, Value -> Environment.lookup env v
+  | Variable v, Length ->
+    Environment.lookup env v >>= fun value ->
+    return (to_string value)
+  | _ -> failwith "invalid"
+
 let apply
     ?(substitute_in_place = true)
     ?(fresh = counter)
@@ -54,7 +63,7 @@ let apply
   let open Option in
 
   (* accepts only one expression *)
-  let rec rule_match ?(rewrite_context : rewrite_context option) env =
+  let rec rule_match env =
     function
     | True -> true, Some env
     | False -> false, Some env
@@ -91,7 +100,7 @@ let apply
               let fold_cases (sat, out) predicate =
                 if sat then
                   let env' = Environment.merge env environment in
-                  rule_match ?rewrite_context env' predicate
+                  rule_match env' predicate
                 else
                   (sat, out)
               in
@@ -112,30 +121,15 @@ let apply
       let fresh_var = fresh () in
       let env = Environment.add env fresh_var source in
       rule_match env (Match (Variable fresh_var, cases))
-    | Substitute (String rewrite_template) ->
-      begin
-        match rewrite_context with
-        | None -> false, None
-        | Some { variable; _ } ->
-          (* FIXME(RVT) assumes only contextual substitution for now. *)
-          let env =
-            Rewrite_template.substitute rewrite_template env
-            |> fst
-            |> fun replacement' ->
-            Environment.update env variable replacement'
-            |> Option.some
-          in
-          true, env
-      end
-    | Substitute (Variable _var) -> failwith "Unimplemented"
+
     | Rewrite (Variable variable, (match_template, rewrite_expression)) ->
+      let template =
+        match match_template with
+        | Variable _ -> failwith "Unsupported: please quote variable on LHS"
+        | String template -> template
+      in
       begin match rewrite_expression with
-        | Substitute (String rewrite_template) ->
-          let template =
-            match match_template with
-            | Variable _ -> failwith "Invalid syntax in rewrite LHS"
-            | String template -> template
-          in
+        | Substitute (String rewrite_template, Value) ->
           let result =
             Environment.lookup env variable >>= fun source ->
             let configuration = Configuration.create ~match_kind:Fuzzy () in
@@ -155,6 +149,7 @@ let apply
         | _ -> failwith "Not implemented yet"
       end
     | Rewrite _ -> failwith "TODO/Invalid: Have not decided whether rewrite \":[x]\" is useful."
+    | _ -> failwith "nop"
   in
   List.fold predicates ~init:(true, None) ~f:(fun (sat, out) predicate ->
       if sat then
