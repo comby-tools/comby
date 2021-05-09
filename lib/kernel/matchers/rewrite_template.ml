@@ -122,20 +122,21 @@ let get_offsets_for_holes
     variables
     rewrite_template =
   let sorted_variables =
-    List.fold variables ~init:[] ~f:(fun acc Template.{ variable; pattern; _ } ->
-        match String.substr_index rewrite_template ~pattern with
-        | Some index -> ((variable, pattern), index)::acc
-        | None -> acc)
-    |> List.sort ~compare:(fun (_, i1) (_, i2) -> i1 - i2)
-    |> List.map ~f:fst
+    List.sort variables
+      ~compare:(fun
+                 Template.{ offset = i1; _ }
+                 Template.{ offset = i2; _ } ->
+                 i1 - i2)
   in
-  List.fold sorted_variables ~init:(rewrite_template, []) ~f:(fun (rewrite_template, acc) (variable, pattern) ->
-      match String.substr_index rewrite_template ~pattern with
-      | Some index ->
-        let rewrite_template =
-          String.substr_replace_all rewrite_template ~pattern ~with_:"" in
-        rewrite_template, (variable, index)::acc
-      | None -> rewrite_template, acc)
+  List.fold
+    sorted_variables
+    ~init:(rewrite_template, []) ~f:(fun (rewrite_template, acc) { variable; pattern; _} ->
+        match String.substr_index rewrite_template ~pattern with
+        | Some index ->
+          let rewrite_template =
+            String.substr_replace_all rewrite_template ~pattern ~with_:"" in
+          rewrite_template, (variable, index)::acc
+        | None -> rewrite_template, acc)
   |> snd
 
 (** pretend we substituted vars in offsets with environment. return what the offsets are after *)
@@ -147,5 +148,16 @@ let get_offsets_after_substitution offsets environment =
       | Some s ->
         let offset' = offset + shift in
         let shift = shift + String.length s in
+        ((var, offset')::acc), shift)
+  |> fst
+
+(** pretend we substituted vars in offsets with environment. return what the offsets are after *)
+let get_offsets_after_substitution_no_shift offsets environment =
+  if debug then Format.printf "Environment: %s@." @@ Match.Environment.to_string environment;
+  List.fold_right offsets ~init:([],0 ) ~f:(fun (var, offset) (acc, shift)  ->
+      match Environment.lookup environment var with
+      | None -> acc, shift
+      | Some _ ->
+        let offset' = offset + shift in
         ((var, offset')::acc), shift)
   |> fst
