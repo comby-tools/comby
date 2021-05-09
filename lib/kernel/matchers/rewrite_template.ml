@@ -130,7 +130,7 @@ let get_offsets_for_holes
   in
   List.fold
     sorted_variables
-    ~init:(rewrite_template, []) ~f:(fun (rewrite_template, acc) { variable; pattern; _} ->
+    ~init:(rewrite_template, []) ~f:(fun (rewrite_template, acc) { variable; pattern; _ } ->
         match String.substr_index rewrite_template ~pattern with
         | Some index ->
           let rewrite_template =

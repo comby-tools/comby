@@ -70,43 +70,43 @@ let substitute_match_contexts ?fresh (matches: Match.t list) source replacements
 let substitute_in_rewrite_template
     ?fresh
     ?(metasyntax = Metasyntax.default_metasyntax)
-    rewrite_template
+    template
     ({ environment; _ } : Match.t) =
   let (module M) = Metasyntax.create metasyntax in
   let module Template_parser = Template.Make(M) in
-  let variables = Template_parser.variables rewrite_template in
+  let vars = Template_parser.variables template in
+  let template = Rewrite_template.substitute_fresh ~metasyntax ?fresh template in
 
-  let replacement_content, vars_substituted_for =
-    Rewrite_template.substitute
-      ~metasyntax
-      ?fresh
-      rewrite_template
-      environment
+  (* Fold over the template for substituting. Must do left-to-right, so that a substitution
+     earlier in a template shifts the rolling template result appopriately for subsequent
+     offset calculation.
+
+     E.g., a:[1]b:[2] => substitute for :[1] so that we can get the right offset for substituted
+     values in :[2], based off the length of :[1].
+  *)
+  let replacement_content, environment =
+    List.fold vars ~init:(template, Environment.create ()) ~f:(fun (template, env) { variable; pattern; _ } ->
+        match Environment.lookup environment variable with
+        | None ->
+          template, env
+        | Some value ->
+          match String.substr_index template ~pattern with
+          | Some offset ->
+            let start_location =
+              Location.{ default with offset = offset } in
+            let end_location =
+              Location.{ default with offset = offset + String.length value } in
+            let range =
+              Range.
+                { match_start = start_location
+                ; match_end = end_location
+                }
+            in
+            let env = Environment.add ~range env variable value in
+            String.substr_replace_all template ~pattern ~with_:value, env
+          | None -> template, env)
   in
-  let offsets = Rewrite_template.get_offsets_for_holes variables rewrite_template in
-  let offsets = Rewrite_template.get_offsets_after_substitution offsets environment in
-  let environment =
-    List.fold offsets ~init:(Environment.create ()) ~f:(fun acc (var, relative_offset) ->
-        if List.mem vars_substituted_for var ~equal:String.equal then
-          let value = Option.value_exn (Environment.lookup environment var) in
-          (* FIXME(RVT): Location does not update row/column here *)
-          let start_location =
-            Location.{ default with offset = relative_offset }
-          in
-          let end_location =
-            let offset = relative_offset + String.length value in
-            Location.{ default with offset }
-          in
-          let range =
-            Range.
-              { match_start = start_location
-              ; match_end = end_location
-              }
-          in
-          Environment.add ~range acc var value
-        else
-          acc)
-  in
+
   { replacement_content
   ; environment
   ; range =
