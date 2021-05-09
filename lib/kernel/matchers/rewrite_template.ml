@@ -82,7 +82,7 @@ let substitute ?(metasyntax = Metasyntax.default_metasyntax) ?fresh template env
   let template = substitute_fresh ~metasyntax ?fresh template in
   if debug then Format.printf "Template after substituting fresh: %s@." template;
 
-  List.fold vars ~init:(template, []) ~f:(fun (acc, vars) { variable; pattern } ->
+  List.fold vars ~init:(template, []) ~f:(fun (acc, vars) { variable; pattern; _ } ->
       match Environment.lookup env variable with
       | Some value ->
         if Option.is_some (String.substr_index template ~pattern) then
@@ -122,7 +122,7 @@ let get_offsets_for_holes
     variables
     rewrite_template =
   let sorted_variables =
-    List.fold variables ~init:[] ~f:(fun acc Template.{ variable; pattern } ->
+    List.fold variables ~init:[] ~f:(fun acc Template.{ variable; pattern; _ } ->
         match String.substr_index rewrite_template ~pattern with
         | Some index -> ((variable, pattern), index)::acc
         | None -> acc)

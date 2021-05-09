@@ -333,9 +333,11 @@ module Matchers : sig
 
   module Template : sig
     type syntax =
-      { variable: string
-      ; pattern: string
+      { variable : string
+      ; pattern : string
+      ; offset : int
       }
+    [@@deriving sexp_of]
 
     type extracted =
       | Hole of syntax

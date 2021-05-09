@@ -1,4 +1,8 @@
-type syntax = { variable: string; pattern: string }
+type syntax =
+  { variable : string
+  ; pattern : string
+  ; offset : int
+  }
 [@@deriving sexp_of]
 
 type extracted =

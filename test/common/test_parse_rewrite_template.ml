@@ -3,14 +3,31 @@ open Comby_kernel
 
 open Test_helpers
 
+
+let%expect_test "get_offsets_for_holes" =
+  let module Template_parser = Matchers.Template.Make(Matchers.Metasyntax.Default) in
+  let rewrite_template = {|1234:[1]1234:[2]|} in
+  let variables = Template_parser.variables rewrite_template in
+  let offsets = Matchers.Rewrite.get_offsets_for_holes variables rewrite_template in
+  print_s [%message (offsets : (string * int) list)];
+  [%expect_exact {|(offsets ((2 8) (1 4)))
+|}];
+  print_s [%message (variables : Matchers.Template.syntax list)];
+  [%expect {|
+    (variables
+     (((variable 1) (pattern :[1]) (offset 4))
+      ((variable 2) (pattern :[2]) (offset 12)))) |}]
+
 let%expect_test "interpret_incomplete_hole_as_constant" =
   let template = ":[B :[A]" in
   parse_template Matchers.Metasyntax.default_metasyntax template |> print_string;
-  [%expect_exact {|((Constant :) (Constant "[B ") (Hole ((variable A) (pattern :[A]))))|}];
+  [%expect_exact {|((Constant :) (Constant "[B ")
+ (Hole ((variable A) (pattern :[A]) (offset 4))))|}];
 
   let template = ":[B :[A~x]" in
   parse_template Matchers.Metasyntax.default_metasyntax template |> print_string;
-  [%expect_exact {|((Constant :) (Constant "[B ") (Hole ((variable A) (pattern :[A~x]))))|}]
+  [%expect_exact {|((Constant :) (Constant "[B ")
+ (Hole ((variable A) (pattern :[A~x]) (offset 4))))|}]
 
 let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
   let template = "$:x $B:x  $A" in
@@ -25,8 +42,9 @@ let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
     }
   in
   parse_template metasyntax template |> print_string;
-  [%expect_exact {|((Constant $) (Constant ":x ") (Hole ((variable B) (pattern "$B:x ")))
- (Constant " ") (Hole ((variable A) (pattern $A))))|}]
+  [%expect_exact {|((Constant $) (Constant ":x ")
+ (Hole ((variable B) (pattern "$B:x ") (offset 4))) (Constant " ")
+ (Hole ((variable A) (pattern $A) (offset 10))))|}]
 
 let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
   let template = "(  , ,  )" in
@@ -40,9 +58,9 @@ let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
     }
   in
   parse_template metasyntax template |> print_string;
-  [%expect_exact {|((Constant "(") (Hole ((variable "  ") (pattern "  "))) (Constant ,)
- (Hole ((variable " ") (pattern " "))) (Constant ,)
- (Hole ((variable "  ") (pattern "  "))) (Constant ")"))|}]
+  [%expect_exact {|((Constant "(") (Hole ((variable "  ") (pattern "  ") (offset 1)))
+ (Constant ,) (Hole ((variable " ") (pattern " ") (offset 4))) (Constant ,)
+ (Hole ((variable "  ") (pattern "  ") (offset 6))) (Constant ")"))|}]
 
 let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
   let template = "(..,.)" in
@@ -56,5 +74,5 @@ let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
     }
   in
   parse_template metasyntax template |> print_string;
-  [%expect_exact {|((Constant "(") (Hole ((variable ..) (pattern ..))) (Constant ,)
- (Hole ((variable .) (pattern .))) (Constant ")"))|}]
+  [%expect_exact {|((Constant "(") (Hole ((variable ..) (pattern ..) (offset 1))) (Constant ,)
+ (Hole ((variable .) (pattern .) (offset 4))) (Constant ")"))|}]

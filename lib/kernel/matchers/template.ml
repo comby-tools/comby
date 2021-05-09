@@ -6,6 +6,7 @@ open Omega_parser_helper
 type syntax =
   { variable: string (* E.g., x *)
   ; pattern: string (*E.g., the entire :[x] part *)
+  ; offset : int
   }
 [@@deriving sexp_of]
 
@@ -77,7 +78,7 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
   let parse_template : extracted list Angstrom.t =
     let hole = choice hole_parsers in
     many @@ choice
-      [ (hole >>| fun (pattern, variable) -> Hole { pattern; variable } )
+      [ (pos >>= fun offset -> hole >>| fun (pattern, variable) -> Hole { pattern; variable; offset })
       ; (((many1 @@ Omega_parser_helper.Deprecate.any_char_except ~reserved:hole_prefixes)) >>| fun c -> Constant (String.of_char_list c))
       ; any_char >>| fun c -> Constant (Char.to_string c) (* accept anything as constant not accepted by attempting holes above *)
       ]
@@ -93,6 +94,6 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
       ~default:[]
       (parse template
        >>| List.filter_map ~f:(function
-           | Hole { pattern; variable } -> Some { pattern; variable }
+           | Hole { pattern; variable; offset } -> Some { pattern; variable; offset }
            | _ -> None))
 end
