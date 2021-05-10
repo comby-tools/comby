@@ -8,9 +8,3 @@ val substitute_fresh : ?metasyntax:Metasyntax.t -> ?fresh:(unit -> string) -> st
 
 (** substitute returns the result and variables substituted for *)
 val substitute : ?metasyntax:Metasyntax.t -> ?fresh:(unit -> string) -> string -> Environment.t -> (string * string list)
-
-val of_match_context : ?fresh:(unit -> string) -> Match.t -> source:string -> (string * string)
-
-val get_offsets_for_holes : Template.syntax list -> string -> (string * int) list
-
-val get_offsets_after_substitution : (string * int) list -> Environment.t -> (string * int) list

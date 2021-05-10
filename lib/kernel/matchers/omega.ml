@@ -151,7 +151,6 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         let match_start = { offset = pos_before; line = 1; column = pos_before + 1 } in
         let match_end = { offset = pos_after; line = 1; column = pos_after + 1 } in
         let text = extract_matched_text !source_ref match_start match_end in
-        if debug then Format.printf "TEXTEXT: %s@." text;
         Match.
           { range = { match_start; match_end }
           ; environment = !current_environment_ref

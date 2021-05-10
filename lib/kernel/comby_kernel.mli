@@ -731,9 +731,5 @@ module Matchers : sig
       -> string
       -> Match.environment
       -> (string * string list)
-
-    val get_offsets_for_holes : Template.syntax list -> string -> (string * int) list
-
-    val get_offsets_after_substitution : (string * int) list -> Match.environment -> (string * int) list
   end
 end

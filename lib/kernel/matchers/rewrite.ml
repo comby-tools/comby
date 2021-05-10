@@ -93,23 +93,17 @@ let substitute_in_rewrite_template
 
 let substitute_match_contexts ?fresh (matches: Match.t list) source replacements =
   if debug then Format.printf "Matches: %d | Replacements: %d@." (List.length matches) (List.length replacements);
-  if debug then Option.is_some fresh |> ignore;
+  if debug then Option.is_some fresh |> ignore; (* TODO remove fresh *)
   let rewritten_source, in_place_substitutions, _ =
     (* shift adjusts the difference of the matched part and the replacement part to the matched offsets *)
-    List.fold2_exn (List.rev matches) (List.rev replacements) ~init:(source, [], 0) ~f:(fun (rolling_result, replacements, shift) ({ range; matched; _ } as m) ({ replacement_content; _ } as r) ->
-        if debug then Format.printf "Match: %a" Match.pp (None, [m]);
-        if debug then Format.printf "Replace: %s@." @@ (Yojson.Safe.to_string @@ Replacement.to_yojson r);
-        if debug then Format.printf "Rolling: %s@." rolling_result;
-        if debug then Format.printf "Shift: %d@." shift;
+    List.fold2_exn (List.rev matches) (List.rev replacements) ~init:(source, [], 0) ~f:(fun (rolling_result, replacements, shift) { range; _ } ({ replacement_content; _ } as r) ->
+        (* TODO: populate environment *)
         let start_index = range.match_start.offset + shift in
         let end_index = range.match_end.offset + shift in
         let before = if start_index = 0 then "" else String.slice rolling_result 0 start_index in
         let after = String.slice rolling_result end_index (String.length rolling_result) in
-        let match_length = String.length matched (*end_index - start_index*) in
+        let match_length = end_index - start_index in
         let difference = String.length replacement_content - match_length in
-        if debug then Format.printf "Match len: %d Rep len: %d difference: %d@." match_length (String.length replacement_content) difference;
-        if debug then Format.printf "    Start: %d     End: %d@." start_index end_index;
-        if debug then Format.printf "NEW Start: %d NEW End: %d@." (start_index + difference) (end_index + difference);
         let range = Range.{ match_start = Location.{ default with offset = start_index }; match_end = Location.{ default with offset = end_index + difference } } in
         let replacements = { r with range }::replacements in
         String.concat [before; replacement_content; after], replacements, shift + difference)
@@ -117,51 +111,6 @@ let substitute_match_contexts ?fresh (matches: Match.t list) source replacements
   { rewritten_source
   ; in_place_substitutions
   }
-
-(*
-  let rewrite_template, environment =
-    List.fold2_exn
-      matches replacements
-      ~init:(source, Environment.create ())
-      ~f:(fun (rewrite_template, accumulator_environment)
-           ({ environment = _match_environment; _ } as match_)
-           { replacement_content; _ } ->
-           (* create a hole in the rewrite template based on this match context *)
-           let sub_fresh = Option.map fresh ~f:(fun f -> fun () -> ("sub_" ^ f ())) in (* ensure custom fresh function is unique for substition. *)
-           let hole_id, rewrite_template = Rewrite_template.of_match_context ?fresh:sub_fresh match_ ~source:rewrite_template in
-           if debug then Format.printf "Created rewrite template with hole var %s: %s @." hole_id rewrite_template;
-           (* add this match context replacement to the environment *)
-           let accumulator_environment = Environment.add accumulator_environment hole_id replacement_content in
-           (* update match context replacements offset *)
-           rewrite_template, accumulator_environment)
-  in
-  if debug then Format.printf "Env:@.%s" (Environment.to_string environment);
-  if debug then Format.printf "Rewrite in:@.%s@." rewrite_template;
-  let { replacement_content; environment = env; _ } = substitute_in_rewrite_template ~metasyntax:match_context_syntax ?fresh rewrite_template environment in (* replace Rewrite_template.substitute *)
-  let terms = Match_context_template.parse rewrite_template in
-  let _, env, _ =
-    (* use replacements with terms to update offset -- or, just compute it directly -- iteratate over match template and substitute*)
-    List.fold terms ~init:([], Environment.create (), 0) ~f:(fun (result, env, pos) -> function
-        | Constant c -> c::result, env, pos + String.length c
-        | Hole { variable; _ } ->
-          match Environment.lookup environment variable with
-          | None -> failwith "impossible"
-          | Some value ->
-            let advance = pos + String.length value in
-            let range =
-              Range.
-                { match_start = Location.{ default with offset = pos }
-                ; match_end = Location.{ default with offset = advance }
-                }
-            in
-            let env = Environment.add env ~range variable value in
-            value::result, env, advance
-      )
-  in
-  { rewritten_source = replacement_content
-  ; in_place_substitutions
-  }
-*)
 
 let all ?source ?metasyntax ?fresh ~rewrite_template matches : result option =
   if List.is_empty matches then None else
