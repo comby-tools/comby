@@ -76,14 +76,14 @@ let substitute_in_rewrite_template
   let module Template_parser = Template.Make(M) in
   let template = Rewrite_template.substitute_fresh ~metasyntax ?fresh template in
   let terms = Template_parser.parse template in
-  let replacement_content, _, environment =
-    List.fold terms ~init:([], 0, Environment.create()) ~f:(fun (result, pos, env) -> function
+  let replacement_content, environment, _ =
+    List.fold terms ~init:([], Environment.create (), 0) ~f:(fun (result, env, pos) -> function
         | Constant c ->
-          c::result, pos + String.length c, env
+          c::result, env, pos + String.length c
 
         | Hole { variable; pattern; _ } ->
           match Environment.lookup environment variable with
-          | None -> pattern::result, pos + String.length variable, env
+          | None -> pattern::result, env, pos + String.length variable
           | Some value ->
             let start_location = Location.{ default with offset = pos } in
             let end_location = Location.{ default with offset = pos + String.length value } in
@@ -94,7 +94,7 @@ let substitute_in_rewrite_template
                 }
             in
             let env = Environment.add ~range env variable value in
-            value::result, pos + String.length value, env)
+            value::result, env, pos + String.length value)
   in
   let replacement_content = String.concat (List.rev replacement_content) in
 
@@ -105,6 +105,46 @@ let substitute_in_rewrite_template
       ; match_end = Location.default
       }
   }
+
+(** Unused alternative to above. Uses String.substr_index on pattern and then String.replace_all. Don't know if it's faster, must benchmark *)
+let substitute_in_rewrite_template_alt
+    ?fresh
+    ?(metasyntax = Metasyntax.default_metasyntax)
+    template
+    ({ environment; _ } : Match.t) =
+  let (module M) = Metasyntax.create metasyntax in
+  let module Template_parser = Template.Make(M) in
+  let template = Rewrite_template.substitute_fresh ~metasyntax ?fresh template in
+  let vars = Template_parser.variables template in
+  let replacement_content, environment =
+    List.fold vars ~init:(template, Environment.create ()) ~f:(fun (template, env) { variable; pattern; _ } ->
+        match Environment.lookup environment variable with
+        | None ->
+          template, env
+        | Some value ->
+          match String.substr_index template ~pattern with
+          | Some offset ->
+            let start_location = Location.{ default with offset } in
+            let end_location = Location.{ default with offset = offset + String.length value } in
+            let range =
+              Range.
+                { match_start = start_location
+                ; match_end = end_location
+                }
+            in
+            let env = Environment.add ~range env variable value in
+            String.substr_replace_all template ~pattern ~with_:value, env
+          | None -> template, env)
+  in
+
+  { replacement_content
+  ; environment
+  ; range =
+      { match_start = { Location.default with offset = 0 }
+      ; match_end = Location.default
+      }
+  }
+
 
 let all ?source ?metasyntax ?fresh ~rewrite_template matches : result option =
   if List.is_empty matches then None else
