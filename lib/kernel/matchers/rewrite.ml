@@ -75,27 +75,18 @@ let substitute_in_rewrite_template
   let (module M) = Metasyntax.create metasyntax in
   let module Template_parser = Template.Make(M) in
   let template = Rewrite_template.substitute_fresh ~metasyntax ?fresh template in
-  let vars = Template_parser.variables template in
+  let terms = Template_parser.parse template in
+  let replacement_content, _, environment =
+    List.fold terms ~init:([], 0, Environment.create()) ~f:(fun (result, pos, env) -> function
+        | Constant c ->
+          c::result, pos + String.length c, env
 
-  (* Fold over the template for substituting. Must do left-to-right, so that a substitution
-     earlier in a template shifts the rolling template result appopriately for subsequent
-     offset calculation.
-
-     E.g., a:[1]b:[2] => substitute for :[1] so that we can get the right offset for substituted
-     values in :[2], based off the length of :[1].
-  *)
-  let replacement_content, environment =
-    List.fold vars ~init:(template, Environment.create ()) ~f:(fun (template, env) { variable; pattern; _ } ->
-        match Environment.lookup environment variable with
-        | None ->
-          template, env
-        | Some value ->
-          match String.substr_index template ~pattern with
-          | Some offset ->
-            let start_location =
-              Location.{ default with offset = offset } in
-            let end_location =
-              Location.{ default with offset = offset + String.length value } in
+        | Hole { variable; pattern; _ } ->
+          match Environment.lookup environment variable with
+          | None -> pattern::result, pos + String.length variable, env
+          | Some value ->
+            let start_location = Location.{ default with offset = pos } in
+            let end_location = Location.{ default with offset = pos + String.length value } in
             let range =
               Range.
                 { match_start = start_location
@@ -103,9 +94,9 @@ let substitute_in_rewrite_template
                 }
             in
             let env = Environment.add ~range env variable value in
-            String.substr_replace_all template ~pattern ~with_:value, env
-          | None -> template, env)
+            value::result, pos + String.length value, env)
   in
+  let replacement_content = String.concat (List.rev replacement_content) in
 
   { replacement_content
   ; environment
