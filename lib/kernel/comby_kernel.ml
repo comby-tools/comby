@@ -40,8 +40,5 @@ module Matchers = struct
   module Specification = Matchers.Specification
   type specification = Specification.t
 
-  module Rewrite = struct
-    include Matchers.Rewriter.Rewrite
-    include Matchers.Rewriter.Rewrite_template
-  end
+  module Rewrite = Matchers.Rewriter.Rewrite
 end

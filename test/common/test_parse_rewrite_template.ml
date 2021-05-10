@@ -8,10 +8,6 @@ let%expect_test "get_offsets_for_holes" =
   let module Template_parser = Matchers.Template.Make(Matchers.Metasyntax.Default) in
   let rewrite_template = {|1234:[1]1234:[2]|} in
   let variables = Template_parser.variables rewrite_template in
-  let offsets = Matchers.Rewrite.get_offsets_for_holes variables rewrite_template in
-  print_s [%message (offsets : (string * int) list)];
-  [%expect_exact {|(offsets ((2 8) (1 4)))
-|}];
   print_s [%message (variables : Matchers.Template.syntax list)];
   [%expect {|
     (variables

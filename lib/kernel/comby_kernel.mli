@@ -714,22 +714,21 @@ module Matchers : sig
       -> match' list
       -> replacement option
 
-    (** [substitute metasyntax fresh template environment] substitutes [template]
-        with the variable and value pairs in the [environment]. It returns the
-        result after substitution, and the list of variables in [environment] that
-        were substituted for. If [metasyntax] is defined, the rewrite template will
-        respect custom metasyntax definitions.
+    (** [substitute metasyntax fresh template environment] substitutes
+        [template] with the variable and value pairs in the [environment]. It
+        returns the result after substitution. If [metasyntax] is defined, the
+        rewrite template will respect custom metasyntax definitions.
 
         The syntax :[id()] is substituted with fresh values. If [fresh] is not
         specified, the default behavior substitutes :[id()] starting with 1, and
-        subsequent :[id()] values increment the ID. If [fresh] is set, substitutes
-        the pattern :[id()] with the value of fresh () as the hole is encountered,
-        left to right. *)
+        subsequent :[id()] values increment the ID. If [fresh] is set,
+        substitutes the pattern :[id()] with the value of fresh () as the hole is
+        encountered, left to right. *)
     val substitute
       :  ?metasyntax:metasyntax
       -> ?fresh:(unit -> string)
       -> string
       -> Match.environment
-      -> (string * string list)
+      -> string
   end
 end
