@@ -150,14 +150,3 @@ let get_offsets_after_substitution offsets environment =
         let shift = shift + String.length s in
         ((var, offset')::acc), shift)
   |> fst
-
-(** pretend we substituted vars in offsets with environment. return what the offsets are after *)
-let get_offsets_after_substitution_no_shift offsets environment =
-  if debug then Format.printf "Environment: %s@." @@ Match.Environment.to_string environment;
-  List.fold_right offsets ~init:([],0 ) ~f:(fun (var, offset) (acc, shift)  ->
-      match Environment.lookup environment var with
-      | None -> acc, shift
-      | Some _ ->
-        let offset' = offset + shift in
-        ((var, offset')::acc), shift)
-  |> fst

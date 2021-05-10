@@ -73,3 +73,16 @@ let parse_template metasyntax template =
   let module Template_parser = Template.Make(M) in
   let tree = Template_parser.parse template in
   Sexp.to_string_hum (sexp_of_list Template.sexp_of_extracted tree)
+
+let run_match (module M : Matchers.Matcher.S) source match_template =
+  M.all ~configuration ~template:match_template ~source ()
+  |> function
+  | [] -> print_string "No matches."
+  | hd :: _ ->
+    print_string (Yojson.Safe.to_string (Match.to_yojson hd))
+
+let run_all_matches (module M : Matchers.Matcher.S) source match_template =
+  M.all ~configuration ~template:match_template ~source ()
+  |> function
+  | [] -> print_string "No matches."
+  | l -> Format.printf "%a" Match.pp_json_lines (None, l)

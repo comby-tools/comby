@@ -139,13 +139,19 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
       if debug then Format.printf "match context end pos %d@." pos_after;
       let extract_matched_text source { offset = match_start; _ } { offset = match_end; _ } =
         if debug then Format.printf "Attempt slice start %d end %d on %S@." match_start match_end source;
-        String.slice source match_start match_end
+        if match_start = 0 && match_end = 0 then
+          (* Special case: slice will return the whole string if match_start is
+             0 and match_end is 0. It needs to be empty string *)
+          ""
+        else
+          String.slice source match_start match_end
       in
       (* line/col values are placeholders and not accurate until processed in pipeline.ml *)
       let match_context =
         let match_start = { offset = pos_before; line = 1; column = pos_before + 1 } in
         let match_end = { offset = pos_after; line = 1; column = pos_after + 1 } in
         let text = extract_matched_text !source_ref match_start match_end in
+        if debug then Format.printf "TEXTEXT: %s@." text;
         Match.
           { range = { match_start; match_end }
           ; environment = !current_environment_ref

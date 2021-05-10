@@ -14,5 +14,3 @@ val of_match_context : ?fresh:(unit -> string) -> Match.t -> source:string -> (s
 val get_offsets_for_holes : Template.syntax list -> string -> (string * int) list
 
 val get_offsets_after_substitution : (string * int) list -> Environment.t -> (string * int) list
-
-val get_offsets_after_substitution_no_shift : (string * int) list -> Environment.t -> (string * int) list
