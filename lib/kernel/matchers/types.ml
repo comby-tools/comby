@@ -113,6 +113,23 @@ type production =
   | String of string
   | Hole of hole
 
+module Template = struct
+  type syntax =
+    { variable: string (* E.g., x *)
+    ; pattern: string (* E.g., the entire :[x] part *)
+    ; offset : int
+    }
+  [@@deriving sexp_of]
+
+  type atom =
+    | Hole of syntax
+    | Constant of string
+  [@@deriving sexp_of]
+
+  type t = atom list
+  [@@deriving sexp_of]
+end
+
 module Ast = struct
   type atom =
     | Variable of string

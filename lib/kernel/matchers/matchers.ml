@@ -19,6 +19,9 @@ module Script = Script
 
 module Specification = Specification
 
-module Template = Template
+module Template = struct
+  include Types.Template
+  include Template
+end
 
 module Rewriter = Rewrite

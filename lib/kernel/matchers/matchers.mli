@@ -18,6 +18,9 @@ module Script : module type of Script
 
 module Specification : module type of Specification
 
-module Template = Template
+module Template : sig
+  include module type of Types.Template
+  include module type of Template
+end
 
 module Rewriter = Rewrite

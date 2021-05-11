@@ -3,20 +3,7 @@ open Core_kernel
 
 open Omega_parser_helper
 
-type syntax =
-  { variable: string (* E.g., x *)
-  ; pattern: string (* E.g., the entire :[x] part *)
-  ; offset : int
-  }
-[@@deriving sexp_of]
-
-type atom =
-  | Hole of syntax
-  | Constant of string
-[@@deriving sexp_of]
-
-type t = atom list
-[@@deriving sexp_of]
+open Types.Template
 
 module Make (Metasyntax : Types.Metasyntax.S) = struct
 
