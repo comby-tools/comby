@@ -7,7 +7,6 @@ type replacement = Replacement.result
 module Matchers = struct
 
   module Engine = Matchers.Engine
-  module Info = Matchers.Info
   module Language = Matchers.Language
 
   module Matcher = Matchers.Matcher
@@ -15,8 +14,6 @@ module Matchers = struct
   module Configuration = Matchers.Configuration
   type configuration = Configuration.t
 
-  module Syntax = Matchers.Syntax
-  type syntax = Matchers.Syntax.t
   module Hole = Matchers.Hole
 
   module Metasyntax = Matchers.Metasyntax

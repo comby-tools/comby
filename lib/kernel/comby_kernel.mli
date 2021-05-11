@@ -489,67 +489,72 @@ module Matchers : sig
 
   type specification = Specification.t
 
-  (** {3 Syntax}
 
-      Defines the syntax structures for the target language (C, Go, etc.) that
-      are significant for matching. *)
-  module Syntax : sig
+  (** {3 Language}
 
-    (** Defines a set of quoted syntax for strings based on one or more
-        delimiters and associated escape chracter.
-
-        E.g., this supports single and double quotes with escape character '\'
-        as: { delimiters = [ {|"|}, {|'|} ]; escape_character = '\\' } *)
-    type escapable_string_literals =
-      { delimiters : string list
-      ; escape_character: char
-      }
-
-    (** Defines comment syntax as one of Multiline, Nested_multiline with
-        associated left and right delimiters, or Until_newline that defines a
-        comment prefix. associated prefix. *)
-    type comment_kind =
-      | Multiline of string * string
-      | Nested_multiline of string * string
-      | Until_newline of string
-
-    (** Defines syntax as:
-
-        - [user_defined_delimiters] are delimiters treated as code structures
-          (parentheses, brackets, braces, alphabetic words) -
-          [escapable_string_literals] are escapable quoted strings
-
-        - [raw_string literals] are raw quoted strings that have no escape
-          character
-
-        - [comments] are comment structures  *)
-    type t =
-      { user_defined_delimiters : (string * string) list
-      ; escapable_string_literals : escapable_string_literals option [@default None]
-      ; raw_string_literals : (string * string) list
-      ; comments : comment_kind list
-      }
-
-    val to_yojson : t -> Yojson.Safe.json
-    val of_yojson : Yojson.Safe.json -> (t, string) Result.t
-
-    (** The module signature that defines language syntax for a matcher *)
-    module type S = sig
-      val user_defined_delimiters : (string * string) list
-      val escapable_string_literals : escapable_string_literals option
-      val raw_string_literals : (string * string) list
-      val comments : comment_kind list
-    end
-  end
-
-  module Info : sig
-    module type S = sig
-      val name : string
-      val extensions : string list
-    end
-  end
-
+      Language definitions *)
   module Language : sig
+
+    (** {4 Syntax}
+
+        Defines the syntax structures for the target language (C, Go, etc.) that
+        are significant for matching. *)
+    module Syntax : sig
+
+      (** Defines a set of quoted syntax for strings based on one or more
+          delimiters and associated escape chracter.
+
+          E.g., this supports single and double quotes with escape character '\'
+          as: { delimiters = [ {|"|}, {|'|} ]; escape_character = '\\' } *)
+      type escapable_string_literals =
+        { delimiters : string list
+        ; escape_character: char
+        }
+
+      (** Defines comment syntax as one of Multiline, Nested_multiline with
+          associated left and right delimiters, or Until_newline that defines a
+          comment prefix. associated prefix. *)
+      type comment_kind =
+        | Multiline of string * string
+        | Nested_multiline of string * string
+        | Until_newline of string
+
+      (** Defines syntax as:
+
+          - [user_defined_delimiters] are delimiters treated as code structures
+            (parentheses, brackets, braces, alphabetic words) -
+            [escapable_string_literals] are escapable quoted strings
+
+          - [raw_string literals] are raw quoted strings that have no escape
+            character
+
+          - [comments] are comment structures  *)
+      type t =
+        { user_defined_delimiters : (string * string) list
+        ; escapable_string_literals : escapable_string_literals option [@default None]
+        ; raw_string_literals : (string * string) list
+        ; comments : comment_kind list
+        }
+
+      val to_yojson : t -> Yojson.Safe.json
+      val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+
+      (** The module signature that defines language syntax for a matcher *)
+      module type S = sig
+        val user_defined_delimiters : (string * string) list
+        val escapable_string_literals : escapable_string_literals option
+        val raw_string_literals : (string * string) list
+        val comments : comment_kind list
+      end
+    end
+
+    module Info : sig
+      module type S = sig
+        val name : string
+        val extensions : string list
+      end
+    end
+
     module type S = sig
       module Info : Info.S
       module Syntax : Syntax.S
@@ -681,7 +686,7 @@ module Matchers : sig
       (** [create metasyntax syntax] creates a matcher for a language defined by
           [syntax]. If [metasyntax] is specified, the matcher will use a custom
           metasyntax definition instead of the default. *)
-      val create : ?metasyntax:Metasyntax.t -> Syntax.t -> (module Matcher.S)
+      val create : ?metasyntax:Metasyntax.t -> Language.Syntax.t -> (module Matcher.S)
     end
   end
 

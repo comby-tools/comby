@@ -621,7 +621,7 @@ let syntax custom_matcher_path =
     exit 1
   | `Yes ->
     Yojson.Safe.from_file custom_matcher_path
-    |> Matchers.Syntax.of_yojson
+    |> Matchers.Language.Syntax.of_yojson
     |> function
     | Ok c -> c
     | Error error ->

@@ -1,42 +1,43 @@
 open Core_kernel
 
-module Syntax = struct
-  type escapable_string_literals =
-    { delimiters : string list
-    ; escape_character: char
-    }
-  [@@deriving yojson]
-
-  type comment_kind =
-    | Multiline of string * string
-    | Nested_multiline of string * string
-    | Until_newline of string
-  [@@deriving yojson]
-
-  type t =
-    { user_defined_delimiters : (string * string) list
-    ; escapable_string_literals : escapable_string_literals option [@default None]
-    ; raw_string_literals : (string * string) list
-    ; comments : comment_kind list
-    }
-  [@@deriving yojson]
-
-  module type S = sig
-    val user_defined_delimiters : (string * string) list
-    val escapable_string_literals : escapable_string_literals option
-    val raw_string_literals : (string * string) list
-    val comments : comment_kind list
-  end
-end
-
-module Info = struct
-  module type S = sig
-    val name : string
-    val extensions : string list
-  end
-end
-
 module Language = struct
+
+  module Syntax = struct
+    type escapable_string_literals =
+      { delimiters : string list
+      ; escape_character: char
+      }
+    [@@deriving yojson]
+
+    type comment_kind =
+      | Multiline of string * string
+      | Nested_multiline of string * string
+      | Until_newline of string
+    [@@deriving yojson]
+
+    type t =
+      { user_defined_delimiters : (string * string) list
+      ; escapable_string_literals : escapable_string_literals option [@default None]
+      ; raw_string_literals : (string * string) list
+      ; comments : comment_kind list
+      }
+    [@@deriving yojson]
+
+    module type S = sig
+      val user_defined_delimiters : (string * string) list
+      val escapable_string_literals : escapable_string_literals option
+      val raw_string_literals : (string * string) list
+      val comments : comment_kind list
+    end
+  end
+
+  module Info = struct
+    module type S = sig
+      val name : string
+      val extensions : string list
+    end
+  end
+
   module type S = sig
     module Info : Info.S
     module Syntax : Syntax.S
@@ -166,7 +167,7 @@ module Matcher = struct
       -> string
       -> Match.t Or_error.t
 
-    include Info.S
+    include Language.Info.S
 
     val set_rewrite_template : string -> unit
   end
@@ -228,6 +229,6 @@ module Engine = struct
 
     val all : (module Matcher.S) list
     val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matcher.S) option
-    val create : ?metasyntax:Metasyntax.t -> Syntax.t -> (module Matcher.S)
+    val create : ?metasyntax:Metasyntax.t -> Language.Syntax.t -> (module Matcher.S)
   end
 end
