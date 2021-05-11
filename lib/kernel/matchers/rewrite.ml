@@ -36,8 +36,8 @@ let parse_first_label ?(metasyntax = Metasyntax.default_metasyntax) template =
   let parser =
     many @@
     choice
-      [ (string (left^"id(") *> label <* string (")"^right) >>= fun label -> return (Some label))
-      ; any_char >>= fun _ -> return None
+      [ lift3 (fun _ label _ -> Some label) (string (left^"id(")) label (string (")"^right))
+      ; any_char >>| fun _ -> None
       ]
   in
   parse_string ~consume:All parser template
