@@ -119,27 +119,27 @@ module Template = struct
     ; pattern: string (* E.g., the entire :[x] part *)
     ; offset : int
     }
-  [@@deriving sexp_of]
+  [@@deriving sexp]
 
   type atom =
     | Hole of syntax
     | Constant of string
-  [@@deriving sexp_of]
+  [@@deriving sexp]
 
   type t = atom list
-  [@@deriving sexp_of]
+  [@@deriving sexp]
 end
 
 module Ast = struct
   type atom =
-    | Variable of string
+    | Template of Template.t
     | String of string
   [@@deriving sexp]
 
   type antecedent = atom
   [@@deriving sexp]
 
-  type kind =
+  type kind =  (* FIXME holes needs to have associated substitution kind *)
     | Value
     | Length
     | Type
@@ -153,8 +153,7 @@ module Ast = struct
     | Equal of atom * atom
     | Not_equal of atom * atom
     | Match of atom * (antecedent * consequent) list
-    | Rewrite of atom * (antecedent * expression)
-    | Substitute of atom * kind
+    | Rewrite of atom * (antecedent * atom)
   and consequent = expression list
   [@@deriving sexp]
 end

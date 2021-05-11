@@ -34,22 +34,21 @@ let counter =
     uuid_for_id_counter := !uuid_for_id_counter + 1;
     Format.sprintf "gu3ssme_%012d" !uuid_for_id_counter
 
-let equal_in_environment var value env =
-  match Environment.lookup env var with
-  | None -> false, Some env
-  | Some var_value -> String.equal var_value value, Some env
+(* FIXME. Shouldn't need this. *)
+module Template = Template.Make(Metasyntax.Default)
 
-
+(* FIXME this logic should go in rewrite *)
 let evaluate_substitute env atom kind =
   let open Option in
-  let to_string n = Format.sprintf "%d" (String.length n) in
+  let length_to_string n = Format.sprintf "%d" (String.length n) in
   match atom, kind with
   | String v, Value -> return v
-  | String v, Length -> return (to_string v)
-  | Variable v, Value -> Environment.lookup env v
-  | Variable v, Length ->
-    Environment.lookup env v >>= fun value ->
-    return (to_string value)
+  | String v, Length -> return (length_to_string v)
+  | Template t, Value -> Some (Rewrite.substitute (Template.to_string t) env)
+  | Template t, Length ->
+    Rewrite.substitute (Template.to_string t) env
+    |> length_to_string
+    |> return
   | _ -> failwith "invalid"
 
 let apply
@@ -61,31 +60,34 @@ let apply
     env =
   let open Option in
 
+  let _ = fresh () in (* FIXME not needed any more *)
+
   (* accepts only one expression *)
   let rec rule_match env =
     function
     | True -> true, Some env
     | False -> false, Some env
     | Option _ -> true, Some env
-    | Equal (Variable var, String value)
-    | Equal (String value, Variable var) ->
-      equal_in_environment var value env
+    | Equal (Template t, String value)
+    | Equal (String value, Template t) ->
+      let other = Rewrite.substitute (Template.to_string t) env in
+      let result = String.equal value other in
+      result, Some env
     | Equal (String left, String right) ->
-      String.equal left right, Some env
-    | Equal (Variable left, Variable right) ->
-      let result =
-        Environment.lookup env left >>= fun left ->
-        Environment.lookup env right >>= fun right ->
-        return (String.equal left right)
-      in
-      Option.value result ~default:false, Some env
+      let result = String.equal left right in
+      result, Some env
+    | Equal (Template left, Template right) ->
+      let left = Rewrite.substitute (Template.to_string left) env in
+      let right = Rewrite.substitute (Template.to_string right) env in
+      let result = String.equal left right in
+      result, Some env
     | Not_equal (left, right) ->
       let sat, env = rule_match env (Equal (left, right)) in
       not sat, env
-    | Match (Variable variable, cases) ->
+    | Match (Template t, cases) ->
       if debug then Format.printf "ENV: %s@." (Environment.to_string env);
       let result =
-        Environment.lookup env variable >>= fun source ->
+        let source = Rewrite.substitute (Template.to_string t) env in
         let evaluate template case_expression =
           let configuration = match_configuration_of_syntax template in
           if debug then Format.printf "Running for template %s source %s@." template source;
@@ -110,45 +112,97 @@ let apply
         in
         List.find_map cases ~f:(fun (template, case_expression) ->
             match template with
-            | String template
-            | Variable template ->
-              evaluate template case_expression)
+            | String template -> evaluate template case_expression
+            | Template template -> evaluate (Rewrite.substitute (Template.to_string template) env) case_expression)
       in
       Option.value_map result ~f:ident ~default:(false, Some env)
-    | Match (String template, cases) ->
-      let source = Rewrite.substitute ?metasyntax template env in
-      let fresh_var = fresh () in
-      let env = Environment.add env fresh_var source in
-      rule_match env (Match (Variable fresh_var, cases))
+    | Match (String source, cases) ->  (* FIXME DEDUPE *)
+      let result =
+        let evaluate template case_expression =
+          let configuration = match_configuration_of_syntax template in
+          if debug then Format.printf "Running for template %s source %s@." template source;
+          match_all ~configuration ~template ~source () |> function
+          | [] ->
+            None
+          | matches ->
+            (* merge environments. overwrite behavior is undefined *)
+            if debug then Format.printf "Matches: %a@." Match.pp (None, matches);
+            let fold_matches (sat, out) { environment; _ } =
+              let fold_cases (sat, out) predicate =
+                if sat then
+                  let env' = Environment.merge env environment in
+                  rule_match env' predicate
+                else
+                  (sat, out)
+              in
+              List.fold case_expression ~init:(sat, out) ~f:fold_cases
+            in
+            List.fold matches ~init:(true, None) ~f:fold_matches
+            |> Option.some
+        in
+        List.find_map cases ~f:(fun (template, case_expression) ->
+            match template with
+            | String template -> evaluate template case_expression
+            | Template template -> evaluate (Rewrite.substitute (Template.to_string template) env) case_expression)
+      in
+      Option.value_map result ~f:ident ~default:(false, Some env)
 
-    | Rewrite (Variable variable, (match_template, rewrite_expression)) ->
+    | Rewrite (Template t, (match_template, Template rewrite_template)) ->
       let template =
         match match_template with
-        | Variable _ -> failwith "Unsupported: please quote variable on LHS"
-        | String template -> template
+        | Template t -> Rewrite.substitute (Template.to_string t) env
+        | String s -> s
       in
-      begin match rewrite_expression with
-        | Substitute (String rewrite_template, Value) ->
-          let result =
-            Environment.lookup env variable >>= fun source ->
-            let configuration = Configuration.create ~match_kind:Fuzzy () in
-            let matches = match_all ~configuration ~template ~source () in
-            let source = if substitute_in_place then Some source else None in
-            let result = Rewrite.all ?metasyntax ?source ~rewrite_template matches in
-            match result with
-            | Some { rewritten_source; _ } ->
-              (* substitute for variables that are in the outside scope *)
-              let rewritten_source = Rewrite.substitute ?metasyntax rewritten_source env in
-              let env = Environment.update env variable rewritten_source in
-              return (true, Some env)
-            | None ->
-              return (true, Some env)
+      let result =
+        let source = Rewrite.substitute (Template.to_string t) env in
+        let configuration = Configuration.create ~match_kind:Fuzzy () in
+        let matches = match_all ~configuration ~template ~source () in
+        let source = if substitute_in_place then Some source else None in
+        let result = Rewrite.all ?metasyntax ?source ~rewrite_template:(Template.to_string rewrite_template) matches in
+        match result with
+        | Some { rewritten_source; _ } ->
+          (* substitute for variables that are in the outside scope *)
+          let rewritten_source = Rewrite.substitute ?metasyntax rewritten_source env in
+          let variable =
+            match t with
+            | [ Types.Template.Hole { variable; _ } ] -> variable
+            | _ -> failwith "Cannot substitute for this"
           in
-          Option.value_map result ~f:ident ~default:(false, Some env)
-        | _ -> failwith "Not implemented yet"
-      end
+          let env = Environment.update env variable rewritten_source in
+          return (true, Some env)
+        | None ->
+          return (true, Some env)
+      in
+      Option.value_map result ~f:ident ~default:(false, Some env)
+    | Rewrite (Template t, (match_template, String rewrite_template)) -> (* FIXME DEDUPE *)
+      let template =
+        match match_template with
+        | Template t -> Rewrite.substitute (Template.to_string t) env
+        | String s -> s
+      in
+      let result =
+        let source = Rewrite.substitute (Template.to_string t) env in
+        let configuration = Configuration.create ~match_kind:Fuzzy () in
+        let matches = match_all ~configuration ~template ~source () in
+        let source = if substitute_in_place then Some source else None in
+        let result = Rewrite.all ?metasyntax ?source ~rewrite_template matches in
+        match result with
+        | Some { rewritten_source; _ } ->
+          (* substitute for variables that are in the outside scope *)
+          let rewritten_source = Rewrite.substitute ?metasyntax rewritten_source env in
+          let variable =
+            match t with
+            | [ Types.Template.Hole { variable; _ } ] -> variable
+            | _ -> failwith "Cannot substitute for this"
+          in
+          let env = Environment.update env variable rewritten_source in
+          return (true, Some env)
+        | None ->
+          return (true, Some env)
+      in
+      Option.value_map result ~f:ident ~default:(false, Some env)
+
     | Rewrite _ -> failwith "TODO/Invalid: Have not decided whether rewrite \":[x]\" is useful."
-    | _ -> failwith "nop"
   in
   List.fold predicates ~init:(true, None) ~f:(fun (sat, out) predicate ->
       if sat then

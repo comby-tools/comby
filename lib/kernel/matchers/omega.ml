@@ -69,13 +69,16 @@ let substitute template env =
         |> Option.value ~default:(acc,vars)
       | None -> acc, vars)
 
+(* FIXME. Uses should be general *)
+module Template = Template.Make(Metasyntax.Default)
+
 let infer_equality_constraints environment =
   let vars = Match.Environment.vars environment in
   List.fold vars ~init:[] ~f:(fun acc var ->
       if String.is_suffix var ~suffix:"_equal" then
         match String.split var ~on:'_' with
         | _uuid :: target :: _equal ->
-          let expression = Types.Ast.Equal (Variable var, Variable target) in
+          let expression = Types.Ast.Equal (Template (Template.parse var), Template (Template.parse target)) in
           expression::acc
         | _ -> acc
       else

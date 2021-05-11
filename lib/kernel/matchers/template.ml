@@ -83,4 +83,11 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     |> List.filter_map ~f:(function
         | Hole { pattern; variable; offset } -> Some { pattern; variable; offset }
         | _ -> None)
+
+  let to_string template =
+    let buf = Buffer.create 10 in
+    List.iter template ~f:(function
+        | Constant c -> Buffer.add_string buf c
+        | Hole { pattern; _ } -> Buffer.add_string buf pattern);
+    Buffer.contents buf
 end

@@ -337,15 +337,15 @@ module Matchers : sig
       ; pattern : string
       ; offset : int
       }
-    [@@deriving sexp_of]
+    [@@deriving sexp]
 
     type atom =
       | Hole of syntax
       | Constant of string
-    [@@deriving sexp_of]
+    [@@deriving sexp]
 
     type t = atom list
-    [@@deriving sexp_of]
+    [@@deriving sexp]
 
     module Make : Metasyntax.S -> sig
         val parse : string -> t
@@ -358,7 +358,7 @@ module Matchers : sig
       Defines a rule AST. *)
   module Ast : sig
     type atom =
-      | Variable of string
+      | Template of Template.t
       | String of string
     [@@deriving sexp]
 
@@ -379,8 +379,7 @@ module Matchers : sig
       | Equal of atom * atom
       | Not_equal of atom * atom
       | Match of atom * (antecedent * consequent) list
-      | Rewrite of atom * (antecedent * expression)
-      | Substitute of atom * kind
+      | Rewrite of atom * (antecedent * atom)
     and consequent = expression list
     [@@deriving sexp]
   end
