@@ -1,7 +1,7 @@
 open Core_kernel
 
 open Match
-open Ast
+open Types.Ast
 
 let debug =
   match Sys.getenv "DEBUG_COMBY" with

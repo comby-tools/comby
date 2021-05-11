@@ -2,7 +2,10 @@ module Configuration = Configuration
 module Languages = Languages
 module Metasyntax = Metasyntax
 module Rule = Rule
-module Ast = Ast
+module Ast = struct
+  include Types.Ast
+  include Ast
+end
 module Evaluate = Evaluate
 
 module Alpha = Engine.Make(Alpha.Make)

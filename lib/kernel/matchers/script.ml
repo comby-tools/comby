@@ -3,7 +3,7 @@ open Angstrom
 
 open Rule
 open Parser
-open Ast
+open Types.Ast
 
 type spec = Specification.t
 [@@deriving sexp]

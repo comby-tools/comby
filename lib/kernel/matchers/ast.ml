@@ -1,4 +1,4 @@
-include Types.Ast
+open Types.Ast
 
 let (=) left right = Equal (left, right)
 

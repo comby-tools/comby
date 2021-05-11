@@ -1,8 +1,9 @@
 open Core_kernel
 open Angstrom
 
+open Types.Ast
+
 module Parser = struct
-  open Ast
 
   let alphanum =
     satisfy (function
@@ -208,5 +209,5 @@ type options =
 
 let options rule =
   List.fold rule ~init:{ nested = false } ~f:(fun acc -> function
-      | Ast.Option name when String.(name = Syntax.option_nested) -> { nested = true }
+      | Types.Ast.Option name when String.(name = Syntax.option_nested) -> { nested = true }
       | _ -> acc)

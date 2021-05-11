@@ -47,7 +47,7 @@ let infer_equality_constraints environment =
       if String.is_suffix var ~suffix:"_equal" then
         match String.split var ~on:'_' with
         | _uuid :: target :: _equal ->
-          let expression = Ast.Equal (Variable var, Variable target) in
+          let expression = Types.Ast.Equal (Variable var, Variable target) in
           expression::acc
         | _ -> acc
       else
@@ -751,13 +751,12 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
           | Success _ -> failwith "Hole expected")
 
     let hole_parser ?at_depth sort dimension =
-      let open Types in
-      let open Hole in
+      let open Types.Hole in
       let hole_parser =
         let open Polymorphic_compare in
         List.fold ~init:[] hole_parsers ~f:(fun acc (sort', parser) -> if sort' = sort then parser::acc else acc)
       in
-      let skip_signal hole = skip (string "_signal_hole") |>> fun () -> Hole hole in
+      let skip_signal hole = skip (string "_signal_hole") |>> fun () -> Types.Hole hole in
       let at_depth =
         if !configuration_ref.match_newline_toplevel then
           None
@@ -1106,7 +1105,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
         ~substitute_in_place
         ~fresh
         ?metasyntax
-        ~match_all:(Matcher.all ~rule:[Ast.True] ~nested:false)
+        ~match_all:(Matcher.all ~rule:[Types.Ast.True] ~nested:false)
         rule
         env
   end

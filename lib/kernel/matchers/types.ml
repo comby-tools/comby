@@ -114,7 +114,6 @@ type production =
   | String of string
   | Hole of hole
 
-
 module Ast = struct
   type atom =
     | Variable of string
