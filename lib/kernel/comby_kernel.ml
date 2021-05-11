@@ -40,5 +40,5 @@ module Matchers = struct
   module Specification = Matchers.Specification
   type specification = Specification.t
 
-  module Rewrite = Matchers.Rewriter.Rewrite
+  module Rewrite = Matchers.Rewriter
 end

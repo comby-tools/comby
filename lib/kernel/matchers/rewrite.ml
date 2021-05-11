@@ -15,12 +15,6 @@ let counter =
     uuid_for_id_counter := !uuid_for_id_counter + 1;
     Format.sprintf "%d" !uuid_for_id_counter
 
-let sub_counter =
-  let uuid_for_sub_counter = ref 0 in
-  fun () ->
-    uuid_for_sub_counter := !uuid_for_sub_counter + 1;
-    Format.sprintf "sub_%d" !uuid_for_sub_counter
-
 let replacement_sentinel metasyntax =
   let open Types.Metasyntax in
   List.find_map metasyntax.syntax ~f:(function
@@ -65,8 +59,7 @@ let substitute_fresh
       | Some id -> id
       | None ->
         let id = fresh () in
-        if String.(label <> "") then
-          String.Table.add_exn label_table ~key:label ~data:id;
+        if String.(label <> "") then String.Table.add_exn label_table ~key:label ~data:id;
         id
     in
     let left, right = replacement_sentinel metasyntax in
@@ -75,18 +68,6 @@ let substitute_fresh
     current_label_ref := parse_first_label ~metasyntax !template_ref;
   done;
   !template_ref
-
-(* override default metasyntax for identifiers to accomodate fresh variable generation and UUID
-   identifiers that contain -, etc. *)
-let match_context_syntax =
-  let identifier = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" in
-  Metasyntax.{ default_metasyntax with identifier }
-
-let match_context_metasyntax =
-  Metasyntax.(create match_context_syntax)
-
-module Match_context_metasyntax = (val match_context_metasyntax)
-module Match_context_template = Template.Make(Match_context_metasyntax)
 
 (** Unused alternative to above. Uses String.substr_index on pattern and then String.replace_all. Don't know if it's faster, must benchmark *)
 let substitute_in_rewrite_template'
@@ -101,10 +82,10 @@ let substitute_in_rewrite_template'
   let replacement_content, environment =
     List.fold vars ~init:(template, Environment.create ()) ~f:(fun (template, env) { variable; pattern; _ } ->
         match Environment.lookup environment variable with
-        | None ->
-          template, env
+        | None -> template, env
         | Some value ->
           match String.substr_index template ~pattern with
+          | None -> template, env
           | Some offset ->
             let range =
               Range.
@@ -113,8 +94,7 @@ let substitute_in_rewrite_template'
                 }
             in
             let env = Environment.add ~range env variable value in
-            String.substr_replace_all template ~pattern ~with_:value, env
-          | None -> template, env)
+            String.substr_replace_all template ~pattern ~with_:value, env)
   in
   { replacement_content
   ; environment

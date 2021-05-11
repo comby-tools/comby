@@ -19,4 +19,4 @@ module Specification : module type of Specification
 
 module Template = Template
 
-module Rewriter = Rewriter
+module Rewriter = Rewrite

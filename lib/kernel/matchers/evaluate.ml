@@ -117,7 +117,7 @@ let apply
       in
       Option.value_map result ~f:ident ~default:(false, Some env)
     | Match (String template, cases) ->
-      let source = Rewriter.Rewrite.substitute ?metasyntax template env in
+      let source = Rewrite.substitute ?metasyntax template env in
       let fresh_var = fresh () in
       let env = Environment.add env fresh_var source in
       rule_match env (Match (Variable fresh_var, cases))
@@ -139,7 +139,7 @@ let apply
             match result with
             | Some { rewritten_source; _ } ->
               (* substitute for variables that are in the outside scope *)
-              let rewritten_source = Rewriter.Rewrite.substitute ?metasyntax rewritten_source env in
+              let rewritten_source = Rewrite.substitute ?metasyntax rewritten_source env in
               let env = Environment.update env variable rewritten_source in
               return (true, Some env)
             | None ->

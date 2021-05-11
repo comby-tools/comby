@@ -1,7 +1,7 @@
 open Core
+open Comby_kernel
 
 open Matchers
-open Rewriter
 
 open Matchers.Alpha
 
