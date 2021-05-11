@@ -5,7 +5,7 @@ open Omega_parser_helper
 
 type syntax =
   { variable: string (* E.g., x *)
-  ; pattern: string (*E.g., the entire :[x] part *)
+  ; pattern: string (* E.g., the entire :[x] part *)
   ; offset : int
   }
 [@@deriving sexp_of]
