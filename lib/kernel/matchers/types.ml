@@ -1,7 +1,6 @@
 open Core_kernel
 
 module Language = struct
-
   module Syntax = struct
     type escapable_string_literals =
       { delimiters : string list
@@ -50,7 +49,6 @@ type dimension =
   | Raw_string_literal
   | Comment
 
-type id = string
 type including = char list
 type until = char option
 

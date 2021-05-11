@@ -173,7 +173,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
         | _ -> assert false
 
     let is_alphanum delim = Pcre.(pmatch ~rex:(regexp "^[[:alnum:]]+$") delim)
-    let whitespace : (Types.id, Match.t) parser = many1 space |>> String.of_char_list
+    let whitespace : (string, Match.t) parser = many1 space |>> String.of_char_list
     let not_alphanum = many1 (is_not alphanum) |>> String.of_char_list
     let reserved_alphanum_delimiter_must_satisfy =
       Syntax.user_defined_delimiters
