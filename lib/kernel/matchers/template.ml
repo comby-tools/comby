@@ -10,9 +10,12 @@ type syntax =
   }
 [@@deriving sexp_of]
 
-type extracted =
+type atom =
   | Hole of syntax
   | Constant of string
+[@@deriving sexp_of]
+
+type t = atom list
 [@@deriving sexp_of]
 
 module Make (Metasyntax : Types.Metasyntax.S) = struct
@@ -75,7 +78,7 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
 
   (** Not smart enough: only looks for hole prefix to stop scanning constant,
       because there isn't a good 'not' parser *)
-  let parse_template : extracted list Angstrom.t =
+  let parse_template : t Angstrom.t =
     let hole = choice hole_parsers in
     many @@ choice
       [ (pos >>= fun offset -> hole >>| fun (pattern, variable) -> Hole { pattern; variable; offset })

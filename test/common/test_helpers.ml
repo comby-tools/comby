@@ -72,7 +72,7 @@ let parse_template metasyntax template =
   let (module M) = Matchers.Metasyntax.create metasyntax in
   let module Template_parser = Template.Make(M) in
   let tree = Template_parser.parse template in
-  Sexp.to_string_hum (sexp_of_list Template.sexp_of_extracted tree)
+  Sexp.to_string_hum (Template.sexp_of_t tree)
 
 let run_match (module M : Matchers.Matcher.S) source match_template =
   M.all ~configuration ~template:match_template ~source ()

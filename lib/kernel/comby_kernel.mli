@@ -339,13 +339,16 @@ module Matchers : sig
       }
     [@@deriving sexp_of]
 
-    type extracted =
+    type atom =
       | Hole of syntax
       | Constant of string
     [@@deriving sexp_of]
 
+    type t = atom list
+    [@@deriving sexp_of]
+
     module Make : Metasyntax.S -> sig
-        val parse : string -> extracted list
+        val parse : string -> t
         val variables : string -> syntax list
       end
   end
