@@ -47,7 +47,7 @@ let infer_equality_constraints environment =
       if String.is_suffix var ~suffix:"_equal" then
         match String.split var ~on:'_' with
         | _uuid :: target :: _equal ->
-          let expression = Rule.Ast.Equal (Variable var, Variable target) in
+          let expression = Ast.Equal (Variable var, Variable target) in
           expression::acc
         | _ -> acc
       else
@@ -1106,7 +1106,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
         ~substitute_in_place
         ~fresh
         ?metasyntax
-        ~match_all:(Matcher.all ~rule:[Rule.Ast.True] ~nested:false)
+        ~match_all:(Matcher.all ~rule:[Ast.True] ~nested:false)
         rule
         env
   end

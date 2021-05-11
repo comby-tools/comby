@@ -29,9 +29,10 @@ module Matchers = struct
 
   module Template = Matchers.Template
 
+  module Ast = Matchers.Ast
+
   module Rule = struct
     include Matchers.Rule
-    include Matchers.Rule.Ast
     include Matchers.Rule.Parser
     include Matchers.Evaluate
   end

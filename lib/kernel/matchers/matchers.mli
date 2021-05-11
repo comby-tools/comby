@@ -2,6 +2,7 @@ module Configuration = Configuration
 module Languages = Languages
 module Metasyntax = Metasyntax
 module Rule = Rule
+module Ast = Ast
 module Evaluate = Evaluate
 
 module Alpha : Types.Engine.S

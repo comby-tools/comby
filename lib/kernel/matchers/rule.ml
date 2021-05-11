@@ -1,39 +1,6 @@
 open Core_kernel
 open Angstrom
 
-module Ast = struct
-  type atom =
-    | Variable of string
-    | String of string
-  [@@deriving sexp]
-
-  type antecedent = atom
-  [@@deriving sexp]
-
-  type kind =
-    | Value
-    | Length
-    | Type
-    | File
-  [@@deriving sexp]
-
-  type expression =
-    | True
-    | False
-    | Option of string
-    | Equal of atom * atom
-    | Not_equal of atom * atom
-    | Match of atom * (antecedent * consequent) list
-    | Rewrite of atom * (antecedent * expression)
-    | Substitute of atom * kind
-  and consequent = expression list
-  [@@deriving sexp]
-
-  let (=) left right = Equal (left, right)
-
-  let (<>) left right = Not_equal (left, right)
-end
-
 module Parser = struct
   open Ast
 
@@ -232,7 +199,7 @@ module Parser = struct
     | Error error -> Or_error.error_string error
 end
 
-type t = Ast.expression list
+type t = Types.Rule.t
 [@@deriving sexp]
 
 type options =

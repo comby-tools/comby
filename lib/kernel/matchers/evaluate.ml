@@ -1,7 +1,6 @@
 open Core_kernel
 
 open Match
-open Rule
 open Ast
 
 let debug =

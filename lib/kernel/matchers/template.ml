@@ -20,11 +20,11 @@ type t = atom list
 
 module Make (Metasyntax : Types.Metasyntax.S) = struct
 
-  let identifier () =
+  let character () =
     choice @@ List.map ~f:char (String.to_list Metasyntax.identifier)
 
   let identifier () =
-    many1 (identifier ()) >>| String.of_char_list
+    many1 @@ character () >>| String.of_char_list
 
   let regex_expression suffix =
     many1 @@

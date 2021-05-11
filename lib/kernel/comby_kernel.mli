@@ -353,6 +353,38 @@ module Matchers : sig
       end
   end
 
+  (** {3 AST}
+
+      Defines a rule AST. *)
+  module Ast : sig
+    type atom =
+      | Variable of string
+      | String of string
+    [@@deriving sexp]
+
+    type antecedent = atom
+    [@@deriving sexp]
+
+    type kind =
+      | Value
+      | Length
+      | Type
+      | File
+    [@@deriving sexp]
+
+    type expression =
+      | True
+      | False
+      | Option of string
+      | Equal of atom * atom
+      | Not_equal of atom * atom
+      | Match of atom * (antecedent * consequent) list
+      | Rewrite of atom * (antecedent * expression)
+      | Substitute of atom * kind
+    and consequent = expression list
+    [@@deriving sexp]
+  end
+
   (** {3 Matcher}
 
       Defines the functions that a matcher can perform. *)
@@ -396,35 +428,6 @@ module Matchers : sig
       Defines types and operations for match rules. *)
   and Rule : sig
 
-    module Ast : sig
-      type atom =
-        | Variable of string
-        | String of string
-      [@@deriving sexp]
-
-      type antecedent = atom
-      [@@deriving sexp]
-
-      type kind =
-        | Value
-        | Length
-        | Type
-        | File
-      [@@deriving sexp]
-
-      type expression =
-        | True
-        | False
-        | Option of string
-        | Equal of atom * atom
-        | Not_equal of atom * atom
-        | Match of atom * (antecedent * consequent) list
-        | Rewrite of atom * (antecedent * expression)
-        | Substitute of atom * kind
-      and consequent = expression list
-      [@@deriving sexp]
-    end
-
     type t = Ast.expression list
     [@@deriving sexp]
 
@@ -459,7 +462,7 @@ module Matchers : sig
         unit ->
         Match.t list
       ) ->
-      Rule.Ast.expression list ->
+      Ast.expression list ->
       Match.Environment.t -> result
   end
 
