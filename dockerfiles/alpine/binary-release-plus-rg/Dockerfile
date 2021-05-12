@@ -24,16 +24,16 @@ RUN opam exec -- dune clean
 RUN rm -rf comby comby-server benchmark
 RUN opam exec -- dune build --profile release
 
-###################################################
-### Binary distribution on minimal alpine image ###
-###################################################
+###########################################################
+### Binary distribution on minimal alpine image with rg ###
+###########################################################
 FROM alpine:3.12
 
 LABEL maintainer="Rijnard van Tonder <rvantonder@gmail.com>"
 LABEL name="comby"
 LABEL org.opencontainers.image.source="https://github.com/comby-tools/comby"
 
-RUN apk --no-cache add pcre libev sqlite-dev tini
+RUN apk --no-cache add pcre libev sqlite-dev ripgrep tini
 COPY --from=source-build-alpine /home/comby/_build/default/src/main.exe /usr/local/bin/comby
 COPY --from=source-build-alpine /home/comby/docs/third-party-licenses /usr/local/bin/comby-third-party-licenses
 

@@ -5,7 +5,7 @@ FROM ocaml/opam2:alpine-3.12-ocaml-4.11
 
 WORKDIR /home/comby
 
-# Install alpine system dependencies.
+# Install alpine system dependencies. Yes,these need to be -dev.
 RUN sudo apk --no-cache add \
     pcre-dev \
     m4 \

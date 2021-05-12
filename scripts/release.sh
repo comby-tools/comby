@@ -50,7 +50,14 @@ comby '"0.x.0"' "$VERSION" .html -i -d scripts/$VERSION
 cd scripts
 ./build-docker-binary-releases.sh
 docker tag comby-alpine-binary-release:latest comby/comby:$VERSION
-echo "test: 'docker run -it comby/comby:$VERSION -version'"
-echo "push: 'docker push comby/comby:$VERSION'"
-echo "tag latest: 'docker tag comby/comby:$VERSION comby/comby:latest"
-echo "push: 'docker push comby/comby:latest"
+docker tag comby-alpine-binary-release-plus-rg:latest comby/comby-rg:$VERSION
+echo "test: docker run -it comby/comby:$VERSION -version"
+echo "push: docker push comby/comby:$VERSION"
+echo "tag latest: docker tag comby/comby:$VERSION comby/comby:latest"
+echo "push: docker push comby/comby:latest"
+echo
+echo "test: docker run -it comby/comby-rg 'a' 'b' -rg \"\""
+echo "push: docker push comby/comby-rg:$VERSION"
+echo "tag latest: docker tag comby/comby-rg:$VERSION comby/comby-rg:latest"
+echo "push: docker push comby/comby-rg:latest"
+
