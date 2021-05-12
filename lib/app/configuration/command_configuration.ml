@@ -692,11 +692,14 @@ let ripgrep_file_filters specifications args : string list =
   in
   let result = Ripgrep.run ~pattern:regex ~args in
   match result with
-  | Ok result ->
+  | Ok Some result ->
     if debug then Format.printf "Ripgrep result: %s@." @@ String.concat ~sep:"\n" result;
     result
+  | Ok None ->
+    if debug then Format.printf "No ripgrep results, no files to process. Exiting 0.";
+    exit 0
   | Error e ->
-    Format.eprintf "%s@." (Error.to_string_hum e);
+    if debug then Format.eprintf "%s@." (Error.to_string_hum e);
     exit 1
 
 let create

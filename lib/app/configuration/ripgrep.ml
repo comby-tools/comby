@@ -21,7 +21,8 @@ let run ~pattern ~args =
     Lwt_process.with_process_in lwt_command (fun proc ->
         recv proc >>= fun result ->
         proc#status >>= function
+        | WEXITED v when v = 1 -> return (Ok None) (* no matches *)
         | WEXITED v when v <> 0 -> return @@ Or_error.errorf "Error executing rg, exit status %d." v
-        | _ -> return (Ok (String.split ~on:'\n' result |> List.filter ~f:(String.(<>) ""))))
+        | _ -> return (Ok (Some (String.split ~on:'\n' result |> List.filter ~f:(String.(<>) "")))))
   in
   try Lwt_main.run (f ()) with Sys.Break -> exit 0
