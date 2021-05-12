@@ -20,6 +20,7 @@ RUN sudo apk --no-cache add \
 # Copy the source files.
 COPY Makefile /home/comby/
 COPY comby.opam /home/comby/
+COPY comby-kernel.opam /home/comby/
 COPY dune-project /home/comby/dune-project
 COPY dune /home/comby/
 COPY docs /home/comby/docs

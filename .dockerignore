@@ -6,6 +6,7 @@
 !vendored
 !Makefile
 !comby.opam
+!comby-kernel.opam
 !dune
 !push-coverage-report.sh
 !dune-project
