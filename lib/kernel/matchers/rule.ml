@@ -71,6 +71,8 @@ module Parser = struct
         String.of_char_list
         (many (Omega_parser_helper.Deprecate.any_char_except ~reserved))
 
+  let expr_terminal = end_of_input <|> (Omega_parser_helper.ignore spaces) <* char ','
+
   let map_special s =
     if String.is_prefix s ~prefix:"~" then
       Template (Template.parse (Format.sprintf ":[%s]" s))
@@ -85,10 +87,22 @@ module Parser = struct
       ; (lift map_special (value_parser ~reserved ()))
       ]
 
-  let quoted_or_contiguous_string () =
+  let quoted_or_contiguous_string_to_close_brace () =
     choice
-      [ (lift to_atom quoted_parser <* spaces <* char '}') (* FIXME: Make parsing the end better. Have to stop at " }" for any_char case, but quoted does not need it, but we must consume in case this passes, because we would _if_ the next one does. *)
+      [ (lift to_atom (quoted_parser <* spaces <* char '}')) (* FIXME: Make parsing the end better. Have to stop at " }" for any_char case, but quoted does not need it, but we must consume in case this passes, because we would _if_ the next one does. *)
       ; (lift (fun v -> to_atom (String.of_char_list v)) (Omega_parser_helper.many1_till any_char spaces1))
+      ]
+
+  let quoted_or_contiguous_string_to_open_brace () =
+    choice
+      [ (lift to_atom (quoted_parser <* spaces <* char '{')) (* FIXME: Make parsing the end better. Have to stop at " }" for any_char case, but quoted does not need it, but we must consume in case this passes, because we would _if_ the next one does. *)
+      ; (lift (fun v -> to_atom (String.of_char_list v)) (Omega_parser_helper.many1_till any_char (spaces1 <* char '{')))
+      ]
+
+  let quoted_or_contiguous_string_up_to_comma () =
+    choice
+      [ (lift to_atom (quoted_parser <* expr_terminal))
+      ; (lift (fun v -> to_atom (String.of_char_list v)) (Omega_parser_helper.many1_till any_char expr_terminal))
       ]
 
   let rewrite_consequent_parser () =
@@ -119,12 +133,12 @@ module Parser = struct
   let false' = lift (fun _ -> False) (spaces *> string Syntax.false' <* spaces)
 
   (** <atom> [==, !=] <atom> *)
-  let operator_parser =
+  let compare_parser =
     lift3
       make_equality_expression
-      (spaces *> quoted_or_contiguous_string ())
+      (spaces *> quoted_or_contiguous_up_to_comma ())
       (spaces *> operator_parser)
-      (spaces *> quoted_or_contiguous_string ())
+      (spaces *> quoted_or_contiguous_up_to_comma ())
     <* spaces
 
   let make_rewrite_expression atom match_template rewrite_template =
@@ -137,7 +151,7 @@ module Parser = struct
   let rewrite_pattern_parser =
     lift3
       make_rewrite_expression
-      (string Syntax.start_rewrite_pattern *> spaces *> quoted_or_contiguous_string () <* spaces <* char '{' <* spaces)
+      (string Syntax.start_rewrite_pattern *> spaces *> quoted_or_contiguous_string_to_open_brace () <* spaces)
       (antecedent_parser ~reserved:[" ->"; "->"] () <* spaces <* string Syntax.arrow <* spaces)
       (rewrite_consequent_parser ())
 
@@ -168,7 +182,7 @@ module Parser = struct
     string Syntax.start_match_pattern *> spaces *>
     lift2
       make_match_expression
-      (quoted_or_contiguous_string () <* spaces <* char '{' <* spaces)
+      (quoted_or_contiguous_string_to_open_brace () <* spaces)
       (case_block expression_parser <* char '}' <* spaces)
 
   let expression_parser =
@@ -176,7 +190,7 @@ module Parser = struct
         choice ~failure_msg:"could not parse expression"
           [ match_pattern_parser expression_parser
           ; rewrite_pattern_parser
-          ; operator_parser
+          ; compare_parser
           ; true'
           ; false'
           ; option_parser

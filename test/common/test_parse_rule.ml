@@ -219,3 +219,15 @@ let%expect_test "parse_freeform_consequent_in_rewrite_rule" =
  ((Rewrite (Variable 0)
    ((String \":[1] :[2]\") (Substitute (String \":[1] a\") Value)))))
 "]
+
+let%expect_test "this_damn_rule" =
+  Rule.create
+    {|
+  where match :[1] {
+ | ":[~^\\d+$]" -> false
+ | ":[_]" -> true
+ }
+|}
+  |> Or_error.ok_exn
+  |> fun rule -> print_s [%message (rule : Ast.expression list)];
+  [%expect_exact "(rule" ]
