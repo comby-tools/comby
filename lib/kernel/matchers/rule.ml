@@ -63,16 +63,6 @@ module Parser = struct
     choice ~failure_msg:"could not parse quoted value"
       [ quote {|"|}; quote {|'|}; raw {|`|} ]
 
-  let value_parser ~reserved () =
-    match reserved with
-    | [] -> fail "no value allowed to scan here"
-    | reserved ->
-      lift
-        String.of_char_list
-        (many (Omega_parser_helper.Deprecate.any_char_except ~reserved))
-
-  let expr_terminal = end_of_input <|> (Omega_parser_helper.ignore spaces) <* char ','
-
   let map_special s =
     if String.is_prefix s ~prefix:"~" then
       Template (Template.parse (Format.sprintf ":[%s]" s))
@@ -81,34 +71,31 @@ module Parser = struct
     else
       to_atom s
 
-  let antecedent_parser ?(reserved = []) () =
+  let up_to p =
+    many1 (not_followed_by p *> any_char)
+
+  let antecedent_parser () =
     choice ~failure_msg:"could not parse LHS of ->"
       [ (lift to_atom quoted_parser)
-      ; (lift map_special (value_parser ~reserved ()))
+      ; (lift (fun v -> map_special (String.of_char_list v)) (up_to (spaces *> string Syntax.arrow)))
       ]
 
-  let quoted_or_contiguous_string_to_close_brace () =
+  let value_to_open_brace () =
     choice
-      [ (lift to_atom (quoted_parser <* spaces <* char '}')) (* FIXME: Make parsing the end better. Have to stop at " }" for any_char case, but quoted does not need it, but we must consume in case this passes, because we would _if_ the next one does. *)
-      ; (lift (fun v -> to_atom (String.of_char_list v)) (Omega_parser_helper.many1_till any_char spaces1))
+      [ (lift to_atom quoted_parser)
+      ; (lift (fun v -> to_atom (String.of_char_list v)) (up_to (spaces *> char '{')))
       ]
 
-  let quoted_or_contiguous_string_to_open_brace () =
+  let value_to_comma () =
     choice
-      [ (lift to_atom (quoted_parser <* spaces <* char '{')) (* FIXME: Make parsing the end better. Have to stop at " }" for any_char case, but quoted does not need it, but we must consume in case this passes, because we would _if_ the next one does. *)
-      ; (lift (fun v -> to_atom (String.of_char_list v)) (Omega_parser_helper.many1_till any_char (spaces1 <* char '{')))
-      ]
-
-  let quoted_or_contiguous_string_up_to_comma () =
-    choice
-      [ (lift to_atom (quoted_parser <* expr_terminal))
-      ; (lift (fun v -> to_atom (String.of_char_list v)) (Omega_parser_helper.many1_till any_char expr_terminal))
+      [ (lift to_atom quoted_parser)
+      ; (lift (fun v -> to_atom (String.of_char_list v)) (up_to (spaces *> char ',')))
       ]
 
   let rewrite_consequent_parser () =
     choice
-      [ (lift to_atom (quoted_parser <* spaces <* char '}')) (* FIXME: Make parsing the end better *)
-      ; (lift (fun v -> to_atom (String.of_char_list v)) (Omega_parser_helper.many1_till any_char (spaces *> char '}')))
+      [ (lift to_atom quoted_parser)
+      ; (lift (fun v -> to_atom (String.of_char_list v)) (up_to (spaces *> char '}')))
       ]
 
   let operator_parser =
@@ -136,9 +123,9 @@ module Parser = struct
   let compare_parser =
     lift3
       make_equality_expression
-      (spaces *> quoted_or_contiguous_up_to_comma ())
+      (spaces *> value_to_comma ())
       (spaces *> operator_parser)
-      (spaces *> quoted_or_contiguous_up_to_comma ())
+      (spaces *> value_to_comma ())
     <* spaces
 
   let make_rewrite_expression atom match_template rewrite_template =
@@ -151,14 +138,14 @@ module Parser = struct
   let rewrite_pattern_parser =
     lift3
       make_rewrite_expression
-      (string Syntax.start_rewrite_pattern *> spaces *> quoted_or_contiguous_string_to_open_brace () <* spaces)
-      (antecedent_parser ~reserved:[" ->"; "->"] () <* spaces <* string Syntax.arrow <* spaces)
+      (string Syntax.start_rewrite_pattern *> spaces *> value_to_open_brace () <* spaces)
+      (antecedent_parser () <* spaces <* string Syntax.arrow <* spaces)
       (rewrite_consequent_parser ())
 
   (** <atom> -> atom [, <expr>], [,] *)
   let match_arrow_parser expression_parser =
     both
-      (antecedent_parser ~reserved:[" ->"; "->"] () <* spaces <* string Syntax.arrow <* spaces)
+      (antecedent_parser () <* spaces <* string Syntax.arrow <* spaces)
       (sep_by (char ',') expression_parser <* spaces <* optional_trailing ',' <* spaces)
 
   (** [|] <match_arrow> *)
@@ -182,7 +169,7 @@ module Parser = struct
     string Syntax.start_match_pattern *> spaces *>
     lift2
       make_match_expression
-      (quoted_or_contiguous_string_to_open_brace () <* spaces)
+      (value_to_open_brace () <* spaces)
       (case_block expression_parser <* char '}' <* spaces)
 
   let expression_parser =
