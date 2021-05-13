@@ -7,7 +7,7 @@
   test_cli_helper
   test_script
   test_extract_regex
-  ; test_cli TODO small test needs template to parse reserved identifiers
+  test_cli
   test_cli_list
   test_statistics
   test_offset_conversion

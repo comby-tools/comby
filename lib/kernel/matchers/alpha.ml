@@ -42,26 +42,6 @@ let is_not p s =
     | None -> Empty_failed (unknown_error s)
 
 
-(* FIXME. Uses should be general *)
-module Template = Template.Make(Metasyntax.Default)
-
-let infer_equality_constraints environment =
-  let vars = Match.Environment.vars environment in
-  List.fold vars ~init:[] ~f:(fun acc var ->
-      if String.is_suffix var ~suffix:"_equal" then
-        match String.split var ~on:'_' with
-        | _uuid :: target :: _equal ->
-          let expression =
-            Types.Ast.Equal
-              (
-                Template (Template.parse (":["^var^"]")),
-                Template (Template.parse (":["^target^"]"))
-              ) in
-          expression::acc
-        | _ -> acc
-      else
-        acc)
-
 type 'a literal_parser_callback = contents:string -> left_delimiter:string -> right_delimiter:string -> 'a
 type 'a nested_delimiter_callback = left_delimiter:string -> right_delimiter:string -> 'a
 
@@ -71,6 +51,35 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
     include Lang.Info
 
     let wildcard = "_"
+
+    (* FIXME. Uses should be general *)
+    module Template = Template.Make(Metasyntax.Default)
+
+    let create v =
+      Types.Ast.Template [Hole { variable = v; pattern = v; offset = 0 }]
+
+    let infer_equality_constraints environment =
+      let vars = Match.Environment.vars environment in
+      List.fold vars ~init:[] ~f:(fun acc var ->
+          if String.is_suffix var ~suffix:"_equal" then
+            match String.split var ~on:'_' with
+            | _uuid :: target :: _equal ->
+              let expression = Types.Ast.Equal (create var, create target) in
+              expression::acc
+            | _ -> acc
+          else
+            acc)
+
+    let implicit_equals_satisfied environment identifier range matched =
+      if debug then Format.printf "Looking up %s@." identifier;
+      match Environment.lookup environment identifier with
+      | None -> Some (Environment.add ~range environment identifier (String.concat matched))
+      | Some _ when String.(identifier = wildcard) -> Some environment
+      | Some existing_value when String.(existing_value = String.concat matched) ->
+        let identifier' = Format.sprintf "%s_equal_%s" identifier (!configuration_ref.fresh ()) in
+        let environment' = Environment.add ~range environment identifier' (String.concat matched) in
+        Some environment'
+      | _ -> None
 
     let escapable_string_literal_parser (f : 'a literal_parser_callback) =
       (match Syntax.escapable_string_literals with
@@ -365,42 +374,37 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
         else
           post_index, post_line, post_column
       in
-      update_user_state
-        (fun ({ Match.environment; _ } as result) ->
-           if debug then begin
-             Format.printf "Updating user state:@.";
-             Format.printf "%s |-> %s@." identifier (String.concat matched);
-             Format.printf "ID %s: %d:%d:%d - %d:%d:%d@."
-               identifier
-               pre_index pre_line pre_column
-               post_index post_line post_column;
-           end;
-           let pre_location : Location.t =
-             Location.
-               { offset = pre_index
-               ; line = pre_line
-               ; column = pre_column
-               }
-           in
-           let post_location : Location.t =
-             Location.
-               { offset = post_index
-               ; line = post_line
-               ; column = post_column
-               }
-           in
-           let range = { match_start = pre_location; match_end = post_location } in
-           let environment =
-             if Environment.exists environment identifier && String.(identifier <> wildcard) then
-               let fresh_hole_id =
-                 Format.sprintf "%s_%s_equal" (!configuration_ref.fresh ()) identifier
-               in
-               Environment.add ~range environment fresh_hole_id (String.concat matched)
-             else
-               Environment.add ~range environment identifier (String.concat matched)
-           in
-           { result with environment })
-      >>= fun () -> f matched
+      get_user_state >>= fun { environment; _ } ->
+      let pre_location : Location.t =
+        Location.
+          { offset = pre_index
+          ; line = pre_line
+          ; column = pre_column
+          }
+      in
+      let post_location : Location.t =
+        Location.
+          { offset = post_index
+          ; line = post_line
+          ; column = post_column
+          }
+      in
+      let range = { match_start = pre_location; match_end = post_location } in
+      match implicit_equals_satisfied environment identifier range matched with
+      | None -> fail "don't record, unsat"
+      | Some environment ->
+        update_user_state
+          (fun result ->
+             if debug then begin
+               Format.printf "Updating user state:@.";
+               Format.printf "%s |-> %s@." identifier (String.concat matched);
+               Format.printf "ID %s: %d:%d:%d - %d:%d:%d@."
+                 identifier
+                 pre_index pre_line pre_column
+                 post_index post_line post_column;
+             end;
+             { result with environment })
+        >>= fun () -> f matched
 
     let alphanum_delimiter_must_satisfy =
       many1 (is_not (skip (choice reserved_alphanum_delimiter_must_satisfy) <|> skip alphanum))
@@ -630,7 +634,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
         if debug then Format.printf "Prefix parser unsat@.";
         fail "unsat"
 
-    let turn_holes_into_matchers_for_this_level ?left_delimiter ?right_delimiter p_list =
+    let turn_holes_into_matchers_for_this_level ?left_delimiter ?right_delimiter (p_list : (Types.production, Match.t) parser list) : (Types.production, Match.t) parser list =
       List.fold (List.rev p_list) ~init:[] ~f:(fun acc p ->
           match parse_string p "_signal_hole" (Match.create ()) with
           | Failed _ -> p::acc
@@ -939,6 +943,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
 
     (** shift: start the scan in the source at an offset *)
     let first' shift p source : Match.t Or_error.t =
+      if debug then Format.printf "First for shift %d@." shift;
       let set_start_pos p = fun s -> p (advance_state s shift) in
       let p = set_start_pos p in
       match parse_string (pair p get_user_state) source (Match.create ()) with
@@ -988,6 +993,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
           let rec aux acc shift =
             match first' shift p original_source with
             | Ok ({range = { match_start; match_end; _ }; environment; _} as result) ->
+              if debug then Format.printf "Ok first'";
               let shift = match_end.offset in
               let shift, matched =
                 if match_start.offset = match_end.offset then

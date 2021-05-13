@@ -24,8 +24,7 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
           ])
 
   let regex_body separator suffix =
-    lift2
-      (fun v e -> v,e)
+    both
       (option "" (identifier ()))
       (char separator *> regex_expression suffix)
 
@@ -56,8 +55,6 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
         in
         result::acc)
 
-  (** Not smart enough: only looks for hole prefix to stop scanning constant,
-      because there isn't a good 'not' parser *)
   let parse_template =
     let hole = choice hole_parsers in
     many @@ choice
