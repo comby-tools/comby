@@ -56,14 +56,6 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
         in
         result::acc)
 
-  let hole_prefixes =
-    List.filter_map Metasyntax.syntax ~f:(function
-        | Hole (_, Delimited (Some left, _))
-        | Regex (left, _, _) -> Some [left]
-        | Hole (_, Reserved_identifiers l) -> Some l
-        | _ -> None)
-    |> List.concat
-
   (** Not smart enough: only looks for hole prefix to stop scanning constant,
       because there isn't a good 'not' parser *)
   let parse_template =
