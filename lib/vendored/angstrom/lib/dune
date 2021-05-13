@@ -1,0 +1,6 @@
+(library
+ (name angstrom)
+ (public_name comby.angstrom)
+ (libraries bigstringaf)
+ (flags :standard -safe-string)
+ (preprocess future_syntax))

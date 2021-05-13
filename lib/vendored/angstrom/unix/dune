@@ -1,0 +1,4 @@
+(library
+ (name angstrom_unix)
+ (public_name comby.angstrom-unix)
+ (libraries angstrom unix))
