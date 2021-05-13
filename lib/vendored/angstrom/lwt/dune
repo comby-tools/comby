@@ -1,5 +1,0 @@
-(library
- (name angstrom_lwt_unix)
- (public_name comby.angstrom-lwt-unix)
- (flags :standard -safe-string)
- (libraries angstrom lwt.unix))

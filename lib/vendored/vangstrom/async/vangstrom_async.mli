@@ -31,18 +31,18 @@
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
 
-open Angstrom
+open Vangstrom
+open Async
 
 
 val parse :
-     ?buf_size:int
+     ?pushback:(unit -> unit Deferred.t)
   -> 'a t
-  -> in_channel
-  -> Buffered.unconsumed * ('a, string) result
+  -> Reader.t
+  -> ('a, string) result Deferred.t
 
 val parse_many :
-     ?buf_size:int
-  -> 'a t
-  -> ('a -> unit)
-  -> in_channel
-  -> Buffered.unconsumed * (unit, string) result
+     'a t
+  -> ('a -> unit Deferred.t)
+  -> Reader.t
+  -> (unit, string) result Deferred.t

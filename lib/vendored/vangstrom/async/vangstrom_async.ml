@@ -31,51 +31,55 @@
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
 
-open Angstrom.Buffered
-open Lwt
+open Vangstrom.Unbuffered
+open Core
+open Async
 
-let default_pushback () = return_unit
+let empty_bigstring = Bigstring.create 0
 
-let rec buffered_state_loop pushback state in_chan bytes =
-  let size = Bytes.length bytes in
-  match state with
-  | Partial k ->
-    Lwt_io.read_into in_chan bytes 0 size
-    >|= begin function
-      | 0   -> k `Eof
-      | len ->
-        assert (len > 0);
-        k (`String (Bytes.(unsafe_to_string (sub bytes 0 len))))
-    end
-    >>= fun state' -> pushback ()
-    >>= fun ()     -> buffered_state_loop pushback state' in_chan bytes
-  | state -> return state
+let rec finalize state result =
+  (* It is very important to understand the assumptions that go into the second
+   * case. If execution reaches that case, then that means that the parser has
+   * commited all the way up to the last byte that was read by the reader, and
+   * the reader's internal buffer is empty. If the parser hadn't committed up
+   * to the last byte, then the reader buffer would not be empty and execution
+   * would hit the first case rather than the second.
+   *
+   * In other words, the second case looks wrong but it's not. *)
+  match state, result with
+  | Partial p, `Eof_with_unconsumed_data s ->
+    let bigstring = Bigstring.of_string s in
+    finalize (p.continue bigstring ~off:0 ~len:(String.length s) Complete) `Eof
+  | Partial p, `Eof                        ->
+    finalize (p.continue empty_bigstring ~off:0 ~len:0 Complete) `Eof
+  | Partial _, `Stopped () -> assert false
+  | (Done _ | Fail _) , _  -> state_to_result state
 
-let handle_parse_result state =
-  match state_to_unconsumed state with
-  | None    -> assert false
-  | Some us -> us, state_to_result state
+let response = function
+  | Partial p  -> `Consumed(p.committed, `Need_unknown)
+  | Done(c, _) -> `Stop_consumed((), c)
+  | Fail _     -> `Stop ()
 
-let parse ?(pushback=default_pushback) p in_chan =
-  let size  = Lwt_io.buffer_size in_chan in
-  let bytes = Bytes.create size in
-  buffered_state_loop pushback (parse ~initial_buffer_size:size p) in_chan bytes
-  >|= handle_parse_result
+let default_pushback () = Deferred.unit
 
-let with_buffered_parse_state ?(pushback=default_pushback) state in_chan =
-  let size  = Lwt_io.buffer_size in_chan in
-  let bytes = Bytes.create size in
-  begin match state with
-  | Partial _ -> buffered_state_loop pushback state in_chan bytes
-  | _         -> return state
-  end
-  >|= handle_parse_result
+let parse ?(pushback=default_pushback) p reader =
+  let state = ref (parse p) in
+  let handle_chunk buf ~pos ~len =
+    begin match !state with
+    | Partial p ->
+      state := p.continue buf ~off:pos ~len Incomplete;
+    | Done _ | Fail _ -> ()
+    end;
+    pushback () >>| fun () -> response !state
+  in
+  Reader.read_one_chunk_at_a_time reader ~handle_chunk >>| fun result ->
+    finalize !state result
 
 let async_many e k =
-  Angstrom.(skip_many (e <* commit >>| k) <?> "async_many")
+  Vangstrom.(skip_many (e <* commit >>| k) <?> "async_many")
 
-let parse_many p write in_chan =
+let parse_many p write reader =
   let wait = ref (default_pushback ()) in
   let k x = wait := write x in
   let pushback () = !wait in
-  parse ~pushback (async_many p k) in_chan
+  parse ~pushback (async_many p k) reader

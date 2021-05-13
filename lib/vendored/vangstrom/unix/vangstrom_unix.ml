@@ -31,7 +31,7 @@
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
 
-open Angstrom.Buffered
+open Vangstrom.Buffered
 
 let parse ?(buf_size=0x1000) p in_chan =
   let bytes = Bytes.create buf_size in
@@ -49,4 +49,4 @@ let parse ?(buf_size=0x1000) p in_chan =
   | Some us -> us, state_to_result state
 
 let parse_many ?buf_size p k in_chan =
-  parse ?buf_size Angstrom.(skip_many (p <* commit >>| k)) in_chan
+  parse ?buf_size Vangstrom.(skip_many (p <* commit >>| k)) in_chan
