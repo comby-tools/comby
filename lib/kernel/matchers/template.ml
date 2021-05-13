@@ -1,11 +1,12 @@
 open Vangstrom
 open Core_kernel
 
-open Omega_parser_helper
-
 open Types.Template
 
 module Make (Metasyntax : Types.Metasyntax.S) = struct
+
+  let up_to p =
+    many1 (not_followed_by p *> any_char)
 
   let character () =
     choice @@ List.map ~f:char (String.to_list Metasyntax.identifier)
@@ -19,7 +20,7 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
         choice
           [ lift (fun x -> Format.sprintf "[%s]" @@ String.concat x) (char '[' *> many1 expr <* char ']')
           ; lift (fun c -> Format.sprintf {|\%c|} c) (char '\\' *> any_char)
-          ; lift String.of_char (Deprecate.any_char_except ~reserved:[suffix])
+          ; lift String.of_char_list (up_to (string suffix))
           ])
 
   let regex_body separator suffix =
@@ -62,9 +63,6 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
         | Hole (_, Reserved_identifiers l) -> Some l
         | _ -> None)
     |> List.concat
-
-  let up_to p =
-    many1 (not_followed_by p *> any_char)
 
   (** Not smart enough: only looks for hole prefix to stop scanning constant,
       because there isn't a good 'not' parser *)
