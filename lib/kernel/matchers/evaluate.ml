@@ -184,7 +184,9 @@ let apply
         let source = Rewrite.substitute (Template.to_string t) env in
         let configuration = Configuration.create ~match_kind:Fuzzy () in
         let matches = match_all ~configuration ~template ~source () in
+        if debug then Format.printf "Running for matches. Template: %s Source: %s. Matches: %d@." template source (List.length matches);
         let source = if substitute_in_place then Some source else None in
+        if debug then Format.printf "Rewrite rule for source: %S Rewrite to: %S matches: %a@." (Option.value_exn source) rewrite_template Match.pp (None, matches);
         let result = Rewrite.all ?metasyntax ?source ~rewrite_template matches in
         match result with
         | Some { rewritten_source; _ } ->

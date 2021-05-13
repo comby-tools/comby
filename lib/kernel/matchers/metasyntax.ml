@@ -14,7 +14,8 @@ let default_syntax =
   ]
 
 let default_identifier =
-  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+  (* FIXME: !@#$ and greek letters added to allow substitution of equal variables *)
+  "!@#$abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 
 let default_metasyntax =
   { syntax = default_syntax

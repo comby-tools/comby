@@ -1,5 +1,5 @@
 open Core_kernel
-open Angstrom
+open Vangstrom
 
 open Rule
 open Parser

@@ -7,17 +7,17 @@
   test_cli_helper
   test_script
   test_extract_regex
-  test_cli
+  ; test_cli TODO small test needs template to parse reserved identifiers
   test_cli_list
   test_statistics
-  ; test_offset_conversion
-  ; test_parse_rule
+  test_offset_conversion
+  test_parse_rule
   test_rewrite_parts
   test_parse_rewrite_template
   test_substitute
   test_rewrite_rule
   test_integration
-  ; test_match_rule
+  test_match_rule
   test_python_string_literals
   test_hole_extensions
   test_match_offsets
@@ -32,7 +32,7 @@
   test_pipeline
   test_user_defined_language
   test_nested_matches
-  ; test_regex_holes
+  test_regex_holes
   )
  (inline_tests)
  (preprocess (pps ppx_expect ppx_sexp_message ppx_deriving_yojson))

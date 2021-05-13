@@ -1,6 +1,6 @@
 open Core_kernel
 
-open Angstrom
+open Vangstrom
 
 let between left right p =
   left *> p <* right

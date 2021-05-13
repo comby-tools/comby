@@ -51,7 +51,12 @@ let infer_equality_constraints environment =
       if String.is_suffix var ~suffix:"_equal" then
         match String.split var ~on:'_' with
         | _uuid :: target :: _equal ->
-          let expression = Types.Ast.Equal (Template (Template.parse var), Template (Template.parse target)) in
+          let expression =
+            Types.Ast.Equal
+              (
+                Template (Template.parse (":["^var^"]")),
+                Template (Template.parse (":["^target^"]"))
+              ) in
           expression::acc
         | _ -> acc
       else
@@ -994,9 +999,11 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
               let result = { result with matched } in
               let result =
                 match rule with
-                | None -> Some result
+                | None ->
+                  Some result
                 | Some rule ->
                   let rule = rule @ infer_equality_constraints environment in
+                  if debug then Format.printf "Rule: %s@." (Sexp.to_string @@ Rule.sexp_of_t rule);
                   (* FIXME metasyntax should propagate *)
                   let sat, env = Program.apply ~metasyntax:Metasyntax.default_metasyntax ~substitute_in_place:true rule environment in
                   if debug && Option.is_some env then Format.printf "Got back: %b %S" sat (Match.Environment.to_string @@ Option.value_exn env);

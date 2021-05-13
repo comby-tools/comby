@@ -1,5 +1,5 @@
 open Core_kernel
-open Angstrom
+open Vangstrom
 
 open Types.Ast
 
@@ -74,6 +74,25 @@ module Parser = struct
   let up_to p =
     many1 (not_followed_by p *> any_char)
 
+  let atom_up_to_spaces () =
+    choice
+      [ (lift to_atom quoted_parser)
+      ; lift (fun v -> to_atom (String.of_char_list v)) (up_to spaces1)
+      ]
+
+  let atom_up_to_terminal () =
+    choice
+      [ (lift to_atom quoted_parser)
+      ; (lift
+           (fun v -> to_atom (String.of_char_list v))
+           (up_to
+              (choice
+                 [ spaces1 *> return ()
+                 ; char ',' *> return ()
+                 ; char '}' *> return ()
+                 ])))
+      ]
+
   let antecedent_parser () =
     choice ~failure_msg:"could not parse LHS of ->"
       [ (lift to_atom quoted_parser)
@@ -123,24 +142,22 @@ module Parser = struct
   let compare_parser =
     lift3
       make_equality_expression
-      (spaces *> value_to_comma ())
+      (spaces *> atom_up_to_spaces ())
       (spaces *> operator_parser)
-      (spaces *> value_to_comma ())
+      (spaces *> atom_up_to_terminal ())
     <* spaces
 
   let make_rewrite_expression atom match_template rewrite_template =
     Rewrite (atom, (match_template, rewrite_template))
 
-  let make_match_expression atom cases =
-    Match (atom, cases)
-
   (** rewrite <atom> { <atom> -> <atom> } *)
   let rewrite_pattern_parser =
     lift3
       make_rewrite_expression
-      (string Syntax.start_rewrite_pattern *> spaces *> value_to_open_brace () <* spaces)
+      (string Syntax.start_rewrite_pattern
+       *> spaces*> value_to_open_brace () <* spaces <* char '{' <* spaces)
       (antecedent_parser () <* spaces <* string Syntax.arrow <* spaces)
-      (rewrite_consequent_parser ())
+      (rewrite_consequent_parser () <* spaces <* char '}')
 
   (** <atom> -> atom [, <expr>], [,] *)
   let match_arrow_parser expression_parser =
@@ -166,10 +183,10 @@ module Parser = struct
 
   (** match <atom> { <case_parser> } *)
   let match_pattern_parser expression_parser =
-    string Syntax.start_match_pattern *> spaces *>
-    lift2
-      make_match_expression
-      (value_to_open_brace () <* spaces)
+    lift3
+      (fun _ atom cases -> Match (atom, cases))
+      (string Syntax.start_match_pattern *> spaces)
+      (value_to_open_brace () <* spaces <* char '{' <* spaces)
       (case_block expression_parser <* char '}' <* spaces)
 
   let expression_parser =

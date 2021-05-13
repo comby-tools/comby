@@ -23,7 +23,7 @@ module Make (Regexp : Regexp_engine_intf): sig
 
   val make_regexp : string -> Regexp.t
 
-  val regexp : Regexp.t -> string Angstrom.t
+  val regexp : Regexp.t -> string Vangstrom.t
 end
 
 module PCRE : sig

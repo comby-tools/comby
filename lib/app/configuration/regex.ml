@@ -1,5 +1,5 @@
 open Core
-open Angstrom
+open Vangstrom
 
 open Comby_kernel
 
@@ -82,7 +82,7 @@ type extracted =
   | Regex of string
   | Constant of string
 
-let extract : extracted list Angstrom.t =
+let extract : extracted list Vangstrom.t =
   let hole =
     choice
       [ single_hole_parser ()

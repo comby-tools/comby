@@ -48,9 +48,9 @@ let%expect_test "rule_sat" =
 
   let rule = {| where :[x] == :[x] |} in
   sat (module Alpha) rule |> print_string;
-  [%expect_exact {|false|}];
+  [%expect_exact {|true|}];
   sat (module Omega) rule |> print_string;
-  [%expect_exact {|false|}]
+  [%expect_exact {|true|}]
 
 let%expect_test "rule_sat_with_env" =
   let env = make_env ["1", "x"; "2", "y"; "3", "x"] in

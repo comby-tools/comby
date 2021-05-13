@@ -1,4 +1,4 @@
-open Angstrom
+open Vangstrom
 open Core_kernel
 
 open Omega_parser_helper
@@ -25,7 +25,7 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
   let regex_body separator suffix =
     lift2
       (fun v e -> v,e)
-      (identifier ())
+      (option "" (identifier ()))
       (char separator *> regex_expression suffix)
 
   (** Folds left to respect order of definitions in custom metasyntax for
@@ -65,7 +65,7 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
 
   (** Not smart enough: only looks for hole prefix to stop scanning constant,
       because there isn't a good 'not' parser *)
-  let parse_template : t Angstrom.t =
+  let parse_template =
     let hole = choice hole_parsers in
     many @@ choice
       [ (pos >>= fun offset -> hole >>| fun (pattern, variable) -> Hole { pattern; variable; offset })
