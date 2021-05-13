@@ -63,14 +63,16 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
         | _ -> None)
     |> List.concat
 
+  let up_to p =
+    many1 (not_followed_by p *> any_char)
+
   (** Not smart enough: only looks for hole prefix to stop scanning constant,
       because there isn't a good 'not' parser *)
   let parse_template =
     let hole = choice hole_parsers in
     many @@ choice
       [ (pos >>= fun offset -> hole >>| fun (pattern, variable) -> Hole { pattern; variable; offset })
-      ; (((many1 @@ Omega_parser_helper.Deprecate.any_char_except ~reserved:hole_prefixes)) >>| fun c -> Constant (String.of_char_list c))
-      ; any_char >>| fun c -> Constant (Char.to_string c) (* accept anything as constant not accepted by attempting holes above *)
+      ; ((up_to (choice hole_parsers)) >>| fun c -> Constant (String.of_char_list c))
       ]
 
   let parse template =

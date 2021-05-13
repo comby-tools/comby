@@ -25,13 +25,11 @@ let%expect_test "interpret_regex_shorthand" =
 let%expect_test "interpret_incomplete_hole_as_constant" =
   let template = ":[B :[A]" in
   parse_template Matchers.Metasyntax.default_metasyntax template |> print_string;
-  [%expect_exact {|((Constant :) (Constant "[B ")
- (Hole ((variable A) (pattern :[A]) (offset 4))))|}];
+  [%expect_exact {|((Constant ":[B ") (Hole ((variable A) (pattern :[A]) (offset 4))))|}];
 
   let template = ":[B :[A~x]" in
   parse_template Matchers.Metasyntax.default_metasyntax template |> print_string;
-  [%expect_exact {|((Constant :) (Constant "[B ")
- (Hole ((variable A) (pattern :[A~x]) (offset 4))))|}]
+  [%expect_exact {|((Constant ":[B ") (Hole ((variable A) (pattern :[A~x]) (offset 4))))|}]
 
 let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
   let template = "$:x $B:x  $A" in
