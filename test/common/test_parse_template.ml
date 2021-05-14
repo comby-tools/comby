@@ -102,7 +102,7 @@ let%expect_test "parse_reserved_identifiers_as_holes" =
 
 let%expect_test "get_offsets_for_holes" =
   let module Template_parser = Matchers.Template.Make(Matchers.Metasyntax.Default) in
-  let template = ":[a].type :[b].length :[[c]].valuev :[d.]." in
+  let template = ":[a].type :[b].length :[[c]].lengtha :[d.].length.ok (:[e].length)" in
   let variables = Template_parser.variables template in
   print_s [%message (variables : Matchers.Template.syntax list)];
   [%expect {|
@@ -110,4 +110,5 @@ let%expect_test "get_offsets_for_holes" =
      (((variable a) (pattern :[a].type) (offset 0) (kind Type))
       ((variable b) (pattern :[b].length) (offset 10) (kind Length))
       ((variable c) (pattern :[[c]]) (offset 22) (kind Value))
-      ((variable d) (pattern :[d.]) (offset 36) (kind Value)))) |}]
+      ((variable d) (pattern :[d.].length) (offset 37) (kind Length))
+      ((variable e) (pattern :[e].length) (offset 54) (kind Length)))) |}]

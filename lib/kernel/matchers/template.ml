@@ -22,7 +22,7 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     | _ -> failwith "invalid attribute"
 
   let attribute_access () =
-    char '.' *> choice [ string "length"; string "type" ] <* Omega_parser_helper.spaces1
+    char '.' *> choice [ string "length"; string "type" ] <* not_followed_by (Omega_parser_helper.alphanum)
 
   let regex_expression suffix =
     many1 @@
