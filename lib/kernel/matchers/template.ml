@@ -19,6 +19,8 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     | "value" -> Value
     | "length" -> Length
     | "type" -> Type
+    | "file.name" -> FileName
+    | "file.path" -> FilePath
     | _ -> failwith "invalid attribute"
 
   let attribute_access () =
@@ -110,6 +112,8 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     match kind with
     | Value -> Environment.lookup env variable
     | Length -> Environment.lookup env variable >>| length_to_string
+    | FileName -> failwith "unimplemented"
+    | FilePath -> failwith "unimplemented"
     | Type -> failwith "unimplemented"
 
   let substitute template environment =

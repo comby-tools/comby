@@ -335,6 +335,8 @@ module Matchers : sig
     type kind =
       | Value
       | Length
+      | FileName
+      | FilePath
       | Type
 
     type syntax =

@@ -117,6 +117,8 @@ module Template = struct
   type kind =
     | Value
     | Length
+    | FileName
+    | FilePath
     | Type
   [@@deriving sexp]
 
