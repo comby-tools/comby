@@ -42,7 +42,7 @@ let substitute env = function
   | Template t -> Rewrite.substitute (Template.to_string t) env
   | String s -> s
 
-(* FIXME this logic should go in rewrite *)
+(* FIXME dead code, this logic should go in rewrite *)
 let evaluate_substitute env atom kind =
   let open Option in
   let length_to_string n = Format.sprintf "%d" (String.length n) in

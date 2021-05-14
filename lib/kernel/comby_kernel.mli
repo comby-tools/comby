@@ -484,6 +484,9 @@ module Matchers : sig
         replacements rather than just matches (see [process_single_source] below).
     *)
     val create : ?rewrite_template:string -> ?rule:rule -> match_template:string -> unit -> t
+
+    (** [regex [t] returns a generalized regular expression corresponding to the specification *)
+    val to_regex : t -> string
   end
 
   type specification = Specification.t

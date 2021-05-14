@@ -5,7 +5,7 @@ open Vangstrom
 let between left right p =
   left *> p <* right
 
-let zero =
+let zero : 'a Vangstrom.t =
   fail ""
 
 let cons x xs = x :: xs

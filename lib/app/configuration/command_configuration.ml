@@ -682,7 +682,7 @@ let select_matcher custom_metasyntax custom_matcher override_matcher file_filter
 let regex_of_specifications specifications =
   Format.sprintf "(%s)"
   @@ String.concat ~sep:")|("
-  @@ List.map specifications ~f:Regex.to_regex
+  @@ List.map specifications ~f:Matchers.Specification.to_regex
 
 let ripgrep_file_filters specifications args : string list =
   let regex = regex_of_specifications specifications in
