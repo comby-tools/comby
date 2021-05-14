@@ -11,21 +11,9 @@ type t =
 let create ?rewrite_template ?rule ~match_template () =
   { match_template; rule; rewrite_template }
 
-let alphanum =
-  satisfy (function
-      | 'a' .. 'z'
-      | 'A' .. 'Z'
-      | '0' .. '9' -> true
-      | _ -> false)
-
-let blank =
-  choice
-    [ char ' '
-    ; char '\t'
-    ]
 
 let identifier_parser () =
-  many (alphanum <|> char '_')
+  many (Omega_parser_helper.alphanum <|> char '_')
   >>| String.of_char_list
 
 let single_hole_parser () =
@@ -45,7 +33,7 @@ let line_hole_parser () =
 
 let blank_hole_parser () =
   string ":["
-  *> many1 blank
+  *> many1 Omega_parser_helper.blank
   *> identifier_parser ()
   <* string "]"
   >>| fun _ -> Some {|(\ |\t|\s|\r|\n)+|}
