@@ -33,6 +33,7 @@
   test_user_defined_language
   test_nested_matches
   test_regex_holes
+  test_template_constraints
   )
  (inline_tests)
  (preprocess (pps ppx_expect ppx_sexp_message ppx_deriving_yojson))

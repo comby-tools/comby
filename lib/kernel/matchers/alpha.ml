@@ -52,23 +52,8 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
 
     let wildcard = "_"
 
-    (* FIXME. Uses should be general *)
-    module Template = Template.Make(Metasyntax.Default)
-
     let create v =
       Types.Ast.Template [Hole { variable = v; pattern = v; offset = 0 }]
-
-    let infer_equality_constraints environment =
-      let vars = Match.Environment.vars environment in
-      List.fold vars ~init:[] ~f:(fun acc var ->
-          if String.is_suffix var ~suffix:"_equal" then
-            match String.split var ~on:'_' with
-            | _uuid :: target :: _equal ->
-              let expression = Types.Ast.Equal (create var, create target) in
-              expression::acc
-            | _ -> acc
-          else
-            acc)
 
     let implicit_equals_satisfied environment identifier range matched =
       if debug then Format.printf "Looking up %s@." identifier;
@@ -1008,7 +993,6 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
                 | None ->
                   Some result
                 | Some rule ->
-                  let rule = rule @ infer_equality_constraints environment in
                   if debug then Format.printf "Rule: %s@." (Sexp.to_string @@ Rule.sexp_of_t rule);
                   (* FIXME metasyntax should propagate *)
                   let sat, env = Program.apply ~metasyntax:Metasyntax.default_metasyntax ~substitute_in_place:true rule environment in

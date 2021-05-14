@@ -19,10 +19,13 @@ type production =
   | Match of omega_match_production
 
 let configuration_ref = ref (Configuration.create ())
+
+let implicit_equals_match_satisfied : bool ref = ref true
 let current_environment_ref : Match.Environment.t ref = ref (Match.Environment.create ())
 let matches_ref : Match.t list ref = ref []
 let source_ref : string ref = ref ""
 
+let push_implicit_equals_match_satisfied : bool ref = ref true
 let push_environment_ref : Match.Environment.t ref = ref (Match.Environment.create ())
 let push_matches_ref : Match.t list ref = ref []
 let push_source_ref : string ref = ref ""
@@ -69,28 +72,6 @@ let substitute template env =
         |> Option.value ~default:(acc,vars)
       | None -> acc, vars)
 
-
-
-(* FIXME. Uses should be general *)
-module Template = Template.Make(Metasyntax.Default)
-
-let infer_equality_constraints environment =
-  let vars = Match.Environment.vars environment in
-  List.fold vars ~init:[] ~f:(fun acc var ->
-      if String.is_suffix var ~suffix:"_equal" then
-        match String.split var ~on:'_' with
-        | _uuid :: target :: _equal ->
-          let expression =
-            Types.Ast.Equal
-              (
-                Template (Template.parse (":["^var^"]")),
-                Template (Template.parse (":["^target^"]"))
-              ) in
-          expression::acc
-        | _ -> acc
-      else
-        acc)
-
 module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struct
   module rec Matcher : Types.Matcher.S = struct
     include Language.Info
@@ -113,6 +94,24 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         if debug then Format.printf "Match@.";
         acc
 
+
+
+    let create v =
+      Types.Ast.Template [Hole { variable = v; pattern = v; offset = 0 }]
+
+    let implicit_equals_satisfied environment identifier range matched =
+      let open Match in
+      if debug then Format.printf "Looking up %s@." identifier;
+      match Environment.lookup environment identifier with
+      | None -> Some (Environment.add ~range environment identifier matched)
+      | Some _ when String.(identifier = wildcard) -> Some environment
+      | Some existing_value when String.(existing_value = matched) ->
+        let identifier' = Format.sprintf "%s_equal_%s" identifier (!configuration_ref.fresh ()) in
+        let environment' = Environment.add ~range environment identifier' matched in
+        Some environment'
+      | _ -> None
+
+
     let r acc production : (production * 'a) t =
       let open Match in
       let open Location in
@@ -123,26 +122,23 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         if debug then Format.printf "Saw String: %S@." s;
         return (Unit, acc)
       | Match { offset = pos_begin; identifier; text = content } ->
-        if debug then Format.printf "Match: %S @@ %d for %s@." content pos_begin identifier;
-        (* line/col values are placeholders and not accurate until processed in pipeline.ml *)
-        let before = { offset = pos_begin; line = 1; column = pos_begin + 1 } in
-        let pos_after_offset = pos_begin + String.length content in
-        let after = { offset = pos_after_offset; line = 1; column = pos_after_offset + 1 } in
-        let range = { match_start = before; match_end = after } in
-        let add identifier = Environment.add ~range !current_environment_ref identifier content in
-        let environment =
-          match Environment.exists !current_environment_ref identifier && String.(identifier <> wildcard) with
-          | true ->
-            let fresh_hole_id =
-              Format.sprintf "%s_%s_equal" (!configuration_ref.fresh ()) identifier
-            in
-            add fresh_hole_id
-          | false -> add identifier
-        in
-        current_environment_ref := environment;
-        return (Unit, acc)
+        begin
+          if debug then Format.printf "Match: %S @@ %d for %s@." content pos_begin identifier;
+          (* line/col values are placeholders and not accurate until processed in pipeline.ml *)
+          let before = { offset = pos_begin; line = 1; column = pos_begin + 1 } in
+          let pos_after_offset = pos_begin + String.length content in
+          let after = { offset = pos_after_offset; line = 1; column = pos_after_offset + 1 } in
+          let range = { match_start = before; match_end = after } in
+          match implicit_equals_satisfied !current_environment_ref identifier range content with
+          | None -> implicit_equals_match_satisfied := false; return (Unit, acc) (* don't record, unsat *)
+          | Some environment ->
+            let environment = Environment.add ~range environment identifier content in
+            current_environment_ref := environment;
+            return (Unit, acc)
+        end
       | _ -> return (Unit, acc)
 
+    (* previous r cannot affect control flow match_context to ignore adding a match if a equivalence was refuted *)
     let record_match_context pos_before pos_after rule =
       let open Match.Location in
       if debug then Format.printf "match context start pos: %d@." pos_before;
@@ -156,7 +152,6 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         else
           String.slice source match_start match_end
       in
-      (* line/col values are placeholders and not accurate until processed in pipeline.ml *)
       let match_context =
         let match_start = { offset = pos_before; line = 1; column = pos_before + 1 } in
         let match_end = { offset = pos_after; line = 1; column = pos_after + 1 } in
@@ -181,11 +176,12 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
           end;
         matches_ref := match_context :: !matches_ref
       | Some rule ->
-        let rule = rule @ infer_equality_constraints !current_environment_ref in
-        (* FIXME Metasyntax should be propagated here. FIXME fresh should be propagated here.*)
         push_environment_ref := !current_environment_ref;
+        push_implicit_equals_match_satisfied := !implicit_equals_match_satisfied;
+        (* FIXME Metasyntax should be propagated here. FIXME fresh should be propagated here.*)
         let sat, env = Program.apply ~metasyntax:Metasyntax.default_metasyntax ~substitute_in_place:true rule !current_environment_ref in
         current_environment_ref := !push_environment_ref;
+        implicit_equals_match_satisfied := !push_implicit_equals_match_satisfied;
         let new_env = if sat then env else None in
         match new_env with
         | None ->
@@ -201,7 +197,6 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
                shouldn't, and instead just ignore. *)
             Buffer.add_string actual result;
           end;
-          (* let match_context = { match_context with environment = !current_environment_ref } in *) (* Needed? *)
           matches_ref := match_context :: !matches_ref
 
     let multiline left right =
@@ -850,7 +845,8 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
           matcher >>= fun _access_last_production_here ->
           pos >>= fun end_pos ->
           end_of_input >>= fun _ ->
-          record_match_context start_pos end_pos rule;
+          if !implicit_equals_match_satisfied then record_match_context start_pos end_pos rule;
+          implicit_equals_match_satisfied := true; (* reset *)
           current_environment_ref := Match.Environment.create ();
           r acc Unit
         | Fuzzy ->
@@ -879,7 +875,8 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
              else
                return ()) >>= fun () ->
             if debug then Format.printf "Calculated end_pos %d@." end_pos;
-            record_match_context start_pos end_pos rule;
+            if !implicit_equals_match_satisfied then record_match_context start_pos end_pos rule;
+            implicit_equals_match_satisfied := true; (* reset *)
             current_environment_ref := Match.Environment.create ();
             return (Unit, "")
           in
