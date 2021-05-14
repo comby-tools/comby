@@ -34,8 +34,13 @@ let counter =
     uuid_for_id_counter := !uuid_for_id_counter + 1;
     Format.sprintf "gu3ssme_%012d" !uuid_for_id_counter
 
-(* FIXME. Shouldn't need this. *)
+
+(* FIXME. Propagate this. *)
 module Template = Template.Make(Metasyntax.Default)
+
+let substitute env = function
+  | Template t -> Rewrite.substitute (Template.to_string t) env
+  | String s -> s
 
 (* FIXME this logic should go in rewrite *)
 let evaluate_substitute env atom kind =
@@ -90,53 +95,37 @@ let apply
 
     (* match ... { ... } *)
     | Match (source, cases) ->
-      let source =
-        match source with
-        | Template t -> Rewrite.substitute (Template.to_string t) env
-        | String s -> s
-      in
-      let result =
-        let evaluate template case_expression =
-          let configuration = match_configuration_of_syntax template in
-          if debug then Format.printf "Running for template %s source %s@." template source;
-          match_all ~configuration ~template ~source () |> function
-          | [] ->
-            None
-          | matches ->
-            (* merge environments. overwrite behavior is undefined *)
-            if debug then Format.printf "Matches: %a@." Match.pp (None, matches);
-            let fold_matches (sat, out) { environment; _ } =
-              let fold_cases (sat, out) predicate =
-                if sat then
-                  let env' = Environment.merge env environment in
-                  eval env' predicate
-                else
-                  (sat, out)
-              in
-              List.fold case_expression ~init:(sat, out) ~f:fold_cases
+      let source = substitute env source in
+      let evaluate template case_expression =
+        let template = substitute env template in
+        let configuration = match_configuration_of_syntax template in
+        if debug then Format.printf "Running for template %s source %s@." template source;
+        match_all ~configuration ~template ~source () |> function
+        | [] ->
+          None
+        | matches ->
+          (* merge environments. overwrite behavior is undefined *)
+          if debug then Format.printf "Matches: %a@." Match.pp (None, matches);
+          let fold_matches (sat, out) { environment; _ } =
+            let fold_cases (sat, out) predicate =
+              if sat then
+                let env' = Environment.merge env environment in
+                eval env' predicate
+              else
+                (sat, out)
             in
-            List.fold matches ~init:(true, None) ~f:fold_matches
-            |> Option.some
-        in
-        List.find_map cases ~f:(fun (template, case_expression) ->
-            match template with
-            | String template -> evaluate template case_expression
-            | Template template -> evaluate (Rewrite.substitute (Template.to_string template) env) case_expression)
+            List.fold case_expression ~init:(sat, out) ~f:fold_cases
+          in
+          List.fold matches ~init:(true, None) ~f:fold_matches
+          |> Option.some
       in
-      Option.value_map result ~f:ident ~default:(false, Some env)
+      List.find_map cases ~f:(fun (template, case_expression) -> evaluate template case_expression)
+      |> Option.value_map ~f:ident ~default:(false, Some env)
 
     (* rewrite ... { ... } *)
     | Rewrite (Template t, (match_template, rewrite_template)) ->
-      let rewrite_template =
-        match rewrite_template with
-        | Template t -> Template.to_string t
-        | String s -> s
-      in
-      let template =
-        match match_template with
-        | Template t -> Rewrite.substitute (Template.to_string t) env
-        | String s -> s
-      in
+      let rewrite_template = substitute env rewrite_template in
+      let template = substitute env match_template in
       let source = Rewrite.substitute (Template.to_string t) env in
       let configuration = Configuration.create ~match_kind:Fuzzy () in
       let matches = match_all ~configuration ~template ~source () in
