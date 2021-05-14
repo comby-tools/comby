@@ -11,8 +11,8 @@ let%expect_test "get_offsets_for_holes" =
   print_s [%message (variables : Matchers.Template.syntax list)];
   [%expect {|
     (variables
-     (((variable 1) (pattern :[1]) (offset 4))
-      ((variable 2) (pattern :[2]) (offset 12)))) |}]
+     (((variable 1) (pattern :[1]) (offset 4) (kind Value))
+      ((variable 2) (pattern :[2]) (offset 12) (kind Value)))) |}]
 
 let%expect_test "interpret_regex_shorthand" =
   let module Template_parser = Matchers.Template.Make(Matchers.Metasyntax.Default) in
@@ -20,16 +20,18 @@ let%expect_test "interpret_regex_shorthand" =
   let variables = Template_parser.variables rewrite_template in
   print_s [%message (variables : Matchers.Template.syntax list)];
   [%expect {|
-    (variables (((variable "") (pattern :[~x]) (offset 1)))) |}]
+    (variables (((variable "") (pattern :[~x]) (offset 1) (kind Value)))) |}]
 
 let%expect_test "interpret_incomplete_hole_as_constant" =
   let template = ":[B :[A]" in
   parse_template Matchers.Metasyntax.default_metasyntax template |> print_string;
-  [%expect_exact {|((Constant ":[B ") (Hole ((variable A) (pattern :[A]) (offset 4))))|}];
+  [%expect_exact {|((Constant ":[B ")
+ (Hole ((variable A) (pattern :[A]) (offset 4) (kind Value))))|}];
 
   let template = ":[B :[A~x]" in
   parse_template Matchers.Metasyntax.default_metasyntax template |> print_string;
-  [%expect_exact {|((Constant ":[B ") (Hole ((variable A) (pattern :[A~x]) (offset 4))))|}]
+  [%expect_exact {|((Constant ":[B ")
+ (Hole ((variable A) (pattern :[A~x]) (offset 4) (kind Value))))|}]
 
 let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
   let template = "$:x $B:x  $A" in
@@ -44,9 +46,9 @@ let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
     }
   in
   parse_template metasyntax template |> print_string;
-  [%expect_exact {|((Hole ((variable "") (pattern "$:x ") (offset 0)))
- (Hole ((variable B) (pattern "$B:x ") (offset 4))) (Constant " ")
- (Hole ((variable A) (pattern $A) (offset 10))))|}]
+  [%expect_exact {|((Hole ((variable "") (pattern "$:x ") (offset 0) (kind Value)))
+ (Hole ((variable B) (pattern "$B:x ") (offset 4) (kind Value)))
+ (Constant " ") (Hole ((variable A) (pattern $A) (offset 10) (kind Value))))|}]
 
 let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
   let template = "(  , ,  )" in
@@ -60,9 +62,11 @@ let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
     }
   in
   parse_template metasyntax template |> print_string;
-  [%expect_exact {|((Constant "(") (Hole ((variable "  ") (pattern "  ") (offset 1)))
- (Constant ,) (Hole ((variable " ") (pattern " ") (offset 4))) (Constant ,)
- (Hole ((variable "  ") (pattern "  ") (offset 6))) (Constant ")"))|}]
+  [%expect_exact {|((Constant "(")
+ (Hole ((variable "  ") (pattern "  ") (offset 1) (kind Value))) (Constant ,)
+ (Hole ((variable " ") (pattern " ") (offset 4) (kind Value))) (Constant ,)
+ (Hole ((variable "  ") (pattern "  ") (offset 6) (kind Value)))
+ (Constant ")"))|}]
 
 let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
   let template = "(..,.)" in
@@ -76,8 +80,9 @@ let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
     }
   in
   parse_template metasyntax template |> print_string;
-  [%expect_exact {|((Constant "(") (Hole ((variable ..) (pattern ..) (offset 1))) (Constant ,)
- (Hole ((variable .) (pattern .) (offset 4))) (Constant ")"))|}]
+  [%expect_exact {|((Constant "(") (Hole ((variable ..) (pattern ..) (offset 1) (kind Value)))
+ (Constant ,) (Hole ((variable .) (pattern .) (offset 4) (kind Value)))
+ (Constant ")"))|}]
 
 let%expect_test "parse_reserved_identifiers_as_holes" =
   let template = "(α)" in
@@ -91,5 +96,18 @@ let%expect_test "parse_reserved_identifiers_as_holes" =
   in
   parse_template metasyntax template |> print_string;
   [%expect_exact {|((Constant "(")
- (Hole ((variable "\206\177") (pattern "\206\177") (offset 1)))
+ (Hole ((variable "\206\177") (pattern "\206\177") (offset 1) (kind Value)))
  (Constant ")"))|}]
+
+
+let%expect_test "get_offsets_for_holes" =
+  let module Template_parser = Matchers.Template.Make(Matchers.Metasyntax.Default) in
+  let template = ":[a].type :[b].length :[[c]].valuev :[d.]." in
+  let variables = Template_parser.variables template in
+  print_s [%message (variables : Matchers.Template.syntax list)];
+  [%expect {|
+    (variables
+     (((variable a) (pattern :[a].type) (offset 0) (kind Type))
+      ((variable b) (pattern :[b].length) (offset 10) (kind Length))
+      ((variable c) (pattern :[[c]]) (offset 22) (kind Value))
+      ((variable d) (pattern :[d.]) (offset 36) (kind Value)))) |}]

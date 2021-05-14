@@ -114,10 +114,17 @@ type production =
   | Hole of hole
 
 module Template = struct
+  type kind =
+    | Value
+    | Length
+    | Type
+  [@@deriving sexp]
+
   type syntax =
     { variable: string (* E.g., x *)
     ; pattern: string (* E.g., the entire :[x] part *)
     ; offset : int
+    ; kind : kind (* The kind of hole, to inform substitution *)
     }
   [@@deriving sexp]
 

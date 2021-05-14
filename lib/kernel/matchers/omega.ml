@@ -94,10 +94,8 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         if debug then Format.printf "Match@.";
         acc
 
-
-
     let create v =
-      Types.Ast.Template [Hole { variable = v; pattern = v; offset = 0 }]
+      Types.Ast.Template [Hole { variable = v; pattern = v; offset = 0; kind = Value }]
 
     let implicit_equals_satisfied environment identifier range matched =
       let open Match in

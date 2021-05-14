@@ -106,9 +106,11 @@ let%expect_test "parse_freeform_antecedent_pattern" =
  ((Match (String match_me)
    (((String \"case one\") (True)) ((String \"case two\") (False))
     ((Template
-      ((Hole ((variable template) (pattern :[template]) (offset 0)))
+      ((Hole
+        ((variable template) (pattern :[template]) (offset 0) (kind Value)))
        (Constant \" \")
-       (Hole ((variable example) (pattern :[example]) (offset 12)))))
+       (Hole
+        ((variable example) (pattern :[example]) (offset 12) (kind Value)))))
      (False))))))
 "]
 
@@ -164,9 +166,12 @@ let%expect_test "parse_freeform_antecedent_pattern_map_regex" =
   |> fun rule -> print_s [%message (rule : Ast.expression list)];
   [%expect_exact "(rule
  ((Match (String match_me)
-   (((Template ((Hole ((variable \"\") (pattern :[~match_me]) (offset 0)))))
+   (((Template
+      ((Hole ((variable \"\") (pattern :[~match_me]) (offset 0) (kind Value)))))
      (True))
-    ((Template ((Hole ((variable _) (pattern :[_]) (offset 0))))) (False))))))
+    ((Template
+      ((Hole ((variable _) (pattern :[_]) (offset 0) (kind Value)))))
+     (False))))))
 "]
 
 let%expect_test "parse_regex_hole" =
@@ -180,10 +185,14 @@ let%expect_test "parse_regex_hole" =
   |> Or_error.ok_exn
   |> fun rule -> print_s [%message (rule : Ast.expression list)];
   [%expect_exact "(rule
- ((Match (Template ((Hole ((variable 1) (pattern :[1]) (offset 0)))))
-   (((Template ((Hole ((variable \"\") (pattern \":[~^\\\\d+$]\") (offset 0)))))
+ ((Match
+   (Template ((Hole ((variable 1) (pattern :[1]) (offset 0) (kind Value)))))
+   (((Template
+      ((Hole ((variable \"\") (pattern \":[~^\\\\d+$]\") (offset 0) (kind Value)))))
      (False))
-    ((Template ((Hole ((variable _) (pattern :[_]) (offset 0))))) (True))))))
+    ((Template
+      ((Hole ((variable _) (pattern :[_]) (offset 0) (kind Value)))))
+     (True))))))
 "]
 
 let%expect_test "parse_interpreting_escapes" =
@@ -213,9 +222,12 @@ let%expect_test "parse_freeform_antecedent_in_rewrite_rule" =
   |> fun rule -> print_s [%message (rule : Ast.expression list)];
   [%expect_exact "(rule
  ((Rewrite
-   (Template ((Hole ((variable contents) (pattern :[contents]) (offset 0)))))
+   (Template
+    ((Hole
+      ((variable contents) (pattern :[contents]) (offset 0) (kind Value)))))
    ((Template
-     ((Constant \"concat [\") (Hole ((variable x) (pattern :[x]) (offset 8)))
+     ((Constant \"concat [\")
+      (Hole ((variable x) (pattern :[x]) (offset 8) (kind Value)))
       (Constant ])))
     (String nice)))))
 "]
@@ -228,12 +240,15 @@ let%expect_test "parse_freeform_consequent_in_rewrite_rule" =
   |> Or_error.ok_exn
   |> fun rule -> print_s [%message (rule : Ast.expression list)];
   [%expect_exact "(rule
- ((Rewrite (Template ((Hole ((variable 0) (pattern :[0]) (offset 0)))))
+ ((Rewrite
+   (Template ((Hole ((variable 0) (pattern :[0]) (offset 0) (kind Value)))))
    ((Template
-     ((Hole ((variable 1) (pattern :[1]) (offset 0))) (Constant \" \")
-      (Hole ((variable 2) (pattern :[2]) (offset 5)))))
+     ((Hole ((variable 1) (pattern :[1]) (offset 0) (kind Value)))
+      (Constant \" \")
+      (Hole ((variable 2) (pattern :[2]) (offset 5) (kind Value)))))
     (Template
-     ((Hole ((variable 1) (pattern :[1]) (offset 0))) (Constant \" a\")))))))
+     ((Hole ((variable 1) (pattern :[1]) (offset 0) (kind Value)))
+      (Constant \" a\")))))))
 "]
 
 let%expect_test "this_damn_rule" =
@@ -247,8 +262,12 @@ let%expect_test "this_damn_rule" =
   |> Or_error.ok_exn
   |> fun rule -> print_s [%message (rule : Ast.expression list)];
   [%expect_exact "(rule
- ((Match (Template ((Hole ((variable 1) (pattern :[1]) (offset 0)))))
-   (((Template ((Hole ((variable \"\") (pattern \":[~^\\\\d+$]\") (offset 0)))))
+ ((Match
+   (Template ((Hole ((variable 1) (pattern :[1]) (offset 0) (kind Value)))))
+   (((Template
+      ((Hole ((variable \"\") (pattern \":[~^\\\\d+$]\") (offset 0) (kind Value)))))
      (False))
-    ((Template ((Hole ((variable _) (pattern :[_]) (offset 0))))) (True))))))
+    ((Template
+      ((Hole ((variable _) (pattern :[_]) (offset 0) (kind Value)))))
+     (True))))))
 " ]

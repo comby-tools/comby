@@ -69,41 +69,6 @@ let substitute_fresh
   done;
   !template_ref
 
-(** Unused alternative to above. Uses String.substr_index on pattern and then String.replace_all. Don't know if it's faster, must benchmark *)
-let substitute_in_rewrite_template'
-    ?fresh
-    ?(metasyntax = Metasyntax.default_metasyntax)
-    template
-    ({ environment; _ } : Match.t) =
-  let (module M) = Metasyntax.create metasyntax in
-  let module Template_parser = Template.Make(M) in
-  let template = substitute_fresh ~metasyntax ?fresh template in
-  let vars = Template_parser.variables template in
-  let replacement_content, environment =
-    List.fold vars ~init:(template, Environment.create ()) ~f:(fun (template, env) { variable; pattern; _ } ->
-        match Environment.lookup environment variable with
-        | None -> template, env
-        | Some value ->
-          match String.substr_index template ~pattern with
-          | None -> template, env
-          | Some offset ->
-            let range =
-              Range.
-                { match_start = Location.{ default with offset }
-                ; match_end = Location.{ default with offset = offset + String.length value }
-                }
-            in
-            let env = Environment.add ~range env variable value in
-            String.substr_replace_all template ~pattern ~with_:value, env)
-  in
-  { replacement_content
-  ; environment
-  ; range =
-      { match_start = { Location.default with offset = 0 }
-      ; match_end = Location.default
-      }
-  }
-
 let substitute_in_rewrite_template
     ?fresh
     ?(metasyntax = Metasyntax.default_metasyntax)
@@ -113,24 +78,7 @@ let substitute_in_rewrite_template
   let module Template_parser = Template.Make(M) in
   let template = substitute_fresh ~metasyntax ?fresh template in
   let terms = Template_parser.parse template in
-  let replacement_content, environment, _ =
-    List.fold terms ~init:([], Environment.create (), 0) ~f:(fun (result, env, pos) -> function
-        | Constant c -> c::result, env, pos + String.length c
-        | Hole { variable; pattern; _ } ->
-          match Environment.lookup environment variable with
-          | None -> pattern::result, env, pos + String.length variable
-          | Some value ->
-            let advance = pos + String.length value in
-            let range =
-              Range.
-                { match_start = Location.{ default with offset = pos }
-                ; match_end = Location.{ default with offset = advance }
-                }
-            in
-            let env = Environment.add ~range env variable value in
-            value::result, env, advance)
-  in
-  let replacement_content = String.concat (List.rev replacement_content) in
+  let replacement_content, environment = Template_parser.substitute terms environment in
   { replacement_content
   ; environment
   ; range =

@@ -332,10 +332,16 @@ module Matchers : sig
       Parse a template based on metasynax *)
 
   module Template : sig
+    type kind =
+      | Value
+      | Length
+      | Type
+
     type syntax =
       { variable : string
       ; pattern : string
       ; offset : int
+      ; kind : kind
       }
     [@@deriving sexp]
 

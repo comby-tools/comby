@@ -42,20 +42,6 @@ let substitute env = function
   | Template t -> Rewrite.substitute (Template.to_string t) env
   | String s -> s
 
-(* FIXME dead code, this logic should go in rewrite *)
-let evaluate_substitute env atom kind =
-  let open Option in
-  let length_to_string n = Format.sprintf "%d" (String.length n) in
-  match atom, kind with
-  | String v, Value -> return v
-  | String v, Length -> return (length_to_string v)
-  | Template t, Value -> Some (Rewrite.substitute (Template.to_string t) env)
-  | Template t, Length ->
-    Rewrite.substitute (Template.to_string t) env
-    |> length_to_string
-    |> return
-  | _ -> failwith "invalid"
-
 let apply
     ?(substitute_in_place = true)
     ?(fresh = counter)

@@ -53,7 +53,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
     let wildcard = "_"
 
     let create v =
-      Types.Ast.Template [Hole { variable = v; pattern = v; offset = 0 }]
+      Types.Ast.Template [Hole { variable = v; pattern = v; offset = 0; kind = Value }]
 
     let implicit_equals_satisfied environment identifier range matched =
       if debug then Format.printf "Looking up %s@." identifier;
