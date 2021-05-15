@@ -1,6 +1,5 @@
 include Types.Metasyntax
 
-(* Format.printf "%s@." @@ Matchers.Metasyntax.(json Matchers.Metasyntax.default_metasyntax);; *)
 let default_syntax =
   [ Hole (Everything, Delimited (Some ":[", Some "]"))
   ; Hole (Expression, Delimited (Some ":[", Some ":e]"))
@@ -33,5 +32,6 @@ let default = create default_metasyntax
 
 module Default = (val default)
 
+(* In utop: Format.printf "%s@." @@ Matchers.Metasyntax.(json Matchers.Metasyntax.default_metasyntax);; *)
 let json metasyntax =
   Yojson.Safe.pretty_to_string @@ to_yojson metasyntax

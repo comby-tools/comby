@@ -109,7 +109,6 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         Some environment'
       | _ -> None
 
-
     let r acc production : (production * 'a) t =
       let open Match in
       let open Location in
