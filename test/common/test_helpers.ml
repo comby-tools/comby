@@ -41,21 +41,6 @@ let run ?(configuration = configuration) (module M : Matchers.Matcher.S) source 
     |> (fun { rewritten_source; _ } -> rewritten_source)
     |> print_string
 
-let run_nested
-    (module M : Matchers.Matcher.S)
-    ?(configuration = configuration)
-    ?rule
-    source
-    match_template
-    () =
-  M.all ~configuration ?rule ~template:match_template ~source ()
-  |> function
-  | [] -> print_string "No matches."
-  | matches ->
-    let matches = List.map matches ~f:(Match.convert_offset ~fast:true ~source) in
-    Format.asprintf "%a" Match.pp (None, matches)
-    |> print_string
-
 let make_env bindings =
   List.fold bindings
     ~init:(Match.Environment.create ())
@@ -67,15 +52,32 @@ let parse_template metasyntax template =
   let tree = Template_parser.parse template in
   Sexp.to_string_hum (Template.sexp_of_t tree)
 
-let run_match (module M : Matchers.Matcher.S) source match_template =
-  M.all ~configuration ~template:match_template ~source ()
+let run_match (module M : Matchers.Matcher.S) source ?rule match_template =
+  let rule =
+    match rule with
+    | Some rule -> Matchers.Rule.create rule |> Or_error.ok_exn
+    | None -> Rule.create "where true" |> Or_error.ok_exn
+  in
+  M.all ~configuration ~rule ~template:match_template ~source ()
   |> function
   | [] -> print_string "No matches."
   | hd :: _ ->
     print_string (Yojson.Safe.to_string (Match.to_yojson hd))
 
-let run_all_matches (module M : Matchers.Matcher.S) source match_template =
-  M.all ~configuration ~template:match_template ~source ()
+let run_all_matches (module M : Matchers.Matcher.S) ?(format = `Json) source ?rule match_template =
+  let rule =
+    match rule with
+    | Some rule -> Matchers.Rule.create rule |> Or_error.ok_exn
+    | None -> Rule.create "where true" |> Or_error.ok_exn
+  in
+  M.all ~configuration ~rule ~template:match_template ~source ()
   |> function
   | [] -> print_string "No matches."
-  | l -> Format.printf "%a" Match.pp_json_lines (None, l)
+  | l ->
+    match format with
+    | `Json ->
+      Format.printf "%a" Match.pp_json_lines (None, l)
+    | `Lines ->
+      let matches = List.map l ~f:(Match.convert_offset ~fast:true ~source) in
+      Format.asprintf "%a" Match.pp (None, matches)
+      |> print_string
