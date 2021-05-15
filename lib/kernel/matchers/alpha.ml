@@ -266,7 +266,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
           | Hole (sort, Delimited (left, right)) ->
             (sort, (p left >> hole_body () << p right))::acc
           | Hole (sort, Reserved_identifiers l) ->
-            (sort, choice (List.map ~f:(fun s -> string s |>> fun s -> s) l))::acc
+            (sort, choice (List.map ~f:string l))::acc
           | Regex (left, separator, right) ->
             (Regex, (p (Some left) >> regex_body separator right () << p (Some right)))::acc)
 
