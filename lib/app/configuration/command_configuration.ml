@@ -238,7 +238,6 @@ type run_options =
   { verbose : bool
   ; match_timeout : int
   ; dump_statistics : bool
-  ; substitute_in_place : bool
   ; disable_substring_matching : bool
   ; fast_offset_conversion : bool
   ; match_newline_toplevel : bool

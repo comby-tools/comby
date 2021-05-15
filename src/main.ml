@@ -235,7 +235,6 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             { verbose
             ; match_timeout
             ; dump_statistics
-            ; substitute_in_place
             ; disable_substring_matching
             ; fast_offset_conversion
             ; match_newline_toplevel

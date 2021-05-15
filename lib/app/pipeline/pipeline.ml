@@ -237,7 +237,6 @@ let run
         { verbose
         ; match_timeout = timeout
         ; dump_statistics
-        ; substitute_in_place = _ (* FIXME remove *)
         ; disable_substring_matching
         ; fast_offset_conversion
         ; match_newline_toplevel

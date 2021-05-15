@@ -81,3 +81,22 @@ let run_all_matches (module M : Matchers.Matcher.S) ?(format = `Json) source ?ru
       let matches = List.map l ~f:(Match.convert_offset ~fast:true ~source) in
       Format.asprintf "%a" Match.pp (None, matches)
       |> print_string
+
+let run_rule (module E : Engine.S) source match_template rewrite_template rule =
+  let (module M : Matcher.S) = (module E.Generic) in
+  M.first ~configuration match_template source
+  |> function
+  | Error _ -> print_string "bad"
+  | Ok result ->
+    match result with
+    | ({ environment; _ } as m) ->
+      let e = Rule.(result_env @@ apply ~match_all:(M.all ~rule:[Ast.True]) rule environment) in
+      match e with
+      | None -> print_string "bad bad"
+      | Some e ->
+        { m with environment = e }
+        |> List.return
+        |> Rewrite.all ~source ~rewrite_template
+        |> (fun x -> Option.value_exn x)
+        |> (fun { rewritten_source; _ } -> rewritten_source)
+        |> print_string

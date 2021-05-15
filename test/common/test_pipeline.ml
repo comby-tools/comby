@@ -12,7 +12,6 @@ let configuration (module E : Engine.S) =
       { verbose = false
       ; match_timeout = 3
       ; dump_statistics = false
-      ; substitute_in_place = true
       ; disable_substring_matching = false
       ; fast_offset_conversion = false
       ; match_newline_toplevel = false
