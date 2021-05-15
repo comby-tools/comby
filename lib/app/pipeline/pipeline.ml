@@ -25,9 +25,7 @@ let timed_run
   (match rewrite_template with
    | Some template -> Matcher.set_rewrite_template template;
    | None -> ());
-  let rule = Option.value rule ~default:(Rule.create "where true" |> Or_error.ok_exn) in
-  let options = Rule.options rule in
-  let matches = Matcher.all ~rule ~nested:options.nested ~configuration ~template ~source () in
+  let matches = Matcher.all ?rule ~configuration ~template ~source () in
   List.map matches ~f:(Match.convert_offset ~fast:fast_offset_conversion ~source)
 
 type output =

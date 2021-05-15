@@ -958,7 +958,8 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
       in
       first' shift p source
 
-    let all ?configuration ?rule ?(nested = false) ~template ~source:original_source () : Match.t list =
+    let all ?configuration ?(rule = [Types.Ast.True]) ~template ~source:original_source () : Match.t list =
+      let Rule.{ nested } = Rule.options rule in
       let rec aux_all ?configuration ?(nested = false) ~template ~source:original_source () =
         let open Or_error in
         depth := (-1);
@@ -989,19 +990,15 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
               if debug then Format.printf "Extracted matched: %s@." matched;
               let result = { result with matched } in
               let result =
-                match rule with
-                | None ->
-                  Some result
-                | Some rule ->
-                  if debug then Format.printf "Rule: %s@." (Sexp.to_string @@ Rule.sexp_of_t rule);
-                  (* FIXME metasyntax should propagate *)
-                  let sat, env = Program.apply ~metasyntax:Metasyntax.default_metasyntax ~substitute_in_place:true rule environment in
-                  if debug && Option.is_some env then Format.printf "Got back: %b %S" sat (Match.Environment.to_string @@ Option.value_exn env);
-                  let new_env = if sat then env else None in
-                  match new_env with
-                  | None -> None
-                  | Some env ->
-                    Some { result with environment = env }
+                if debug then Format.printf "Rule: %s@." (Sexp.to_string @@ Rule.sexp_of_t rule);
+                (* FIXME metasyntax should propagate *)
+                let sat, env = Program.apply ~metasyntax:Metasyntax.default_metasyntax ~substitute_in_place:true rule environment in
+                if debug && Option.is_some env then Format.printf "Got back: %b %S" sat (Match.Environment.to_string @@ Option.value_exn env);
+                let new_env = if sat then env else None in
+                match new_env with
+                | None -> None
+                | Some env ->
+                  Some { result with environment = env }
               in
               if shift >= String.length original_source then
                 (match result with
@@ -1103,7 +1100,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
       Evaluate.apply
         ~substitute_in_place
         ?metasyntax
-        ~match_all:(Matcher.all ~rule:[Types.Ast.True] ~nested:false)
+        ~match_all:(Matcher.all ~rule:[Types.Ast.True])
         rule
         env
   end

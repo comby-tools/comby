@@ -177,7 +177,6 @@ module Matcher = struct
     val all
       :  ?configuration:Configuration.t
       -> ?rule:Rule.t
-      -> ?nested: bool
       -> template:string
       -> source:string
       -> unit

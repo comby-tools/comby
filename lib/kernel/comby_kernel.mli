@@ -403,7 +403,6 @@ module Matchers : sig
       val all
         :  ?configuration:configuration
         -> ?rule:Rule.t
-        -> ?nested:bool
         -> template:string
         -> source:string
         -> unit

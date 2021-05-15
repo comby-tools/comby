@@ -48,14 +48,7 @@ let run_nested
     source
     match_template
     () =
-  let nested =
-    match rule with
-    | None -> true
-    | Some rule ->
-      let options = Rule.create rule |> Or_error.ok_exn |> Rule.options in
-      options.nested
-  in
-  M.all ~configuration ~nested ~template:match_template ~source ()
+  M.all ~configuration ?rule ~template:match_template ~source ()
   |> function
   | [] -> print_string "No matches."
   | matches ->

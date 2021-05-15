@@ -12,7 +12,7 @@ let run_rule (module E : Engine.S) source match_template rewrite_template rule =
   | Ok result ->
     match result with
     | ({ environment; _ } as m) ->
-      let e = Rule.(result_env @@ apply ~match_all:(M.all ~rule:[Ast.True] ~nested:false) rule environment) in
+      let e = Rule.(result_env @@ apply ~match_all:(M.all ~rule:[Ast.True]) rule environment) in
       match e with
       | None -> print_string "bad bad"
       | Some e ->

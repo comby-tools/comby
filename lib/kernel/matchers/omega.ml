@@ -951,13 +951,14 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
       in
       Match.create ~range ()
 
-    let all ?configuration ?rule ?(nested = false) ~template ~source:original_source () : Match.t list =
+    let all ?configuration ?(rule = [Types.Ast.True]) ~template ~source:original_source () : Match.t list =
       push_matches_ref := !matches_ref;
       configuration_ref := Option.value configuration ~default:!configuration_ref;
+      let Rule.{ nested } = Rule.options rule in
       let rec aux_all ?configuration ?(nested = false) ~template ~source () =
         matches_ref := [];
         if String.is_empty template && String.is_empty source then [trivial]
-        else match first_is_broken template source rule with
+        else match first_is_broken template source (Some rule) with (* FIXME always Some rule *)
           | Ok _
           | Error _ ->
             let matches = List.rev !matches_ref in
@@ -1051,7 +1052,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
       Evaluate.apply
         ~substitute_in_place
         ?metasyntax
-        ~match_all:(Matcher.all ~rule:[Types.Ast.True] ~nested:false) (* FIXME propagated nested *)
+        ~match_all:(Matcher.all ~rule:[Types.Ast.True])
         rule
         env
   end
