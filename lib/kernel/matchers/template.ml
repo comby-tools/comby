@@ -15,6 +15,43 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
   let identifier () =
     many1 @@ character () >>| String.of_char_list
 
+  let hole_body () =
+    identifier ()
+
+  let regex_expression suffix =
+    lift String.concat
+      (many1 @@
+       fix (fun expr ->
+           choice
+             [ lift (fun x -> Format.sprintf "[%s]" @@ String.concat x) (char '[' *> many1 expr <* char ']')
+             ; lift (fun c -> Format.sprintf {|\%c|} c) (char '\\' *> any_char)
+             ; lift String.of_char_list (up_to (string suffix))
+             ])
+      )
+
+  let regex_body separator suffix =
+    both
+      (option "" (identifier ()))
+      (char separator *> regex_expression suffix)
+
+  module Match = struct
+
+    let p = function
+      | Some delim -> (string delim) *> return ()
+      | None -> return ()
+
+(*
+    let hole_parsers =
+      List.fold ~init:[] Metasyntax.syntax ~f:(fun acc -> function
+          | Hole (sort, Delimited (left, right)) ->
+            (p left *> hole_body () <* p right)::acc
+          | Hole (sort, Reserved_identifiers l) ->
+            choice (List.map ~f:(fun s -> string s >>| fun s -> s) l)::acc
+          | Regex (left, separator, right) ->
+            (p (Some left) *> regex_body separator right <* p (Some right) >>= fun (v,r) -> return (v^r))::acc)
+*)
+  end
+
   let attribute_to_kind = function
     | "value" -> Value
     | "length" -> Length
@@ -25,20 +62,6 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
 
   let attribute_access () =
     char '.' *> choice [ string "length"; string "type" ] <* not_followed_by (Omega_parser_helper.alphanum)
-
-  let regex_expression suffix =
-    many1 @@
-    fix (fun expr ->
-        choice
-          [ lift (fun x -> Format.sprintf "[%s]" @@ String.concat x) (char '[' *> many1 expr <* char ']')
-          ; lift (fun c -> Format.sprintf {|\%c|} c) (char '\\' *> any_char)
-          ; lift String.of_char_list (up_to (string suffix))
-          ])
-
-  let regex_body separator suffix =
-    both
-      (option "" (identifier ()))
-      (char separator *> regex_expression suffix)
 
   (** Folds left to respect order of definitions in custom metasyntax for
       matching, where we attempt to parse in order. Note this is significant if a
@@ -71,7 +94,7 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
               (fun left (v, expr) right kind ->
                  let dot_attribute = if String.(kind = "value") then "" else "."^kind in
                  Format.sprintf "%s%s%c%s%s%s"
-                   left v separator (String.concat expr) right dot_attribute, v, kind)
+                   left v separator expr right dot_attribute, v, kind)
               (string left)
               (regex_body separator right)
               (string right)
