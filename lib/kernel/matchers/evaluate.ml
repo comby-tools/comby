@@ -28,13 +28,6 @@ let merge_match_environments matches environment' =
   List.map matches ~f:(fun { environment; _ } ->
       Environment.merge environment environment')
 
-let counter =
-  let uuid_for_id_counter = ref 0 in
-  fun () ->
-    uuid_for_id_counter := !uuid_for_id_counter + 1;
-    Format.sprintf "gu3ssme_%012d" !uuid_for_id_counter
-
-
 (* FIXME. Propagate this. *)
 module Template = Template.Make(Metasyntax.Default)
 
@@ -44,13 +37,10 @@ let substitute env = function
 
 let apply
     ?(substitute_in_place = true)
-    ?(fresh = counter)
     ?metasyntax
     ~(match_all:(?configuration:Configuration.t -> template:string -> source:string -> unit -> Match.t list))
     predicates
     env =
-
-  let _ = fresh () in (* FIXME not needed any more *)
 
   (* accepts only one expression *)
   let rec eval env =

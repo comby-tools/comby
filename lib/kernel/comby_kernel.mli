@@ -460,7 +460,6 @@ module Matchers : sig
         rules. [metasyntax] uses the custom metasyntax definition. *)
     val apply :
       ?substitute_in_place:bool ->
-      ?fresh:(unit -> string) ->
       ?metasyntax:Metasyntax.t ->
       match_all:(
         ?configuration:Configuration.t ->

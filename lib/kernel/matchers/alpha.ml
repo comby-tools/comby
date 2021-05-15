@@ -1089,7 +1089,6 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
   and Program : sig
     val apply
       :  ?substitute_in_place:bool
-      -> ?fresh:(unit -> string)
       -> ?metasyntax:Types.Metasyntax.t
       -> Rule.t
       -> Match.environment
@@ -1098,13 +1097,11 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
 
     let apply
         ?(substitute_in_place = true)
-        ?(fresh = Evaluate.counter)
         ?metasyntax
         rule
         env =
       Evaluate.apply
         ~substitute_in_place
-        ~fresh
         ?metasyntax
         ~match_all:(Matcher.all ~rule:[Types.Ast.True] ~nested:false)
         rule

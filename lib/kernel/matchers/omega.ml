@@ -1038,22 +1038,18 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
   and Program : sig
     val apply
       :  ?substitute_in_place:bool
-      -> ?fresh:(unit -> string)
       -> ?metasyntax:Metasyntax.t
       -> Rule.t
       -> Match.environment
       -> Evaluate.result
   end = struct
-
     let apply
         ?(substitute_in_place = true)
-        ?(fresh = Evaluate.counter)
         ?metasyntax
         rule
         env =
       Evaluate.apply
         ~substitute_in_place
-        ~fresh
         ?metasyntax
         ~match_all:(Matcher.all ~rule:[Types.Ast.True] ~nested:false) (* FIXME propagated nested *)
         rule
