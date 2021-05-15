@@ -1213,30 +1213,32 @@ let%expect_test "test_custom_metasyntax_replace" =
   let source = "a(b)" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
   let command_args =
-    Format.sprintf "'$A($B~\\w+$)' '$A $B' -stdin -sequential -custom-metasyntax %s -stdout" metasyntax_path
+    Format.sprintf "'$A($B~\\w+$)' '$A $B' -stdin -sequential -custom-metasyntax %s -stdout -matcher .generic" metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "a b"]
+  [%expect "
+    a b"]
 
 let%expect_test "test_custom_metasyntax_replace" =
   let source = "a(b)" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
   let command_args =
-    Format.sprintf "'$A($B~\\w+$)' '$A~x$ $B~\\w+$' -stdin -sequential -custom-metasyntax %s -stdout" metasyntax_path
+    Format.sprintf "'$A($B~\\w+$)' '$A~x$ $B~\\w+$' -stdin -sequential -custom-metasyntax %s -stdout -matcher .generic" metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "a b"]
+  [%expect "
+    a b"]
 
 let%expect_test "test_custom_metasyntax_substitute" =
   let source = "IGNORED" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
   let env = {|[{"variable":"B", "value":"hello" }]|} in
   let command_args =
-    Format.sprintf "'IGNORED' '$A $B~\\w+$' -stdin -sequential -custom-metasyntax %s -substitute-only '%s'" metasyntax_path env
+    Format.sprintf "'IGNORED' '$A $B~\\w+$' -stdin -sequential -custom-metasyntax %s -substitute-only '%s' -matcher .generic" metasyntax_path env
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
@@ -1247,20 +1249,22 @@ let%expect_test "test_custom_metasyntax_partial_rule_support" =
   let source = "a(b)" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
   let command_args =
-    Format.sprintf {|'$A($B)' '$A $B' -rule 'where rewrite :[A] { "$C~a$" -> "$C" }' -stdin -custom-metasyntax %s -stdout|} metasyntax_path
+    Format.sprintf {|'$A($B)' '$A $B' -rule 'where rewrite :[A] { "$C~a$" -> "$C" }' -stdin -custom-metasyntax %s -stdout -matcher .generic|} metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "$C b"]
+  [%expect "
+    $C b"]
 
 let%expect_test "test_custom_metasyntax_reserved_identifiers" =
   let source = "fun f -> (fun x -> f (x x)) (fun x -> f (x x))" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "default.json" in
   let command_args =
-    Format.sprintf {|'λ f -> α α' 'α' -stdin -custom-metasyntax %s -stdout|} metasyntax_path
+    Format.sprintf {|'λ f -> α α' 'α' -stdin -custom-metasyntax %s -stdout -matcher .generic|} metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "(fun x -> f (x x))"]
+  [%expect "
+    (fun x -> f (x x))"]

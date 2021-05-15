@@ -91,7 +91,6 @@ type t =
   ; output_printer : Printer.t
   ; interactive_review : interactive_review option
   ; matcher : (module Matchers.Matcher.S)
-  ; extension : string option
   ; metasyntax :  Matchers.Metasyntax.t option
   }
 

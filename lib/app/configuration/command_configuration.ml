@@ -432,7 +432,6 @@ type t =
   ; output_printer : Printer.t
   ; interactive_review : interactive_review option
   ; matcher : (module Matchers.Matcher.S)
-  ; extension : string option
   ; metasyntax : Matchers.Metasyntax.t option
   }
 
@@ -828,11 +827,10 @@ let create
       else
         Printer.Rewrite.print replacement_output source_path replacements result source_content
   in
-  let (module M) as matcher, extension, metasyntax =
+  let (module M) as matcher, _, metasyntax =
     select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega in
   return
     { matcher
-    ; extension
     ; sources
     ; specifications
     ; run_options

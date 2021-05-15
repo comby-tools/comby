@@ -20,7 +20,6 @@ let configuration (module E : Engine.S) =
       }
   ; output_printer = (fun _ -> ())
   ; interactive_review = None
-  ; extension = None
   ; metasyntax = None
   }
 
