@@ -856,13 +856,8 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
           r acc Unit
 
     let to_template template rule =
-      let state = Buffered.parse (general_parser_generator rule) in
-      let state = Buffered.feed state (`String template) in
-      Buffered.feed state `Eof
-      |> function
-      | Buffered.Done ({ len; _ }, p) ->
-        if len <> 0 then failwith @@ Format.sprintf "Input left over in template where not expected: %d" len;
-        Ok p
+      match parse_string ~consume:All (general_parser_generator rule) template with
+      | Ok p -> Ok p
       | _ -> Or_error.error_string "Template could not be parsed."
 
     let run_the_parser_for_first p source : Match.t Or_error.t =
