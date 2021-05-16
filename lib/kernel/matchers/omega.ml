@@ -545,8 +545,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                     (
                       pos >>= fun pos ->
                       if get_pos () = (-1) then set_pos pos;
-                      let stop_at = choice [ rest; Omega_parser_helper.ignore reserved_parsers ] in
-                      many1_till_stop any_char stop_at (* Beware of this use. *)
+                      Omega_parser_helper.up_to (choice [ Omega_parser_helper.skip reserved_parsers; rest ])
                     ) >>| String.of_char_list
                   in
                   let non_space =
