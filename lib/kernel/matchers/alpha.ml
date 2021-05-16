@@ -274,7 +274,6 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
       List.map hole_parsers ~f:(fun (_, parser) -> parser >>= fun _ -> return "")
 
     let reserved_parsers () =
-
       (* Alphanum blocks *)
       let required_from_suffix = not_alphanum in
       let required_until_suffix = not_alphanum in
@@ -319,17 +318,17 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
       let user_defined_reserved_raw_strings =
         List.concat_map Syntax.raw_string_literals ~f:(fun (from, until) -> [string from; string until])
       in
-      let reserved_comments =
+      let user_defined_reserved_comments =
         List.concat_map Syntax.comments ~f:(function
             | Multiline (left, right) -> [string left; string right]
             | Nested_multiline (left, right) -> [string left; string right]
             | Until_newline start -> [string start])
       in
-      [ reserved_holes
-      ; user_defined_reserved_delimiters
+      [ user_defined_reserved_delimiters
+      ; reserved_holes
       ; user_defined_reserved_escapable_strings
       ; user_defined_reserved_raw_strings
-      ; reserved_comments (* only needed once it's significant for matching and not treated like spaces*)
+      ; user_defined_reserved_comments (* only needed once it's significant for matching and not treated like spaces*)
       ]
       |> List.concat
       |> List.map ~f:skip

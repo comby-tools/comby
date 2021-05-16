@@ -90,6 +90,10 @@ let blank =
     ; char '\t'
     ]
 
+let spaces =
+  take_while is_whitespace >>= fun s ->
+  return s
+
 let spaces1 =
   satisfy is_whitespace >>= fun c ->
   take_while is_whitespace >>= fun s ->

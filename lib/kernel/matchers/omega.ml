@@ -277,11 +277,18 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         List.concat_map Language.Syntax.raw_string_literals ~f:(fun (from, until) ->
             [string from; string until])
       in
+      let user_defined_reserved_comments =
+        List.concat_map Language.Syntax.comments ~f:(function
+            | Multiline (left, right) -> [string left; string right]
+            | Nested_multiline (left, right) -> [string left; string right]
+            | Until_newline start -> [string start])
+      in
       let spaces = [ " "; "\n"; "\t"; "\r" ] |> List.map ~f:string in
-      [ reserved_holes
-      ; user_defined_delimiters
+      [ user_defined_delimiters
+      ; reserved_holes
       ; user_defined_escapable_strings
       ; user_defined_raw_strings
+      ; user_defined_reserved_comments
       ; spaces
       ]
       |> List.concat
