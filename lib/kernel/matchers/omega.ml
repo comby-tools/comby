@@ -248,18 +248,6 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       | Some until -> until
       | None -> assert false
 
-    module Deprecate = struct
-      let reserved_delimiters =
-        List.concat_map Language.Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
-        |> List.append [":["; "]"]
-        |> List.append [":[["; "]]"]
-
-      let reserved =
-        reserved_delimiters @ [" "; "\n"; "\t"; "\r"]
-        |> List.sort ~compare:(fun v2 v1 ->
-            String.length v1 - String.length v2)
-    end
-
     let reserved_holes =
       List.map Template.Matching.hole_parsers ~f:(fun (_, parser) -> parser *> return "")
 
@@ -293,6 +281,18 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       ]
       |> List.concat
       |> choice
+
+    module Deprecate = struct
+      let reserved_delimiters =
+        List.concat_map Language.Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
+        |> List.append [":["; "]"]
+        |> List.append [":[["; "]]"]
+
+      let reserved =
+        reserved_delimiters @ [" "; "\n"; "\t"; "\r"]
+        |> List.sort ~compare:(fun v2 v1 ->
+            String.length v1 - String.length v2)
+    end
 
     let generate_single_hole_parser () =
       (alphanum <|> char '_') >>| String.of_char
@@ -368,7 +368,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       let inner =
         fix (fun grammar ->
             let delims_over_holes = between_nested_delims (many grammar) in
-            let other = Omega_parser_helper.Deprecate.any_char_except ~reserved >>| String.of_char in
+            let other = up_to @@ choice (List.map reserved ~f:string) >>| String.of_char_list in
             choice
               [ comment_parser
               ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)

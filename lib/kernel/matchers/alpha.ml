@@ -419,7 +419,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
          <|> (attempt @@ delims_over_holes)
          (* Only consume if not reserved. If it is reserved, we want to trigger the 'many'
             in (many nested_grammar) to continue. *)
-         <|> (is_not (reserved <|> (space |>> Char.to_string)) |>> String.of_char))
+         <|> (is_not reserved |>> String.of_char))
           s
       and delims_over_holes s =
         let between_nested_delims p =
