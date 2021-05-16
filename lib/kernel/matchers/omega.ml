@@ -267,26 +267,29 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
     end
 
     let reserved_parsers =
-      let user_defined_delimiters = List.concat_map Language.Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until]) in
+      let user_defined_delimiters =
+        List.concat_map Language.Syntax.user_defined_delimiters ~f:(fun (from, until) ->
+            [string from; string until]) in
       let user_defined_escapable_strings =
         match Language.Syntax.escapable_string_literals with
         | Some { delimiters; _ } ->
-          List.concat_map delimiters ~f:(fun delimiter -> [delimiter])
+          List.concat_map delimiters ~f:(fun delimiter -> [string delimiter])
         | None -> []
       in
       let user_defined_raw_strings =
-        List.concat_map Language.Syntax.raw_string_literals ~f:(fun (from, until) -> [from; until])
+        List.concat_map Language.Syntax.raw_string_literals ~f:(fun (from, until) ->
+            [string from; string until])
       in
-      let hole_syntax = [ ":["; "]"; ":[["; ":]]" ] in
-      let spaces = [ " "; "\n"; "\t"; "\r" ] in
-      let reserved =
-        user_defined_delimiters
-        @ user_defined_escapable_strings
-        @ user_defined_raw_strings
-        @ hole_syntax
-        @ spaces
-      in
-      choice @@ List.map reserved ~f:string
+      let hole_syntax = [ ":["; "]"; ":[["; ":]]" ] |> List.map ~f:string in
+      let spaces = [ " "; "\n"; "\t"; "\r" ] |> List.map ~f:string in
+      [ user_defined_delimiters
+      ; user_defined_escapable_strings
+      ; user_defined_raw_strings
+      ; hole_syntax
+      ; spaces
+      ]
+      |> List.concat
+      |> choice
 
     let generate_single_hole_parser () =
       (alphanum <|> char '_') |>> String.of_char

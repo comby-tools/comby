@@ -274,6 +274,8 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
       List.map hole_parsers ~f:(fun (_, parser) -> parser >>= fun _ -> return "")
 
     let reserved_parsers () =
+
+      (* Alphanum blocks *)
       let required_from_suffix = not_alphanum in
       let required_until_suffix = not_alphanum in
       let handle_alphanum_delimiters_reserved_trigger from until =
@@ -300,21 +302,22 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
         in
         [from_parser; until_parser]
       in
-      let reserved_delimiters =
+      (* Isomorphic to Omega *)
+      let user_defined_reserved_delimiters =
         List.concat_map Syntax.user_defined_delimiters ~f:(fun (from, until) ->
             if is_alphanum from && is_alphanum until then
               handle_alphanum_delimiters_reserved_trigger from until
             else
               [ string from; string until])
       in
-      let reserved_escapable_strings =
+      let user_defined_reserved_escapable_strings =
         match Syntax.escapable_string_literals with
         | Some { delimiters; _ } ->
           List.concat_map delimiters ~f:(fun delimiter -> [delimiter])
           |> List.map ~f:string
         | None -> []
       in
-      let reserved_raw_strings =
+      let user_defined_reserved_raw_strings =
         List.concat_map Syntax.raw_string_literals ~f:(fun (from, until) -> [from; until])
         |> List.map ~f:string
       in
@@ -326,9 +329,9 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
         |> List.map ~f:string
       in
       [ reserved_holes
-      ; reserved_delimiters
-      ; reserved_escapable_strings
-      ; reserved_raw_strings
+      ; user_defined_reserved_delimiters
+      ; user_defined_reserved_escapable_strings
+      ; user_defined_reserved_raw_strings
       ; reserved_comments
       ]
       |> List.concat
