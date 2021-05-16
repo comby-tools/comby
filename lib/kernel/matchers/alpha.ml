@@ -409,6 +409,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
         |> List.map ~f:attempt
         |> choice
       in
+      let other = is_not reserved |>> String.of_char in
       (* A parser that understands the hole matching cut off points happen at
          delimiters. *)
       let rec nested_grammar s =
@@ -419,7 +420,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
          <|> (attempt @@ delims_over_holes)
          (* Only consume if not reserved. If it is reserved, we want to trigger the 'many'
             in (many nested_grammar) to continue. *)
-         <|> (is_not reserved |>> String.of_char))
+         <|> other)
           s
       and delims_over_holes s =
         let between_nested_delims p =

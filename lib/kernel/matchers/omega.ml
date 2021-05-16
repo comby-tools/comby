@@ -365,10 +365,10 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         in
         List.concat_map parsers ~f:(fun (from, until) -> [from; until])
       in
+      let other = up_to @@ choice (List.map reserved ~f:string) >>| String.of_char_list in
       let inner =
         fix (fun grammar ->
             let delims_over_holes = between_nested_delims (many grammar) in
-            let other = up_to @@ choice (List.map reserved ~f:string) >>| String.of_char_list in
             choice
               [ comment_parser
               ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
@@ -388,7 +388,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         choice
           [ (string (Format.sprintf "%c%s" escape_character right_delimiter))
           ; (string (Format.sprintf "%c%c" escape_character escape_character))
-          ; (Omega_parser_helper.Deprecate.any_char_except ~reserved:[right_delimiter] >>| String.of_char)
+          ; (not_followed_by (string right_delimiter) *> any_char >>| String.of_char)
           ]
 
     let raw_literal_grammar ~right_delimiter =
