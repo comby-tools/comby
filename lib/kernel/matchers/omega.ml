@@ -353,6 +353,78 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
     let raw_literal_grammar ~right_delimiter =
       (not_followed_by (string right_delimiter) *> any_char >>| String.of_char)
 
+    let seq p_list =
+      List.fold p_list ~init:(return (Unit, "")) ~f:( *>)
+
+    let convert ?left_delimiter ?right_delimiter (p_list : (production * 'a) t list) :
+      (production * 'a) t list =
+      List.fold (List.rev p_list) ~init:[] ~f:(fun acc p ->
+          match parse_string ~consume:All p "_signal_hole" with
+          | Error s ->
+            if debug then Format.printf "Composing p with terminating parser, error %s@." s;
+            p::acc
+          | Ok (Hole { sort; identifier; dimension = _; _ }, user_state) ->
+            begin
+              match sort with
+
+              | Alphanum ->
+                let allowed = choice [alphanum; char '_'] >>| String.of_char in
+                let hole_semantics = many1 allowed in
+                (
+                  pos >>= fun offset ->
+                  hole_semantics >>= fun value ->
+                  let m =
+                    { offset
+                    ; identifier
+                    ; text = String.concat value
+                    }
+                  in
+                  r user_state (Match m)
+                )::acc
+
+              | Expression ->
+                let non_space =
+                  ([ Omega_parser_helper.skip spaces
+                   ; Omega_parser_helper.skip reserved_parsers
+                   ]
+                   |> choice
+                   |> not_followed_by)
+                  *> any_char
+                  >>| String.of_char
+                in
+                let delimited =
+                  generate_delimited_hole_parser
+                    ?priority_left_delimiter:left_delimiter
+                    ?priority_right_delimiter:right_delimiter
+                    ()
+                in
+                let matcher = non_space <|> delimited in
+                let rest =
+                  match acc with
+                  | [] -> end_of_input *> return (Unit, "")
+                  | _ -> seq acc
+                in
+                let hole_semantics = many1 (not_followed_by rest *> matcher) in
+                (
+                  pos >>= fun offset ->
+                  hole_semantics >>= fun value ->
+                  let m =
+                    { offset
+                    ; identifier
+                    ; text = String.concat value
+                    }
+                  in
+                  r user_state (Match m)
+                )::acc
+
+              | _ -> acc
+            end
+          | _ -> failwith "unreachable: _signal_hole parsed but not handled by Hole variant")
+
+    let sequence_chain' ?left_delimiter ?right_delimiter p_list =
+      convert ?left_delimiter ?right_delimiter p_list
+      |> seq
+
     let sequence_chain ?left_delimiter ?right_delimiter (p_list : (production * 'a) t list) =
       if debug then Format.printf "Sequence chain p_list size: %d@." @@ List.length p_list;
       let i = ref 0 in
@@ -715,7 +787,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
           ]
       in
       match parse_string ~consume:All parser contents with
-      | Ok parsers -> sequence_chain ~left_delimiter ~right_delimiter parsers
+      | Ok parsers -> sequence_chain' ~left_delimiter ~right_delimiter parsers
       | Error _ ->
         failwith "If this failure happens it is a bug: Converting a \
                   quoted string in the template to a parser list should \
@@ -746,7 +818,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                 >>= fun (g: (production * 'a) t list) ->
                 if debug then Format.printf "G size: %d; delim %s@." (List.length g) left_delimiter;
                 return @@
-                sequence_chain @@
+                sequence_chain' @@
                 [string left_delimiter >>= fun result -> r acc (Template_string result)]
                 @ g
                 @ [ string right_delimiter >>= fun result -> r acc (Template_string result)])
@@ -772,7 +844,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         r acc Unit
       | p_list ->
         p_list
-        |> sequence_chain
+        |> sequence_chain'
         |> fun matcher ->
         match !configuration_ref.match_kind with
         | Exact ->
