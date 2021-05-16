@@ -868,18 +868,11 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
     let run_the_parser_for_first p source : Match.t Or_error.t =
       push_source_ref := !source_ref;
       source_ref := source;
-      let state = Buffered.parse p in
-      let state = Buffered.feed state (`String source) in
-      let state = Buffered.feed state `Eof in
-      match state with
-      | Buffered.Done ({ len; off; _ }, (_, _result_string)) ->
+      match parse_string ~consume:All p source with
+      | Ok _ ->
         source_ref := !push_source_ref;
         if rewrite then Format.eprintf "Result string:@.---@.%s---@." @@ Buffer.contents actual;
-        if len <> 0 then
-          (if debug then Format.eprintf "Input left over in parse where not expected: off(%d) len(%d)" off len;
-           Or_error.error_string "Does not match template")
-        else
-          Ok (Match.create ()) (* Fake for now *)
+        Ok (Match.create ()) (* Fake match result--currently using refs *)
       | _ ->
         source_ref := !push_source_ref;
         Or_error.error_string "No matches"
