@@ -313,26 +313,23 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
       let user_defined_reserved_escapable_strings =
         match Syntax.escapable_string_literals with
         | Some { delimiters; _ } ->
-          List.concat_map delimiters ~f:(fun delimiter -> [delimiter])
-          |> List.map ~f:string
+          List.concat_map delimiters ~f:(fun delimiter -> [string delimiter])
         | None -> []
       in
       let user_defined_reserved_raw_strings =
-        List.concat_map Syntax.raw_string_literals ~f:(fun (from, until) -> [from; until])
-        |> List.map ~f:string
+        List.concat_map Syntax.raw_string_literals ~f:(fun (from, until) -> [string from; string until])
       in
       let reserved_comments =
         List.concat_map Syntax.comments ~f:(function
-            | Multiline (left, right) -> [left; right]
-            | Nested_multiline (left, right) -> [left; right]
-            | Until_newline start -> [start])
-        |> List.map ~f:string
+            | Multiline (left, right) -> [string left; string right]
+            | Nested_multiline (left, right) -> [string left; string right]
+            | Until_newline start -> [string start])
       in
       [ reserved_holes
       ; user_defined_reserved_delimiters
       ; user_defined_reserved_escapable_strings
       ; user_defined_reserved_raw_strings
-      ; reserved_comments
+      ; reserved_comments (* only needed once it's significant for matching and not treated like spaces*)
       ]
       |> List.concat
       |> List.map ~f:skip
@@ -340,7 +337,6 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
          it won't detect that single or greedy is reserved. *)
       |> List.map ~f:attempt
       |> choice
-
 
     let until_of_from from =
       Syntax.user_defined_delimiters

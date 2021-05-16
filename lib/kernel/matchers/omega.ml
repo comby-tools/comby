@@ -30,12 +30,6 @@ let push_environment_ref : Match.Environment.t ref = ref (Match.Environment.crea
 let push_matches_ref : Match.t list ref = ref []
 let push_source_ref : string ref = ref ""
 
-let (|>>) p f =
-  p >>= fun x -> return (f x)
-
-let ignore p =
-  p *> return ()
-
 let debug =
   match Sys.getenv "DEBUG_COMBY" with
   | exception Not_found -> false
@@ -266,6 +260,9 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
             String.length v1 - String.length v2)
     end
 
+    let reserved_holes =
+      List.map Template.Matching.hole_parsers ~f:(fun (_, parser) -> parser *> return "")
+
     let reserved_parsers =
       let user_defined_delimiters =
         List.concat_map Language.Syntax.user_defined_delimiters ~f:(fun (from, until) ->
@@ -280,19 +277,18 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         List.concat_map Language.Syntax.raw_string_literals ~f:(fun (from, until) ->
             [string from; string until])
       in
-      let hole_syntax = [ ":["; "]"; ":[["; ":]]" ] |> List.map ~f:string in
       let spaces = [ " "; "\n"; "\t"; "\r" ] |> List.map ~f:string in
-      [ user_defined_delimiters
+      [ reserved_holes
+      ; user_defined_delimiters
       ; user_defined_escapable_strings
       ; user_defined_raw_strings
-      ; hole_syntax
       ; spaces
       ]
       |> List.concat
       |> choice
 
     let generate_single_hole_parser () =
-      (alphanum <|> char '_') |>> String.of_char
+      (alphanum <|> char '_') >>| String.of_char
 
     let generate_everything_hole_parser
         ?priority_left_delimiter:left_delimiter
@@ -324,7 +320,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       in
       fix (fun grammar ->
           let delimsx = between_nested_delims (many grammar) in
-          let other = Omega_parser_helper.Deprecate.any_char_except ~reserved |>> String.of_char in
+          let other = Omega_parser_helper.Deprecate.any_char_except ~reserved >>| String.of_char in
           choice
             [ comment_parser
             ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
@@ -365,7 +361,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       let inner =
         fix (fun grammar ->
             let delims_over_holes = between_nested_delims (many grammar) in
-            let other = Omega_parser_helper.Deprecate.any_char_except ~reserved |>> String.of_char in
+            let other = Omega_parser_helper.Deprecate.any_char_except ~reserved >>| String.of_char in
             choice
               [ comment_parser
               ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
@@ -385,11 +381,11 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         choice
           [ (string (Format.sprintf "%c%s" escape_character right_delimiter))
           ; (string (Format.sprintf "%c%c" escape_character escape_character))
-          ; (Omega_parser_helper.Deprecate.any_char_except ~reserved:[right_delimiter] |>> String.of_char)
+          ; (Omega_parser_helper.Deprecate.any_char_except ~reserved:[right_delimiter] >>| String.of_char)
           ]
 
     let raw_literal_grammar ~right_delimiter =
-      (Omega_parser_helper.Deprecate.any_char_except ~reserved:[right_delimiter] |>> String.of_char)
+      (Omega_parser_helper.Deprecate.any_char_except ~reserved:[right_delimiter] >>| String.of_char)
 
     let sequence_chain ?left_delimiter ?right_delimiter (p_list : (production * 'a) t list) =
       if debug then Format.printf "Sequence chain p_list size: %d@." @@ List.length p_list;
@@ -516,7 +512,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   pos >>= fun offset ->
                   let allowed =
                     many (Omega_parser_helper.Deprecate.any_char_except ~reserved:["\n"])
-                    |>> fun x -> [(String.of_char_list x)^"\n"]
+                    >>| fun x -> [(String.of_char_list x)^"\n"]
                   in
                   allowed <* char '\n' >>= fun value ->
                   acc >>= fun _ ->
@@ -541,10 +537,10 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                       if get_pos () = (-1) then set_pos pos;
                       let stop_at = choice [ rest; Omega_parser_helper.ignore reserved_parsers ] in
                       many1_till_stop any_char stop_at (* Beware of this use. *)
-                    ) |>> String.of_char_list
+                    ) >>| String.of_char_list
                   in
                   let non_space =
-                    many1 (Omega_parser_helper.Deprecate.any_char_except ~reserved:([" "]@Deprecate.reserved_delimiters)) |>> String.of_char_list
+                    many1 (Omega_parser_helper.Deprecate.any_char_except ~reserved:([" "]@Deprecate.reserved_delimiters)) >>| String.of_char_list
                   in
                   let delimited =
                     (* IDK why this rest works without end_of_input but it's needed for non_space. *)
@@ -708,15 +704,12 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         List.fold ~init:[] Template.Matching.hole_parsers ~f:(fun acc (sort', parser) ->
             if sort' = sort then parser::acc else acc)
       in
-      let skip_signal hole = Omega_parser_helper.ignore (string "_signal_hole") |>> fun () -> (Hole hole, acc) in
+      let skip_signal hole = Omega_parser_helper.ignore (string "_signal_hole") >>| fun () -> (Hole hole, acc) in
       match hole_parser with
       | [] -> fail "none" (* not defined *)
       | l ->
         choice l >>| function identifier ->
           skip_signal { sort; identifier; dimension; at_depth = None }
-
-    let reserved_holes () =
-      List.map Template.Matching.hole_parsers ~f:(fun (_, parser) -> parser *> return "")
 
     let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter () =
       let literal_holes =
@@ -724,10 +717,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         |> List.map ~f:(fun kind -> hole_parser kind sort) (* Note: Uses attempt in alpha *)
         |> choice
       in
-      let reserved_holes =
-        reserved_holes ()
-        |> List.map ~f:(fun p -> p *> return ())
-      in
+      let reserved_holes = List.map reserved_holes ~f:Omega_parser_helper.skip in
       let other = Omega_parser_helper.(
           up_to @@
           choice
@@ -740,8 +730,8 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         many @@
         choice
           [ literal_holes
-          ; (spaces1 |>> generate_pure_spaces_parser)
-          ; (other |>> generate_string_token_parser)
+          ; (spaces1 >>| generate_pure_spaces_parser)
+          ; (other >>| generate_string_token_parser)
           ]
       in
       match parse_string ~consume:All parser contents with
@@ -758,8 +748,8 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
           (many1 (comment_parser <|> spaces1))
       in
       let other =
-        (many1 (Omega_parser_helper.Deprecate.any_char_except ~reserved:Deprecate.reserved) |>> String.of_char_list)
-        |>> generate_string_token_parser
+        (many1 (Omega_parser_helper.Deprecate.any_char_except ~reserved:Deprecate.reserved) >>| String.of_char_list)
+        >>| generate_string_token_parser
       in
       let code_holes =
         Types.Hole.sorts ()
@@ -793,7 +783,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
           if debug then Format.printf "Produced %d parsers in main generator@." @@ List.length x;
           return x
         )
-      |>> fun p_list ->
+      >>| fun p_list ->
       match p_list with
       | [] ->
         (* The template is the empty string and source is nonempty. We need to
@@ -821,7 +811,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
               [ comment_parser
               ; (raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents))
               ; (escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents))
-              ; any_char |>> Char.to_string
+              ; any_char >>| Char.to_string
               ]
           in
           let match_one =
