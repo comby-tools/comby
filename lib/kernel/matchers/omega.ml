@@ -538,8 +538,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   let set_pos v = first_pos := v in
                   let get_pos () = !first_pos in
                   let non_space =
-                    (Omega_parser_helper.Deprecate.any_char_except
-                       ~reserved:([" "]@Deprecate.reserved_delimiters))
+                    not_followed_by (choice [ reserved_parsers ]) *> any_char
                     >>| String.of_char
                   in
                   let rest = Omega_parser_helper.ignore acc in
