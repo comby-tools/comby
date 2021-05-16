@@ -363,9 +363,63 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
           | Error s ->
             if debug then Format.printf "Composing p with terminating parser, error %s@." s;
             p::acc
-          | Ok (Hole { sort; identifier; dimension = _; _ }, user_state) ->
+          | Ok (Hole { sort; identifier; dimension; _ }, user_state) ->
             begin
               match sort with
+              | Regex ->
+
+                let separator = List.find_map_exn Meta.syntax ~f:(function
+                    | Hole _ -> None
+                    | Regex (_, separator, _) -> Some separator)
+                in
+                let identifier, pattern = String.lsplit2_exn identifier ~on:separator in (* FIXME parse *)
+                let identifier = if String.(identifier = "") then wildcard else identifier in
+                if debug then Format.printf "Regex: Id: %s Pat: %s@." identifier pattern;
+                let pattern, prefix =
+                  if String.is_prefix pattern ~prefix:"^" then
+                    (* FIXME: match beginning of input too *)
+                    String.drop_prefix pattern 1,
+                    Some (
+                      (char '\n' *> return "")
+                      <|>
+                      (pos >>= fun p -> if p = 0 then return "" else fail "")
+                    )
+                  else
+                    pattern, None
+                in
+                let pattern, suffix =
+                  if String.is_suffix pattern ~suffix:"$" then
+                    String.drop_suffix pattern 1, Some (char '\n' *> return "" <|> end_of_input *> return "")
+                  else
+                    pattern, None
+                in
+                let compiled_regexp = Regexp.PCRE.make_regexp pattern in
+                let regexp_parser = Regexp.PCRE.regexp compiled_regexp in
+                let regexp_parser =
+                  match prefix, suffix with
+                  | Some prefix, None -> prefix *> regexp_parser
+                  | None, Some suffix -> regexp_parser <* suffix
+                  | Some prefix, Some suffix -> prefix *> regexp_parser <* suffix
+                  | None, None -> regexp_parser
+                in
+                (* the eof matters here for that one tricky test case *)
+                let base_parser =
+                  [ regexp_parser
+                  ; end_of_input >>= fun () -> return ""
+                  ]
+                in
+                let hole_semantics = choice base_parser in
+                (
+                  pos >>= fun offset ->
+                  hole_semantics >>= fun value ->
+                  let m =
+                    { offset
+                    ; identifier
+                    ; text = value
+                    }
+                  in
+                  r user_state (Match m)
+                )::acc
 
               | Alphanum ->
                 let allowed = choice [alphanum; char '_'] >>| String.of_char in
@@ -382,15 +436,75 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   r user_state (Match m)
                 )::acc
 
-              | Expression ->
+              | Non_space ->
                 let non_space =
-                  ([ Omega_parser_helper.skip spaces
+                  ([ Omega_parser_helper.skip (choice [ char ' '; char '\n' ])
                    ; Omega_parser_helper.skip reserved_parsers
                    ]
                    |> choice
                    |> not_followed_by)
                   *> any_char
-                  >>| String.of_char
+                  >>| Char.to_string
+                in
+                let rest =
+                  match acc with
+                  | [] -> end_of_input *> return (Unit, "")
+                  | _ -> seq acc
+                in
+                let hole_semantics = many1 (not_followed_by rest *> non_space) in
+                (
+                  pos >>= fun offset ->
+                  hole_semantics >>= fun value ->
+                  let m =
+                    { offset
+                    ; identifier
+                    ; text = String.concat value
+                    }
+                  in
+                  r user_state (Match m)
+                )::acc
+
+              | Line ->
+                let allowed =
+                  many (not_followed_by (string "\n" <|> string "\r\n") *> any_char )
+                  >>| fun x -> [(String.of_char_list x)^"\n"]
+                in
+                let hole_semantics = allowed <* char '\n' in
+                (
+                  pos >>= fun offset ->
+                  hole_semantics >>= fun value ->
+                  let m =
+                    { offset
+                    ; identifier
+                    ; text = String.concat value
+                    }
+                  in
+                  r user_state (Match m)
+                )::acc
+
+              | Blank ->
+                let hole_semantics = many1 blank in
+                (
+                  pos >>= fun offset ->
+                  hole_semantics >>= fun value ->
+                  let m =
+                    { offset
+                    ; identifier
+                    ; text = String.of_char_list value
+                    }
+                  in
+                  r user_state (Match m)
+                )::acc
+
+              | Expression ->
+                let non_space =
+                  ([ Omega_parser_helper.skip (choice [ char ' '; char '\n' ])
+                   ; Omega_parser_helper.skip reserved_parsers
+                   ]
+                   |> choice
+                   |> not_followed_by)
+                  *> any_char
+                  >>| Char.to_string
                 in
                 let delimited =
                   generate_delimited_hole_parser
@@ -417,315 +531,45 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   r user_state (Match m)
                 )::acc
 
-              | _ -> acc
+              | Everything ->
+                let matcher =
+                  match dimension with
+                  | Code ->
+                    generate_everything_hole_parser
+                      ?priority_left_delimiter:left_delimiter
+                      ?priority_right_delimiter:right_delimiter
+                      ()
+                  | Escapable_string_literal ->
+                    let right_delimiter = Option.value_exn right_delimiter in
+                    escapable_literal_grammar ~right_delimiter
+                  | Raw_string_literal ->
+                    let right_delimiter = Option.value_exn right_delimiter in
+                    raw_literal_grammar ~right_delimiter
+                  | Comment -> failwith "Unimplemented"
+                in
+                let rest =
+                  match acc with
+                  | [] -> end_of_input *> return (Unit, "")
+                  | _ -> seq acc
+                in
+                let hole_semantics = many (not_followed_by rest *> matcher) in
+                (
+                  pos >>= fun offset ->
+                  hole_semantics >>= fun value ->
+                  let m =
+                    { offset
+                    ; identifier
+                    ; text = String.concat value
+                    }
+                  in
+                  r user_state (Match m)
+                )::acc
             end
           | _ -> failwith "unreachable: _signal_hole parsed but not handled by Hole variant")
 
     let sequence_chain' ?left_delimiter ?right_delimiter p_list =
       convert ?left_delimiter ?right_delimiter p_list
       |> seq
-
-    let sequence_chain ?left_delimiter ?right_delimiter (p_list : (production * 'a) t list) =
-      if debug then Format.printf "Sequence chain p_list size: %d@." @@ List.length p_list;
-      let i = ref 0 in
-      List.fold_right p_list ~init:(return (Unit, acc)) ~f:(fun p acc ->
-          if debug then Format.printf "iterate fold_right %d@." !i;
-          let result =
-            match parse_string ~consume:All p "_signal_hole" with
-            | Error s ->
-              if debug then Format.printf "Composing p with terminating parser, error %s@." s;
-              p *> acc
-            | Ok (Hole { sort; identifier; dimension; _ }, user_state) ->
-              begin
-                match sort with
-                | Regex ->
-                  let separator = List.find_map_exn Meta.syntax ~f:(function
-                      | Hole _ -> None
-                      | Regex (_, separator, _) -> Some separator)
-                  in
-                  let identifier, pattern = String.lsplit2_exn identifier ~on:separator in (* FIXME parse *)
-                  let identifier = if String.(identifier = "") then wildcard else identifier in
-                  if debug then Format.printf "Regex: Id: %s Pat: %s@." identifier pattern;
-                  let pattern, prefix =
-                    if String.is_prefix pattern ~prefix:"^" then
-                      (* FIXME: match beginning of input too *)
-                      String.drop_prefix pattern 1,
-                      Some (
-                        (char '\n' *> return "")
-                        <|>
-                        (pos >>= fun p -> if p = 0 then return "" else fail "")
-                      )
-                    else
-                      pattern, None
-                  in
-                  let pattern, suffix =
-                    if String.is_suffix pattern ~suffix:"$" then
-                      String.drop_suffix pattern 1, Some (char '\n' *> return "" <|> end_of_input *> return "")
-                    else
-                      pattern, None
-                  in
-                  let compiled_regexp = Regexp.PCRE.make_regexp pattern in
-                  let regexp_parser = Regexp.PCRE.regexp compiled_regexp in
-                  let regexp_parser =
-                    match prefix, suffix with
-                    | Some prefix, None -> prefix *> regexp_parser
-                    | None, Some suffix -> regexp_parser <* suffix
-                    | Some prefix, Some suffix -> prefix *> regexp_parser <* suffix
-                    | None, None -> regexp_parser
-                  in
-                  (* the eof matters here for that one tricky test case *)
-                  let base_parser =
-                    [ regexp_parser
-                    ; end_of_input >>= fun () -> return ""
-                    ]
-                  in
-                  pos >>= fun offset ->
-                  choice base_parser >>= fun value ->
-                  if debug then Format.printf "Regex match @@ %d value %s@." offset value;
-                  acc >>= fun _ ->
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = value
-                    }
-                  in
-                  r user_state (Match m)
-
-                | Alphanum ->
-                  pos >>= fun offset ->
-                  many1 (generate_single_hole_parser ())
-                  >>= fun value ->
-                  (* acc must come after in order to sat. try mimic alpha to better express this. *)
-                  acc >>= fun _ ->
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = String.concat value
-                    }
-                  in
-                  r user_state (Match m)
-
-                | Non_space ->
-                  if debug then Format.printf "Doing non_space@.";
-                  let first_pos = ref (-1) in
-                  let set_pos v = first_pos := v in
-                  let get_pos () = !first_pos in
-
-                  let rest =
-                    (* if this is the base case (the first time we go around the
-                       loop backwards, when the first parser is a hole), then it
-                       means there's a hole at the end without anything following
-                       it in the template. So it should always match to
-                       end_of_input, not empty string. If it matches to empty
-                       string it chops up the matches so that f,o,o are three
-                       matches of foo. *)
-                    if !i = 0 then
-                      (if debug then Format.printf "hole until: match to the end of this level@.";
-                       end_of_input)
-                    else
-                      (if debug then Format.printf "hole until: append suffix@.";
-                       Omega_parser_helper.ignore acc)
-                  in
-
-                  let non_space_matcher =
-                    pos >>= fun pos ->
-                    if get_pos () = (-1) then set_pos pos;
-                    Omega_parser_helper.(up_to @@ choice [ Omega_parser_helper.skip reserved_parsers; rest ])
-                    >>| String.of_char_list
-                  in
-
-                  non_space_matcher
-                  >>= fun value ->
-                  acc >>= fun _ ->
-                  let offset =
-                    match get_pos () with
-                    | -1 -> failwith "Did not expect unset offset"
-                    | offset ->
-                      if debug then Format.printf "Offset: %d@." offset;
-                      set_pos (-1);
-                      offset
-                  in
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = value
-                    }
-                  in
-                  r user_state (Match m)
-
-                | Line ->
-                  pos >>= fun offset ->
-                  let allowed =
-                    many (not_followed_by (string "\n" <|> string "\r\n") *> any_char )
-                    >>| fun x -> [(String.of_char_list x)^"\n"]
-                  in
-                  allowed <* char '\n' >>= fun value ->
-                  acc >>= fun _ ->
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = String.concat value
-                    }
-                  in
-                  r user_state (Match m)
-
-                | Expression ->
-                  if debug then Format.printf "EXpression time i is %d@." !i;
-                  let first_pos = ref (-1) in
-                  let set_pos v = first_pos := v in
-                  let get_pos () = !first_pos in
-
-                  let rest =
-                    (* it may be that the many till for the first parser
-                       succeeds on 'empty string', specifically in the :[1]:[2]
-                       case for :[1]. We won't capture the pos of :[1] in the
-                       first parser since it doesn't fire, so we have to
-                       set the pos right before the until parser below, if that
-                       happens. *)
-                    pos >>= fun pos ->
-                    if debug then Format.printf "~~~~Rest parsed~~~~ i is %d@." !i;
-                    if get_pos () = (-1) then set_pos pos;
-                    if debug then Format.printf "Pos is %d@." pos;
-                    if !i = 0 then
-                      (if debug then Format.printf "hole until: END OF INPUT match to the end of this level@.";
-                       end_of_input)
-                    else
-                      (if debug then Format.printf "hole until: APPEND suffix parser %d@." !i;
-                       Omega_parser_helper.skip acc
-                       (*Omega_parser_helper.skip acc *> end_of_input*)
-                       (* fake fix, only matches last *)
-                      )
-                  in
-
-                  let non_space_matcher =
-                    pos >>= fun pos ->
-                    if debug then Format.printf "Non_space parsed@.";
-                    if get_pos () = (-1) then set_pos pos;
-                    not_followed_by (choice [ Omega_parser_helper.skip reserved_parsers; rest ]) *> any_char
-                    >>| String.of_char
-                  in
-
-                  let delimited =
-                    match dimension with
-                    | Code ->
-                      generate_delimited_hole_parser
-                        ?priority_left_delimiter:left_delimiter
-                        ?priority_right_delimiter:right_delimiter
-                        () >>= fun result ->
-                      if debug then Format.printf "Delimited parsed@.";
-                      return result
-                    | Escapable_string_literal ->
-                      let right_delimiter = Option.value_exn right_delimiter in
-                      escapable_literal_grammar ~right_delimiter
-                    | Raw_string_literal ->
-                      let right_delimiter = Option.value_exn right_delimiter in
-                      escapable_literal_grammar ~right_delimiter
-                    | _ -> failwith "Unimplemented for comment"
-                  in
-
-                  let matcher = many1 (not_followed_by rest *> choice [non_space_matcher; delimited]) in
-                  matcher
-                  >>= fun value ->
-                  rest >>= fun _ ->
-                  if debug then Format.printf "i here is %d" !i;
-                  let offset =
-                    match get_pos () with
-                    | -1 -> failwith "Did not expect unset offset"
-                    | offset ->
-                      if debug then Format.printf "Offset: %d@." offset;
-                      set_pos (-1);
-                      offset
-                  in
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = String.concat value
-                    }
-                  in
-                  r user_state (Match m)
-
-                | Blank ->
-                  pos >>= fun offset ->
-                  many1 blank >>= fun value ->
-                  acc >>= fun _ ->
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = String.of_char_list value
-                    }
-                  in
-                  r user_state (Match m)
-
-                | Everything ->
-                  if debug then Format.printf "do hole %s@." identifier;
-                  (* change this so that rest is not consumed *)
-                  let rest =
-                    (* if this is the base case (the first time we go around the
-                       loop backwards, when the first parser is a hole), then it
-                       means there's a hole at the end without anything following
-                       it in the template. So it should always match to
-                       end_of_input (not empty string) *)
-                    if !i = 0 then
-                      (if debug then Format.printf "hole everything until: match to the end of this level@.";
-                       end_of_input)
-                    else
-                      (if debug then Format.printf "hole everything until: append suffix@.";
-                       Omega_parser_helper.ignore acc)
-                  in
-                  let first_pos = ref (-1) in
-                  let set_pos v = first_pos := v in
-                  let get_pos () = !first_pos in
-                  let hole_matcher =
-                    (many_till
-                       (pos >>= fun pos ->
-                        if debug then Format.printf "Pos is %d@." pos;
-                        if get_pos () = (-1) then set_pos pos;
-                        (match dimension with
-                         | Code -> generate_everything_hole_parser ()
-                         | Escapable_string_literal ->
-                           let right_delimiter = Option.value_exn right_delimiter in
-                           escapable_literal_grammar ~right_delimiter
-                         | Raw_string_literal ->
-                           let right_delimiter = Option.value_exn right_delimiter in
-                           escapable_literal_grammar ~right_delimiter
-                         | _ -> failwith "Unimplemented for comment"
-                        )
-                       )
-                       (pos >>= fun pos ->
-                        if get_pos () = (-1) then set_pos pos;
-                        if debug then Format.printf "Pos is %d@." pos;
-                        rest)
-                       (* it may be that the many till for the first parser
-                          succeeds on 'empty string', specifically in the :[1]:[2]
-                          case for :[1]. We won't capture the pos of :[1] in the
-                          first parser since it doesn't fire, so we have to
-                          set the pos right before the until parser below, if that
-                          happens. *)
-                    ) >>| String.concat
-                  in
-                  hole_matcher >>= fun text ->
-                  let offset =
-                    match get_pos () with
-                    | -1 -> failwith "Did not expect unset offset"
-                    | offset ->
-                      if debug then Format.printf "Offset: %d@." offset;
-                      set_pos (-1);
-                      offset
-                  in
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text
-                    }
-                  in
-                  if debug then Format.printf "Recording!@.";
-                  r user_state (Match m)
-              end
-            | Ok (_, _user_state) -> failwith "unreachable: _signal_hole parsed but not handled by Hole variant"
-          in
-          if debug then Format.printf "Incrementing i@.";
-          i := !i + 1;
-          result)
 
     let generate_pure_spaces_parser _ignored =
       spaces1 >>= fun s1 -> r acc (Template_string s1)
