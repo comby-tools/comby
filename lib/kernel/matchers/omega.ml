@@ -44,28 +44,6 @@ let actual = Buffer.create 10
 
 let rewrite_template = ref ""
 
-let substitute template env =
-  let substitution_formats =
-    [ ":[ ", "]"
-    ; ":[", ".]"
-    ; ":[", "\\n]"
-    ; ":[[", "]]"
-    ; ":[", "]"
-    ]
-  in
-  Match.Environment.vars env
-  |> List.fold ~init:(template, []) ~f:(fun (acc, vars) variable ->
-      match Match.Environment.lookup env variable with
-      | Some value ->
-        List.find_map substitution_formats ~f:(fun (left,right) ->
-            let pattern = left^variable^right in
-            if Option.is_some (String.substr_index template ~pattern) then
-              Some (String.substr_replace_all acc ~pattern ~with_:value, variable::vars)
-            else
-              None)
-        |> Option.value ~default:(acc,vars)
-      | None -> acc, vars)
-
 module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
   module rec Matcher : Types.Matcher.S = struct
     include Language.Info
@@ -161,7 +139,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       | None ->
         if rewrite then
           begin
-            let result, _ = substitute !rewrite_template !current_environment_ref in
+            let result, _ = Template.substitute (Template.parse !rewrite_template) !current_environment_ref in
             (* Don't just append, but replace the match context including constant
                strings. I.e., somewhere where we are appending the parth that matched, it
                shouldn't, and instead just ignore. *)
@@ -172,7 +150,13 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         push_environment_ref := !current_environment_ref;
         push_implicit_equals_match_satisfied := !implicit_equals_match_satisfied;
         (* FIXME Metasyntax should be propagated here. FIXME fresh should be propagated here.*)
-        let sat, env = Program.apply ~metasyntax:Metasyntax.default_metasyntax ~substitute_in_place:true rule !current_environment_ref in
+        let sat, env =
+          Program.apply
+            ~metasyntax:Metasyntax.default_metasyntax
+            ~substitute_in_place:true
+            rule
+            !current_environment_ref
+        in
         current_environment_ref := !push_environment_ref;
         implicit_equals_match_satisfied := !push_implicit_equals_match_satisfied;
         let new_env = if sat then env else None in
@@ -184,7 +168,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
           if debug then Format.printf "Some new env@.";
           current_environment_ref := env;
           begin
-            let result, _ = substitute !rewrite_template !current_environment_ref in
+            let result, _ = Template.substitute (Template.parse !rewrite_template) !current_environment_ref in
             (* Don't just append, but replace the match context including constant
                strings. I.e., somewhere where we are appending the parth that matched, it
                shouldn't, and instead just ignore. *)
@@ -535,7 +519,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       r acc (Template_string (String.concat s1 ^ result))
 
     let hole_parser sort dimension : (production * 'a) t t =
-      let hole_parser = (* FIXME try make it List.find *)
+      let hole_parser = (* This must be fold, can't be find *)
         let open Polymorphic_compare in
         List.fold ~init:[] Template.Matching.hole_parsers ~f:(fun acc (sort', parser) ->
             if sort' = sort then parser::acc else acc)
