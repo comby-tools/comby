@@ -538,10 +538,12 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   let set_pos v = first_pos := v in
                   let get_pos () = !first_pos in
                   let non_space =
-                    many1 (Omega_parser_helper.Deprecate.any_char_except ~reserved:([" "]@Deprecate.reserved_delimiters)) >>| String.of_char_list
+                    many1
+                      (Omega_parser_helper.Deprecate.any_char_except
+                         ~reserved:([" "]@Deprecate.reserved_delimiters))
+                    >>| String.of_char_list
                   in
                   let rest = Omega_parser_helper.ignore acc in
-
                   let delimited =
                     pos >>= fun pos ->
                     if debug then Format.printf "Pos is %d@." pos;
@@ -562,23 +564,19 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   in
 
                   let until_part =
-                    (pos >>= fun pos ->
-                     if get_pos () = (-1) then set_pos pos;
-                     if debug then Format.printf "Pos is %d@." pos;
-                     rest)
                     (* it may be that the many till for the first parser
                        succeeds on 'empty string', specifically in the :[1]:[2]
                        case for :[1]. We won't capture the pos of :[1] in the
                        first parser since it doesn't fire, so we have to
                        set the pos right before the until parser below, if that
                        happens. *)
+                    pos >>= fun pos ->
+                    if get_pos () = (-1) then set_pos pos;
+                    if debug then Format.printf "Pos is %d@." pos;
+                    rest
                   in
-
-                  let delimited =
-                    many1_till delimited until_part
-                    >>| String.concat
-                  in
-                  (many1 @@ choice [non_space; delimited])
+                  let delimited = many1_till delimited until_part >>| String.concat in
+                  many1 @@ choice [non_space; delimited]
                   >>= fun value ->
                   acc >>= fun _ ->
                   let offset =
