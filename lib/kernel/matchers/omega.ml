@@ -271,13 +271,13 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
             | Nested_multiline (left, right) -> [string left; string right]
             | Until_newline start -> [string start])
       in
-      let spaces = [ " "; "\n"; "\t"; "\r" ] |> List.map ~f:string in
+      let spaces1 = [ Omega_parser_helper.spaces1 ] in
       [ user_defined_delimiters
       ; reserved_holes
       ; user_defined_escapable_strings
       ; user_defined_raw_strings
       ; user_defined_reserved_comments
-      ; spaces
+      ; spaces1
       ]
       |> List.concat
       |> choice
@@ -378,7 +378,6 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
             begin
               match sort with
               | Regex ->
-
                 let separator = List.find_map_exn Meta.syntax ~f:(function
                     | Hole _ -> None
                     | Regex (_, separator, _) -> Some separator)
