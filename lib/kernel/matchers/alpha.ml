@@ -273,7 +273,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
     let reserved_holes =
       List.map hole_parsers ~f:(fun (_, parser) -> parser >>= fun _ -> return "")
 
-    let reserved_delimiters () =
+    let reserved_parsers () =
       let required_from_suffix = not_alphanum in
       let required_until_suffix = not_alphanum in
       let handle_alphanum_delimiters_reserved_trigger from until =
@@ -338,9 +338,6 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
       |> List.map ~f:attempt
       |> choice
 
-    let reserved _s =
-      reserved_delimiters ()
-      <|> skip (space |>> Char.to_string)
 
     let until_of_from from =
       Syntax.user_defined_delimiters
@@ -672,7 +669,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
 
               | Non_space ->
                 let allowed =
-                  [skip space; reserved_delimiters ()]
+                  [skip space; reserved_parsers ()]
                   |> choice
                   |> is_not
                   |>> Char.to_string
@@ -700,7 +697,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
 
               | Expression ->
                 let non_space =
-                  [skip space; reserved_delimiters ()]
+                  [skip space; reserved_parsers ()]
                   |> choice
                   |> is_not
                   |>> Char.to_string
@@ -823,9 +820,14 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
         (* Optional: parse identifiers and disallow substring matching *)
         ; if !configuration_ref.disable_substring_matching then many1 (alphanum <|> char '_') |>> generate_word else zero
         (* Everything else. *)
-        ; (many1 (is_not (reserved _s)) >>= fun cl ->
+        ; (many1 @@
+           is_not @@
+           choice
+             [ reserved_parsers ()
+             ; skip space
+             ] |>> fun cl ->
            if debug then Format.printf "<cl>%s</cl>" @@ String.of_char_list cl;
-           return @@ String.of_char_list cl)
+           String.of_char_list cl)
           |>> generate_string_token_parser
         ]
 

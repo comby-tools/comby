@@ -361,14 +361,14 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       in
       let inner =
         fix (fun grammar ->
-            let delimsx = between_nested_delims (many grammar) in
+            let delims_over_holes = between_nested_delims (many grammar) in
             let other = Omega_parser_helper.Deprecate.any_char_except ~reserved |>> String.of_char in
             choice
               [ comment_parser
               ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
               ; escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
               ; spaces1
-              ; delimsx
+              ; delims_over_holes
               ; other
               ])
       in
@@ -725,7 +725,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         reserved_holes ()
         |> List.map ~f:(fun p -> p *> return ())
       in
-      let rest = Omega_parser_helper.(
+      let other = Omega_parser_helper.(
           up_to @@
           choice
             [ (spaces1 *> return ())
@@ -738,7 +738,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         choice
           [ literal_holes
           ; (spaces1 |>> generate_pure_spaces_parser)
-          ; (rest |>> generate_string_token_parser)
+          ; (other |>> generate_string_token_parser)
           ]
       in
       match parse_string ~consume:All parser contents with
