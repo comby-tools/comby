@@ -392,7 +392,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
           ]
 
     let raw_literal_grammar ~right_delimiter =
-      (Omega_parser_helper.Deprecate.any_char_except ~reserved:[right_delimiter] >>| String.of_char)
+      (not_followed_by (string right_delimiter) *> any_char >>| String.of_char)
 
     let sequence_chain ?left_delimiter ?right_delimiter (p_list : (production * 'a) t list) =
       if debug then Format.printf "Sequence chain p_list size: %d@." @@ List.length p_list;
@@ -518,7 +518,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                 | Line ->
                   pos >>= fun offset ->
                   let allowed =
-                    many (Omega_parser_helper.Deprecate.any_char_except ~reserved:["\n"])
+                    many (not_followed_by (string "\n" <|> string "\r\n") *> any_char )
                     >>| fun x -> [(String.of_char_list x)^"\n"]
                   in
                   allowed <* char '\n' >>= fun value ->
