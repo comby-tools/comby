@@ -459,6 +459,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                     }
                   in
                   r user_state (Match m)
+
                 | Alphanum ->
                   pos >>= fun offset ->
                   many1 (generate_single_hole_parser ())
@@ -472,6 +473,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                     }
                   in
                   r user_state (Match m)
+
                 | Non_space ->
                   if debug then Format.printf "Doing non_space@.";
                   let first_pos = ref (-1) in
@@ -495,8 +497,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   (
                     pos >>= fun pos ->
                     if get_pos () = (-1) then set_pos pos;
-                    let stop_at = choice [ rest; Omega_parser_helper.ignore reserved_parsers ] in
-                    many1_till_stop any_char stop_at (* Beware of this use. *)
+                    Omega_parser_helper.up_to (choice [ Omega_parser_helper.skip reserved_parsers; rest ])
                   )
                   >>= fun value ->
                   acc >>= fun _ ->
@@ -515,6 +516,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                     }
                   in
                   r user_state (Match m)
+
                 | Line ->
                   pos >>= fun offset ->
                   let allowed =
@@ -530,6 +532,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                     }
                   in
                   r user_state (Match m)
+
                 | Expression ->
                   let first_pos = ref (-1) in
                   let set_pos v = first_pos := v in
@@ -601,6 +604,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                     }
                   in
                   r user_state (Match m)
+
                 | Blank ->
                   pos >>= fun offset ->
                   many1 blank >>= fun value ->
@@ -612,6 +616,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                     }
                   in
                   r user_state (Match m)
+
                 | Everything ->
                   if debug then Format.printf "do hole %s@." identifier;
                   (* change this so that rest is not consumed *)
@@ -846,7 +851,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
           (* many1 may be appropriate *)
           let prefix = (prefix >>= fun s -> r acc (String s)) in
           let first_match_attempt = choice [match_one; prefix] in (* consumes a character in prefix if no match *)
-          let matches = many_till first_match_attempt end_of_input in
+          let matches = many first_match_attempt *> end_of_input in
           matches >>= fun _result ->
           r acc Unit
 
