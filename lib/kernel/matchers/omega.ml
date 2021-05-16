@@ -72,9 +72,11 @@ let substitute template env =
         |> Option.value ~default:(acc,vars)
       | None -> acc, vars)
 
-module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struct
+module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
   module rec Matcher : Types.Matcher.S = struct
     include Language.Info
+
+    module Template = Template.Make(Meta)
 
     let wildcard = "_"
 
@@ -400,8 +402,12 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
               begin
                 match sort with
                 | Regex ->
-                  let identifier, pattern = String.lsplit2_exn identifier ~on:'~' in
-                  let identifier = if String.(identifier = "") then "_" else identifier in
+                  let separator = List.find_map_exn Meta.syntax ~f:(function
+                      | Hole _ -> None
+                      | Regex (_, separator, _) -> Some separator)
+                  in
+                  let identifier, pattern = String.lsplit2_exn identifier ~on:separator in (* FIXME parse *)
+                  let identifier = if String.(identifier = "") then wildcard else identifier in
                   if debug then Format.printf "Regex: Id: %s Pat: %s@." identifier pattern;
                   let pattern, prefix =
                     if String.is_prefix pattern ~prefix:"^" then
@@ -693,66 +699,21 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
       string str >>= fun result ->
       r acc (Template_string (String.concat s1 ^ result))
 
-    let single_hole_parser () =
-      string ":[[" *> identifier_parser () <* string "]]"
-
-    let everything_hole_parser () =
-      string ":[" *> identifier_parser () <* string "]"
-
-    let expression_hole_parser () =
-      string ":[" *> identifier_parser () <* string ":e" <* string "]"
-
-    let non_space_hole_parser () =
-      string ":[" *> identifier_parser () <* string ".]"
-
-    let line_hole_parser () =
-      string ":[" *> identifier_parser () <* string "\\n]"
-
-    let blank_hole_parser () =
-      string ":["
-      *> many1 blank
-      *> identifier_parser ()
-      <* string "]"
-
-    let regex_expression () =
-      fix (fun expr ->
-          choice
-            [ lift (fun x -> Format.sprintf "[%s]" @@ String.concat x) (char '[' *> many1 expr <* char ']')
-            ; lift (fun c -> Format.sprintf {|\%c|} c) (char '\\' *> any_char)
-            ; lift Char.to_string (not_char ']')
-            ])
-
-    let regex_body () =
-      lift2
-        (fun v e -> Format.sprintf "%s~%s" v (String.concat e))
-        (identifier_parser ())
-        (char '~' *> many1 (regex_expression ()))
-
-    let regex_hole_parser () =
-      string ":[" *> regex_body () <* string "]"
-
     let hole_parser sort dimension : (production * 'a) t t =
-      let hole_parser =
-        match sort with
-        | Types.Hole.Alphanum -> single_hole_parser ()
-        | Everything -> everything_hole_parser ()
-        | Blank -> blank_hole_parser ()
-        | Line -> line_hole_parser ()
-        | Non_space -> non_space_hole_parser ()
-        | Expression -> expression_hole_parser ()
-        | Regex -> regex_hole_parser ()
+      let hole_parser = (* FIXME try make it List.find *)
+        let open Polymorphic_compare in
+        List.fold ~init:[] Template.Matching.hole_parsers ~f:(fun acc (sort', parser) ->
+            if sort' = sort then parser::acc else acc)
       in
       let skip_signal hole = Omega_parser_helper.ignore (string "_signal_hole") |>> fun () -> (Hole hole, acc) in
-      hole_parser |>> fun identifier -> skip_signal { sort; identifier; dimension; at_depth = None }
+      match hole_parser with
+      | [] -> fail "none" (* not defined *)
+      | l ->
+        choice l >>| function identifier ->
+          skip_signal { sort; identifier; dimension; at_depth = None }
 
     let reserved_holes () =
-      [ single_hole_parser ()
-      ; everything_hole_parser ()
-      ; non_space_hole_parser ()
-      ; line_hole_parser ()
-      ; blank_hole_parser ()
-      ; expression_hole_parser ()
-      ]
+      List.map Template.Matching.hole_parsers ~f:(fun (_, parser) -> parser *> return "")
 
     let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter () =
       let literal_holes =
@@ -760,19 +721,24 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         |> List.map ~f:(fun kind -> hole_parser kind sort) (* Note: Uses attempt in alpha *)
         |> choice
       in
-      let _reserved_holes =
+      let reserved_holes =
         reserved_holes ()
-        |> List.map ~f:Omega_parser_helper.ignore
-        |> choice
+        |> List.map ~f:(fun p -> p *> return ())
+      in
+      let rest = Omega_parser_helper.(
+          up_to @@
+          choice
+            [ (spaces1 *> return ())
+            ; (choice reserved_holes *> return ())
+            ]
+          >>| String.of_char_list)
       in
       let parser =
         many @@
         choice
           [ literal_holes
           ; (spaces1 |>> generate_pure_spaces_parser)
-          ; ((many1 (Omega_parser_helper.Deprecate.any_char_except ~reserved:[":["; " "; "\n"; "\t"; "\r"])
-              |>> String.of_char_list)
-             |>> generate_string_token_parser)
+          ; (rest |>> generate_string_token_parser)
           ]
       in
       match parse_string ~consume:All parser contents with

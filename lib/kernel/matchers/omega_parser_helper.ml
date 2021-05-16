@@ -2,6 +2,10 @@ open Core_kernel
 
 open Vangstrom
 
+
+let up_to p =
+  many1 (not_followed_by p *> any_char)
+
 let between left right p =
   left *> p <* right
 

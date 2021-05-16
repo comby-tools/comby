@@ -631,8 +631,8 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
                     | Hole _ -> None
                     | Regex (_, separator, _) -> Some separator)
                 in
-                let identifier, pattern = String.lsplit2_exn identifier ~on:separator in
-                let identifier = if String.(identifier = "") then "_" else identifier in
+                let identifier, pattern = String.lsplit2_exn identifier ~on:separator in (* FIXME parse *)
+                let identifier = if String.(identifier = "") then wildcard else identifier in
                 if debug then Format.printf "Regex: Id: %s Pat: %s@." identifier pattern;
                 let compiled_regexp = R.make_regexp pattern in
                 let regexp_parser = R.regexp compiled_regexp in
