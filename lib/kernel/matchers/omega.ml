@@ -358,6 +358,17 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
 
     let convert ?left_delimiter ?right_delimiter (p_list : (production * 'a) t list) :
       (production * 'a) t list =
+      let add_match user_state identifier p =
+        pos >>= fun offset ->
+        p >>= fun value ->
+        let m =
+          { offset
+          ; identifier
+          ; text = value
+          }
+        in
+        r user_state (Match m)
+      in
       List.fold (List.rev p_list) ~init:[] ~f:(fun acc p ->
           match parse_string ~consume:All p "_signal_hole" with
           | Error s ->
@@ -409,36 +420,16 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   ]
                 in
                 let hole_semantics = choice base_parser in
-                (
-                  pos >>= fun offset ->
-                  hole_semantics >>= fun value ->
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = value
-                    }
-                  in
-                  r user_state (Match m)
-                )::acc
+                (add_match user_state identifier hole_semantics)::acc
 
               | Alphanum ->
                 let allowed = choice [alphanum; char '_'] >>| String.of_char in
-                let hole_semantics = many1 allowed in
-                (
-                  pos >>= fun offset ->
-                  hole_semantics >>= fun value ->
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = String.concat value
-                    }
-                  in
-                  r user_state (Match m)
-                )::acc
+                let hole_semantics = many1 allowed >>| String.concat in
+                (add_match user_state identifier hole_semantics)::acc
 
               | Non_space ->
                 let non_space =
-                  ([ Omega_parser_helper.skip (choice [ char ' '; char '\n' ])
+                  ([ Omega_parser_helper.skip space1
                    ; Omega_parser_helper.skip reserved_parsers
                    ]
                    |> choice
@@ -451,54 +442,24 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   | [] -> end_of_input *> return (Unit, "")
                   | _ -> seq acc
                 in
-                let hole_semantics = many1 (not_followed_by rest *> non_space) in
-                (
-                  pos >>= fun offset ->
-                  hole_semantics >>= fun value ->
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = String.concat value
-                    }
-                  in
-                  r user_state (Match m)
-                )::acc
+                let hole_semantics = many1 (not_followed_by rest *> non_space) >>| String.concat in
+                (add_match user_state identifier hole_semantics)::acc
 
               | Line ->
                 let allowed =
                   many (not_followed_by (string "\n" <|> string "\r\n") *> any_char )
                   >>| fun x -> [(String.of_char_list x)^"\n"]
                 in
-                let hole_semantics = allowed <* char '\n' in
-                (
-                  pos >>= fun offset ->
-                  hole_semantics >>= fun value ->
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = String.concat value
-                    }
-                  in
-                  r user_state (Match m)
-                )::acc
+                let hole_semantics = allowed <* char '\n' >>| String.concat in
+                (add_match user_state identifier hole_semantics)::acc
 
               | Blank ->
-                let hole_semantics = many1 blank in
-                (
-                  pos >>= fun offset ->
-                  hole_semantics >>= fun value ->
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = String.of_char_list value
-                    }
-                  in
-                  r user_state (Match m)
-                )::acc
+                let hole_semantics = many1 blank >>| String.of_char_list in
+                (add_match user_state identifier hole_semantics)::acc
 
               | Expression ->
                 let non_space =
-                  ([ Omega_parser_helper.skip (choice [ char ' '; char '\n' ])
+                  ([ Omega_parser_helper.skip space1
                    ; Omega_parser_helper.skip reserved_parsers
                    ]
                    |> choice
@@ -518,18 +479,8 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   | [] -> end_of_input *> return (Unit, "")
                   | _ -> seq acc
                 in
-                let hole_semantics = many1 (not_followed_by rest *> matcher) in
-                (
-                  pos >>= fun offset ->
-                  hole_semantics >>= fun value ->
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = String.concat value
-                    }
-                  in
-                  r user_state (Match m)
-                )::acc
+                let hole_semantics = many1 (not_followed_by rest *> matcher) >>| String.concat in
+                (add_match user_state identifier hole_semantics)::acc
 
               | Everything ->
                 let matcher =
@@ -552,18 +503,8 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   | [] -> end_of_input *> return (Unit, "")
                   | _ -> seq acc
                 in
-                let hole_semantics = many (not_followed_by rest *> matcher) in
-                (
-                  pos >>= fun offset ->
-                  hole_semantics >>= fun value ->
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = String.concat value
-                    }
-                  in
-                  r user_state (Match m)
-                )::acc
+                let hole_semantics = many (not_followed_by rest *> matcher) >>| String.concat in
+                (add_match user_state identifier hole_semantics)::acc
             end
           | _ -> failwith "unreachable: _signal_hole parsed but not handled by Hole variant")
 
