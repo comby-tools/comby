@@ -537,53 +537,46 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   let first_pos = ref (-1) in
                   let set_pos v = first_pos := v in
                   let get_pos () = !first_pos in
-                  let _non_space : string t =
-                    let rest =
-                      if !i = 0 then end_of_input
-                      else Omega_parser_helper.ignore acc
-                    in
-                    (
-                      pos >>= fun pos ->
-                      if get_pos () = (-1) then set_pos pos;
-                      Omega_parser_helper.up_to (choice [ Omega_parser_helper.skip reserved_parsers; rest ])
-                    ) >>| String.of_char_list
-                  in
                   let non_space =
                     many1 (Omega_parser_helper.Deprecate.any_char_except ~reserved:([" "]@Deprecate.reserved_delimiters)) >>| String.of_char_list
                   in
+                  let rest = Omega_parser_helper.ignore acc in
+
                   let delimited =
-                    (* IDK why this rest works without end_of_input but it's needed for non_space. *)
-                    let rest = Omega_parser_helper.ignore acc in
-                    (many1_till
-                       (pos >>= fun pos ->
-                        if debug then Format.printf "Pos is %d@." pos;
-                        if get_pos () = (-1) then set_pos pos;
-                        (match dimension with
-                         | Code ->
-                           generate_delimited_hole_parser
-                             ?priority_left_delimiter:left_delimiter
-                             ?priority_right_delimiter:right_delimiter
-                             ()
-                         | Escapable_string_literal ->
-                           let right_delimiter = Option.value_exn right_delimiter in
-                           escapable_literal_grammar ~right_delimiter
-                         | Raw_string_literal ->
-                           let right_delimiter = Option.value_exn right_delimiter in
-                           escapable_literal_grammar ~right_delimiter
-                         | _ -> failwith "Unimplemented for comment"
-                        )
-                       )
-                       (pos >>= fun pos ->
-                        if get_pos () = (-1) then set_pos pos;
-                        if debug then Format.printf "Pos is %d@." pos;
-                        rest)
-                       (* it may be that the many till for the first parser
-                          succeeds on 'empty string', specifically in the :[1]:[2]
-                          case for :[1]. We won't capture the pos of :[1] in the
-                          first parser since it doesn't fire, so we have to
-                          set the pos right before the until parser below, if that
-                          happens. *)
-                    ) >>| String.concat
+                    pos >>= fun pos ->
+                    if debug then Format.printf "Pos is %d@." pos;
+                    if get_pos () = (-1) then set_pos pos;
+                    match dimension with
+                    | Code ->
+                      generate_delimited_hole_parser
+                        ?priority_left_delimiter:left_delimiter
+                        ?priority_right_delimiter:right_delimiter
+                        ()
+                    | Escapable_string_literal ->
+                      let right_delimiter = Option.value_exn right_delimiter in
+                      escapable_literal_grammar ~right_delimiter
+                    | Raw_string_literal ->
+                      let right_delimiter = Option.value_exn right_delimiter in
+                      escapable_literal_grammar ~right_delimiter
+                    | _ -> failwith "Unimplemented for comment"
+                  in
+
+                  let until_part =
+                    (pos >>= fun pos ->
+                     if get_pos () = (-1) then set_pos pos;
+                     if debug then Format.printf "Pos is %d@." pos;
+                     rest)
+                    (* it may be that the many till for the first parser
+                       succeeds on 'empty string', specifically in the :[1]:[2]
+                       case for :[1]. We won't capture the pos of :[1] in the
+                       first parser since it doesn't fire, so we have to
+                       set the pos right before the until parser below, if that
+                       happens. *)
+                  in
+
+                  let delimited =
+                    many1_till delimited until_part
+                    >>| String.concat
                   in
                   (many1 @@ choice [non_space; delimited])
                   >>= fun value ->
