@@ -214,7 +214,7 @@ let%expect_test "implicit_equals_does_not_apply_to_underscore" =
   [%expect_exact {|a|}]
 
 
-let%expect_test "expression_hole" =
+let%expect_test "expression_hole_basic" =
   let source = {|(b, c, d) [ ] { { } } { } ()()|} in
   let match_template = {|:[x:e]|} in
   let rewrite_template = {|>:[x]<|} in
@@ -224,8 +224,7 @@ let%expect_test "expression_hole" =
   run_all (module Omega) source match_template rewrite_template;
   [%expect_exact {|>(b, c, d)< >[ ]< >{ { } }< >{ }< >()()<|}]
 
-
-let%expect_test "expression_hole" =
+let%expect_test "expression_hole_basic_2" =
   let source = {|a(b, c, d)e [][] { { } }|} in
   let match_template = {|:[x:e]|} in
   let rewrite_template = {|>:[x]<|} in
@@ -233,4 +232,14 @@ let%expect_test "expression_hole" =
   run_all (module Alpha) source match_template rewrite_template;
   [%expect_exact {|>a(b, c, d)e< >[][]< >{ { } }<|}];
   run_all (module Omega) source match_template rewrite_template;
+  [%expect_exact {|>a(b, c, d)e< >[][]< >{ { } }<|}]
+
+let%expect_test "expression_hole_multiple" =
+  let source = {|a(b, c, d)e [][] { { } }|} in
+  let match_template = {|:[x:e] :[y:e] :[z:e]|} in
+  let rewrite_template = {|>:[x]< >:[y]< >:[z]<|} in
+
+  run_all (module Alpha) source match_template rewrite_template;
   [%expect_exact {|>a(b, c, d)e< >[][]< >{ { } }<|}];
+  run_all (module Omega) source match_template rewrite_template;
+  [%expect_exact {|>a(b, c, d)e< >[][]< >{ { } }<|}]

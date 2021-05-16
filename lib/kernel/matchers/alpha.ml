@@ -403,9 +403,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
           Syntax.user_defined_delimiters
       in
       let reserved =
-        List.concat_map delimiters ~f:(fun (from, until) ->
-            [string from; string until]
-          )
+        List.concat_map delimiters ~f:(fun (from, until) -> [string from; string until])
         |> List.map ~f:attempt
         |> choice
       in

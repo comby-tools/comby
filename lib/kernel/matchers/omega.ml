@@ -297,88 +297,47 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
     let generate_single_hole_parser () =
       (alphanum <|> char '_') >>| String.of_char
 
-    let generate_everything_hole_parser
-        ?priority_left_delimiter:left_delimiter
-        ?priority_right_delimiter:right_delimiter
-        () =
+    let delimiters left right =
+      match left, right with
+      | Some left_delimiter, Some right_delimiter -> [ (left_delimiter, right_delimiter) ]
+      | _ -> Language.Syntax.user_defined_delimiters
+
+    let between_nested_delims p delimiters =
       let between_nested_delims p from =
         let until = until_of_from from in
         between (string from) (string until) p
-        >>= fun result -> return (String.concat @@ [from] @ result @ [until])
+        >>| fun result -> String.concat @@ [from] @ result @ [until]
       in
-      let between_nested_delims p =
-        let parsers =
-          match left_delimiter, right_delimiter with
-          | Some left_delimiter, Some right_delimiter -> [ (left_delimiter, right_delimiter) ]
-          | _ -> Language.Syntax.user_defined_delimiters
-        in
-        parsers
-        |> List.map ~f:fst
-        |> List.map ~f:(between_nested_delims p)
-        |> choice
-      in
-      let reserved =
-        let parsers =
-          match left_delimiter, right_delimiter with
-          | Some left_delimiter, Some right_delimiter -> [ (left_delimiter, right_delimiter) ]
-          | _ -> Language.Syntax.user_defined_delimiters
-        in
-        List.concat_map parsers ~f:(fun (from, until) -> [from; until])
-      in
-      let other = (not_followed_by (choice @@ List.map reserved ~f:string) *> any_char >>| String.of_char) in
+      delimiters
+      |> List.map ~f:fst
+      |> List.map ~f:(between_nested_delims p)
+      |> choice
+
+    let generate_everything_hole_parser
+        ?priority_left_delimiter:left
+        ?priority_right_delimiter:right
+        () =
+      let delimiters = delimiters left right in
+      let reserved = List.concat_map delimiters ~f:(fun (from, until) -> [from; until]) in
+      let other = not_followed_by (choice @@ List.map reserved ~f:string) *> any_char >>| String.of_char in
       fix (fun grammar ->
-          let delimsx = between_nested_delims (many grammar) in
+          let delims_over_holes = between_nested_delims (many grammar) delimiters in
           choice
             [ comment_parser
             ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
             ; escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
             ; spaces1
-            ; delimsx
+            ; delims_over_holes
             ; other
             ])
 
     let generate_delimited_hole_parser
-        ?priority_left_delimiter:left_delimiter
-        ?priority_right_delimiter:right_delimiter
+        ?priority_left_delimiter:left
+        ?priority_right_delimiter:right
         () =
-      let between_nested_delims p from =
-        let until = until_of_from from in
-        between (string from) (string until) p
-        >>= fun result -> return (String.concat @@ [from] @ result @ [until])
-      in
-      let between_nested_delims p =
-        let parsers =
-          match left_delimiter, right_delimiter with
-          | Some left_delimiter, Some right_delimiter -> [ (left_delimiter, right_delimiter) ]
-          | _ -> Language.Syntax.user_defined_delimiters
-        in
-        parsers
-        |> List.map ~f:fst
-        |> List.map ~f:(between_nested_delims p)
-        |> choice
-      in
-      let reserved =
-        let parsers =
-          match left_delimiter, right_delimiter with
-          | Some left_delimiter, Some right_delimiter -> [ (left_delimiter, right_delimiter) ]
-          | _ -> Language.Syntax.user_defined_delimiters
-        in
-        List.concat_map parsers ~f:(fun (from, until) -> [from; until])
-      in
-      let other = up_to @@ choice (List.map reserved ~f:string) >>| String.of_char_list in
-      let inner =
-        fix (fun grammar ->
-            let delims_over_holes = between_nested_delims (many grammar) in
-            choice
-              [ comment_parser
-              ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
-              ; escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
-              ; spaces1
-              ; delims_over_holes
-              ; other
-              ])
-      in
-      between_nested_delims (many inner)
+      between_nested_delims
+        (many @@ generate_everything_hole_parser ?priority_left_delimiter:left ?priority_right_delimiter:right ())
+        (delimiters left right)
 
     (* this thing is wrapped by a many. also rename it to 'string hole match syntax per char' *)
     let escapable_literal_grammar ~right_delimiter =
@@ -398,8 +357,8 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       if debug then Format.printf "Sequence chain p_list size: %d@." @@ List.length p_list;
       let i = ref 0 in
       List.fold_right p_list ~init:(return (Unit, acc)) ~f:(fun p acc ->
+          if debug then Format.printf "iterate fold_right %d@." !i;
           let result =
-            if debug then Format.printf "iterate fold_right %d@." !i;
             match parse_string ~consume:All p "_signal_hole" with
             | Error s ->
               if debug then Format.printf "Composing p with terminating parser, error %s@." s;
@@ -479,6 +438,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   let first_pos = ref (-1) in
                   let set_pos v = first_pos := v in
                   let get_pos () = !first_pos in
+
                   let rest =
                     (* if this is the base case (the first time we go around the
                        loop backwards, when the first parser is a hole), then it
@@ -494,11 +454,15 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                       (if debug then Format.printf "hole until: append suffix@.";
                        Omega_parser_helper.ignore acc)
                   in
-                  (
+
+                  let non_space_matcher =
                     pos >>= fun pos ->
                     if get_pos () = (-1) then set_pos pos;
-                    Omega_parser_helper.up_to (choice [ Omega_parser_helper.skip reserved_parsers; rest ])
-                  )
+                    Omega_parser_helper.(up_to @@ choice [ Omega_parser_helper.skip reserved_parsers; rest ])
+                    >>| String.of_char_list
+                  in
+
+                  non_space_matcher
                   >>= fun value ->
                   acc >>= fun _ ->
                   let offset =
@@ -512,7 +476,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   let m =
                     { offset
                     ; identifier
-                    ; text = String.of_char_list value
+                    ; text = value
                     }
                   in
                   r user_state (Match m)
@@ -534,24 +498,50 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                   r user_state (Match m)
 
                 | Expression ->
+                  if debug then Format.printf "EXpression time i is %d@." !i;
                   let first_pos = ref (-1) in
                   let set_pos v = first_pos := v in
                   let get_pos () = !first_pos in
-                  let non_space =
-                    not_followed_by (choice [ reserved_parsers ]) *> any_char
+
+                  let rest =
+                    (* it may be that the many till for the first parser
+                       succeeds on 'empty string', specifically in the :[1]:[2]
+                       case for :[1]. We won't capture the pos of :[1] in the
+                       first parser since it doesn't fire, so we have to
+                       set the pos right before the until parser below, if that
+                       happens. *)
+                    pos >>= fun pos ->
+                    if debug then Format.printf "~~~~Rest parsed~~~~ i is %d@." !i;
+                    if get_pos () = (-1) then set_pos pos;
+                    if debug then Format.printf "Pos is %d@." pos;
+                    if !i = 0 then
+                      (if debug then Format.printf "hole until: END OF INPUT match to the end of this level@.";
+                       end_of_input)
+                    else
+                      (if debug then Format.printf "hole until: APPEND suffix parser %d@." !i;
+                       Omega_parser_helper.skip acc
+                       (*Omega_parser_helper.skip acc *> end_of_input*)
+                       (* fake fix, only matches last *)
+                      )
+                  in
+
+                  let non_space_matcher =
+                    pos >>= fun pos ->
+                    if debug then Format.printf "Non_space parsed@.";
+                    if get_pos () = (-1) then set_pos pos;
+                    not_followed_by (choice [ Omega_parser_helper.skip reserved_parsers; rest ]) *> any_char
                     >>| String.of_char
                   in
-                  let rest = Omega_parser_helper.ignore acc in
+
                   let delimited =
-                    pos >>= fun pos ->
-                    if debug then Format.printf "Pos is %d@." pos;
-                    if get_pos () = (-1) then set_pos pos;
                     match dimension with
                     | Code ->
                       generate_delimited_hole_parser
                         ?priority_left_delimiter:left_delimiter
                         ?priority_right_delimiter:right_delimiter
-                        ()
+                        () >>= fun result ->
+                      if debug then Format.printf "Delimited parsed@.";
+                      return result
                     | Escapable_string_literal ->
                       let right_delimiter = Option.value_exn right_delimiter in
                       escapable_literal_grammar ~right_delimiter
@@ -561,22 +551,11 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                     | _ -> failwith "Unimplemented for comment"
                   in
 
-                  let until_part =
-                    (* it may be that the many till for the first parser
-                       succeeds on 'empty string', specifically in the :[1]:[2]
-                       case for :[1]. We won't capture the pos of :[1] in the
-                       first parser since it doesn't fire, so we have to
-                       set the pos right before the until parser below, if that
-                       happens. *)
-                    pos >>= fun pos ->
-                    if get_pos () = (-1) then set_pos pos;
-                    if debug then Format.printf "Pos is %d@." pos;
-                    rest
-                  in
-                  let delimited = many1_till delimited until_part >>| String.concat in
-                  many1 @@ choice [non_space; delimited]
+                  let matcher = many1 (not_followed_by rest *> choice [non_space_matcher; delimited]) in
+                  matcher
                   >>= fun value ->
-                  acc >>= fun _ ->
+                  rest >>= fun _ ->
+                  if debug then Format.printf "i here is %d" !i;
                   let offset =
                     match get_pos () with
                     | -1 -> failwith "Did not expect unset offset"
@@ -672,6 +651,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
               end
             | Ok (_, _user_state) -> failwith "unreachable: _signal_hole parsed but not handled by Hole variant"
           in
+          if debug then Format.printf "Incrementing i@.";
           i := !i + 1;
           result)
 
