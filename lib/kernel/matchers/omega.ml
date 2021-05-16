@@ -325,9 +325,9 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         in
         List.concat_map parsers ~f:(fun (from, until) -> [from; until])
       in
+      let other = (not_followed_by (choice @@ List.map reserved ~f:string) *> any_char >>| String.of_char) in
       fix (fun grammar ->
           let delimsx = between_nested_delims (many grammar) in
-          let other = Omega_parser_helper.Deprecate.any_char_except ~reserved >>| String.of_char in
           choice
             [ comment_parser
             ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
