@@ -269,11 +269,12 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
            be inferred from the file extension(s). The GENERIC matcher may miss \
            matches. See '-list' to set a matcher for a specific language and to \
            remove this warning, or add -matcher .generic to suppress this warning.@."
-      | _ ->
+      | "Generic" when Option.is_some override_matcher -> ()
+      | _ when Option.is_none override_matcher ->
         if debug then Format.eprintf
-            "@.NOTE: the %s matcher was inferred from \
-             extension the file extension. See '-list' \
-             to set a matcher for a specific language.@." M.name
+            "@.NOTE: the %s matcher was inferred from the file extension. See \
+             '-list' to set a matcher for a specific language.@." M.name
+      | _ -> ()
   ]
 
 let default_command =

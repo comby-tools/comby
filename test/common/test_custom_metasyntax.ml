@@ -77,7 +77,6 @@ let%expect_test "custom_metasyntax_multiple_holes" =
   [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"BAR","value":"bar","range":{"start":{"offset":7,"line":1,"column":8},"end":{"offset":10,"line":1,"column":11}}},{"variable":"FOO","value":"simple","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}}}],"matched":"simple(bar)"}]}
 |}];
 
-(*
   run (create (module Matchers.Alpha) matcher) "foo(bar)" {|?FOO($BAR)|} "";
   [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":8,"line":1,"column":9}},"environment":[{"variable":"BAR","value":"bar","range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}}},{"variable":"FOO","value":"foo","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}}}],"matched":"foo(bar)"}]}
 |}];
@@ -129,6 +128,7 @@ let%expect_test "custom_metasyntax_multiple_holes" =
   [%expect_exact {|No matches.|}]
 
 
+(*
 let%expect_test "custom_metasyntax_underscore" =
   let matcher =
     Matchers.Metasyntax.
