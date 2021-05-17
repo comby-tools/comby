@@ -149,7 +149,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       | Some rule ->
         push_environment_ref := !current_environment_ref;
         push_implicit_equals_match_satisfied := !implicit_equals_match_satisfied;
-        (* FIXME Metasyntax should be propagated here. FIXME fresh should be propagated here.*)
+        (* FIXME Metasyntax should be propagated here. *)
         let sat, env =
           Program.apply
             ~metasyntax:Metasyntax.default_metasyntax
@@ -265,18 +265,6 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       ]
       |> List.concat
       |> choice
-
-    module Deprecate = struct
-      let reserved_delimiters =
-        List.concat_map Language.Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
-        |> List.append [":["; "]"]
-        |> List.append [":[["; "]]"]
-
-      let reserved =
-        reserved_delimiters @ [" "; "\n"; "\t"; "\r"]
-        |> List.sort ~compare:(fun v2 v1 ->
-            String.length v1 - String.length v2)
-    end
 
     let generate_single_hole_parser () =
       (alphanum <|> char '_') >>| String.of_char
@@ -568,7 +556,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
           (many1 (comment_parser <|> spaces1))
       in
       let other =
-        (many1 (Omega_parser_helper.Deprecate.any_char_except ~reserved:Deprecate.reserved) >>| String.of_char_list)
+        (many1 (not_followed_by reserved_parsers *> any_char) >>| String.of_char_list)
         >>| generate_string_token_parser
       in
       let code_holes =

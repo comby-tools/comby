@@ -34,7 +34,7 @@
   test_nested_matches
   test_regex_holes
   test_template_constraints
-  test_custom_metasyntax
+  ; test_custom_metasyntax
   )
  (inline_tests)
  (preprocess (pps ppx_expect ppx_sexp_message ppx_deriving_yojson))
