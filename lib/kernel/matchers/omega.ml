@@ -818,19 +818,16 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         List.fold ~init:[] Template.Matching.hole_parsers ~f:(fun acc (sort', parser) ->
             if sort' = sort then parser::acc else acc)
       in
-      let skip_signal hole = Omega_parser_helper.ignore (string "_signal_hole") >>| fun () -> (Hole hole, acc) in
+      let skip_signal hole = Omega_parser_helper.skip (string "_signal_hole") >>| fun () -> (Hole hole, acc) in
       match hole_parser with
       | [] -> fail "none" (* not defined *)
       | l ->
         choice l >>| function identifier ->
           skip_signal { sort; identifier; dimension; at_depth = None }
 
-    let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter () =
+    let generate_hole_for_literal dimension ~contents ~left_delimiter ~right_delimiter () =
       let literal_holes =
-        Types.Hole.sorts ()
-        |> List.map ~f:(fun kind -> hole_parser kind sort) (* Note: Uses attempt in alpha *)
-        |> choice
-      in
+        choice @@ List.map Template.Matching.hole_parsers ~f:(fun (kind, _) -> hole_parser kind dimension) in
       let reserved_holes = List.map reserved_holes ~f:Omega_parser_helper.skip in
       let other = Omega_parser_helper.(
           up_to @@
@@ -866,8 +863,8 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
         >>| generate_string_token_parser
       in
       let code_holes =
-        Types.Hole.sorts ()
-        |> List.map ~f:(fun kind -> hole_parser kind Code)
+        Template.Matching.hole_parsers
+        |> List.map ~f:(fun (sort, _) -> hole_parser sort Code)
         |> choice
       in
       fix (fun (generator : (production * 'a) t list t) ->

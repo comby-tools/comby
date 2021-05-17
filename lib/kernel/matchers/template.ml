@@ -41,8 +41,8 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
         syntax like $X~regex should be tried before shortcircuiting on $X, in which
         case it should be defined _after_ the $X syntax (most general should be
         first). *)
-    (* hole parsers for match templates only *)
     let hole_parsers =
+      (* hole parsers for match templates only *)
       List.fold ~init:[] Metasyntax.syntax ~f:(fun acc v ->
           let result = match v with
             | Hole (sort, Delimited (left, right)) ->
@@ -55,9 +55,7 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
 
             | Hole (sort, Reserved_identifiers l) ->
               sort,
-              lift
-                (fun v -> v)
-                (choice (List.map l ~f:string))
+              choice (List.map l ~f:string)
 
             | Regex (left, separator, right) ->
               Regex,

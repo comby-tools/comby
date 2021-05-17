@@ -803,7 +803,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
     and common _s =
       let holes at_depth =
         hole_parsers
-        |> List.map ~f:(fun (kind, _) -> attempt (hole_parser kind Code ~at_depth))
+        |> List.map ~f:(fun (sort, _) -> attempt (hole_parser sort Code ~at_depth))
       in
       choice
         [ (choice (holes !depth) >>= fun result -> if debug then Format.printf "Depth hole %d@." !depth; return result)
