@@ -128,7 +128,6 @@ let%expect_test "custom_metasyntax_multiple_holes" =
   [%expect_exact {|No matches.|}]
 
 
-(*
 let%expect_test "custom_metasyntax_underscore" =
   let matcher =
     Matchers.Metasyntax.
@@ -140,10 +139,10 @@ let%expect_test "custom_metasyntax_underscore" =
   run (create (module Matchers.Alpha) matcher) "simple(bar)" {|$_(?_)|} "";
   [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"_","value":"simple","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}}}],"matched":"simple(bar)"}]}
 |}];
+  (* different because we record _ the first time and don't subsequently for implicit_equals *)
   run (create (module Matchers.Omega) matcher) "simple(bar)" {|$_(?_)|} "";
-  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"_","value":"simple","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}}}],"matched":"simple(bar)"}]}
+  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"_","value":"bar","range":{"start":{"offset":7,"line":1,"column":8},"end":{"offset":10,"line":1,"column":11}}}],"matched":"simple(bar)"}]}
 |}]
-
 
 let%expect_test "custom_metasyntax_equivalence" =
   let matcher =
@@ -154,10 +153,10 @@ let%expect_test "custom_metasyntax_equivalence" =
   in
 
   run (create (module Matchers.Alpha) matcher) "foo(foo)" {|$A($A~\w+$)|} "";
-  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":8,"line":1,"column":9}},"environment":[{"variable":"A","value":"foo","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}}},{"variable":"A_equal_!@#$000000000458","value":"foo","range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}}}],"matched":"foo(foo)"}]}
+  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":8,"line":1,"column":9}},"environment":[{"variable":"A","value":"foo","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}}},{"variable":"A_equal_!@#$000000000011","value":"foo","range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}}}],"matched":"foo(foo)"}]}
 |}];
   run (create (module Matchers.Omega) matcher) "foo(foo)" {|$A($A~\w+$)|} "";
-  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":8,"line":1,"column":9}},"environment":[{"variable":"A","value":"foo","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}}},{"variable":"A_equal_!@#$000000000458","value":"foo","range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}}}],"matched":"foo(foo)"}]}
+  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":8,"line":1,"column":9}},"environment":[{"variable":"A","value":"foo","range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}}},{"variable":"A_equal_!@#$000000000012","value":"foo","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}}}],"matched":"foo(foo)"}]}
 |}]
 
 let%expect_test "custom_metasyntax_definition_order" =
@@ -245,7 +244,7 @@ let%expect_test "custom_metasyntax_rewrite_omega" =
     | Nothing -> "nothing"
   in
   print_string output;
-  [%expect_exact {|1 2 2|}]
+  [%expect_exact {|3 4 4|}]
 
 let%expect_test "custom_metasyntax_greek_letters" =
   let matcher =
@@ -275,4 +274,3 @@ let%expect_test "custom_metasyntax_alphanum_test" =
   run (create (module Matchers.Omega) matcher) "simple(bar)" {|[:A:](α)|} "";
   [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"A","value":"simple","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}}},{"variable":"α","value":"bar","range":{"start":{"offset":7,"line":1,"column":8},"end":{"offset":10,"line":1,"column":11}}}],"matched":"simple(bar)"}]}
 |}]
-*)
