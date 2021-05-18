@@ -1,0 +1,4 @@
+(library
+ (name vangstrom_unix)
+ (public_name comby.vangstrom-unix)
+ (libraries vangstrom unix))
