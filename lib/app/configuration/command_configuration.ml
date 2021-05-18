@@ -238,7 +238,6 @@ type run_options =
   { verbose : bool
   ; match_timeout : int
   ; dump_statistics : bool
-  ; substitute_in_place : bool
   ; disable_substring_matching : bool
   ; fast_offset_conversion : bool
   ; match_newline_toplevel : bool
@@ -433,7 +432,6 @@ type t =
   ; output_printer : Printer.t
   ; interactive_review : interactive_review option
   ; matcher : (module Matchers.Matcher.S)
-  ; extension : string option
   ; metasyntax : Matchers.Metasyntax.t option
   }
 
@@ -621,7 +619,7 @@ let syntax custom_matcher_path =
     exit 1
   | `Yes ->
     Yojson.Safe.from_file custom_matcher_path
-    |> Matchers.Syntax.of_yojson
+    |> Matchers.Language.Syntax.of_yojson
     |> function
     | Ok c -> c
     | Error error ->
@@ -682,7 +680,7 @@ let select_matcher custom_metasyntax custom_matcher override_matcher file_filter
 let regex_of_specifications specifications =
   Format.sprintf "(%s)"
   @@ String.concat ~sep:")|("
-  @@ List.map specifications ~f:Regex.to_regex
+  @@ List.map specifications ~f:Matchers.Specification.to_regex
 
 let ripgrep_file_filters specifications args : string list =
   let regex = regex_of_specifications specifications in
@@ -829,11 +827,10 @@ let create
       else
         Printer.Rewrite.print replacement_output source_path replacements result source_content
   in
-  let (module M) as matcher, extension, metasyntax =
+  let (module M) as matcher, _, metasyntax =
     select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega in
   return
     { matcher
-    ; extension
     ; sources
     ; specifications
     ; run_options

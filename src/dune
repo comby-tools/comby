@@ -9,17 +9,17 @@
  (modes byte exe)
  (names main))
 
-(executables
- (libraries comby core opium ppx_deriving_yojson ppx_deriving_yojson.runtime cohttp-lwt-unix)
- (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show ppx_sexp_conv))
- (modules server server_types)
- (names server))
+;   (executables
+;    (libraries comby core opium ppx_deriving_yojson ppx_deriving_yojson.runtime cohttp-lwt-unix)
+;    (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show ppx_sexp_conv))
+;    (modules server server_types)
+;    (names server))
 
-(executables
- (libraries comby core opium ppx_deriving_yojson ppx_deriving_yojson.runtime)
- (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show ppx_sexp_conv))
- (modules benchmark)
- (names benchmark))
+;   (executables
+;    (libraries comby core opium ppx_deriving_yojson ppx_deriving_yojson.runtime)
+;    (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show ppx_sexp_conv))
+;    (modules benchmark)
+;    (names benchmark))
 
 (alias
  (name DEFAULT)

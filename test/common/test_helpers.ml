@@ -41,30 +41,62 @@ let run ?(configuration = configuration) (module M : Matchers.Matcher.S) source 
     |> (fun { rewritten_source; _ } -> rewritten_source)
     |> print_string
 
-let run_nested
-    (module M : Matchers.Matcher.S)
-    ?(configuration = configuration)
-    ?rule
-    source
-    match_template
-    () =
-  let nested =
-    match rule with
-    | None -> true
-    | Some rule ->
-      let options = Rule.create rule |> Or_error.ok_exn |> Rule.options in
-      options.nested
-  in
-  M.all ~configuration ~nested ~template:match_template ~source ()
-  |> function
-  | [] -> print_string "No matches."
-  | matches ->
-    let matches = List.map matches ~f:(Match.convert_offset ~fast:true ~source) in
-    Format.asprintf "%a" Match.pp (None, matches)
-    |> print_string
-
-(** Rule tests *)
 let make_env bindings =
   List.fold bindings
     ~init:(Match.Environment.create ())
     ~f:(fun env (var, value) -> Match.Environment.add env var value)
+
+let parse_template metasyntax template =
+  let (module M) = Matchers.Metasyntax.create metasyntax in
+  let module Template_parser = Template.Make(M) in
+  let tree = Template_parser.parse template in
+  Sexp.to_string_hum (Template.sexp_of_t tree)
+
+let run_match (module M : Matchers.Matcher.S) source ?rule match_template =
+  let rule =
+    match rule with
+    | Some rule -> Matchers.Rule.create rule |> Or_error.ok_exn
+    | None -> Rule.create "where true" |> Or_error.ok_exn
+  in
+  M.all ~configuration ~rule ~template:match_template ~source ()
+  |> function
+  | [] -> print_string "No matches."
+  | hd :: _ ->
+    print_string (Yojson.Safe.to_string (Match.to_yojson hd))
+
+let run_all_matches (module M : Matchers.Matcher.S) ?(format = `Json) source ?rule match_template =
+  let rule =
+    match rule with
+    | Some rule -> Matchers.Rule.create rule |> Or_error.ok_exn
+    | None -> Rule.create "where true" |> Or_error.ok_exn
+  in
+  M.all ~configuration ~rule ~template:match_template ~source ()
+  |> function
+  | [] -> print_string "No matches."
+  | l ->
+    match format with
+    | `Json ->
+      Format.printf "%a" Match.pp_json_lines (None, l)
+    | `Lines ->
+      let matches = List.map l ~f:(Match.convert_offset ~fast:true ~source) in
+      Format.asprintf "%a" Match.pp (None, matches)
+      |> print_string
+
+let run_rule (module E : Engine.S) source match_template rewrite_template rule =
+  let (module M : Matcher.S) = (module E.Generic) in
+  M.first ~configuration match_template source
+  |> function
+  | Error _ -> print_string "bad"
+  | Ok result ->
+    match result with
+    | ({ environment; _ } as m) ->
+      let e = Rule.(result_env @@ apply ~match_all:(M.all ~rule:[Ast.True]) rule environment) in
+      match e with
+      | None -> print_string "bad bad"
+      | Some e ->
+        { m with environment = e }
+        |> List.return
+        |> Rewrite.all ~source ~rewrite_template
+        |> (fun x -> Option.value_exn x)
+        |> (fun { rewritten_source; _ } -> rewritten_source)
+        |> print_string

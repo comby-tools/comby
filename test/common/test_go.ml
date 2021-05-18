@@ -4,21 +4,6 @@ open Test_helpers
 open Comby_kernel
 open Matchers
 
-let run ?(rule = "where true") (module E : Engine.S) source match_template rewrite_template =
-  let rule = Rule.create rule |> Or_error.ok_exn in
-  E.Go.first ~configuration match_template source
-  |> function
-  | Ok ({environment; _ } as result) ->
-    if Rule.(sat @@ apply ~match_all:(E.Go.all ~rule:[Ast.True] ~nested:false) rule environment) then
-      Rewrite.all ~source ~rewrite_template [result]
-      |> (fun x -> Option.value_exn x)
-      |> (fun { rewritten_source; _ } -> rewritten_source)
-      |> print_string
-    else
-      assert false
-  | Error _ ->
-    print_string rewrite_template
-
 let%expect_test "gosimple_s1000" =
   let source =
     {|
@@ -45,13 +30,13 @@ let%expect_test "gosimple_s1000" =
     |}
   in
 
-  run (module Alpha) source match_template rewrite_template;
+  run (module Alpha.Go) source match_template rewrite_template;
   [%expect_exact {|
       x := <-ch
       fmt.Println(x)
     |}];
 
-  run (module Omega) source match_template rewrite_template;
+  run (module Omega.Go) source match_template rewrite_template;
   [%expect_exact {|
       x := <-ch
       fmt.Println(x)
@@ -83,12 +68,12 @@ let%expect_test "gosimple_s1001" =
 
   let rule = {|where :[index_define] == :[index_use], :[src_element_define] == :[src_element_use]|} in
 
-  run (module Alpha) ~rule source match_template rewrite_template;
+  run (module Alpha.Go) ~rule source match_template rewrite_template;
   [%expect_exact {|
       copy(dst, src)
     |}];
 
-  run (module Omega) ~rule source match_template rewrite_template;
+  run (module Omega.Go) ~rule source match_template rewrite_template;
   [%expect_exact {|
       copy(dst, src)
     |}]
@@ -108,7 +93,7 @@ let%expect_test "gosimple_s1003" =
 
   let rewrite_template = {|:[1]|} in
 
-  run (module Alpha) source match_template rewrite_template;
+  run (module Alpha.Go) source match_template rewrite_template;
   [%expect_exact {|Index|}];
-  run (module Omega) source match_template rewrite_template;
+  run (module Omega.Go) source match_template rewrite_template;
   [%expect_exact {|Index|}]

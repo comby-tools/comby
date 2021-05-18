@@ -7,7 +7,7 @@ module Make (Make : Types.Language.S -> Types.Metasyntax.S -> Types.Matcher.S) :
 
   let create
       ?(metasyntax = Metasyntax.default_metasyntax)
-      Types.Syntax.
+      Types.Language.Syntax.
         { user_defined_delimiters
         ; escapable_string_literals
         ; raw_string_literals

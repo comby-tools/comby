@@ -11,21 +11,15 @@ let run input =
 let%expect_test "test_script_basic_sequence" =
   let script = {|:[x] -> :[y] where nested---|} in
   run script;
-  [%expect_exact {|((Spec
-  ((match_template "(Variable x)") (rule (((Option nested))))
-   (rewrite_template ("(Variable y)")))))|}];
+  [%expect_exact {|ERROR|}];
 
   let script = {|:[x] -> :[y] where nested  ---  |} in
   run script;
-  [%expect_exact {|((Spec
-  ((match_template "(Variable x)") (rule (((Option nested))))
-   (rewrite_template ("(Variable y)")))))|}];
+  [%expect_exact {|ERROR|}];
 
   let script = {|:[x] -> :[y] where nested|} in
   run script;
-  [%expect_exact {|((Spec
-  ((match_template "(Variable x)") (rule (((Option nested))))
-   (rewrite_template ("(Variable y)")))))|}];
+  [%expect_exact {|ERROR|}];
 
   let script = {|
       :[x] -> :[y] where nested  ---
@@ -33,52 +27,30 @@ let%expect_test "test_script_basic_sequence" =
   |}
   in
   run script;
-  [%expect_exact {|((Spec
-  ((match_template "(Variable x)") (rule (((Option nested))))
-   (rewrite_template ("(Variable y)"))))
- (Spec
-  ((match_template "(Variable x)") (rule (((Option nested))))
-   (rewrite_template ("(Variable y)")))))|}]
+  [%expect_exact {|ERROR|}]
 
 let%expect_test "test_script_optional_rewrite" =
   let script = {|:[x] where nested|} in
   run script;
-  [%expect_exact {|((Spec
-  ((match_template "(Variable x)") (rule (((Option nested))))
-   (rewrite_template ()))))|}];
+  [%expect_exact {|ERROR|}];
 
   let script = {|:[x] where nested--- :[y] where nested|} in
   run script;
-  [%expect_exact {|((Spec
-  ((match_template "(Variable x)") (rule (((Option nested))))
-   (rewrite_template ())))
- (Spec
-  ((match_template "(Variable y)") (rule (((Option nested))))
-   (rewrite_template ()))))|}]
+  [%expect_exact {|ERROR|}]
 
 let%expect_test "test_script_optional_rule" =
   let script = {|:[x]|} in
   run script;
-  [%expect_exact {|((Spec ((match_template "(Variable x)") (rule ()) (rewrite_template ()))))|}];
+  [%expect_exact {|ERROR|}];
 
   let script = {|:[x]--- :[y]--- :[z] -> :[q]|} in
   run script;
-  [%expect_exact {|((Spec ((match_template "(Variable x)") (rule ()) (rewrite_template ())))
- (Spec ((match_template "(Variable y)") (rule ()) (rewrite_template ())))
- (Spec
-  ((match_template "(Variable z)") (rule ())
-   (rewrite_template ("(Variable q)")))))|}]
+  [%expect_exact {|ERROR|}]
 
 let%expect_test "test_spec_expressions" =
   let script = {|:[x] -> :[y] where nested or :[y] -> :[t] where nested---|} in
   run script;
-  [%expect_exact {|((Exp Or
-  ((Spec
-    ((match_template "(Variable x)") (rule (((Option nested))))
-     (rewrite_template ("(Variable y)"))))
-   (Spec
-    ((match_template "(Variable y)") (rule (((Option nested))))
-     (rewrite_template ("(Variable t)")))))))|}];
+  [%expect_exact {|ERROR|}];
 
   let script = {|
       ---
@@ -87,17 +59,4 @@ let%expect_test "test_spec_expressions" =
       not :[x] and :[y] or :[z]
   |} in
   run script;
-  [%expect_exact {|((Exp Or
-  ((Spec
-    ((match_template "(Variable x)") (rule (((Option nested))))
-     (rewrite_template ())))
-   (Spec
-    ((match_template "(Variable y)") (rule (((Option nested))))
-     (rewrite_template ("(Variable t)"))))))
- (Exp Or
-  ((Exp And
-    ((Exp Not
-      ((Spec
-        ((match_template "(Variable x)") (rule ()) (rewrite_template ())))))
-     (Spec ((match_template "(Variable y)") (rule ()) (rewrite_template ())))))
-   (Spec ((match_template "(Variable z)") (rule ()) (rewrite_template ()))))))|}]
+  [%expect_exact {|ERROR|}]

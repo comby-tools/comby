@@ -71,7 +71,6 @@ type run_options =
   { verbose : bool
   ; match_timeout : int
   ; dump_statistics : bool
-  ; substitute_in_place : bool
   ; disable_substring_matching : bool
   ; fast_offset_conversion : bool
   ; match_newline_toplevel : bool
@@ -92,7 +91,6 @@ type t =
   ; output_printer : Printer.t
   ; interactive_review : interactive_review option
   ; matcher : (module Matchers.Matcher.S)
-  ; extension : string option
   ; metasyntax :  Matchers.Metasyntax.t option
   }
 

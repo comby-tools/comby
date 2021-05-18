@@ -327,6 +327,71 @@ module Matchers : sig
 
   type metasyntax = Metasyntax.t
 
+  (** {3 Template}
+
+      Parse a template based on metasynax *)
+
+  module Template : sig
+    type kind =
+      | Value
+      | Length
+      | FileName
+      | FilePath
+      | Type
+
+    type syntax =
+      { variable : string
+      ; pattern : string
+      ; offset : int
+      ; kind : kind
+      }
+    [@@deriving sexp]
+
+    type atom =
+      | Hole of syntax
+      | Constant of string
+    [@@deriving sexp]
+
+    type t = atom list
+    [@@deriving sexp]
+
+    module Make : Metasyntax.S -> sig
+        val parse : string -> t
+        val variables : string -> syntax list
+      end
+  end
+
+  (** {3 AST}
+
+      Defines a rule AST. *)
+  module Ast : sig
+    type atom =
+      | Template of Template.t
+      | String of string
+    [@@deriving sexp]
+
+    type antecedent = atom
+    [@@deriving sexp]
+
+    type kind =
+      | Value
+      | Length
+      | Type
+      | File
+    [@@deriving sexp]
+
+    type expression =
+      | True
+      | False
+      | Option of string
+      | Equal of atom * atom
+      | Not_equal of atom * atom
+      | Match of atom * (antecedent * consequent) list
+      | Rewrite of atom * (antecedent * atom)
+    and consequent = expression list
+    [@@deriving sexp]
+  end
+
   (** {3 Matcher}
 
       Defines the functions that a matcher can perform. *)
@@ -338,7 +403,6 @@ module Matchers : sig
       val all
         :  ?configuration:configuration
         -> ?rule:Rule.t
-        -> ?nested:bool
         -> template:string
         -> source:string
         -> unit
@@ -370,28 +434,6 @@ module Matchers : sig
       Defines types and operations for match rules. *)
   and Rule : sig
 
-    module Ast : sig
-      type atom =
-        | Variable of string
-        | String of string
-      [@@deriving sexp]
-
-      type antecedent = atom
-      [@@deriving sexp]
-
-      type expression =
-        | True
-        | False
-        | Option of string
-        | Equal of atom * atom
-        | Not_equal of atom * atom
-        | Match of atom * (antecedent * consequent) list
-        | RewriteTemplate of string
-        | Rewrite of atom * (antecedent * expression)
-      and consequent = expression list
-      [@@deriving sexp]
-    end
-
     type t = Ast.expression list
     [@@deriving sexp]
 
@@ -417,11 +459,15 @@ module Matchers : sig
         rules. [metasyntax] uses the custom metasyntax definition. *)
     val apply :
       ?substitute_in_place:bool ->
-      ?fresh:(unit -> string) ->
       ?metasyntax:Metasyntax.t ->
-      match_all:(?configuration:Configuration.t ->
-                 template:string -> source:string -> unit -> Match.t list) ->
-      Rule.Ast.expression list ->
+      match_all:(
+        ?configuration:Configuration.t ->
+        template:string ->
+        source:string ->
+        unit ->
+        Match.t list
+      ) ->
+      Ast.expression list ->
       Match.Environment.t -> result
   end
 
@@ -444,73 +490,79 @@ module Matchers : sig
         replacements rather than just matches (see [process_single_source] below).
     *)
     val create : ?rewrite_template:string -> ?rule:rule -> match_template:string -> unit -> t
+
+    (** [regex [t] returns a generalized regular expression corresponding to the specification *)
+    val to_regex : t -> string
   end
 
   type specification = Specification.t
 
-  (** {3 Syntax}
 
-      Defines the syntax structures for the target language (C, Go, etc.) that
-      are significant for matching. *)
-  module Syntax : sig
+  (** {3 Language}
 
-    (** Defines a set of quoted syntax for strings based on one or more
-        delimiters and associated escape chracter.
-
-        E.g., this supports single and double quotes with escape character '\'
-        as: { delimiters = [ {|"|}, {|'|} ]; escape_character = '\\' } *)
-    type escapable_string_literals =
-      { delimiters : string list
-      ; escape_character: char
-      }
-
-    (** Defines comment syntax as one of Multiline, Nested_multiline with
-        associated left and right delimiters, or Until_newline that defines a
-        comment prefix. associated prefix. *)
-    type comment_kind =
-      | Multiline of string * string
-      | Nested_multiline of string * string
-      | Until_newline of string
-
-    (** Defines syntax as:
-
-        - [user_defined_delimiters] are delimiters treated as code structures
-          (parentheses, brackets, braces, alphabetic words) -
-          [escapable_string_literals] are escapable quoted strings
-
-        - [raw_string literals] are raw quoted strings that have no escape
-          character
-
-        - [comments] are comment structures  *)
-    type t =
-      { user_defined_delimiters : (string * string) list
-      ; escapable_string_literals : escapable_string_literals option [@default None]
-      ; raw_string_literals : (string * string) list
-      ; comments : comment_kind list
-      }
-
-    val to_yojson : t -> Yojson.Safe.json
-    val of_yojson : Yojson.Safe.json -> (t, string) Result.t
-
-    (** The module signature that defines language syntax for a matcher *)
-    module type S = sig
-      val user_defined_delimiters : (string * string) list
-      val escapable_string_literals : escapable_string_literals option
-      val raw_string_literals : (string * string) list
-      val comments : comment_kind list
-    end
-  end
-
-  type syntax = Syntax.t
-
-  module Info : sig
-    module type S = sig
-      val name : string
-      val extensions : string list
-    end
-  end
-
+      Language definitions *)
   module Language : sig
+
+    (** {4 Syntax}
+
+        Defines the syntax structures for the target language (C, Go, etc.) that
+        are significant for matching. *)
+    module Syntax : sig
+
+      (** Defines a set of quoted syntax for strings based on one or more
+          delimiters and associated escape chracter.
+
+          E.g., this supports single and double quotes with escape character '\'
+          as: { delimiters = [ {|"|}, {|'|} ]; escape_character = '\\' } *)
+      type escapable_string_literals =
+        { delimiters : string list
+        ; escape_character: char
+        }
+
+      (** Defines comment syntax as one of Multiline, Nested_multiline with
+          associated left and right delimiters, or Until_newline that defines a
+          comment prefix. associated prefix. *)
+      type comment_kind =
+        | Multiline of string * string
+        | Nested_multiline of string * string
+        | Until_newline of string
+
+      (** Defines syntax as:
+
+          - [user_defined_delimiters] are delimiters treated as code structures
+            (parentheses, brackets, braces, alphabetic words) -
+            [escapable_string_literals] are escapable quoted strings
+
+          - [raw_string literals] are raw quoted strings that have no escape
+            character
+
+          - [comments] are comment structures  *)
+      type t =
+        { user_defined_delimiters : (string * string) list
+        ; escapable_string_literals : escapable_string_literals option [@default None]
+        ; raw_string_literals : (string * string) list
+        ; comments : comment_kind list
+        }
+
+      val to_yojson : t -> Yojson.Safe.json
+      val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+
+      (** The module signature that defines language syntax for a matcher *)
+      module type S = sig
+        val user_defined_delimiters : (string * string) list
+        val escapable_string_literals : escapable_string_literals option
+        val raw_string_literals : (string * string) list
+        val comments : comment_kind list
+      end
+    end
+
+    module Info : sig
+      module type S = sig
+        val name : string
+        val extensions : string list
+      end
+    end
+
     module type S = sig
       module Info : Info.S
       module Syntax : Syntax.S
@@ -642,7 +694,7 @@ module Matchers : sig
       (** [create metasyntax syntax] creates a matcher for a language defined by
           [syntax]. If [metasyntax] is specified, the matcher will use a custom
           metasyntax definition instead of the default. *)
-      val create : ?metasyntax:Metasyntax.t -> Syntax.t -> (module Matcher.S)
+      val create : ?metasyntax:Metasyntax.t -> Language.Syntax.t -> (module Matcher.S)
     end
   end
 
@@ -681,40 +733,21 @@ module Matchers : sig
       -> match' list
       -> replacement option
 
-    (** [substitute metasyntax fresh template environment] substitutes [template]
-        with the variable and value pairs in the [environment]. It returns the
-        result after substitution, and the list of variables in [environment] that
-        were substituted for. If [metasyntax] is defined, the rewrite template will
-        respect custom metasyntax definitions.
+    (** [substitute metasyntax fresh template environment] substitutes
+        [template] with the variable and value pairs in the [environment]. It
+        returns the result after substitution. If [metasyntax] is defined, the
+        rewrite template will respect custom metasyntax definitions.
 
         The syntax :[id()] is substituted with fresh values. If [fresh] is not
         specified, the default behavior substitutes :[id()] starting with 1, and
-        subsequent :[id()] values increment the ID. If [fresh] is set, substitutes
-        the pattern :[id()] with the value of fresh () as the hole is encountered,
-        left to right. *)
+        subsequent :[id()] values increment the ID. If [fresh] is set,
+        substitutes the pattern :[id()] with the value of fresh () as the hole is
+        encountered, left to right. *)
     val substitute
       :  ?metasyntax:metasyntax
       -> ?fresh:(unit -> string)
       -> string
       -> Match.environment
-      -> (string * string list)
-
-    type syntax =
-      { variable: string
-      ; pattern: string
-      }
-
-    type extracted =
-      | Hole of syntax
-      | Constant of string
-
-    module Make : Metasyntax.S -> sig
-        val parse : string -> extracted list option
-        val variables : string -> syntax list
-      end
-
-    val get_offsets_for_holes : syntax list -> string -> (string * int) list
-
-    val get_offsets_after_substitution : (string * int) list -> Match.environment -> (string * int) list
+      -> string
   end
 end

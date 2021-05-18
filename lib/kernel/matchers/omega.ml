@@ -1,8 +1,8 @@
 open Core_kernel
 
-open Angstrom
+open Vangstrom
 
-open Omega_parser
+open Omega_parser_helper
 
 type omega_match_production =
   { offset : int
@@ -19,19 +19,16 @@ type production =
   | Match of omega_match_production
 
 let configuration_ref = ref (Configuration.create ())
+
+let implicit_equals_match_satisfied : bool ref = ref true
 let current_environment_ref : Match.Environment.t ref = ref (Match.Environment.create ())
 let matches_ref : Match.t list ref = ref []
 let source_ref : string ref = ref ""
 
+let push_implicit_equals_match_satisfied : bool ref = ref true
 let push_environment_ref : Match.Environment.t ref = ref (Match.Environment.create ())
 let push_matches_ref : Match.t list ref = ref []
 let push_source_ref : string ref = ref ""
-
-let (|>>) p f =
-  p >>= fun x -> return (f x)
-
-let ignore p =
-  p *> return ()
 
 let debug =
   match Sys.getenv "DEBUG_COMBY" with
@@ -47,43 +44,11 @@ let actual = Buffer.create 10
 
 let rewrite_template = ref ""
 
-let substitute template env =
-  let substitution_formats =
-    [ ":[ ", "]"
-    ; ":[", ".]"
-    ; ":[", "\\n]"
-    ; ":[[", "]]"
-    ; ":[", "]"
-    ]
-  in
-  Match.Environment.vars env
-  |> List.fold ~init:(template, []) ~f:(fun (acc, vars) variable ->
-      match Match.Environment.lookup env variable with
-      | Some value ->
-        List.find_map substitution_formats ~f:(fun (left,right) ->
-            let pattern = left^variable^right in
-            if Option.is_some (String.substr_index template ~pattern) then
-              Some (String.substr_replace_all acc ~pattern ~with_:value, variable::vars)
-            else
-              None)
-        |> Option.value ~default:(acc,vars)
-      | None -> acc, vars)
-
-let infer_equality_constraints environment =
-  let vars = Match.Environment.vars environment in
-  List.fold vars ~init:[] ~f:(fun acc var ->
-      if String.is_suffix var ~suffix:"_equal" then
-        match String.split var ~on:'_' with
-        | _uuid :: target :: _equal ->
-          let expression = Rule.Ast.Equal (Variable var, Variable target) in
-          expression::acc
-        | _ -> acc
-      else
-        acc)
-
-module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struct
+module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
   module rec Matcher : Types.Matcher.S = struct
     include Language.Info
+
+    module Template = Template.Make(Meta)
 
     let wildcard = "_"
 
@@ -103,6 +68,30 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         if debug then Format.printf "Match@.";
         acc
 
+    let create v =
+      Types.Ast.Template [Hole { variable = v; pattern = v; offset = 0; kind = Value }]
+
+    let implicit_equals_satisfied environment identifier range matched =
+      let open Match in
+      if debug then Format.printf "Looking up %s@." identifier;
+      match Environment.lookup environment identifier with
+      | None -> Some (Environment.add ~range environment identifier matched)
+      | Some _ when String.(identifier = wildcard) -> Some environment
+      | Some existing_value ->
+        if debug then Format.printf "Existing: identifier: %s Value: %s@." identifier existing_value;
+        let Range.{ match_start = { offset; _ }; _ } = Option.value_exn (Environment.lookup_range environment identifier) in
+        if offset = range.match_start.offset then
+          (* case when already present from rest parser *)
+          Some environment
+        else if String.(existing_value = matched) then
+          (* equals existing. record a witness *)
+          let identifier' = Format.sprintf "%s_equal_%s" identifier (!configuration_ref.fresh ()) in
+          let environment' = Environment.add ~range environment identifier' matched in
+          Some environment'
+        else
+          (* exists and not equal *)
+          None
+
     let r acc production : (production * 'a) t =
       let open Match in
       let open Location in
@@ -113,35 +102,42 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         if debug then Format.printf "Saw String: %S@." s;
         return (Unit, acc)
       | Match { offset = pos_begin; identifier; text = content } ->
-        if debug then Format.printf "Match: %S @@ %d for %s@." content pos_begin identifier;
-        (* line/col values are placeholders and not accurate until processed in pipeline.ml *)
-        let before = { offset = pos_begin; line = 1; column = pos_begin + 1 } in
-        let pos_after_offset = pos_begin + String.length content in
-        let after = { offset = pos_after_offset; line = 1; column = pos_after_offset + 1 } in
-        let range = { match_start = before; match_end = after } in
-        let add identifier = Environment.add ~range !current_environment_ref identifier content in
-        let environment =
-          match Environment.exists !current_environment_ref identifier && String.(identifier <> wildcard) with
-          | true ->
-            let fresh_hole_id =
-              Format.sprintf "%s_%s_equal" (!configuration_ref.fresh ()) identifier
-            in
-            add fresh_hole_id
-          | false -> add identifier
-        in
-        current_environment_ref := environment;
-        return (Unit, acc)
+        (* Inefficiency: a Match production happens even for hole parsers in 'rest'. It's difficult to
+           tease out the right time to record, or manipulate the parsers here. Instead, we check whether
+           the environment already contains this hole (to avoid adding a _equal_ entry) by looking
+           at whether the variable at that offset is already recorded, which uniquely identifies whether
+           we've already seen it *)
+        begin
+          if debug then Format.printf "Match: %S @@ %d for %s@." content pos_begin identifier;
+          (* line/col values are placeholders and not accurate until processed in pipeline.ml *)
+          let before = { offset = pos_begin; line = 1; column = pos_begin + 1 } in
+          let pos_after_offset = pos_begin + String.length content in
+          let after = { offset = pos_after_offset; line = 1; column = pos_after_offset + 1 } in
+          let range = { match_start = before; match_end = after } in
+          if debug then Format.printf "record@.";
+          match implicit_equals_satisfied !current_environment_ref identifier range content with
+          | None -> implicit_equals_match_satisfied := false; return (Unit, acc) (* don't record, unsat *)
+          | Some environment ->
+            let environment = Environment.add ~range environment identifier content in
+            current_environment_ref := environment;
+            return (Unit, acc)
+        end
       | _ -> return (Unit, acc)
 
+    (* previous r cannot affect control flow match_context to ignore adding a match if a equivalence was refuted *)
     let record_match_context pos_before pos_after rule =
       let open Match.Location in
       if debug then Format.printf "match context start pos: %d@." pos_before;
       if debug then Format.printf "match context end pos %d@." pos_after;
       let extract_matched_text source { offset = match_start; _ } { offset = match_end; _ } =
         if debug then Format.printf "Attempt slice start %d end %d on %S@." match_start match_end source;
-        String.slice source match_start match_end
+        if match_start = 0 && match_end = 0 then
+          (* Special case: slice will return the whole string if match_start is
+             0 and match_end is 0. It needs to be empty string *)
+          ""
+        else
+          String.slice source match_start match_end
       in
-      (* line/col values are placeholders and not accurate until processed in pipeline.ml *)
       let match_context =
         let match_start = { offset = pos_before; line = 1; column = pos_before + 1 } in
         let match_end = { offset = pos_after; line = 1; column = pos_after + 1 } in
@@ -158,7 +154,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
       | None ->
         if rewrite then
           begin
-            let result, _ = substitute !rewrite_template !current_environment_ref in
+            let result, _ = Template.substitute (Template.parse !rewrite_template) !current_environment_ref in
             (* Don't just append, but replace the match context including constant
                strings. I.e., somewhere where we are appending the parth that matched, it
                shouldn't, and instead just ignore. *)
@@ -166,11 +162,18 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
           end;
         matches_ref := match_context :: !matches_ref
       | Some rule ->
-        let rule = rule @ infer_equality_constraints !current_environment_ref in
-        (* FIXME Metasyntax should be propagated here. FIXME fresh should be propagated here.*)
         push_environment_ref := !current_environment_ref;
-        let sat, env = Program.apply ~metasyntax:Metasyntax.default_metasyntax ~substitute_in_place:true rule !current_environment_ref in
+        push_implicit_equals_match_satisfied := !implicit_equals_match_satisfied;
+        (* FIXME Metasyntax should be propagated here. *)
+        let sat, env =
+          Program.apply
+            ~metasyntax:Metasyntax.default_metasyntax
+            ~substitute_in_place:true
+            rule
+            !current_environment_ref
+        in
         current_environment_ref := !push_environment_ref;
+        implicit_equals_match_satisfied := !push_implicit_equals_match_satisfied;
         let new_env = if sat then env else None in
         match new_env with
         | None ->
@@ -180,13 +183,12 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
           if debug then Format.printf "Some new env@.";
           current_environment_ref := env;
           begin
-            let result, _ = substitute !rewrite_template !current_environment_ref in
+            let result, _ = Template.substitute (Template.parse !rewrite_template) !current_environment_ref in
             (* Don't just append, but replace the match context including constant
                strings. I.e., somewhere where we are appending the parth that matched, it
                shouldn't, and instead just ignore. *)
             Buffer.add_string actual result;
           end;
-          (* let match_context = { match_context with environment = !current_environment_ref } in *) (* Needed? *)
           matches_ref := match_context :: !matches_ref
 
     let multiline left right =
@@ -245,125 +247,84 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
       | Some until -> until
       | None -> assert false
 
-    module Deprecate = struct
-      let reserved_delimiters =
-        List.concat_map Language.Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until])
-        |> List.append [":["; "]"]
-        |> List.append [":[["; "]]"]
-
-      let reserved =
-        reserved_delimiters @ [" "; "\n"; "\t"; "\r"]
-        |> List.sort ~compare:(fun v2 v1 ->
-            String.length v1 - String.length v2)
-    end
+    let reserved_holes =
+      List.map Template.Matching.hole_parsers ~f:(fun (_, parser) -> parser *> return "")
 
     let reserved_parsers =
-      let user_defined_delimiters = List.concat_map Language.Syntax.user_defined_delimiters ~f:(fun (from, until) -> [from; until]) in
+      let user_defined_delimiters =
+        List.concat_map Language.Syntax.user_defined_delimiters ~f:(fun (from, until) ->
+            [string from; string until]) in
       let user_defined_escapable_strings =
         match Language.Syntax.escapable_string_literals with
         | Some { delimiters; _ } ->
-          List.concat_map delimiters ~f:(fun delimiter -> [delimiter])
+          List.concat_map delimiters ~f:(fun delimiter -> [string delimiter])
         | None -> []
       in
       let user_defined_raw_strings =
-        List.concat_map Language.Syntax.raw_string_literals ~f:(fun (from, until) -> [from; until])
+        List.concat_map Language.Syntax.raw_string_literals ~f:(fun (from, until) ->
+            [string from; string until])
       in
-      let hole_syntax = [ ":["; "]"; ":[["; ":]]" ] in
-      let spaces = [ " "; "\n"; "\t"; "\r" ] in
-      let reserved =
-        user_defined_delimiters
-        @ user_defined_escapable_strings
-        @ user_defined_raw_strings
-        @ hole_syntax
-        @ spaces
+      let user_defined_reserved_comments =
+        List.concat_map Language.Syntax.comments ~f:(function
+            | Multiline (left, right) -> [string left; string right]
+            | Nested_multiline (left, right) -> [string left; string right]
+            | Until_newline start -> [string start])
       in
-      choice @@ List.map reserved ~f:string
+      let spaces1 = [ Omega_parser_helper.spaces1 ] in
+      [ user_defined_delimiters
+      ; reserved_holes
+      ; user_defined_escapable_strings
+      ; user_defined_raw_strings
+      ; user_defined_reserved_comments
+      ; spaces1
+      ]
+      |> List.concat
+      |> choice
 
     let generate_single_hole_parser () =
-      (alphanum <|> char '_') |>> String.of_char
+      (alphanum <|> char '_') >>| String.of_char
 
-    let generate_everything_hole_parser
-        ?priority_left_delimiter:left_delimiter
-        ?priority_right_delimiter:right_delimiter
-        () =
+    let delimiters left right =
+      match left, right with
+      | Some left_delimiter, Some right_delimiter -> [ (left_delimiter, right_delimiter) ]
+      | _ -> Language.Syntax.user_defined_delimiters
+
+    let between_nested_delims p delimiters =
       let between_nested_delims p from =
         let until = until_of_from from in
         between (string from) (string until) p
-        >>= fun result -> return (String.concat @@ [from] @ result @ [until])
+        >>| fun result -> String.concat @@ [from] @ result @ [until]
       in
-      let between_nested_delims p =
-        let parsers =
-          match left_delimiter, right_delimiter with
-          | Some left_delimiter, Some right_delimiter -> [ (left_delimiter, right_delimiter) ]
-          | _ -> Language.Syntax.user_defined_delimiters
-        in
-        parsers
-        |> List.map ~f:fst
-        |> List.map ~f:(between_nested_delims p)
-        |> choice
-      in
-      let reserved =
-        let parsers =
-          match left_delimiter, right_delimiter with
-          | Some left_delimiter, Some right_delimiter -> [ (left_delimiter, right_delimiter) ]
-          | _ -> Language.Syntax.user_defined_delimiters
-        in
-        List.concat_map parsers ~f:(fun (from, until) -> [from; until])
-      in
+      delimiters
+      |> List.map ~f:fst
+      |> List.map ~f:(between_nested_delims p)
+      |> choice
+
+    let generate_everything_hole_parser
+        ?priority_left_delimiter:left
+        ?priority_right_delimiter:right
+        () =
+      let delimiters = delimiters left right in
+      let reserved = List.concat_map delimiters ~f:(fun (from, until) -> [from; until]) in
+      let other = not_followed_by (choice @@ List.map reserved ~f:string) *> any_char >>| String.of_char in
       fix (fun grammar ->
-          let delimsx = between_nested_delims (many grammar) in
-          let other = Omega_parser.Deprecate.any_char_except ~reserved |>> String.of_char in
+          let delims_over_holes = between_nested_delims (many grammar) delimiters in
           choice
             [ comment_parser
             ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
             ; escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
             ; spaces1
-            ; delimsx
+            ; delims_over_holes
             ; other
             ])
 
     let generate_delimited_hole_parser
-        ?priority_left_delimiter:left_delimiter
-        ?priority_right_delimiter:right_delimiter
+        ?priority_left_delimiter:left
+        ?priority_right_delimiter:right
         () =
-      let between_nested_delims p from =
-        let until = until_of_from from in
-        between (string from) (string until) p
-        >>= fun result -> return (String.concat @@ [from] @ result @ [until])
-      in
-      let between_nested_delims p =
-        let parsers =
-          match left_delimiter, right_delimiter with
-          | Some left_delimiter, Some right_delimiter -> [ (left_delimiter, right_delimiter) ]
-          | _ -> Language.Syntax.user_defined_delimiters
-        in
-        parsers
-        |> List.map ~f:fst
-        |> List.map ~f:(between_nested_delims p)
-        |> choice
-      in
-      let reserved =
-        let parsers =
-          match left_delimiter, right_delimiter with
-          | Some left_delimiter, Some right_delimiter -> [ (left_delimiter, right_delimiter) ]
-          | _ -> Language.Syntax.user_defined_delimiters
-        in
-        List.concat_map parsers ~f:(fun (from, until) -> [from; until])
-      in
-      let inner =
-        fix (fun grammar ->
-            let delimsx = between_nested_delims (many grammar) in
-            let other = Omega_parser.Deprecate.any_char_except ~reserved |>> String.of_char in
-            choice
-              [ comment_parser
-              ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
-              ; escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
-              ; spaces1
-              ; delimsx
-              ; other
-              ])
-      in
-      between_nested_delims (many inner)
+      between_nested_delims
+        (many @@ generate_everything_hole_parser ?priority_left_delimiter:left ?priority_right_delimiter:right ())
+        (delimiters left right)
 
     (* this thing is wrapped by a many. also rename it to 'string hole match syntax per char' *)
     let escapable_literal_grammar ~right_delimiter =
@@ -373,13 +334,178 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         choice
           [ (string (Format.sprintf "%c%s" escape_character right_delimiter))
           ; (string (Format.sprintf "%c%c" escape_character escape_character))
-          ; (Omega_parser.Deprecate.any_char_except ~reserved:[right_delimiter] |>> String.of_char)
+          ; (not_followed_by (string right_delimiter) *> any_char >>| String.of_char)
           ]
 
     let raw_literal_grammar ~right_delimiter =
-      (Omega_parser.Deprecate.any_char_except ~reserved:[right_delimiter] |>> String.of_char)
+      (not_followed_by (string right_delimiter) *> any_char >>| String.of_char)
 
-    let sequence_chain ?left_delimiter ?right_delimiter (p_list : (production * 'a) t list) =
+    let seq p_list =
+      List.fold p_list ~init:(return (Unit, "")) ~f:( *>)
+
+    let convert ?left_delimiter ?right_delimiter (p_list : (production * 'a) t list) :
+      (production * 'a) t list =
+      let add_match user_state identifier p =
+        pos >>= fun offset ->
+        p >>= fun value ->
+        let m =
+          { offset
+          ; identifier
+          ; text = value
+          }
+        in
+        if debug then Format.printf "add_match@.";
+        r user_state (Match m)
+      in
+      List.fold (List.rev p_list) ~init:[] ~f:(fun acc p ->
+          match parse_string ~consume:All p "_signal_hole" with
+          | Error s ->
+            if debug then Format.printf "Composing p with terminating parser, error %s@." s;
+            p::acc
+          | Ok (Hole { sort; identifier; dimension; _ }, user_state) ->
+            begin
+              match sort with
+              | Regex ->
+                let separator = List.find_map_exn Meta.syntax ~f:(function
+                    | Hole _ -> None
+                    | Regex (_, separator, _) -> Some separator)
+                in
+                let identifier, pattern = String.lsplit2_exn identifier ~on:separator in (* FIXME parse *)
+                let identifier = if String.(identifier = "") then wildcard else identifier in
+                if debug then Format.printf "Regex: Id: %s Pat: %s@." identifier pattern;
+                let pattern, prefix =
+                  if String.is_prefix pattern ~prefix:"^" then
+                    (* FIXME: match beginning of input too *)
+                    String.drop_prefix pattern 1,
+                    Some (
+                      (char '\n' *> return "")
+                      <|>
+                      (pos >>= fun p -> if p = 0 then return "" else fail "")
+                    )
+                  else
+                    pattern, None
+                in
+                let pattern, suffix =
+                  if String.is_suffix pattern ~suffix:"$" then
+                    String.drop_suffix pattern 1, Some (char '\n' *> return "" <|> end_of_input *> return "")
+                  else
+                    pattern, None
+                in
+                let compiled_regexp = Regexp.PCRE.make_regexp pattern in
+                let regexp_parser = Regexp.PCRE.regexp compiled_regexp in
+                let regexp_parser =
+                  match prefix, suffix with
+                  | Some prefix, None -> prefix *> regexp_parser
+                  | None, Some suffix -> regexp_parser <* suffix
+                  | Some prefix, Some suffix -> prefix *> regexp_parser <* suffix
+                  | None, None -> regexp_parser
+                in
+                (* the eof matters here for that one tricky test case *)
+                let base_parser =
+                  [ regexp_parser
+                  ; end_of_input >>= fun () -> return ""
+                  ]
+                in
+                let hole_semantics = choice base_parser in
+                (add_match user_state identifier hole_semantics)::acc
+
+              | Alphanum ->
+                let allowed = choice [alphanum; char '_'] >>| String.of_char in
+                let hole_semantics = many1 allowed >>| String.concat in
+                (add_match user_state identifier hole_semantics)::acc
+
+              | Non_space ->
+                let non_space =
+                  ([ Omega_parser_helper.skip space1
+                   ; Omega_parser_helper.skip reserved_parsers
+                   ]
+                   |> choice
+                   |> not_followed_by)
+                  *> any_char
+                  >>| Char.to_string
+                in
+                let rest =
+                  match acc with
+                  | [] -> end_of_input *> return (Unit, "")
+                  | _ ->
+                    return () >>= fun () ->
+                    seq acc >>= fun r ->
+                    return r
+                in
+                let hole_semantics = many1 (not_followed_by rest *> non_space) >>| String.concat in
+                (add_match user_state identifier hole_semantics)::acc
+
+              | Line ->
+                let allowed =
+                  many (not_followed_by (string "\n" <|> string "\r\n") *> any_char )
+                  >>| fun x -> [(String.of_char_list x)^"\n"]
+                in
+                let hole_semantics = allowed <* char '\n' >>| String.concat in
+                (add_match user_state identifier hole_semantics)::acc
+
+              | Blank ->
+                let hole_semantics = many1 blank >>| String.of_char_list in
+                (add_match user_state identifier hole_semantics)::acc
+
+              | Expression ->
+                let non_space =
+                  ([ Omega_parser_helper.skip space1
+                   ; Omega_parser_helper.skip reserved_parsers
+                   ]
+                   |> choice
+                   |> not_followed_by)
+                  *> any_char
+                  >>| Char.to_string
+                in
+                let delimited =
+                  generate_delimited_hole_parser
+                    ?priority_left_delimiter:left_delimiter
+                    ?priority_right_delimiter:right_delimiter
+                    ()
+                in
+                let matcher = non_space <|> delimited in
+                let rest =
+                  match acc with
+                  | [] -> end_of_input *> return (Unit, "")
+                  | _ ->
+                    return () >>= fun () ->
+                    seq acc >>= fun r ->
+                    return r
+                in
+                let hole_semantics = many1 (not_followed_by rest *> matcher) >>| String.concat in
+                (add_match user_state identifier hole_semantics)::acc
+
+              | Everything ->
+                let matcher =
+                  match dimension with
+                  | Code ->
+                    generate_everything_hole_parser
+                      ?priority_left_delimiter:left_delimiter
+                      ?priority_right_delimiter:right_delimiter
+                      ()
+                  | Escapable_string_literal ->
+                    let right_delimiter = Option.value_exn right_delimiter in
+                    escapable_literal_grammar ~right_delimiter
+                  | Raw_string_literal ->
+                    let right_delimiter = Option.value_exn right_delimiter in
+                    raw_literal_grammar ~right_delimiter
+                  | Comment -> failwith "Unimplemented"
+                in
+                let rest =
+                  match acc with
+                  | [] -> end_of_input *> return (Unit, "")
+                  | _ -> seq acc
+                in
+                let hole_semantics = many (not_followed_by rest *> matcher) >>| String.concat in
+                (add_match user_state identifier hole_semantics)::acc
+            end
+          | _ -> failwith "unreachable: _signal_hole parsed but not handled by Hole variant")
+
+    let sequence_chain' ?left_delimiter ?right_delimiter p_list =
+      convert ?left_delimiter ?right_delimiter p_list
+      |> seq
+
+    let sequence_chain_unused ?left_delimiter ?right_delimiter (p_list : (production * 'a) t list) =
       if debug then Format.printf "Sequence chain p_list size: %d@." @@ List.length p_list;
       let i = ref 0 in
       List.fold_right p_list ~init:(return (Unit, acc)) ~f:(fun p acc ->
@@ -471,12 +597,12 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
                        end_of_input)
                     else
                       (if debug then Format.printf "hole until: append suffix@.";
-                       skip_unit acc)
+                       Omega_parser_helper.skip acc)
                   in
                   (
                     pos >>= fun pos ->
                     if get_pos () = (-1) then set_pos pos;
-                    let stop_at = choice [ rest; skip_unit reserved_parsers ] in
+                    let stop_at = choice [ rest; Omega_parser_helper.skip reserved_parsers ] in
                     many1_till_stop any_char stop_at (* Beware of this use. *)
                   )
                   >>= fun value ->
@@ -499,8 +625,8 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
                 | Line ->
                   pos >>= fun offset ->
                   let allowed =
-                    many (Omega_parser.Deprecate.any_char_except ~reserved:["\n"])
-                    |>> fun x -> [(String.of_char_list x)^"\n"]
+                    many (not_followed_by (char '\n') *> any_char)
+                    >>| fun x -> [(String.of_char_list x)^"\n"]
                   in
                   allowed <* char '\n' >>= fun value ->
                   acc >>= fun _ ->
@@ -518,21 +644,21 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
                   let _non_space : string t =
                     let rest =
                       if !i = 0 then end_of_input
-                      else skip_unit acc
+                      else Omega_parser_helper.skip acc
                     in
                     (
                       pos >>= fun pos ->
                       if get_pos () = (-1) then set_pos pos;
-                      let stop_at = choice [ rest; skip_unit reserved_parsers ] in
+                      let stop_at = choice [ rest; Omega_parser_helper.skip reserved_parsers ] in
                       many1_till_stop any_char stop_at (* Beware of this use. *)
-                    ) |>> String.of_char_list
+                    ) >>| String.of_char_list
                   in
                   let non_space =
-                    many1 (Omega_parser.Deprecate.any_char_except ~reserved:([" "]@Deprecate.reserved_delimiters)) |>> String.of_char_list
+                    many1 (not_followed_by (Omega_parser_helper.skip (char ' ') <|> Omega_parser_helper.skip reserved_parsers) *> any_char) >>| String.of_char_list
                   in
                   let delimited =
                     (* IDK why this rest works without end_of_input but it's needed for non_space. *)
-                    let rest = skip_unit acc in
+                    let rest = Omega_parser_helper.skip acc in
                     (many1_till
                        (pos >>= fun pos ->
                         if debug then Format.printf "Pos is %d@." pos;
@@ -607,7 +733,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
                        end_of_input)
                     else
                       (if debug then Format.printf "hole everything until: append suffix@.";
-                       skip_unit acc)
+                       Omega_parser_helper.skip acc)
                   in
                   let first_pos = ref (-1) in
                   let set_pos v = first_pos := v in
@@ -686,90 +812,41 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
       string str >>= fun result ->
       r acc (Template_string (String.concat s1 ^ result))
 
-    let single_hole_parser () =
-      string ":[[" *> identifier_parser () <* string "]]"
-
-    let everything_hole_parser () =
-      string ":[" *> identifier_parser () <* string "]"
-
-    let expression_hole_parser () =
-      string ":[" *> identifier_parser () <* string ":e" <* string "]"
-
-    let non_space_hole_parser () =
-      string ":[" *> identifier_parser () <* string ".]"
-
-    let line_hole_parser () =
-      string ":[" *> identifier_parser () <* string "\\n]"
-
-    let blank_hole_parser () =
-      string ":["
-      *> many1 blank
-      *> identifier_parser ()
-      <* string "]"
-
-    let regex_expression () =
-      fix (fun expr ->
-          choice
-            [ lift (fun x -> Format.sprintf "[%s]" @@ String.concat x) (char '[' *> many1 expr <* char ']')
-            ; lift (fun c -> Format.sprintf {|\%c|} c) (char '\\' *> any_char)
-            ; lift Char.to_string (not_char ']')
-            ])
-
-    let regex_body () =
-      lift2
-        (fun v e -> Format.sprintf "%s~%s" v (String.concat e))
-        (identifier_parser ())
-        (char '~' *> many1 (regex_expression ()))
-
-    let regex_hole_parser () =
-      string ":[" *> regex_body () <* string "]"
-
     let hole_parser sort dimension : (production * 'a) t t =
-      let hole_parser =
-        match sort with
-        | Types.Hole.Alphanum -> single_hole_parser ()
-        | Everything -> everything_hole_parser ()
-        | Blank -> blank_hole_parser ()
-        | Line -> line_hole_parser ()
-        | Non_space -> non_space_hole_parser ()
-        | Expression -> expression_hole_parser ()
-        | Regex -> regex_hole_parser ()
+      let hole_parser = (* This must be fold, can't be find *)
+        let open Polymorphic_compare in
+        List.fold ~init:[] Template.Matching.hole_parsers ~f:(fun acc (sort', parser) ->
+            if sort' = sort then parser::acc else acc)
       in
-      let skip_signal hole = skip_unit (string "_signal_hole") |>> fun () -> (Hole hole, acc) in
-      hole_parser |>> fun identifier -> skip_signal { sort; identifier; dimension; at_depth = None }
+      let skip_signal hole = Omega_parser_helper.skip (string "_signal_hole") >>| fun () -> (Hole hole, acc) in
+      match hole_parser with
+      | [] -> fail "none" (* not defined *)
+      | l ->
+        choice l >>| function identifier ->
+          skip_signal { sort; identifier; dimension; at_depth = None }
 
-    let reserved_holes () =
-      [ single_hole_parser ()
-      ; everything_hole_parser ()
-      ; non_space_hole_parser ()
-      ; line_hole_parser ()
-      ; blank_hole_parser ()
-      ; expression_hole_parser ()
-      ]
-
-    let generate_hole_for_literal sort ~contents ~left_delimiter ~right_delimiter () =
+    let generate_hole_for_literal dimension ~contents ~left_delimiter ~right_delimiter () =
       let literal_holes =
-        Types.Hole.sorts ()
-        |> List.map ~f:(fun kind -> hole_parser kind sort) (* Note: Uses attempt in alpha *)
-        |> choice
-      in
-      let _reserved_holes =
-        reserved_holes ()
-        |> List.map ~f:skip_unit
-        |> choice
+        choice @@ List.map Template.Matching.hole_parsers ~f:(fun (kind, _) -> hole_parser kind dimension) in
+      let reserved_holes = List.map reserved_holes ~f:Omega_parser_helper.skip in
+      let other = Omega_parser_helper.(
+          up_to @@
+          choice
+            [ (spaces1 *> return ())
+            ; (choice reserved_holes *> return ())
+            ]
+          >>| String.of_char_list)
       in
       let parser =
         many @@
         choice
           [ literal_holes
-          ; (spaces1 |>> generate_pure_spaces_parser)
-          ; ((many1 (Omega_parser.Deprecate.any_char_except ~reserved:[":["; " "; "\n"; "\t"; "\r"])
-              |>> String.of_char_list)
-             |>> generate_string_token_parser)
+          ; (spaces1 >>| generate_pure_spaces_parser)
+          ; (other >>| generate_string_token_parser)
           ]
       in
       match parse_string ~consume:All parser contents with
-      | Ok parsers -> sequence_chain ~left_delimiter ~right_delimiter parsers
+      | Ok parsers -> sequence_chain' ~left_delimiter ~right_delimiter parsers
       | Error _ ->
         failwith "If this failure happens it is a bug: Converting a \
                   quoted string in the template to a parser list should \
@@ -782,12 +859,12 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
           (many1 (comment_parser <|> spaces1))
       in
       let other =
-        (many1 (Omega_parser.Deprecate.any_char_except ~reserved:Deprecate.reserved) |>> String.of_char_list)
-        |>> generate_string_token_parser
+        (many1 (not_followed_by reserved_parsers *> any_char) >>| String.of_char_list)
+        >>| generate_string_token_parser
       in
       let code_holes =
-        Types.Hole.sorts ()
-        |> List.map ~f:(fun kind -> hole_parser kind Code)
+        Template.Matching.hole_parsers
+        |> List.map ~f:(fun (sort, _) -> hole_parser sort Code)
         |> choice
       in
       fix (fun (generator : (production * 'a) t list t) ->
@@ -800,7 +877,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
                 >>= fun (g: (production * 'a) t list) ->
                 if debug then Format.printf "G size: %d; delim %s@." (List.length g) left_delimiter;
                 return @@
-                sequence_chain @@
+                sequence_chain' @@
                 [string left_delimiter >>= fun result -> r acc (Template_string result)]
                 @ g
                 @ [ string right_delimiter >>= fun result -> r acc (Template_string result)])
@@ -817,7 +894,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
           if debug then Format.printf "Produced %d parsers in main generator@." @@ List.length x;
           return x
         )
-      |>> fun p_list ->
+      >>| fun p_list ->
       match p_list with
       | [] ->
         (* The template is the empty string and source is nonempty. We need to
@@ -826,7 +903,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
         r acc Unit
       | p_list ->
         p_list
-        |> sequence_chain
+        |> sequence_chain'
         |> fun matcher ->
         match !configuration_ref.match_kind with
         | Exact ->
@@ -835,7 +912,8 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
           matcher >>= fun _access_last_production_here ->
           pos >>= fun end_pos ->
           end_of_input >>= fun _ ->
-          record_match_context start_pos end_pos rule;
+          if !implicit_equals_match_satisfied then record_match_context start_pos end_pos rule;
+          implicit_equals_match_satisfied := true; (* reset *)
           current_environment_ref := Match.Environment.create ();
           r acc Unit
         | Fuzzy ->
@@ -844,7 +922,7 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
               [ comment_parser
               ; (raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents))
               ; (escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents))
-              ; any_char |>> Char.to_string
+              ; any_char >>| Char.to_string
               ]
           in
           let match_one =
@@ -864,42 +942,31 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
              else
                return ()) >>= fun () ->
             if debug then Format.printf "Calculated end_pos %d@." end_pos;
-            record_match_context start_pos end_pos rule;
+            if !implicit_equals_match_satisfied then record_match_context start_pos end_pos rule;
+            implicit_equals_match_satisfied := true; (* reset *)
             current_environment_ref := Match.Environment.create ();
             return (Unit, "")
           in
           (* many1 may be appropriate *)
           let prefix = (prefix >>= fun s -> r acc (String s)) in
           let first_match_attempt = choice [match_one; prefix] in (* consumes a character in prefix if no match *)
-          let matches = many_till first_match_attempt end_of_input in
+          let matches = many first_match_attempt *> end_of_input in
           matches >>= fun _result ->
           r acc Unit
 
     let to_template template rule =
-      let state = Buffered.parse (general_parser_generator rule) in
-      let state = Buffered.feed state (`String template) in
-      Buffered.feed state `Eof
-      |> function
-      | Buffered.Done ({ len; _ }, p) ->
-        if len <> 0 then failwith @@ Format.sprintf "Input left over in template where not expected: %d" len;
-        Ok p
+      match parse_string ~consume:All (general_parser_generator rule) template with
+      | Ok p -> Ok p
       | _ -> Or_error.error_string "Template could not be parsed."
 
     let run_the_parser_for_first p source : Match.t Or_error.t =
       push_source_ref := !source_ref;
       source_ref := source;
-      let state = Buffered.parse p in
-      let state = Buffered.feed state (`String source) in
-      let state = Buffered.feed state `Eof in
-      match state with
-      | Buffered.Done ({ len; off; _ }, (_, _result_string)) ->
+      match parse_string ~consume:All p source with
+      | Ok _ ->
         source_ref := !push_source_ref;
         if rewrite then Format.eprintf "Result string:@.---@.%s---@." @@ Buffer.contents actual;
-        if len <> 0 then
-          (if debug then Format.eprintf "Input left over in parse where not expected: off(%d) len(%d)" off len;
-           Or_error.error_string "Does not match template")
-        else
-          Ok (Match.create ()) (* Fake for now *)
+        Ok (Match.create ()) (* Fake match result--currently using refs *)
       | _ ->
         source_ref := !push_source_ref;
         Or_error.error_string "No matches"
@@ -941,13 +1008,14 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
       in
       Match.create ~range ()
 
-    let all ?configuration ?rule ?(nested = false) ~template ~source:original_source () : Match.t list =
+    let all ?configuration ?(rule = [Types.Ast.True]) ~template ~source:original_source () : Match.t list =
       push_matches_ref := !matches_ref;
       configuration_ref := Option.value configuration ~default:!configuration_ref;
+      let Rule.{ nested } = Rule.options rule in
       let rec aux_all ?configuration ?(nested = false) ~template ~source () =
         matches_ref := [];
         if String.is_empty template && String.is_empty source then [trivial]
-        else match first_is_broken template source rule with
+        else match first_is_broken template source (Some rule) with (* FIXME always Some rule *)
           | Ok _
           | Error _ ->
             let matches = List.rev !matches_ref in
@@ -1024,27 +1092,24 @@ module Make (Language : Types.Language.S) (Unimplemented : Metasyntax.S) = struc
       | [] -> Or_error.error_string "No result"
       | (hd::_) -> Ok hd (* FIXME be efficient *)
   end
+
   and Program : sig
     val apply
       :  ?substitute_in_place:bool
-      -> ?fresh:(unit -> string)
       -> ?metasyntax:Metasyntax.t
       -> Rule.t
       -> Match.environment
       -> Evaluate.result
   end = struct
-
     let apply
         ?(substitute_in_place = true)
-        ?(fresh = Evaluate.counter)
         ?metasyntax
         rule
         env =
       Evaluate.apply
         ~substitute_in_place
-        ~fresh
         ?metasyntax
-        ~match_all:(Matcher.all ~rule:[Rule.Ast.True] ~nested:false) (* FIXME propagated nested *)
+        ~match_all:(Matcher.all ~rule:[Types.Ast.True])
         rule
         env
   end

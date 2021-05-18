@@ -1,6 +1,6 @@
 open Core_kernel
 
-open Types.Syntax
+open Types.Language.Syntax
 
 let ordinary_string = Some { delimiters = [{|"|}]; escape_character = '\\' }
 

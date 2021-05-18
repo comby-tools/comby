@@ -231,7 +231,7 @@ let%expect_test "with_rewrite_rule_stdin_default_no_extension" =
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;43;30m!|[0mhello[0;31m world[0m
 
-WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning.
+WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning.
 |}]
 
 let%expect_test "generic_matcher" =
@@ -250,7 +250,7 @@ let%expect_test "generic_matcher" =
 [0;41;30m-|[0m[0m[0;2m\footnote{[0m[0;31m\small[0m[0;2m \url{https://github.com}}[0m[0m
 [0;42;30m+|[0m[0m\footnote{[0;32m\scriptsize[0m \url{https://github.com}}[0m
 
-WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning.
+WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning.
 |}]
 
 
@@ -473,7 +473,7 @@ let%expect_test "exclude_dir_option" =
     -int main() {}
     +int pain() {}
 
-    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}];
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}];
 
   let src_dir = "example" ^/ "src" in
   let command_args = Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir 'nonexist' -diff" src_dir in
@@ -522,7 +522,7 @@ let%expect_test "exclude_dir_option" =
     -int main() {}
     +int pain() {}
 
-    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}]
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}]
 
 let%expect_test "exclude_file_option" =
   let source = "hello world" in
@@ -539,7 +539,7 @@ let%expect_test "exclude_file_option" =
     -main
     +pain
 
-    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}]
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}]
 
 let%expect_test "dir_depth_option" =
   let source = "hello world" in
@@ -563,7 +563,7 @@ let%expect_test "dir_depth_option" =
     -int depth_0() {}
     +int correct_depth_0() {}
 
-    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}];
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}];
 
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
@@ -583,7 +583,7 @@ let%expect_test "dir_depth_option" =
     -int depth_1() {}
     +int correct_depth_1() {}
 
-    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}];
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}];
 
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
@@ -608,7 +608,7 @@ let%expect_test "dir_depth_option" =
     -int depth_2() {}
     +int correct_depth_2() {}
 
-    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}];
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}];
 
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
@@ -633,7 +633,7 @@ let%expect_test "dir_depth_option" =
     -int depth_2() {}
     +int correct_depth_2() {}
 
-    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}]
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}]
 
 let%expect_test "matcher_override" =
   let source = "hello world" in
@@ -699,7 +699,7 @@ let%expect_test "infer_and_honor_extensions" =
     +// bar()
      }
 
-    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}]
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}]
 
 let%expect_test "diff_only" =
   let source = "hello world" in
@@ -710,7 +710,7 @@ let%expect_test "diff_only" =
   [%expect{|
     {"uri":null,"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-hello world\n\\ No newline at end of file\n+world world\n\\ No newline at end of file"}
 
-    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}];
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}];
 
   let source = "hello world" in
   let command_args = Format.sprintf "'hello' 'world' -stdin -sequential -json-only-diff" in
@@ -752,7 +752,7 @@ let%expect_test "zip_exclude_dir_no_extension" =
     -func main() {}
     +func pain() {}
 
-    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning. |}]
+    WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}]
 
 let%expect_test "zip_exclude_file" =
   let source = "doesn't matter" in
@@ -1213,30 +1213,32 @@ let%expect_test "test_custom_metasyntax_replace" =
   let source = "a(b)" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
   let command_args =
-    Format.sprintf "'$A($B~\\w+$)' '$A $B' -stdin -sequential -custom-metasyntax %s -stdout" metasyntax_path
+    Format.sprintf "'$A($B~\\w+$)' '$A $B' -stdin -sequential -custom-metasyntax %s -stdout -matcher .generic" metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "a b"]
+  [%expect "
+    a b"]
 
 let%expect_test "test_custom_metasyntax_replace" =
   let source = "a(b)" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
   let command_args =
-    Format.sprintf "'$A($B~\\w+$)' '$A~x$ $B~\\w+$' -stdin -sequential -custom-metasyntax %s -stdout" metasyntax_path
+    Format.sprintf "'$A($B~\\w+$)' '$A~x$ $B~\\w+$' -stdin -sequential -custom-metasyntax %s -stdout -matcher .generic" metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "a b"]
+  [%expect "
+    a b"]
 
 let%expect_test "test_custom_metasyntax_substitute" =
   let source = "IGNORED" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
   let env = {|[{"variable":"B", "value":"hello" }]|} in
   let command_args =
-    Format.sprintf "'IGNORED' '$A $B~\\w+$' -stdin -sequential -custom-metasyntax %s -substitute-only '%s'" metasyntax_path env
+    Format.sprintf "'IGNORED' '$A $B~\\w+$' -stdin -sequential -custom-metasyntax %s -substitute-only '%s' -matcher .generic" metasyntax_path env
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
@@ -1247,20 +1249,22 @@ let%expect_test "test_custom_metasyntax_partial_rule_support" =
   let source = "a(b)" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
   let command_args =
-    Format.sprintf {|'$A($B)' '$A $B' -rule 'where rewrite :[A] { "$C~a$" -> "$C" }' -stdin -custom-metasyntax %s -stdout|} metasyntax_path
+    Format.sprintf {|'$A($B)' '$A $B' -rule 'where rewrite :[A] { "$C~a$" -> "$C" }' -stdin -custom-metasyntax %s -stdout -matcher .generic|} metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "$C b"]
+  [%expect "
+    $C b"]
 
 let%expect_test "test_custom_metasyntax_reserved_identifiers" =
   let source = "fun f -> (fun x -> f (x x)) (fun x -> f (x x))" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "default.json" in
   let command_args =
-    Format.sprintf {|'λ f -> α α' 'α' -stdin -custom-metasyntax %s -stdout|} metasyntax_path
+    Format.sprintf {|'λ f -> α α' 'α' -stdin -custom-metasyntax %s -stdout -matcher .generic|} metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "(fun x -> f (x x))"]
+  [%expect "
+    (fun x -> f (x x))"]
