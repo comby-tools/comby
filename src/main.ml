@@ -76,7 +76,7 @@ let substitute_environment_only_and_exit metasyntax_path anonymous_arguments jso
       Match.Environment.of_yojson json
       |> function
       | Ok environment ->
-        let substituted, _ = Matchers.Rewrite.substitute ~metasyntax rewrite_template environment in
+        let substituted = Matchers.Rewrite.substitute ~metasyntax rewrite_template environment in
         Format.printf "%s@." substituted;
         exit 0
       | Error err ->
@@ -235,7 +235,6 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             { verbose
             ; match_timeout
             ; dump_statistics
-            ; substitute_in_place
             ; disable_substring_matching
             ; fast_offset_conversion
             ; match_newline_toplevel
@@ -262,15 +261,20 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     in
     fun () ->
       Pipeline.run configuration;
-      match configuration.extension with
-      | Some ".generic" ->
-        Format.eprintf "@.WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning.@."
-      | Some extension ->
-        let (module M) = configuration.matcher in
-        if String.equal M.name "Generic" then
-          Format.eprintf "@.WARNING: the GENERIC matcher was used because I'm unable to guess what language to use for the file extension %s. The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning.@." extension
-        else if debug then Format.eprintf "@.NOTE: the %s matcher was inferred from extension %s. See '-list' to set a matcher for a specific language.@." M.name extension
-      | None -> ()
+      let (module M) = configuration.matcher in
+      match M.name with
+      | "Generic" when Option.is_none override_matcher ->
+        Format.eprintf
+          "@.WARNING: the GENERIC matcher was used, because a language could not \
+           be inferred from the file extension(s). The GENERIC matcher may miss \
+           matches. See '-list' to set a matcher for a specific language and to \
+           remove this warning, or add -matcher .generic to suppress this warning.@."
+      | "Generic" when Option.is_some override_matcher -> ()
+      | _ when Option.is_none override_matcher ->
+        if debug then Format.eprintf
+            "@.NOTE: the %s matcher was inferred from the file extension. See \
+             '-list' to set a matcher for a specific language.@." M.name
+      | _ -> ()
   ]
 
 let default_command =

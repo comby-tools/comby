@@ -8,12 +8,12 @@ open Test_helpers
 
 let sat ?(env = Match.Environment.create ()) (module E : Engine.S) rule =
   let rule = Rule.create rule |> Or_error.ok_exn in
-  Format.sprintf "%b" Rule.(sat @@ apply ~match_all:(E.Generic.all ~rule:[Ast.True] ~nested:false) rule env)
+  Format.sprintf "%b" Rule.(sat @@ apply ~match_all:(E.Generic.all ~rule:[Ast.True]) rule env)
 
 let run (module E : Engine.S) template source rule =
   let (module M : Matcher.S) = (module E.Generic) in
   M.all ~configuration ~template ~source ()
-  |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply ~match_all:(M.all ~rule:[Ast.True] ~nested:false) rule environment))
+  |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply ~match_all:(M.all ~rule:[Ast.True]) rule environment))
 
 let%expect_test "rule_sat" =
   let rule = {| where "x" != "y" |} in
@@ -48,9 +48,9 @@ let%expect_test "rule_sat" =
 
   let rule = {| where :[x] == :[x] |} in
   sat (module Alpha) rule |> print_string;
-  [%expect_exact {|false|}];
+  [%expect_exact {|true|}];
   sat (module Omega) rule |> print_string;
-  [%expect_exact {|false|}]
+  [%expect_exact {|true|}]
 
 let%expect_test "rule_sat_with_env" =
   let env = make_env ["1", "x"; "2", "y"; "3", "x"] in

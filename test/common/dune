@@ -13,13 +13,14 @@
   test_offset_conversion
   test_parse_rule
   test_rewrite_parts
-  test_parse_rewrite_template
+  test_parse_template
   test_substitute
   test_rewrite_rule
   test_integration
   test_match_rule
   test_python_string_literals
   test_hole_extensions
+  test_match_offsets
   test_generic
   test_string_literals
   test_c_style_comments
@@ -32,6 +33,8 @@
   test_user_defined_language
   test_nested_matches
   test_regex_holes
+  test_template_constraints
+  test_custom_metasyntax
   )
  (inline_tests)
  (preprocess (pps ppx_expect ppx_sexp_message ppx_deriving_yojson))

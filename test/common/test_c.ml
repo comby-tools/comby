@@ -4,25 +4,14 @@ open Test_helpers
 open Comby_kernel
 open Matchers
 
-let run (module E : Engine.S) source match_template rewrite_template =
-  E.C.first ~configuration match_template source
-  |> function
-  | Ok result ->
-    Rewrite.all ~source ~rewrite_template [result]
-    |> (fun x -> Option.value_exn x)
-    |> (fun { rewritten_source; _ } -> rewritten_source)
-    |> print_string
-  | Error _ ->
-    print_string rewrite_template
-
 let%expect_test "comments_1" =
   let source = {|match this /**/ expect end|} in
   let match_template = {|match this :[1] end|} in
   let rewrite_template = {|:[1]|} in
 
-  run (module Alpha) source match_template rewrite_template;
+  run (module Alpha.C) source match_template rewrite_template;
   [%expect_exact {|expect|}];
-  run (module Omega) source match_template rewrite_template;
+  run (module Omega.C) source match_template rewrite_template;
   [%expect_exact {|expect|}]
 
 let%expect_test "comments_2" =
@@ -30,9 +19,9 @@ let%expect_test "comments_2" =
   let match_template = {|match this :[1] end|} in
   let rewrite_template = {|:[1]|} in
 
-  run (module Alpha) source match_template rewrite_template;
+  run (module Alpha.C) source match_template rewrite_template;
   [%expect_exact {|expect|}];
-  run (module Omega) source match_template rewrite_template;
+  run (module Omega.C) source match_template rewrite_template;
   [%expect_exact {|expect|}]
 
 let%expect_test "comments_3" =
@@ -40,9 +29,9 @@ let%expect_test "comments_3" =
   let match_template = {|match this :[1] end|} in
   let rewrite_template = {|:[1]|} in
 
-  run (module Alpha) source match_template rewrite_template;
+  run (module Alpha.C) source match_template rewrite_template;
   [%expect_exact {|expect|}];
-  run (module Omega) source match_template rewrite_template;
+  run (module Omega.C) source match_template rewrite_template;
   [%expect_exact {|expect|}]
 
 let%expect_test "comments_4" =
@@ -50,9 +39,9 @@ let%expect_test "comments_4" =
   let match_template = {|match this :[1]end|} in
   let rewrite_template = {|:[1]|} in
 
-  run (module Alpha) source match_template rewrite_template;
+  run (module Alpha.C) source match_template rewrite_template;
   [%expect_exact {|expect|}];
-  run (module Omega) source match_template rewrite_template;
+  run (module Omega.C) source match_template rewrite_template;
   [%expect_exact {|expect|}]
 
 let%expect_test "comments_5" =
@@ -60,9 +49,9 @@ let%expect_test "comments_5" =
   let match_template = {|match this :[1] end|} in
   let rewrite_template = {|:[1]|} in
 
-  run (module Alpha) source match_template rewrite_template;
+  run (module Alpha.C) source match_template rewrite_template;
   [%expect_exact {|expect|}];
-  run (module Omega) source match_template rewrite_template;
+  run (module Omega.C) source match_template rewrite_template;
   [%expect_exact {|expect|}]
 
 let%expect_test "comments_6" =
@@ -70,39 +59,39 @@ let%expect_test "comments_6" =
   let match_template = {|match this :[1] end|} in
   let rewrite_template = {|nothing matches|} in
 
-  run (module Alpha) source match_template rewrite_template;
-  [%expect_exact {|nothing matches|}];
-  run (module Omega) source match_template rewrite_template;
-  [%expect_exact {|nothing matches|}]
+  run (module Alpha.C) source match_template rewrite_template;
+  [%expect_exact {|No matches.|}];
+  run (module Omega.C) source match_template rewrite_template;
+  [%expect_exact {|No matches.|}]
 
 let%expect_test "comments_7" =
   let source = {|/* don't match /**/ this (a) end */|} in
   let match_template = {|match this :[1] end|} in
   let rewrite_template = {|nothing matches|} in
 
-  run (module Alpha) source match_template rewrite_template;
-  [%expect_exact {|nothing matches|}];
-  run (module Omega) source match_template rewrite_template;
-  [%expect_exact {|nothing matches|}]
+  run (module Alpha.C) source match_template rewrite_template;
+  [%expect_exact {|No matches.|}];
+  run (module Omega.C) source match_template rewrite_template;
+  [%expect_exact {|No matches.|}]
 
 let%expect_test "comments_8" =
   let source = {|(/* don't match this (a) end */)|} in
   let match_template = {|match this :[1] end|} in
   let rewrite_template = {|nothing matches|} in
 
-  run (module Alpha) source match_template rewrite_template;
-  [%expect_exact {|nothing matches|}];
-  run (module Omega) source match_template rewrite_template;
-  [%expect_exact {|nothing matches|}]
+  run (module Alpha.C) source match_template rewrite_template;
+  [%expect_exact {|No matches.|}];
+  run (module Omega.C) source match_template rewrite_template;
+  [%expect_exact {|No matches.|}]
 
 let%expect_test "comments_9" =
   let source = {|/* don't match this (a) end */ do match this (b) end|} in
   let match_template = {|match this :[1] end|} in
   let rewrite_template = {|:[1]|} in
 
-  run (module Alpha) source match_template rewrite_template;
+  run (module Alpha.C) source match_template rewrite_template;
   [%expect_exact {|/* don't match this (a) end */ do (b)|}];
-  run (module Omega) source match_template rewrite_template;
+  run (module Omega.C) source match_template rewrite_template;
   [%expect_exact {|/* don't match this (a) end */ do (b)|}]
 
 let%expect_test "comments_10" =
@@ -110,9 +99,9 @@ let%expect_test "comments_10" =
   let match_template = {|match this :[1] end|} in
   let rewrite_template = {|:[1]|} in
 
-  run (module Alpha) source match_template rewrite_template;
+  run (module Alpha.C) source match_template rewrite_template;
   [%expect_exact {|/* don't match this (a) end */ do ()|}];
-  run (module Omega) source match_template rewrite_template;
+  run (module Omega.C) source match_template rewrite_template;
   [%expect_exact {|/* don't match this (a) end */ do ()|}]
 
 let%expect_test "comments_11" =
@@ -120,7 +109,7 @@ let%expect_test "comments_11" =
   let match_template = {|match this :[1] end|} in
   let rewrite_template = {|:[1]|} in
 
-  run (module Alpha) source match_template rewrite_template;
+  run (module Alpha.C) source match_template rewrite_template;
   [%expect_exact {|do (b) /* don't match this (a) end */|}];
-  run (module Omega) source match_template rewrite_template;
+  run (module Omega.C) source match_template rewrite_template;
   [%expect_exact {|do (b) /* don't match this (a) end */|}]

@@ -18,7 +18,7 @@ let run (module E : Engine.S) user_lang source match_template rewrite_template =
 
 let%expect_test "user_defined_language" =
   let user_lang =
-    Syntax.
+    Language.Syntax.
       { user_defined_delimiters = [("case", "esac")]
       ; escapable_string_literals = None
       ; raw_string_literals = []
@@ -97,7 +97,7 @@ let%expect_test "user_defined_language_from_json" =
   in
   let user_lang =
     Yojson.Safe.from_string json
-    |> Matchers.Syntax.of_yojson
+    |> Matchers.Language.Syntax.of_yojson
     |> Result.ok_or_failwith
   in
   let source = "" in
@@ -126,7 +126,7 @@ let%expect_test "user_defined_language_from_json_optional_escapable" =
   in
   let user_lang =
     Yojson.Safe.from_string json
-    |> Matchers.Syntax.of_yojson
+    |> Matchers.Language.Syntax.of_yojson
     |> Result.ok_or_failwith
   in
   let source = "" in

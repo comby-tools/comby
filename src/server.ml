@@ -141,7 +141,7 @@ let perform_environment_substitution request =
     let code, result =
       200,
       Out.Substitution.to_string
-        { result = fst @@ Comby_kernel.Matchers.Rewrite.substitute rewrite_template environment
+        { result = Comby_kernel.Matchers.Rewrite.substitute rewrite_template environment
         ; id
         }
     in

@@ -39,7 +39,3 @@ module Pipeline : sig
     -> Matchers.specification
     -> output
 end
-
-module Regex : sig
-  val to_regex : Matchers.specification -> string
-end

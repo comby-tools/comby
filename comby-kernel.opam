@@ -20,7 +20,6 @@ build: [
 depends: [
   "dune" {>= "2.8.0"}
   "ocaml" {>= "4.08.1"}
-  "angstrom" {>= "0.15.0"}
   "core_kernel"
   "mparser"
   "mparser-pcre"

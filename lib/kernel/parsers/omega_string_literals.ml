@@ -1,6 +1,6 @@
 open Core_kernel
 
-open Angstrom
+open Vangstrom
 
 let (|>>) p f =
   p >>= fun x -> return (f x)

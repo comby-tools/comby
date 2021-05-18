@@ -1,4 +1,4 @@
-open Angstrom
+open Vangstrom
 
 let debug =
   match Sys.getenv "DEBUG_COMBY" with
@@ -38,7 +38,7 @@ module Make (Regexp: Regexp_engine_intf) = struct
   (* FIXME: size. about advance => want to use internal unsafe_apply_opt
      actually. cf. string_ in angstrom.ml. instead, trying "do peek, then
      advance/commit." *)
-  let regexp rex : string Angstrom.t =
+  let regexp rex =
     (* Why do Unsafe if I can just do peek_string? => So I don't allocate on copy of buffer. *)
     (* But it looks like we can't avoid allocation in converting bigstringaf to bytes *)
     Unsafe.peek 1 (fun buffer ~off ~len:_ -> Bigstringaf.length buffer - off) >>= fun n ->

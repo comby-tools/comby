@@ -1,9 +1,9 @@
 open Core_kernel
-open Angstrom
+open Vangstrom
 
 open Rule
 open Parser
-open Ast
+open Types.Ast
 
 type spec = Specification.t
 [@@deriving sexp]
@@ -36,11 +36,18 @@ let chainl1 e op =
 
 let parens p = char '(' *> (p <|> return []) <* char ')'
 
+
+let template_parser until =
+  choice
+    [ (lift to_atom quoted_parser)
+    ; (lift (fun v -> to_atom (String.of_char_list v)) (Omega_parser_helper.many1_till any_char until))
+    ]
+
 let spec =
   let match_rewrite_parser =
     both
-      (spaces *> atom_parser ())
-      (option None (spaces *> string Syntax.arrow *> spaces *> atom_parser () >>| fun x -> Some x))
+      (spaces *> template_parser (spaces *> string "->"))
+      (option None (spaces *> string Syntax.arrow *> spaces *> template_parser (spaces1 *> string "where" *> spaces1)  >>| fun v -> Some v)) (* FIXME use of reserved *)
   in
   match_rewrite_parser >>= fun (match_template_atom, rewrite_template_atom) ->
   (option None (spaces1 *> parse >>| fun x -> Some x)) >>= fun rule ->

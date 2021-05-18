@@ -4,17 +4,6 @@ open Test_helpers
 open Comby_kernel
 open Matchers
 
-let run (module M: Matchers.Matcher.S) source match_template rewrite_template =
-  M.first ~configuration match_template source
-  |> function
-  | Ok result ->
-    Rewrite.all ~source ~rewrite_template [result]
-    |> (fun x -> Option.value_exn x)
-    |> (fun { rewritten_source; _ } -> rewritten_source)
-    |> print_string
-  | Error _ ->
-    print_string rewrite_template
-
 let%expect_test "custom_long_delimiters" =
   let source =
     {|
@@ -64,9 +53,7 @@ let%expect_test "custom_long_delimiters_doesn't_work_in_go" =
   [%expect_exact {|
       case nuked blocks esac
 
-        case
-          block 2
-        esac
+        case nuked blocks esac
       esac
     |}];
 
@@ -74,8 +61,6 @@ let%expect_test "custom_long_delimiters_doesn't_work_in_go" =
   [%expect_exact {|
       case nuked blocks esac
 
-        case
-          block 2
-        esac
+        case nuked blocks esac
       esac
     |}]

@@ -25,10 +25,8 @@ let timed_run
   (match rewrite_template with
    | Some template -> Matcher.set_rewrite_template template;
    | None -> ());
-  let rule = Option.value rule ~default:(Rule.create "where true" |> Or_error.ok_exn) in
-  let options = Rule.options rule in
-  let matches = Matcher.all ~rule ~nested:options.nested ~configuration ~template ~source () in
-  List.map matches ~f:(Match.convert_offset ~fast:fast_offset_conversion ~source)
+  Matcher.all ?rule ~configuration ~template ~source ()
+  |> List.map ~f:(Match.convert_offset ~fast:fast_offset_conversion ~source)
 
 type output =
   | Matches of (Match.t list * int)
@@ -134,11 +132,12 @@ let run_on_specifications mode specifications process (input : single_source) =
 
         | Matches _, Replacement (l, content, n)
         | Replacement (l, content, n), Matches _ ->
-          Format.eprintf "WARNING: input configuration specifies both rewrite \
-                          and match templates. I am choosing to only process the \
-                          configurations with both a 'match' and 'rewrite' part. \
-                          If you only want to see matches, add -match-only to \
-                          suppress this warning@.";
+          Format.eprintf
+            "WARNING: input configuration specifies both rewrite \
+             and match templates. I am choosing to only process the \
+             configurations with both a 'match' and 'rewrite' part. \
+             If you only want to see matches, add -match-only to \
+             suppress this warning@.";
           Replacement (l, content, n)
       )
   in
@@ -239,7 +238,6 @@ let run
         { verbose
         ; match_timeout = timeout
         ; dump_statistics
-        ; substitute_in_place = _ (* FIXME remove *)
         ; disable_substring_matching
         ; fast_offset_conversion
         ; match_newline_toplevel
@@ -248,7 +246,6 @@ let run
         }
     ; output_printer
     ; interactive_review
-    ; extension = _ (* FIXME *)
     ; metasyntax
     }
   =

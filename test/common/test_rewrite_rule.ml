@@ -4,25 +4,6 @@ open Test_helpers
 open Comby_kernel
 open Matchers
 
-let run_rule (module E : Engine.S) source match_template rewrite_template rule =
-  let (module M : Matcher.S) = (module E.Generic) in
-  M.first ~configuration match_template source
-  |> function
-  | Error _ -> print_string "bad"
-  | Ok result ->
-    match result with
-    | ({ environment; _ } as m) ->
-      let e = Rule.(result_env @@ apply ~match_all:(M.all ~rule:[Ast.True] ~nested:false) rule environment) in
-      match e with
-      | None -> print_string "bad bad"
-      | Some e ->
-        { m with environment = e }
-        |> List.return
-        |> Rewrite.all ~source ~rewrite_template
-        |> (fun x -> Option.value_exn x)
-        |> (fun { rewritten_source; _ } -> rewritten_source)
-        |> print_string
-
 let%expect_test "rewrite_rule" =
   let source = {|int|} in
   let match_template = {|:[1]|} in
