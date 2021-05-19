@@ -117,9 +117,17 @@ module Template = struct
   type kind =
     | Value
     | Length
+    | Type
     | FileName
     | FilePath
-    | Type
+    | Lowercase
+    | Uppercase
+    | Capitalize
+    | Uncapitalize
+    | UpperCamelCase
+    | LowerCamelCase
+    | UpperSnakeCase
+    | LowerSnakeCase
   [@@deriving sexp]
 
   type syntax =

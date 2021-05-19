@@ -335,9 +335,17 @@ module Matchers : sig
     type kind =
       | Value
       | Length
+      | Type
       | FileName
       | FilePath
-      | Type
+      | Lowercase
+      | Uppercase
+      | Capitalize
+      | Uncapitalize
+      | UpperCamelCase
+      | LowerCamelCase
+      | UpperSnakeCase
+      | LowerSnakeCase
 
     type syntax =
       { variable : string
