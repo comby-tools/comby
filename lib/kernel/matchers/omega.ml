@@ -78,7 +78,6 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       | None -> Some (Environment.add ~range environment identifier matched)
       | Some _ when String.(identifier = wildcard) -> Some environment
       | Some existing_value ->
-        if debug then Format.printf "Existing: identifier: %s Value: %s@." identifier existing_value;
         let Range.{ match_start = { offset; _ }; _ } = Option.value_exn (Environment.lookup_range environment identifier) in
         if offset = range.match_start.offset then
           (* case when already present from rest parser *)
@@ -180,7 +179,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
           if debug then Format.printf "No new_env@.";
           if rewrite then Buffer.add_string actual match_context.matched
         | Some env ->
-          if debug then Format.printf "Some new env@.";
+          if debug then Format.printf "Some new env %s@." @@ Match.Environment.to_string env;
           current_environment_ref := env;
           begin
             let result, _ = Template.substitute (Template.parse !rewrite_template) !current_environment_ref in
@@ -189,7 +188,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
                shouldn't, and instead just ignore. *)
             Buffer.add_string actual result;
           end;
-          matches_ref := match_context :: !matches_ref
+          matches_ref := { match_context with environment = !current_environment_ref } :: !matches_ref
 
     let multiline left right =
       let open Parsers.Comments.Omega.Multiline in
