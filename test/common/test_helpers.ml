@@ -27,7 +27,7 @@ let print_only_match matches =
   |> Yojson.Safe.pretty_to_string
   |> print_string
 
-let run ?(configuration = configuration) (module M : Matchers.Matcher.S) source match_template ?rule rewrite_template =
+let run ?(configuration = configuration) ?metasyntax (module M : Matchers.Matcher.S) source match_template ?rule rewrite_template =
   let rule =
     match rule with
     | Some rule -> Matchers.Rule.create rule |> Or_error.ok_exn
@@ -37,7 +37,7 @@ let run ?(configuration = configuration) (module M : Matchers.Matcher.S) source 
   |> function
   | [] -> print_string "No matches."
   | results ->
-    Option.value_exn (Rewrite.all ~source ~rewrite_template results)
+    Option.value_exn (Rewrite.all ?metasyntax ~source ~rewrite_template results)
     |> (fun { rewritten_source; _ } -> rewritten_source)
     |> print_string
 
