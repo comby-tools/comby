@@ -22,12 +22,16 @@ let replacement_sentinel metasyntax =
         let left = Option.value left ~default:"" in
         let right = Option.value right ~default:"" in
         Some (left, right)
+      | Hole (Alphanum, Delimited (left, right)) ->
+        let left = Option.value left ~default:"" in
+        let right = Option.value right ~default:"" in
+        Some (left, right)
       | Regex (left, _, right) ->
         Some (left, right)
       | _ -> None)
   |> function
   | Some v -> v
-  | None -> failwith "A custom metasyntax must define syntax for an Everything hole or Regex to customize rewriting"
+  | None -> failwith "A custom metasyntax must define syntax for an Everything or Alphanum hole or Regex to customize rewriting"
 
 (** Parse the first :[id(label)] label encountered in the template. *)
 let parse_first_label ?(metasyntax = Metasyntax.default_metasyntax) template =

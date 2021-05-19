@@ -1015,7 +1015,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       let rec aux_all ?configuration ?(nested = false) ~template ~source () =
         matches_ref := [];
         if String.is_empty template && String.is_empty source then [trivial]
-        else match first_is_broken template source (Some rule) with (* FIXME always Some rule *)
+        else match first_is_broken template source (Some rule) with
           | Ok _
           | Error _ ->
             let matches = List.rev !matches_ref in
