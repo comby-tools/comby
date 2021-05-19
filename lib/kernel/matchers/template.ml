@@ -78,20 +78,20 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     | "file.path" -> FilePath
     | "lowercase" -> Lowercase
     | "UPPERCASE" -> Uppercase
-    | "capitalize" -> Capitalize
+    | "Capitalize" -> Capitalize
     | "uncapitalize" -> Uncapitalize
     | "UpperCamelCase" -> UpperCamelCase
     | "lowerCamelCase" -> LowerCamelCase
     | "UPPER_SNAKE_CASE" -> UpperSnakeCase
     | "lower_snake_case" -> LowerSnakeCase
-    | _ -> failwith "invalid attribute"
+    | s -> failwith @@ Format.sprintf "invalid attribute %S" s
 
   let attribute_access () =
     char '.' *> choice
       [ string "value"
       ; string "length"
-      (*
       ; string "type"
+      (*
       ; string "file.name"
       ; string "file.path"
       *)
@@ -101,8 +101,8 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
       ; string "uncapitalize"
       ; string "UpperCamelCase"
       ; string "lowerCamelCase"
-      ; string "UPPER_SNALE_CASE"
-      ; string "lowers_nake_case"
+      ; string "UPPER_SNAKE_CASE"
+      ; string "lower_snake_case"
       ]
     <* not_followed_by (Omega_parser_helper.alphanum)
 
