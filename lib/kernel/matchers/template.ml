@@ -76,10 +76,35 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     | "type" -> Type
     | "file.name" -> FileName
     | "file.path" -> FilePath
+    | "lowercase" -> Lowercase
+    | "UPPERCASE" -> Uppercase
+    | "capitalize" -> Capitalize
+    | "uncapitalize" -> Uncapitalize
+    | "UpperCamelCase" -> UpperCamelCase
+    | "lowerCamelCase" -> LowerCamelCase
+    | "UPPER_SNAKE_CASE" -> UpperSnakeCase
+    | "lower_snake_case" -> LowerSnakeCase
     | _ -> failwith "invalid attribute"
 
   let attribute_access () =
-    char '.' *> choice [ string "length"; string "type" ] <* not_followed_by (Omega_parser_helper.alphanum)
+    char '.' *> choice
+      [ string "value"
+      ; string "length"
+      (*
+      ; string "type"
+      ; string "file.name"
+      ; string "file.path"
+      *)
+      ; string "lowercase"
+      ; string "UPPERCASE"
+      ; string "Capitalize"
+      ; string "uncapitalize"
+      ; string "UpperCamelCase"
+      ; string "lowerCamelCase"
+      ; string "UPPER_SNALE_CASE"
+      ; string "lowers_nake_case"
+      ]
+    <* not_followed_by (Omega_parser_helper.alphanum)
 
   (** Folds left to respect order of definitions in custom metasyntax for
       matching, where we attempt to parse in order. Note this is significant if a
@@ -146,15 +171,57 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
         | Hole { pattern; _ } -> Buffer.add_string buf pattern);
     Buffer.contents buf
 
+  let camel_to_snake s =
+    let rec aux i = function
+      | [] -> []
+      | ('A'..'Z' as c)::tl when i = 0 -> (Char.lowercase c)::aux (i+1) tl
+      | ('A'..'Z' as c)::tl when i <> 0 -> '_'::(Char.lowercase c)::aux (i+1) tl
+      | c::tl -> c::aux (i+1) tl
+    in
+    aux 0 (String.to_list s)
+    |> String.of_char_list
+
   let substitute_kind { variable; kind; _ } env =
     let open Option in
     let length_to_string n = Format.sprintf "%d" (String.length n) in
     match kind with
     | Value -> Environment.lookup env variable
     | Length -> Environment.lookup env variable >>| length_to_string
+    | Type -> failwith "unimplemented"
     | FileName -> failwith "unimplemented"
     | FilePath -> failwith "unimplemented"
-    | Type -> failwith "unimplemented"
+    | Lowercase ->
+      Environment.lookup env variable
+      >>| String.lowercase
+    | Uppercase ->
+      Environment.lookup env variable
+      >>| String.uppercase
+    | Capitalize ->
+      Environment.lookup env variable
+      >>| String.capitalize
+    | Uncapitalize ->
+      Environment.lookup env variable
+      >>| String.uncapitalize
+    | UpperCamelCase ->
+      Environment.lookup env variable
+      >>| String.split ~on:'_'
+      >>| List.map ~f:String.capitalize
+      >>| String.concat
+      >>| String.capitalize
+    | LowerCamelCase ->
+      Environment.lookup env variable
+      >>| String.split ~on:'_'
+      >>| List.map ~f:String.capitalize
+      >>| String.concat
+      >>| String.uncapitalize
+    | UpperSnakeCase ->
+      Environment.lookup env variable
+      >>| camel_to_snake
+      >>| String.uppercase
+    | LowerSnakeCase ->
+      Environment.lookup env variable
+      >>| camel_to_snake
+      >>| String.lowercase
 
   let substitute template environment =
     let replacement_content, environment', _ =
