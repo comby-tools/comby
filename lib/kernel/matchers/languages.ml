@@ -497,6 +497,23 @@ module Php = struct
   end
 end
 
+module HCL = struct
+  module Info = struct
+    let name = "HashiCorp Configuration Language"
+    let extensions = [".hcl"]
+  end
+
+  module Syntax = struct
+    include Generic.Syntax
+
+    let comments =
+      [ Multiline ("/*", "*/")
+      ; Until_newline "//"
+      ; Until_newline "#"
+      ]
+  end
+end
+
 module Go = struct
   module Info = struct
     let name = "Go"
@@ -882,6 +899,7 @@ let all: (module Types.Language.S) list =
   ; (module Go)
   ; (module Html)
   ; (module Haskell)
+  ; (module HCL)
   ; (module Java)
   ; (module Javascript)
   ; (module Jsx)

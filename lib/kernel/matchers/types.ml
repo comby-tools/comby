@@ -250,6 +250,7 @@ module Engine = struct
     module Julia : Matcher.S
     module Fortran : Matcher.S
     module Haskell : Matcher.S
+    module HCL : Matcher.S
     module Elm : Matcher.S
     module Zig: Matcher.S
     module Coq: Matcher.S

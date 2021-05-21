@@ -23,6 +23,7 @@ let%expect_test "list_languages" =
  -matcher .go       Go        
  -matcher .html     HTML      
  -matcher .hs       Haskell   
+ -matcher .hcl      HashiCorp Configuration Language
  -matcher .java     Java      
  -matcher .js       JavaScript
  -matcher .jsx      JSX       
