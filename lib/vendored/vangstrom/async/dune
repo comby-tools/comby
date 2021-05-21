@@ -1,5 +1,0 @@
-(library
- (name vangstrom_async)
- (public_name comby.vangstrom-async)
- (flags :standard -safe-string)
- (libraries vangstrom async))
