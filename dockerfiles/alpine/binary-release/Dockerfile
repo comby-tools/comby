@@ -34,7 +34,7 @@ LABEL maintainer="Rijnard van Tonder <rvantonder@gmail.com>"
 LABEL name="comby"
 LABEL org.opencontainers.image.source="https://github.com/comby-tools/comby"
 
-RUN apk --no-cache add pcre libev sqlite-dev tini
+RUN apk --no-cache add pcre libev sqlite-dev tini gmp
 COPY --from=source-build-alpine /home/comby/_build/default/src/main.exe /usr/local/bin/comby
 COPY --from=source-build-alpine /home/comby/docs/third-party-licenses /usr/local/bin/comby-third-party-licenses
 
