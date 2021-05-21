@@ -18,6 +18,7 @@ RUN eval $(opam env) && opam repository set-url default https://opam.ocaml.org &
 COPY Makefile /home/comby/
 COPY comby.opam /home/comby/
 COPY comby-kernel.opam /home/comby/
+COPY comby-semantic.opam /home/comby/
 COPY dune /home/comby/
 COPY dune-project /home/comby/dune-project
 COPY docs /home/comby/docs

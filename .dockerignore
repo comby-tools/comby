@@ -7,6 +7,7 @@
 !Makefile
 !comby.opam
 !comby-kernel.opam
+!comby-semantic.opam
 !dune
 !push-coverage-report.sh
 !dune-project

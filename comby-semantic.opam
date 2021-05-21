@@ -1,0 +1,32 @@
+opam-version: "2.0"
+maintainer: "rvantonder@gmail.com"
+authors: "Rijnard van Tonder"
+homepage: "https://github.com/comby-tools/comby"
+bug-reports: "https://github.com/comby-tools/comby/issues"
+dev-repo: "git+https://github.com/comby-tools/comby.git"
+license: "Apache-2.0"
+build: [
+    [
+      "dune"
+      "build"
+      "-p"
+      name
+      "-j"
+      jobs
+      "@install"
+      "@runtest" {with-test}
+    ]
+]
+depends: [
+  "dune" {>= "2.8.0"}
+  "ocaml" {>= "4.08.1"}
+  "core_kernel"
+  "ppx_deriving"
+  "lwt"
+  "cohttp"
+  "cohttp-lwt-unix"
+  "bisect_ppx" {with-test & dev & >= "2.5.0"}
+]
+synopsis: "An experimental package that interfaces with external services to provide semantic information of programs."
+description: """
+"""
