@@ -404,7 +404,9 @@ module Printer = struct
       in
       let print_if_some output = Option.value_map output ~default:() ~f:(Format.fprintf ppf "%s@.") in
       match output_format with
-      | Stdout -> Format.fprintf ppf "%s" rewritten_source
+      | Stdout ->
+        if not (String.equal "\n" rewritten_source) then (* FIXME: somehow newlines are entering here. *)
+          Format.fprintf ppf "%s" rewritten_source
       | Overwrite_file ->
         if (replacements <> []) then
           Out_channel.write_all ~data:rewritten_source (Option.value path ~default:"/dev/null")
@@ -733,10 +735,7 @@ let create
   let open Or_error in
   emit_errors configuration >>= fun () ->
   emit_warnings configuration >>= fun () ->
-  let rule =
-    let rule = String.substr_replace_all rule ~pattern:"..." ~with_:":[_]" in
-    Matchers.Rule.create rule |> Or_error.ok_exn
-  in
+  let rule =  Matchers.Rule.create rule |> Or_error.ok_exn in
   let specifications =
     match templates, anonymous_arguments with
     | None, Some { match_template; rewrite_template; _ } ->
@@ -747,11 +746,6 @@ let create
     | Some templates, _ ->
       parse_templates ~warn_for_missing_file_in_dir:true templates
     | _ -> assert false
-  in
-  let specifications =
-    List.map specifications ~f:(fun ({ match_template ; _ } as spec) ->
-        { spec with match_template =
-                      String.substr_replace_all match_template ~pattern:"..." ~with_:":[_]" })
   in
   let specifications =
     if match_only then

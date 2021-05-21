@@ -15,15 +15,24 @@ let default_syntax =
 let default_identifier =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 
+let default_aliases =
+  [ { pattern = "..."
+    ; match_template = ":[_]"
+    ; rule = None
+    }
+  ]
+
 let default_metasyntax =
   { syntax = default_syntax
   ; identifier = default_identifier
+  ; aliases = default_aliases
   }
 
-let create { syntax; identifier } =
+let create { syntax; identifier; aliases } =
   let module Metasyntax = struct
     let syntax = syntax
     let identifier = identifier
+    let aliases = aliases
   end
   in
   (module Metasyntax : Types.Metasyntax.S)

@@ -76,13 +76,14 @@ let substitute_fresh
 let substitute_in_rewrite_template
     ?fresh
     ?(metasyntax = Metasyntax.default_metasyntax)
+    ?filepath
     template
     environment =
   let (module M) = Metasyntax.create metasyntax in
   let module Template_parser = Template.Make(M) in
   let template = substitute_fresh ~metasyntax ?fresh template in
   let terms = Template_parser.parse template in
-  let replacement_content, environment = Template_parser.substitute terms environment in
+  let replacement_content, environment = Template_parser.substitute ?filepath terms environment in
   { replacement_content
   ; environment
   ; range =
@@ -91,8 +92,8 @@ let substitute_in_rewrite_template
       }
   }
 
-let substitute ?(metasyntax = Metasyntax.default_metasyntax) ?fresh template env =
-  let { replacement_content; _ } = substitute_in_rewrite_template ?fresh ~metasyntax template env
+let substitute ?(metasyntax = Metasyntax.default_metasyntax) ?fresh ?filepath template env =
+  let { replacement_content; _ } = substitute_in_rewrite_template ?fresh ?filepath ~metasyntax template env
   in replacement_content
 
 let substitute_matches (matches: Match.t list) source replacements =
@@ -114,13 +115,13 @@ let substitute_matches (matches: Match.t list) source replacements =
   ; in_place_substitutions
   }
 
-let all ?source ?metasyntax ?fresh ~rewrite_template rev_matches : result option =
+let all ?source ?metasyntax ?fresh ?filepath ~rewrite_template rev_matches : result option =
   Option.some_if (not (List.is_empty rev_matches)) @@
   match source with
   (* in-place substitution *)
   | Some source ->
     rev_matches
-    |> List.map ~f:(fun Match.{ environment; _ } -> substitute_in_rewrite_template ?metasyntax ?fresh rewrite_template environment)
+    |> List.map ~f:(fun Match.{ environment; _ } -> substitute_in_rewrite_template ?filepath ?metasyntax ?fresh rewrite_template environment)
     |> substitute_matches rev_matches source
   (* no in place substitution, emit result separated by newlines *)
   | None ->

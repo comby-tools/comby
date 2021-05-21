@@ -29,5 +29,6 @@
     [ "Regex", ":[", "~", "]" ]
   ],
   "identifier":
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+  "aliases": [ { "pattern": "...", "match_template": ":[_]", "rule": null } ]
 }

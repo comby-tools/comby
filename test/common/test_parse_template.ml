@@ -43,6 +43,7 @@ let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
         ; Regex ("$", ':', " ")
         ]
     ; identifier = "AB"
+    ; aliases = []
     }
   in
   parse_template metasyntax template |> print_string;
@@ -59,6 +60,7 @@ let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
         ; Hole (Everything, Reserved_identifiers ["  "; " "])
         ]
     ; identifier = "AB"
+    ; aliases = []
     }
   in
   parse_template metasyntax template |> print_string;
@@ -77,6 +79,7 @@ let%expect_test "interpret_incomplete_hole_as_constant_metasyntax" =
         ; Hole (Everything, Reserved_identifiers [".."; "."])
         ]
     ; identifier = "AB"
+    ; aliases = []
     }
   in
   parse_template metasyntax template |> print_string;
@@ -92,6 +95,7 @@ let%expect_test "parse_reserved_identifiers_as_holes" =
         [ Hole (Expression, Reserved_identifiers ["α"])
         ]
     ; identifier = "AB"
+    ; aliases = []
     }
   in
   parse_template metasyntax template |> print_string;
@@ -107,7 +111,7 @@ let%expect_test "get_offsets_for_holes" =
   print_s [%message (variables : Matchers.Template.syntax list)];
   [%expect {|
     (variables
-     (((variable a) (pattern :[a].type) (offset 0) (kind Type))
+     (((variable a) (pattern :[a]) (offset 0) (kind Value))
       ((variable b) (pattern :[b].length) (offset 10) (kind Length))
       ((variable c) (pattern :[[c]]) (offset 22) (kind Value))
       ((variable d) (pattern :[d.].length) (offset 37) (kind Length))

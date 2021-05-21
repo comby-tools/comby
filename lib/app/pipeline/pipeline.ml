@@ -18,6 +18,7 @@ let debug =
 let timed_run
     (module Matcher : Matcher.S)
     ?(fast_offset_conversion = false)
+    ?filepath
     ~configuration
     ~source
     ~specification:(Specification.{ match_template = template; rule; rewrite_template })
@@ -25,7 +26,7 @@ let timed_run
   (match rewrite_template with
    | Some template -> Matcher.set_rewrite_template template;
    | None -> ());
-  Matcher.all ?rule ~configuration ~template ~source ()
+  Matcher.all ~configuration ?filepath ?rule ~template ~source ()
   |> List.map ~f:(Match.convert_offset ~fast:fast_offset_conversion ~source)
 
 type output =
@@ -57,12 +58,12 @@ let process_single_source
     (Specification.{ rewrite_template; _ } as specification)
   =
   try
-    let input_text =
+    let filepath, input_text =
       match source with
-      | String input_text -> input_text
+      | String input_text -> None, input_text
       | Path path ->
         if verbose then log_to_file path;
-        In_channel.read_all path
+        Some path, In_channel.read_all path
     in
     let matches =
       with_timeout timeout source ~f:(fun () ->
@@ -71,6 +72,7 @@ let process_single_source
             ~fast_offset_conversion
             ~configuration
             ~specification
+            ?filepath
             ~source:input_text
             ())
     in
@@ -82,7 +84,7 @@ let process_single_source
         (* If there are no matches, return the original source (for editor support). *)
         Replacement ([], input_text, 0)
       | matches ->
-        match Rewrite.all ~source:input_text ?metasyntax ?fresh ~rewrite_template matches with
+        match Rewrite.all ~source:input_text ?metasyntax ?fresh ?filepath ~rewrite_template matches with
         | None -> Nothing
         | Some { rewritten_source; in_place_substitutions } ->
           Replacement (in_place_substitutions, rewritten_source, List.length matches)

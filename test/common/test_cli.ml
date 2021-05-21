@@ -778,7 +778,7 @@ let%expect_test "newline_separated_output"=
   let match_template = ":[[1]]" in
   let rewrite_template = ":[[1]]" in
   let command_args =
-    Format.sprintf "-stdin -sequential -stdout '%s' '%s' -n -matcher .generic"
+    Format.sprintf "-stdin -sequential -stdout '%s' '%s' -matcher .generic -newline-separated"
       match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in

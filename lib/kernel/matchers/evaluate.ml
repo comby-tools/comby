@@ -31,14 +31,16 @@ let merge_match_environments matches environment' =
 (* FIXME. Propagate this. *)
 module Template = Template.Make(Metasyntax.Default)
 
-let substitute env = function
-  | Template t -> Rewrite.substitute (Template.to_string t) env
+let substitute ?filepath env v =
+  match v with
+  | Template t -> Rewrite.substitute ?filepath (Template.to_string t) env
   | String s -> s
 
 let apply
     ?(substitute_in_place = true)
     ?metasyntax
-    ~(match_all:(?configuration:Configuration.t -> template:string -> source:string -> unit -> Match.t list))
+    ?filepath
+    ~(match_all:(?configuration:Configuration.t -> ?filepath:string -> template:string -> source:string -> unit -> Match.t list))
     predicates
     env =
 
@@ -54,15 +56,15 @@ let apply
     (* ==, != *)
     | Equal (Template t, String value)
     | Equal (String value, Template t) ->
-      let other = Rewrite.substitute (Template.to_string t) env in
+      let other = Rewrite.substitute ?filepath (Template.to_string t) env in
       let result = String.equal value other in
       result, Some env
     | Equal (String left, String right) ->
       let result = String.equal left right in
       result, Some env
     | Equal (Template left, Template right) ->
-      let left = Rewrite.substitute (Template.to_string left) env in
-      let right = Rewrite.substitute (Template.to_string right) env in
+      let left = Rewrite.substitute ?filepath (Template.to_string left) env in
+      let right = Rewrite.substitute ?filepath (Template.to_string right) env in
       let result = String.equal left right in
       result, Some env
     | Not_equal (left, right) ->
@@ -71,9 +73,9 @@ let apply
 
     (* match ... { ... } *)
     | Match (source, cases) ->
-      let source = substitute env source in
+      let source = substitute ?filepath env source in
       let evaluate template case_expression =
-        let template = substitute env template in
+        let template = substitute ?filepath env template in
         let configuration = match_configuration_of_syntax template in
         if debug then Format.printf "Running for template %s source %s@." template source;
         match_all ~configuration ~template ~source () |> function
@@ -100,9 +102,9 @@ let apply
 
     (* rewrite ... { ... } *)
     | Rewrite (Template t, (match_template, rewrite_template)) ->
-      let rewrite_template = substitute env rewrite_template in
-      let template = substitute env match_template in
-      let source = Rewrite.substitute (Template.to_string t) env in
+      let rewrite_template = substitute ?filepath env rewrite_template in
+      let template = substitute ?filepath env match_template in
+      let source = Rewrite.substitute ?filepath (Template.to_string t) env in
       let configuration = Configuration.create ~match_kind:Fuzzy () in
       let matches = match_all ~configuration ~template ~source () in
       let source = if substitute_in_place then Some source else None in
@@ -112,7 +114,7 @@ let apply
       else
         let Replacement.{ rewritten_source; _ } = Option.value_exn result in
         (* substitute for variables that are in the outside scope *)
-        let rewritten_source = Rewrite.substitute ?metasyntax rewritten_source env in
+        let rewritten_source = Rewrite.substitute ?filepath ?metasyntax rewritten_source env in
         let variable =
           match t with
           | [ Types.Template.Hole { variable; _ } ] -> variable
