@@ -42,6 +42,7 @@ module Fsharp : Language.S
 module Pascal : Language.S
 module Julia : Language.S
 module Fortran : Language.S
+module HCL : Language.S
 module Haskell : Language.S
 module Elm : Language.S
 module Zig : Language.S

@@ -621,6 +621,7 @@ module Matchers : sig
     module Julia : Language.S
     module Fortran : Language.S
     module Haskell : Language.S
+    module HCL : Language.S
     module Elm : Language.S
     module Zig : Language.S
     module Coq : Language.S
@@ -681,6 +682,7 @@ module Matchers : sig
       module Julia : Matcher.S
       module Fortran : Matcher.S
       module Haskell : Matcher.S
+      module HCL : Matcher.S
       module Elm : Matcher.S
       module Zig: Matcher.S
       module Coq: Matcher.S
