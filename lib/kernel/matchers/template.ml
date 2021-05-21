@@ -4,6 +4,11 @@ open Core_kernel
 open Match
 open Types.Template
 
+let debug =
+  match Sys.getenv "DEBUG_COMBY" with
+  | exception Not_found -> false
+  | _ -> true
+
 module Make (Metasyntax : Types.Metasyntax.S) = struct
 
   let up_to p =
@@ -73,9 +78,10 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
   let attribute_to_kind = function
     | "value" -> Value
     | "length" -> Length
-    | "type" -> Type
-    | "file.name" -> FileName
+    | "lsif.hover" -> LsifHover
     | "file.path" -> FilePath
+    | "file.name" -> FileName
+    | "file.directory" -> FileDirectory
     | "lowercase" -> Lowercase
     | "UPPERCASE" -> Uppercase
     | "Capitalize" -> Capitalize
@@ -90,11 +96,10 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     char '.' *> choice
       [ string "value"
       ; string "length"
-      ; string "type"
-      (*
-      ; string "file.name"
+      ; string "lsif.hover"
       ; string "file.path"
-      *)
+      ; string "file.name"
+      ; string "file.directory"
       ; string "lowercase"
       ; string "UPPERCASE"
       ; string "Capitalize"
@@ -181,15 +186,38 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     aux 0 (String.to_list s)
     |> String.of_char_list
 
-  let substitute_kind { variable; kind; _ } env =
+  let substitute_kind ?filepath { variable; kind; _ } env =
     let open Option in
     let length_to_string n = Format.sprintf "%d" (String.length n) in
     match kind with
     | Value -> Environment.lookup env variable
     | Length -> Environment.lookup env variable >>| length_to_string
-    | Type -> failwith "unimplemented"
-    | FileName -> failwith "unimplemented"
-    | FilePath -> failwith "unimplemented"
+    | LsifHover ->
+      filepath >>= fun filepath ->
+      if debug then Format.printf "File for lsif.hover lookup: %s@." filepath;
+      Environment.lookup env variable >>= fun value ->
+      Environment.lookup_range env variable
+      >>= fun { match_start = { offset; _ }; _ } ->
+      if debug then Format.printf "Var offset is %d@." offset;
+      let source = In_channel.read_all filepath in (* Inefficient. *)
+      if debug then Format.printf "Read filepath, source len is %d@." @@ String.length source;
+      String.chop_prefix_if_exists filepath ~prefix:(Sys.getcwd ()) |> fun filepath_relative_root ->
+      if debug then Format.printf "File relative root: %s@." filepath;
+      let index = Match.Offset.index ~source in
+      let line, column = Match.Offset.convert_fast ~offset index in
+      let line, column = line - 1, column - 1 + String.length value - 1 in
+      if debug then Format.printf "Querying type at %d::%d@." line column;
+      let context =
+        Comby_semantic.Lsif.Context.
+          { repository = "github.com/sourcegraph/sourcegraph"
+          ; lsif_endpoint = "https://sourcegraph.com/.api/graphql"
+          ; formatting = Markdown ("```go", "```") (* Expose. *)
+          }
+      in
+      Comby_semantic.Lsif.hover_at context ~filepath:filepath_relative_root ~line ~column
+    | FilePath -> filepath
+    | FileName -> filepath >>| Filename.basename
+    | FileDirectory -> filepath >>| Filename.dirname
     | Lowercase ->
       Environment.lookup env variable
       >>| String.lowercase
@@ -223,12 +251,12 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
       >>| camel_to_snake
       >>| String.lowercase
 
-  let substitute template environment =
+  let substitute ?filepath template environment =
     let replacement_content, environment', _ =
       List.fold template ~init:([], Environment.create (), 0) ~f:(fun (result, env, pos) -> function
           | Constant c -> c::result, env, pos + String.length c
           | Hole ({ variable; pattern; _ } as h) ->
-            match substitute_kind h environment with
+            match substitute_kind ?filepath h environment with
             | None -> pattern::result, env, pos + String.length variable
             | Some value ->
               let advance = pos + String.length value in

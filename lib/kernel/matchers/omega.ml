@@ -30,6 +30,8 @@ let push_environment_ref : Match.Environment.t ref = ref (Match.Environment.crea
 let push_matches_ref : Match.t list ref = ref []
 let push_source_ref : string ref = ref ""
 
+let filepath_ref : string option ref = ref None
+
 let debug =
   match Sys.getenv "DEBUG_COMBY" with
   | exception Not_found -> false
@@ -97,8 +99,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       let open Range in
       let acc = f acc production in
       match production with
-      | String s ->
-        if debug then Format.printf "Saw String: %S@." s;
+      | String _ ->
         return (Unit, acc)
       | Match { offset = pos_begin; identifier; text = content } ->
         (* Inefficiency: a Match production happens even for hole parsers in 'rest'. It's difficult to
@@ -168,6 +169,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
           Program.apply
             ~metasyntax:Metasyntax.default_metasyntax
             ~substitute_in_place:true
+            ?filepath:!filepath_ref
             rule
             !current_environment_ref
         in
@@ -1007,14 +1009,16 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       in
       Match.create ~range ()
 
-    let all ?configuration ?(rule = [Types.Ast.True]) ~template ~source:original_source () : Match.t list =
+    let all ?configuration ?filepath ?(rule = [Types.Ast.True]) ~template ~source:original_source () : Match.t list =
+      filepath_ref := filepath;
       push_matches_ref := !matches_ref;
       configuration_ref := Option.value configuration ~default:!configuration_ref;
       let Rule.{ nested } = Rule.options rule in
+      let template, rule = Preprocess.map_aliases template (Some rule) Meta.aliases in
       let rec aux_all ?configuration ?(nested = false) ~template ~source () =
         matches_ref := [];
         if String.is_empty template && String.is_empty source then [trivial]
-        else match first_is_broken template source (Some rule) with
+        else match first_is_broken template source rule with
           | Ok _
           | Error _ ->
             let matches = List.rev !matches_ref in
@@ -1084,10 +1088,11 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       matches_ref := !push_matches_ref;
       result
 
-    let first ?configuration ?shift:_ template source : Match.t Or_error.t =
+    let first ?configuration ?shift:_ ?filepath template source : Match.t Or_error.t =
+      filepath_ref := filepath;
       configuration_ref := Option.value configuration ~default:!configuration_ref;
       matches_ref := [];
-      match all ?configuration ~template ~source () with
+      match all ?filepath ?configuration ~template ~source () with
       | [] -> Or_error.error_string "No result"
       | (hd::_) -> Ok hd (* FIXME be efficient *)
   end
@@ -1096,6 +1101,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
     val apply
       :  ?substitute_in_place:bool
       -> ?metasyntax:Metasyntax.t
+      -> ?filepath:string
       -> Rule.t
       -> Match.environment
       -> Evaluate.result
@@ -1103,11 +1109,13 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
     let apply
         ?(substitute_in_place = true)
         ?metasyntax
+        ?filepath
         rule
         env =
       Evaluate.apply
         ~substitute_in_place
         ?metasyntax
+        ?filepath
         ~match_all:(Matcher.all ~rule:[Types.Ast.True])
         rule
         env

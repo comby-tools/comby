@@ -85,6 +85,12 @@ end
 type hole = Hole.t
 
 module Metasyntax = struct
+  type alias =
+    { pattern : string
+    ; match_template : string
+    ; rule : string option
+    }
+  [@@deriving yojson]
 
   type hole_definition =
     | Delimited of string option * string option
@@ -99,12 +105,14 @@ module Metasyntax = struct
   type t =
     { syntax : hole_syntax list
     ; identifier : string
+    ; aliases : alias list
     }
   [@@deriving yojson]
 
   module type S = sig
     val syntax : hole_syntax list
     val identifier : string
+    val aliases : alias list
   end
 end
 
@@ -117,9 +125,10 @@ module Template = struct
   type kind =
     | Value
     | Length
-    | Type
+    | LsifHover
     | FileName
     | FilePath
+    | FileDirectory
     | Lowercase
     | Uppercase
     | Capitalize
@@ -156,13 +165,6 @@ module Ast = struct
   type antecedent = atom
   [@@deriving sexp]
 
-  type kind =  (* FIXME holes needs to have associated substitution kind *)
-    | Value
-    | Length
-    | Type
-    | File
-  [@@deriving sexp]
-
   type expression =
     | True
     | False
@@ -184,6 +186,7 @@ module Matcher = struct
   module type S = sig
     val all
       :  ?configuration:Configuration.t
+      -> ?filepath:string
       -> ?rule:Rule.t
       -> template:string
       -> source:string
@@ -193,6 +196,7 @@ module Matcher = struct
     val first
       :  ?configuration:Configuration.t
       -> ?shift:int
+      -> ?filepath:string
       -> string
       -> string
       -> Match.t Or_error.t

@@ -13,6 +13,7 @@ let%expect_test "substitute_entire_regex_pattern_in_custom_metasyntax" =
         ; Regex ("$", ':', " ")
         ]
     ; identifier = "AB"
+    ; aliases = []
     }
   in
   (* Don't just substitute for `$B`, but for `$B:\w+ `. This depends on Regex (more specific syntax) being defined _after_ the general syntax. *)

@@ -245,6 +245,12 @@ module Matchers : sig
       Defines the metasyntax recognized in templates and associates the
       metasyntax with the matching behavior of holes. *)
   module Metasyntax : sig
+    (** aliases where a match of the string [pattern] maps to [match_template] and [rule]. *)
+    type alias =
+      { pattern : string
+      ; match_template : string
+      ; rule : string option
+      }
 
     (** A hole definition should comprise either a string prefix, suffix, or
         both which encloses an variable identifier. See example below. *)
@@ -284,6 +290,7 @@ module Matchers : sig
     type t =
       { syntax : hole_syntax list
       ; identifier : string
+      ; aliases : alias list
       }
 
     val to_yojson : t -> Yojson.Safe.json
@@ -293,6 +300,7 @@ module Matchers : sig
     module type S = sig
       val syntax : hole_syntax list
       val identifier : string
+      val aliases : alias list
     end
 
     (** A module representing the default metasyntax *)
@@ -335,9 +343,10 @@ module Matchers : sig
     type kind =
       | Value
       | Length
-      | Type
+      | LsifHover
       | FileName
       | FilePath
+      | FileDirectory
       | Lowercase
       | Uppercase
       | Capitalize
@@ -381,13 +390,6 @@ module Matchers : sig
     type antecedent = atom
     [@@deriving sexp]
 
-    type kind =
-      | Value
-      | Length
-      | Type
-      | File
-    [@@deriving sexp]
-
     type expression =
       | True
       | False
@@ -410,6 +412,7 @@ module Matchers : sig
           recursively on matched content. *)
       val all
         :  ?configuration:configuration
+        -> ?filepath:string
         -> ?rule:Rule.t
         -> template:string
         -> source:string
@@ -421,6 +424,7 @@ module Matchers : sig
       val first
         :  ?configuration:configuration
         -> ?shift:int
+        -> ?filepath:string
         -> string
         -> string
         -> match' Core_kernel.Or_error.t
@@ -468,8 +472,10 @@ module Matchers : sig
     val apply :
       ?substitute_in_place:bool ->
       ?metasyntax:Metasyntax.t ->
+      ?filepath:string ->
       match_all:(
         ?configuration:Configuration.t ->
+        ?filepath:string ->
         template:string ->
         source:string ->
         unit ->
@@ -739,6 +745,7 @@ module Matchers : sig
       :  ?source:string
       -> ?metasyntax:metasyntax
       -> ?fresh:(unit -> string)
+      -> ?filepath:string
       -> rewrite_template:string
       -> match' list
       -> replacement option
@@ -756,6 +763,7 @@ module Matchers : sig
     val substitute
       :  ?metasyntax:metasyntax
       -> ?fresh:(unit -> string)
+      -> ?filepath:string
       -> string
       -> Match.environment
       -> string

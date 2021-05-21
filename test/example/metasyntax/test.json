@@ -4,5 +4,6 @@
     [ "Hole", [ "Alphanum" ], [ "Delimited", "?", null ] ]
   ],
   "identifier":
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
+  "aliases": []
 }

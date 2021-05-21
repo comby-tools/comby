@@ -6,7 +6,7 @@ open Test_helpers
 let configuration = Matchers.Configuration.create ~match_kind:Fuzzy ()
 
 let create (module E : Matchers.Engine.S) syntax =
-  let metasyntax = Matchers.Metasyntax.{ syntax; identifier = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_" } in
+  let metasyntax = Matchers.Metasyntax.{ syntax; identifier = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"; aliases = [] } in
   Option.value_exn (E.select_with_extension ~metasyntax ".go")
 
 let%expect_test "custom_metasyntax_everything" =
@@ -188,7 +188,7 @@ let%expect_test "custom_metasyntax_rewrite_alpha" =
       ; Hole (Alphanum, Delimited (Some "?", None))
       ]
   in
-  let metasyntax = Matchers.Metasyntax.{ syntax; identifier = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_" } in
+  let metasyntax = Matchers.Metasyntax.{ syntax; identifier = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"; aliases = [] } in
   let matcher = Option.value_exn (Matchers.Alpha.select_with_extension ~metasyntax ".go") in
 
   let specification = Matchers.Specification.create ~match_template:"$A(?B)" ~rewrite_template:"??B -> $A$A" () in
@@ -218,7 +218,7 @@ let%expect_test "custom_metasyntax_rewrite_omega" =
       ; Hole (Alphanum, Delimited (Some "?", None))
       ]
   in
-  let metasyntax = Matchers.Metasyntax.{ syntax; identifier = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_" } in
+  let metasyntax = Matchers.Metasyntax.{ syntax; identifier = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"; aliases = [] } in
   let matcher = Option.value_exn (Matchers.Omega.select_with_extension ~metasyntax ".go") in
 
   let specification = Matchers.Specification.create ~match_template:"$A(?B)" ~rewrite_template:"??B -> $A$A" () in
@@ -278,9 +278,42 @@ let%expect_test "custom_metasyntax_rewrite_length" =
       ]
   in
 
-  let metasyntax = Matchers.Metasyntax.{ syntax; identifier = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_" } in
+  let metasyntax = Matchers.Metasyntax.{ syntax; identifier = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"; aliases = [] } in
 
   run ~metasyntax (create (module Matchers.Alpha) syntax) "simple(bar)" {|[:A:](α)|} {|[:A:].length (α.length)|};
   [%expect_exact {|6 (3)|}];
   run ~metasyntax (create (module Matchers.Omega) syntax) "simple(bar)" {|[:A:](α)|} {|[:A:].length (α.length)|};
   [%expect_exact {|6 (3)|}]
+
+let%expect_test "custom_metasyntax_test_alias" =
+  let aliases =
+    Matchers.Metasyntax.
+      [ { pattern = "_1"
+        ; match_template = ":[x1]"
+        ; rule = Some "where :[x1].length == '1'"
+        }
+      ; { pattern = "_2"
+        ; match_template = ":[x2]"
+        ; rule = Some "where :[x2].length == '2'"
+        }
+      ; { pattern = "_3"
+        ; match_template = ":[x3]"
+        ; rule = Some "where :[x3].length == '3'"
+        }
+      ]
+  in
+
+  (* Need to use default metasyntax because rules don't yet support arbitrary metasyntax *)
+  let metasyntax = { Matchers.Metasyntax.default_metasyntax with aliases } in
+  let alpha = Option.value_exn (Matchers.Alpha.select_with_extension ~metasyntax ".go") in
+  let omega = Option.value_exn (Matchers.Omega.select_with_extension ~metasyntax ".go") in
+
+  run ~metasyntax alpha "foo(a) foo(ab) foo(abc) foo(abcd)" "foo(_2)" "matched";
+  [%expect_exact {|foo(a) matched foo(abc) foo(abcd)|}];
+  run ~metasyntax omega "foo(a) foo(ab) foo(abc) foo(abcd)" "foo(_2)" "matched";
+  [%expect_exact {|foo(a) matched foo(abc) foo(abcd)|}];
+
+  run ~metasyntax alpha "foo(a) foo(ab) foo(abc) foo(abcd)" "foo(_3)" "matched";
+  [%expect_exact {|foo(a) foo(ab) matched foo(abcd)|}];
+  run ~metasyntax omega "foo(a) foo(ab) foo(abc) foo(abcd)" "foo(_3)" "matched";
+  [%expect_exact {|foo(a) foo(ab) matched foo(abcd)|}]

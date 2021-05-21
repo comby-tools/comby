@@ -12,5 +12,5 @@ module Make : Metasyntax.S -> sig
 
     val to_string : t -> string
 
-    val substitute : t -> Match.Environment.t -> (string * Match.Environment.t)
+    val substitute : ?filepath:string -> t -> Match.Environment.t -> (string * Match.Environment.t)
   end

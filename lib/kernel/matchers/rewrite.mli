@@ -7,7 +7,7 @@ open Match
 val substitute_fresh : ?metasyntax:Metasyntax.t -> ?fresh:(unit -> string) -> string -> string
 
 (** substitute returns the result of substituting env in template *)
-val substitute : ?metasyntax:Metasyntax.t -> ?fresh:(unit -> string) -> string -> Environment.t -> string
+val substitute : ?metasyntax:Metasyntax.t -> ?fresh:(unit -> string) -> ?filepath:string -> string -> Environment.t -> string
 
 (** if [source] is given, substitute in-place. If not,
     emit result separated by newlines *)
@@ -15,6 +15,7 @@ val all
   :  ?source:string
   -> ?metasyntax:Types.Metasyntax.t
   -> ?fresh:(unit -> string)
+  -> ?filepath:string
   -> rewrite_template:string
   -> Match.t list
   -> Replacement.result option

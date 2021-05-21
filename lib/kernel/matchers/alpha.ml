@@ -946,8 +946,9 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
           Ok result
       | Failed (msg, _) -> Or_error.error_string msg
 
-    let first ?configuration ?shift template source =
+    let first ?configuration ?shift ?filepath template source =
       let open Or_error in
+      let _ : string option = filepath in
       configuration_ref := Option.value configuration ~default:!configuration_ref;
       to_template template >>= fun p ->
       let shift =
@@ -957,8 +958,11 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
       in
       first' shift p source
 
-    let all ?configuration ?(rule = [Types.Ast.True]) ~template ~source:original_source () : Match.t list =
+    let all ?configuration ?filepath ?(rule = [Types.Ast.True]) ~template ~source:original_source () : Match.t list =
+      let _ : string option = filepath in
       let Rule.{ nested } = Rule.options rule in
+      let template, rule = Preprocess.map_aliases template (Some rule) Meta.aliases in
+      let rule = Option.value_exn rule in (* OK in this case *)
       let rec aux_all ?configuration ?(nested = false) ~template ~source:original_source () =
         let open Or_error in
         depth := (-1);
@@ -991,7 +995,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
               let result =
                 if debug then Format.printf "Rule: %s@." (Sexp.to_string @@ Rule.sexp_of_t rule);
                 (* FIXME metasyntax should propagate *)
-                let sat, env = Program.apply ~metasyntax:Metasyntax.default_metasyntax ~substitute_in_place:true rule environment in
+                let sat, env = Program.apply ~metasyntax:Metasyntax.default_metasyntax ~substitute_in_place:true ?filepath rule environment in
                 if debug && Option.is_some env then Format.printf "Got back: %b %S" sat (Match.Environment.to_string @@ Option.value_exn env);
                 let new_env = if sat then env else None in
                 match new_env with
@@ -1086,6 +1090,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
     val apply
       :  ?substitute_in_place:bool
       -> ?metasyntax:Types.Metasyntax.t
+      -> ?filepath:string
       -> Rule.t
       -> Match.environment
       -> Evaluate.result
@@ -1094,11 +1099,13 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
     let apply
         ?(substitute_in_place = true)
         ?metasyntax
+        ?filepath
         rule
         env =
       Evaluate.apply
         ~substitute_in_place
         ?metasyntax
+        ?filepath
         ~match_all:(Matcher.all ~rule:[Types.Ast.True])
         rule
         env
