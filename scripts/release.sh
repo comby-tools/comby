@@ -56,7 +56,7 @@ echo "push: docker push comby/comby:$VERSION"
 echo "tag latest: docker tag comby/comby:$VERSION comby/comby:latest"
 echo "push: docker push comby/comby:latest"
 echo
-echo "test: docker run -it comby/comby-rg 'a' 'b' -rg \"\""
+echo "test: docker run -it comby/comby-rg 'a' 'b' -rg \"\" -d /home/comby"
 echo "push: docker push comby/comby-rg:$VERSION"
 echo "tag latest: docker tag comby/comby-rg:$VERSION comby/comby-rg:latest"
 echo "push: docker push comby/comby-rg:latest"
