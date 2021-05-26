@@ -125,6 +125,13 @@ module Template = struct
   type kind =
     | Value
     | Length
+    | Lines
+    | OffsetStart
+    | OffsetEnd
+    | LineStart
+    | LineEnd
+    | ColumnStart
+    | ColumnEnd
     | LsifHover
     | FileName
     | FilePath

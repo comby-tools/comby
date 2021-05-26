@@ -78,6 +78,16 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
   let attribute_to_kind = function
     | "value" -> Value
     | "length" -> Length
+    | "lines" -> Lines
+    | "offset"
+    | "offset.start" -> OffsetStart
+    | "offset.end" -> OffsetEnd
+    | "line"
+    | "line.start" -> LineStart
+    | "line.end" -> LineEnd
+    | "column"
+    | "column.start" -> ColumnStart
+    | "column.end" -> ColumnEnd
     | "lsif.hover" -> LsifHover
     | "file.path" -> FilePath
     | "file.name" -> FileName
@@ -96,6 +106,16 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     char '.' *> choice
       [ string "value"
       ; string "length"
+      ; string "lines"
+      ; string "offset.start"
+      ; string "offset.end"
+      ; string "offset"
+      ; string "line.start"
+      ; string "line.end"
+      ; string "line"
+      ; string "column.start"
+      ; string "column.end"
+      ; string "column"
       ; string "lsif.hover"
       ; string "file.path"
       ; string "file.name"
@@ -192,6 +212,51 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     match kind with
     | Value -> Environment.lookup env variable
     | Length -> Environment.lookup env variable >>| length_to_string
+    | Lines -> Environment.lookup env variable >>| String.count ~f:(Char.(=) '\n') >>| Int.to_string
+
+    | OffsetStart ->
+      Environment.lookup_range env variable
+      >>| fun { match_start = { offset; _ }; _ } ->
+      Int.to_string offset
+    | OffsetEnd ->
+      Environment.lookup_range env variable
+      >>| fun { match_end = { offset; _ }; _ } ->
+      Int.to_string offset
+
+    | LineStart ->
+      filepath >>= fun filepath ->
+      Environment.lookup_range env variable
+      >>| fun { match_start = { offset; _ }; _ } ->
+      let source = In_channel.read_all filepath in (* Inefficient. *)
+      let index = Match.Offset.index ~source in
+      let line, _ = Match.Offset.convert_fast ~offset index in
+      Int.to_string line
+    | LineEnd ->
+      filepath >>= fun filepath ->
+      Environment.lookup_range env variable
+      >>| fun { match_end = { offset; _ }; _ } ->
+      let source = In_channel.read_all filepath in (* Inefficient. *)
+      let index = Match.Offset.index ~source in
+      let line, _ = Match.Offset.convert_fast ~offset index in
+      Int.to_string line
+
+    | ColumnStart ->
+      filepath >>= fun filepath ->
+      Environment.lookup_range env variable
+      >>| fun { match_start = { offset; _ }; _ } ->
+      let source = In_channel.read_all filepath in (* Inefficient. *)
+      let index = Match.Offset.index ~source in
+      let _, column = Match.Offset.convert_fast ~offset index in
+      Int.to_string column
+    | ColumnEnd ->
+      filepath >>= fun filepath ->
+      Environment.lookup_range env variable
+      >>| fun { match_end = { offset; _ }; _ } ->
+      let source = In_channel.read_all filepath in (* Inefficient. *)
+      let index = Match.Offset.index ~source in
+      let _, column = Match.Offset.convert_fast ~offset index in
+      Int.to_string column
+
     | LsifHover ->
       filepath >>= fun filepath ->
       if debug then Format.printf "File for lsif.hover lookup: %s@." filepath;

@@ -343,6 +343,13 @@ module Matchers : sig
     type kind =
       | Value
       | Length
+      | Lines
+      | OffsetStart
+      | OffsetEnd
+      | LineStart
+      | LineEnd
+      | ColumnStart
+      | ColumnEnd
       | LsifHover
       | FileName
       | FilePath
