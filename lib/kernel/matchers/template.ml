@@ -212,7 +212,11 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     match kind with
     | Value -> Environment.lookup env variable
     | Length -> Environment.lookup env variable >>| length_to_string
-    | Lines -> Environment.lookup env variable >>| String.count ~f:(Char.(=) '\n') >>| Int.to_string
+    | Lines ->
+      Environment.lookup env variable
+      >>| String.count ~f:(Char.(=) '\n')
+      >>| (fun v -> if v = 0 then 1 else v)
+      >>| Int.to_string
 
     | OffsetStart ->
       Environment.lookup_range env variable
