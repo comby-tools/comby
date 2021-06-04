@@ -499,8 +499,8 @@ end
 
 module HCL = struct
   module Info = struct
-    let name = "HashiCorp Configuration Language"
-    let extensions = [".hcl"]
+    let name = "Terraform (HashiCorp Configuration Language"
+    let extensions = [".tf"; ".hcl"]
   end
 
   module Syntax = struct
@@ -789,6 +789,49 @@ module Julia = struct
   end
 end
 
+module Matlab = struct
+  module Info = struct
+    let name = "MATLAB"
+    let extensions = [".m"]
+  end
+
+  module Syntax = struct
+    include Generic.Syntax
+
+    let user_defined_delimiters =
+      Generic.Syntax.user_defined_delimiters
+      @
+      [ "if", "end"
+      ; "for", "end"
+      ; "parfor", "end"
+      ; "while", "end"
+      ; "try", "end"
+      ; "switch", "end"
+      ; "function", "end"
+      ]
+
+    let comments =
+      [ Multiline ("%{", "}%")
+      ; Until_newline "%"
+      ]
+  end
+end
+
+module R = struct
+  module Info = struct
+    let name = "R"
+    let extensions = [".r"]
+  end
+
+  module Syntax = struct
+    include Generic.Syntax
+
+    let comments =
+      [ Until_newline "#"
+      ]
+  end
+end
+
 module Fortran = struct
   module Info = struct
     let name = "Fortran"
@@ -911,6 +954,7 @@ let all: (module Types.Language.S) list =
   ; (module Kotlin)
   ; (module Latex)
   ; (module Lisp)
+  ; (module Matlab)
   ; (module Move)
   ; (module Nim)
   ; (module OCaml)
@@ -918,6 +962,7 @@ let all: (module Types.Language.S) list =
   ; (module Pascal)
   ; (module Php)
   ; (module Python)
+  ; (module R)
   ; (module Reason)
   ; (module Ruby)
   ; (module Rust)

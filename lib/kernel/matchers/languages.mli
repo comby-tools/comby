@@ -27,6 +27,7 @@ module CSS : Language.S
 module Kotlin : Language.S
 module Scala : Language.S
 module Nim : Language.S
+module Matlab : Language.S
 module Dart : Language.S
 module Php : Language.S
 module Go : Language.S
@@ -36,6 +37,7 @@ module Typescript : Language.S
 module Tsx : Language.S
 module Swift : Language.S
 module Rust : Language.S
+module R : Language.S
 module OCaml : Language.S
 module Reason : Language.S
 module Fsharp : Language.S
