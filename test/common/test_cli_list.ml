@@ -23,7 +23,7 @@ let%expect_test "list_languages" =
  -matcher .go       Go        
  -matcher .html     HTML      
  -matcher .hs       Haskell   
- -matcher .hcl      HashiCorp Configuration Language
+ -matcher .tf       Terraform (HashiCorp Configuration Language
  -matcher .java     Java      
  -matcher .js       JavaScript
  -matcher .jsx      JSX       
@@ -37,12 +37,14 @@ let%expect_test "list_languages" =
  -matcher .lisp     Lisp      
  -matcher .move     Move      
  -matcher .nim      Nim       
+ -matcher .m        MATLAB    
  -matcher .ml       OCaml     
  -matcher .paren    Paren     
  -matcher .pas      Pascal    
  -matcher .php      PHP       
  -matcher .py       Python    
  -matcher .re       Reason    
+ -matcher .r        R         
  -matcher .rb       Ruby      
  -matcher .rs       Rust      
  -matcher .scala    Scala     

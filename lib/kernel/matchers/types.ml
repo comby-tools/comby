@@ -245,6 +245,7 @@ module Engine = struct
     module Kotlin : Matcher.S
     module Scala : Matcher.S
     module Nim : Matcher.S
+    module Matlab : Matcher.S
     module Dart : Matcher.S
     module Php : Matcher.S
     module Go : Matcher.S
@@ -254,6 +255,7 @@ module Engine = struct
     module Tsx : Matcher.S
     module Swift : Matcher.S
     module Rust : Matcher.S
+    module R : Matcher.S
     module OCaml : Matcher.S
     module Reason : Matcher.S
     module Fsharp : Matcher.S

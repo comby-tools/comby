@@ -618,6 +618,7 @@ module Matchers : sig
     module Kotlin : Language.S
     module Scala : Language.S
     module Nim : Language.S
+    module Matlab : Language.S
     module Dart : Language.S
     module Php : Language.S
     module Go : Language.S
@@ -627,6 +628,7 @@ module Matchers : sig
     module Tsx : Language.S
     module Swift : Language.S
     module Rust : Language.S
+    module R : Language.S
     module OCaml : Language.S
     module Reason : Language.S
     module Fsharp : Language.S
@@ -679,6 +681,7 @@ module Matchers : sig
       module Kotlin : Matcher.S
       module Scala : Matcher.S
       module Nim : Matcher.S
+      module Matlab : Matcher.S
       module Dart : Matcher.S
       module Php : Matcher.S
       module Go : Matcher.S
@@ -688,6 +691,7 @@ module Matchers : sig
       module Tsx : Matcher.S
       module Swift : Matcher.S
       module Rust : Matcher.S
+      module R : Matcher.S
       module OCaml : Matcher.S
       module Reason : Matcher.S
       module Fsharp : Matcher.S
