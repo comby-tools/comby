@@ -33,7 +33,7 @@ RUN opam exec -- make build
 RUN opam exec -- dune runtest
 RUN opam exec -- dune clean
 # UGH. stop dune from complaining
-RUN rm -rf comby comby-server benchmark
+RUN rm -rf comby 
 RUN opam exec -- dune build --profile release
 
 # The binary is now available in /home/comby/_build/default/src/main.exe

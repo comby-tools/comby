@@ -9,18 +9,6 @@
  (modes byte exe)
  (names main))
 
-;   (executables
-;    (libraries comby core opium ppx_deriving_yojson ppx_deriving_yojson.runtime cohttp-lwt-unix)
-;    (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show ppx_sexp_conv))
-;    (modules server server_types)
-;    (names server))
-
-;   (executables
-;    (libraries comby core opium ppx_deriving_yojson ppx_deriving_yojson.runtime)
-;    (preprocess (pps ppx_deriving_yojson ppx_let ppx_deriving.show ppx_sexp_conv))
-;    (modules benchmark)
-;    (names benchmark))
-
 (alias
  (name DEFAULT)
  (deps main.exe))
@@ -29,25 +17,7 @@
  (name DEFAULT)
  (deps main.bc))
 
-(alias
- (name DEFAULT)
- (deps server.exe))
-
-(alias
- (name DEFAULT)
- (deps benchmark.exe))
-
 (install
  (package comby)
  (section bin)
  (files (main.exe as comby)))
-
-;   (install
-;    (section bin)
-;    (files (server.exe as comby-server)))
-
-;   (install
-;    (section bin)
-;    (files (benchmark.exe as benchmark)))
-
-
