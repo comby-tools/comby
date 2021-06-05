@@ -53,6 +53,7 @@ let process_single_source
     ?(timeout = 3)
     ?metasyntax
     ?fresh
+    ?(substitute_in_place = true)
     configuration
     source
     (Specification.{ rewrite_template; _ } as specification)
@@ -84,7 +85,8 @@ let process_single_source
         (* If there are no matches, return the original source (for editor support). *)
         Replacement ([], input_text, 0)
       | matches ->
-        match Rewrite.all ~source:input_text ?metasyntax ?fresh ?filepath ~rewrite_template matches with
+        let source = if substitute_in_place then Some input_text else None in
+        match Rewrite.all ?source ?metasyntax ?fresh ?filepath ~rewrite_template matches with
         | None -> Nothing
         | Some { rewritten_source; in_place_substitutions } ->
           Replacement (in_place_substitutions, rewritten_source, List.length matches)
@@ -197,6 +199,7 @@ let run_interactive
     matcher
     fast_offset_conversion
     match_configuration
+    substitute_in_place
     verbose
     timeout
     sources
@@ -212,6 +215,7 @@ let run_interactive
            ~fast_offset_conversion
            ~verbose
            ~timeout
+           ~substitute_in_place
            match_configuration
            input
            specification)
@@ -236,6 +240,7 @@ let run
     { matcher
     ; sources
     ; specifications
+    ; substitute_in_place
     ; run_options =
         { verbose
         ; match_timeout = timeout
@@ -278,6 +283,7 @@ let run
            ~timeout
            ?metasyntax
            ?fresh
+           ~substitute_in_place
            match_configuration
            input
            specification)
@@ -297,6 +303,7 @@ let run
         matcher
         fast_offset_conversion
         match_configuration
+        substitute_in_place
         verbose
         timeout
         sources
@@ -311,6 +318,7 @@ let execute
     ?metasyntax
     ?fresh
     ?(configuration = Matchers.Configuration.create ())
+    ?substitute_in_place
     source
     specification =
   process_single_source
@@ -320,6 +328,7 @@ let execute
     ?timeout
     ?metasyntax
     ?fresh
+    ?substitute_in_place
     configuration
     source
     specification

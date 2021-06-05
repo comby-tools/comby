@@ -21,6 +21,7 @@ let configuration (module E : Engine.S) =
   ; output_printer = (fun _ -> ())
   ; interactive_review = None
   ; metasyntax = None
+  ; substitute_in_place = true
   }
 
 (* TODO restore this, can't access the Parallel_hack module *)

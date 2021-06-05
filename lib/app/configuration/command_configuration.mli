@@ -92,6 +92,7 @@ type t =
   ; interactive_review : interactive_review option
   ; matcher : (module Matchers.Matcher.S)
   ; metasyntax :  Matchers.Metasyntax.t option
+  ; substitute_in_place : bool
   }
 
 val create : user_input -> t Or_error.t

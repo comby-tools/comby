@@ -35,6 +35,7 @@ module Pipeline : sig
     -> ?metasyntax:Matchers.metasyntax
     -> ?fresh:(unit -> string)
     -> ?configuration:Matchers.configuration
+    -> ?substitute_in_place:bool
     -> single_source
     -> Matchers.specification
     -> output

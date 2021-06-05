@@ -1268,3 +1268,19 @@ let%expect_test "test_custom_metasyntax_reserved_identifiers" =
   print_string result;
   [%expect "
     (fun x -> f (x x))"]
+
+let%expect_test "test_nested_newline_rewrite" =
+  let source = "foo(foo(foo(x)))" in
+  let match_ = "foo(:[x])" in
+  let rule = "where nested" in
+  let rewrite = ":[x]" in
+  let command_args =
+    Format.sprintf "-stdin -sequential -stdout '%s' '%s' -rule '%s' -f .c -newline-separated" match_ rewrite rule
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|
+    foo(foo(x))
+    foo(x)
+    x|}]

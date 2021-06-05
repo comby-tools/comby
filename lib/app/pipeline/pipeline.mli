@@ -15,6 +15,7 @@ val process_single_source
   -> ?timeout:int
   -> ?metasyntax:Matchers.Metasyntax.t
   -> ?fresh:(unit -> string)
+  -> ?substitute_in_place:bool
   -> Matchers.Configuration.t
   -> single_source
   -> Matchers.Specification.t
@@ -26,6 +27,7 @@ val execute
   -> ?metasyntax:Matchers.Metasyntax.t
   -> ?fresh:(unit -> string)
   -> ?configuration:Matchers.Configuration.t
+  -> ?substitute_in_place:bool
   -> single_source
   -> Matchers.Specification.t
   -> output

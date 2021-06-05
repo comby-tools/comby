@@ -335,14 +335,9 @@ module Printer = struct
       | Json_lines of json_kind
       | Match_only
 
-    type replacement_output =
-      { output_format : output_format
-      ; substitution_kind : substitution_kind
-      }
+    val convert : output_options -> output_format
 
-    val convert : output_options -> replacement_output
-
-    val print : replacement_output -> string option -> Replacement.t list -> string -> string -> unit
+    val print : output_format -> string option -> Replacement.t list -> string -> string -> unit
 
   end = struct
 
@@ -364,44 +359,26 @@ module Printer = struct
       | Json_lines of json_kind
       | Match_only
 
-    type replacement_output =
-      { output_format : output_format
-      ; substitution_kind : substitution_kind
-      }
+    type replacement_output = output_format
 
-    let convert output_options : replacement_output =
-      let output_format =
-        match output_options with
-        | { interactive_review = Some _; _ } -> Interactive_review
-        | { overwrite_file_in_place = true; _ } -> Overwrite_file
-        | { stdout = true; _ } -> Stdout
-        | { json_lines = true; overwrite_file_in_place = false; json_only_diff; _ } ->
-          if json_only_diff then
-            Json_lines Only_diff
-          else
-            Json_lines Everything
-        | { diff = true; color = false; _ } ->
-          Diff Plain
-        | { color = true; _ }
-        | _ ->
-          Diff Colored
-      in
-      if output_options.substitute_in_place then
-        { output_format; substitution_kind = In_place }
-      else
-        { output_format; substitution_kind = Newline_separated }
+    let convert output_options : output_format =
+      match output_options with
+      | { interactive_review = Some _; _ } -> Interactive_review
+      | { overwrite_file_in_place = true; _ } -> Overwrite_file
+      | { stdout = true; _ } -> Stdout
+      | { json_lines = true; overwrite_file_in_place = false; json_only_diff; _ } ->
+        if json_only_diff then
+          Json_lines Only_diff
+        else
+          Json_lines Everything
+      | { diff = true; color = false; _ } ->
+        Diff Plain
+      | { color = true; _ }
+      | _ ->
+        Diff Colored
 
-    let print { output_format; substitution_kind } path replacements rewritten_source source_content =
-      let open Replacement in
+    let print output_format path replacements rewritten_source source_content =
       let ppf = Format.std_formatter in
-      let rewritten_source =
-        match substitution_kind with
-        | In_place -> rewritten_source
-        | Newline_separated ->
-          List.rev_map replacements ~f:(fun { replacement_content; _ } -> replacement_content)
-          |> String.concat ~sep:"\n"
-          |> Format.sprintf "%s\n"
-      in
       let print_if_some output = Option.value_map output ~default:() ~f:(Format.fprintf ppf "%s@.") in
       match output_format with
       | Stdout ->
@@ -435,6 +412,7 @@ type t =
   ; interactive_review : interactive_review option
   ; matcher : (module Matchers.Matcher.S)
   ; metasyntax : Matchers.Metasyntax.t option
+  ; substitute_in_place : bool
   }
 
 let emit_errors { input_options; output_options; _ } =
@@ -728,6 +706,7 @@ let create
           ; color
           ; count
           ; interactive_review
+          ; substitute_in_place
           ; _
           } as output_options)
      } as configuration)
@@ -820,7 +799,7 @@ let create
       Printer.Rewrite.convert output_options
       |> fun replacement_output ->
       if match_only && color then
-        Printer.Rewrite.print { replacement_output with output_format = Match_only } source_path replacements result source_content
+        Printer.Rewrite.print Match_only source_path replacements result source_content
       else
         Printer.Rewrite.print replacement_output source_path replacements result source_content
   in
@@ -834,4 +813,5 @@ let create
     ; output_printer
     ; interactive_review
     ; metasyntax
+    ; substitute_in_place
     }
