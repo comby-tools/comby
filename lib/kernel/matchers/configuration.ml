@@ -8,6 +8,7 @@ type t =
   ; disable_substring_matching : bool
   ; match_newline_toplevel : bool
   ; fresh : unit -> string
+  ; substitute_in_place : bool
   }
 
 let counter =
@@ -22,10 +23,12 @@ let create
     ?(significant_whitespace = false)
     ?(match_newline_toplevel = true)
     ?(fresh = counter)
+    ?(substitute_in_place = true)
     () =
   { match_kind
   ; significant_whitespace
   ; disable_substring_matching
   ; match_newline_toplevel
   ; fresh
+  ; substitute_in_place
   }

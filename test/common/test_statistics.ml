@@ -32,7 +32,7 @@ let %expect_test "statistics" =
   in
   Alpha.Go.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } ->
-      Rule.(sat @@ apply ~match_all:(Alpha.Generic.all ~rule:[Ast.True]) rule environment))
+      Rule.(sat @@ apply ~substitute_in_place:true ~match_all:(Alpha.Generic.all ~rule:[Ast.True]) rule environment))
   |> fun matches ->
   let statistics =
     Statistics.

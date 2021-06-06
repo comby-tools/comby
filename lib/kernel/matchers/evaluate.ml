@@ -24,7 +24,7 @@ let apply
     ?(external_handler = External.default_external)
     ?filepath
     ~(match_all:(?configuration:Configuration.t -> ?filepath:string -> template:string -> source:string -> unit -> Match.t list))
-    predicates
+    rule
     env =
   let (module Metasyntax) = Metasyntax.create metasyntax in
   let module External = struct let handler = external_handler end in
@@ -80,6 +80,7 @@ let apply
       let evaluate template case_expression =
         let template = substitute env template in
         let configuration = match_configuration_of_syntax template in
+        let configuration = { configuration with substitute_in_place } in
         if debug then Format.printf "Running for template %s source %s@." template source;
         match_all ~configuration ~template ~source () |> function
         | [] ->
@@ -109,6 +110,7 @@ let apply
       let template = substitute env match_template in
       let source = rewrite_substitute (Template.to_string t) env in
       let configuration = Configuration.create ~match_kind:Fuzzy () in
+      let configuration = { configuration with substitute_in_place } in
       let matches = match_all ~configuration ~template ~source () in
       let source = if substitute_in_place then Some source else None in
       let result = Rewrite.all ~metasyntax ?source ~rewrite_template matches in
@@ -129,7 +131,7 @@ let apply
     | Rewrite _ -> failwith "TODO/Invalid: Have not decided whether rewrite \":[x]\" is useful."
   in
 
-  List.fold predicates ~init:(true, None) ~f:(fun (sat, out) predicate ->
+  List.fold rule ~init:(true, None) ~f:(fun (sat, out) predicate ->
       if sat then
         let env =
           Option.value_map out

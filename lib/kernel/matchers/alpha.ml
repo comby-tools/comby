@@ -1013,7 +1013,7 @@ module Make (Lang : Types.Language.S) (Meta : Types.Metasyntax.S) (Ext : Types.E
                   Program.apply
                     ~metasyntax
                     ~external_handler
-                    ~substitute_in_place:true
+                    ~substitute_in_place:(!configuration_ref.substitute_in_place)
                     ?filepath
                     rule
                     environment
@@ -1120,18 +1120,20 @@ module Make (Lang : Types.Language.S) (Meta : Types.Metasyntax.S) (Ext : Types.E
   end = struct
 
     let apply
-        ?(substitute_in_place = true)
+        ?substitute_in_place
         ?metasyntax
         ?external_handler
         ?filepath
         rule
         env =
+      let Rule.{ nested } = Rule.options rule in
+      let subrule = if nested then [Types.Ast.True; Option "nested"] else [Types.Ast.True] in
       Evaluate.apply
-        ~substitute_in_place
+        ?substitute_in_place
         ?metasyntax
         ?external_handler
         ?filepath
-        ~match_all:(Matcher.all ~rule:[Types.Ast.True])
+        ~match_all:(Matcher.all ~rule:subrule)
         rule
         env
   end

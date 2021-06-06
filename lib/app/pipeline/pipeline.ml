@@ -268,6 +268,7 @@ let run
       ~disable_substring_matching
       ~match_kind:Fuzzy
       ~match_newline_toplevel
+      ~substitute_in_place
       ?fresh
       ()
   in

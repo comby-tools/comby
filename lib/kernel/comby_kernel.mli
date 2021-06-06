@@ -200,6 +200,7 @@ module Matchers : sig
       -> ?significant_whitespace:bool
       -> ?match_newline_toplevel:bool
       -> ?fresh:(unit -> string)
+      -> ?substitute_in_place:bool
       -> unit
       -> t
   end

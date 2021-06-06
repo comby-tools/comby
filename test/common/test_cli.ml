@@ -1284,3 +1284,29 @@ let%expect_test "test_nested_newline_rewrite" =
     foo(foo(x))
     foo(x)
     x|}]
+
+
+(**
+   echo 'qux { bar(bar(t)) } foo { bar(bar(bar(x))) }' | ./comby -stdin '$F {$BODY}' 'xoxo $BODY' -stdout -newline-separated -lang .generic -rule 'where nested, rewrite $BODY { bar($X) -> $F: $X }'  -custom-metasyntax test/example/metasyntax/dolla.json
+*)
+
+let%expect_test "test_nested_newline_rule_rewrite" =
+  let source = "qux { bar(bar(t)) } foo { bar(bar(bar(x))) }" in
+  let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
+  let match_ = "$F {$BODY}" in
+  let rule = "where nested, rewrite $BODY { bar($X) -> $F: $X }" in
+  let rewrite = ">$BODY<" in
+  let command_args =
+    Format.sprintf "-stdin -stdout -newline-separated -sequential -lang .generic -custom-metasyntax %s '%s' '%s' -rule '%s'" metasyntax_path match_ rewrite rule
+  in
+  let command = Format.sprintf "%s %s" binary_path command_args in
+  let result = read_expect_stdin_and_stdout command source in
+  print_string result;
+  [%expect{|
+    >qux: bar(t)
+    qux: t
+    <
+    > foo: bar(bar(x))
+     foo: bar(x)
+     foo: x
+    <|}]
