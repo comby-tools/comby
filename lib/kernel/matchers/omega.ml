@@ -154,7 +154,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
       | None ->
         if rewrite then
           begin
-            let result, _ = Template.substitute (Template.parse !rewrite_template) !current_environment_ref in
+            let result, _ = Template.substitute ?filepath:!filepath_ref (Template.parse !rewrite_template) !current_environment_ref in
             (* Don't just append, but replace the match context including constant
                strings. I.e., somewhere where we are appending the parth that matched, it
                shouldn't, and instead just ignore. *)
@@ -193,7 +193,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
           if debug then Format.printf "Some new env %s@." @@ Match.Environment.to_string env;
           current_environment_ref := env;
           begin
-            let result, _ = Template.substitute (Template.parse !rewrite_template) !current_environment_ref in
+            let result, _ = Template.substitute ?filepath:!filepath_ref (Template.parse !rewrite_template) !current_environment_ref in
             (* Don't just append, but replace the match context including constant
                strings. I.e., somewhere where we are appending the parth that matched, it
                shouldn't, and instead just ignore. *)

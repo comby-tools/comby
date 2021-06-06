@@ -88,6 +88,7 @@ module Make (Metasyntax : Types.Metasyntax.S) (External : Types.External.S) : Ty
     | "column"
     | "column.start" -> ColumnStart
     | "column.end" -> ColumnEnd
+    | "file"
     | "file.path" -> FilePath
     | "file.name" -> FileName
     | "file.directory" -> FileDirectory
@@ -119,6 +120,7 @@ module Make (Metasyntax : Types.Metasyntax.S) (External : Types.External.S) : Ty
       ; string "file.path"
       ; string "file.name"
       ; string "file.directory"
+      ; string "file"
       ; string "lowercase"
       ; string "UPPERCASE"
       ; string "Capitalize"

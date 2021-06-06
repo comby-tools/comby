@@ -111,11 +111,15 @@ let apply
       let source = rewrite_substitute (Template.to_string t) env in
       let configuration = Configuration.create ~match_kind:Fuzzy () in
       let configuration = { configuration with substitute_in_place } in
-      let matches = match_all ~configuration ~template ~source () in
+      let matches = match_all ?filepath ~configuration ~template ~source () in
       let source = if substitute_in_place then Some source else None in
-      let result = Rewrite.all ~metasyntax ?source ~rewrite_template matches in
+      let result = Rewrite.all ~metasyntax ?filepath ?source ~rewrite_template matches in
       if Option.is_empty result then
-        true, Some env (* rewrites are always sat. *)
+        (if substitute_in_place then
+           (* rewrites are always sat for in-place. always unsat for newline-sep. *)
+           true, Some env
+         else
+           false, Some env)
       else
         let Replacement.{ rewritten_source; _ } = Option.value_exn result in
         (* substitute for variables that are in the outside scope *)

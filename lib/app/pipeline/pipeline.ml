@@ -82,8 +82,11 @@ let process_single_source
     | Some rewrite_template ->
       match matches with
       | [] ->
-        (* If there are no matches, return the original source (for editor support). *)
-        Replacement ([], input_text, 0)
+        (* If there are no matches, return the original source (for editor support) if substitute_in_place is active. *)
+        if substitute_in_place then
+          Replacement ([], input_text, 0)
+        else
+          Nothing
       | matches ->
         (* FIXME this should be configured where it's done in command_configuration.ml *)
         let external_handler = External_semantic.lsif_hover in
