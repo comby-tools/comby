@@ -1,5 +1,7 @@
 open Matchers
 
+module Script = Script.Make (Metasyntax.Default) (External.Default)
+
 let run input =
   let result =
     match Script.parse input with

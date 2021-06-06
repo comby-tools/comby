@@ -46,11 +46,11 @@ let actual = Buffer.create 10
 
 let rewrite_template = ref ""
 
-module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
+module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.S) = struct
   module rec Matcher : Types.Matcher.S = struct
     include Language.Info
 
-    module Template = Template.Make(Meta)
+    module Template = Template.Make(Meta)(Ext)
 
     let wildcard = "_"
 
@@ -164,10 +164,19 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       | Some rule ->
         push_environment_ref := !current_environment_ref;
         push_implicit_equals_match_satisfied := !implicit_equals_match_satisfied;
-        (* FIXME Metasyntax should be propagated here. *)
+        (* FIXME we should not have to convert here. Pass module, but after fixing this functor's signature. *)
+        let metasyntax =
+          Metasyntax.
+            { syntax = Meta.syntax
+            ; identifier = Meta.identifier
+            ; aliases = Meta.aliases
+            }
+        in
+        let external_handler = Ext.handler in
         let sat, env =
           Program.apply
-            ~metasyntax:Metasyntax.default_metasyntax
+            ~metasyntax
+            ~external_handler
             ~substitute_in_place:true
             ?filepath:!filepath_ref
             rule
@@ -1014,7 +1023,13 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
       push_matches_ref := !matches_ref;
       configuration_ref := Option.value configuration ~default:!configuration_ref;
       let Rule.{ nested } = Rule.options rule in
-      let template, rule = Preprocess.map_aliases template (Some rule) Meta.aliases in
+      let template, rule =
+        Preprocess.map_aliases
+          (module Meta)
+          (module Ext)
+          template
+          (Some rule)
+      in
       let rec aux_all ?configuration ?(nested = false) ~template ~source () =
         matches_ref := [];
         if String.is_empty template && String.is_empty source then [trivial]
@@ -1101,6 +1116,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
     val apply
       :  ?substitute_in_place:bool
       -> ?metasyntax:Metasyntax.t
+      -> ?external_handler:External.t
       -> ?filepath:string
       -> Rule.t
       -> Match.environment
@@ -1109,12 +1125,14 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) = struct
     let apply
         ?(substitute_in_place = true)
         ?metasyntax
+        ?external_handler
         ?filepath
         rule
         env =
       Evaluate.apply
         ~substitute_in_place
         ?metasyntax
+        ?external_handler
         ?filepath
         ~match_all:(Matcher.all ~rule:[Types.Ast.True])
         rule

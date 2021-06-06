@@ -11,7 +11,6 @@ type t =
 let create ?rewrite_template ?rule ~match_template () =
   { match_template; rule; rewrite_template }
 
-
 let identifier_parser () =
   many (Omega_parser_helper.alphanum <|> char '_')
   >>| String.of_char_list

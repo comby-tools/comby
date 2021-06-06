@@ -1245,17 +1245,17 @@ let%expect_test "test_custom_metasyntax_substitute" =
   print_string result;
   [%expect "$A hello"]
 
-let%expect_test "test_custom_metasyntax_partial_rule_support" =
+let%expect_test "test_custom_metasyntax_rule_support" =
   let source = "a(b)" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
   let command_args =
-    Format.sprintf {|'$A($B)' '$A $B' -rule 'where rewrite :[A] { "$C~a$" -> "$C" }' -stdin -custom-metasyntax %s -stdout -matcher .generic|} metasyntax_path
+    Format.sprintf {|'$A($B)' '$A $B' -rule 'where rewrite $A { "$C~a$" -> "$C" }' -stdin -custom-metasyntax %s -stdout -matcher .generic|} metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
   [%expect "
-    $C b"]
+    a b"]
 
 let%expect_test "test_custom_metasyntax_reserved_identifiers" =
   let source = "fun f -> (fun x -> f (x x)) (fun x -> f (x x))" in

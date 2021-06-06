@@ -75,12 +75,14 @@ let substitute_fresh
 
 let substitute_in_rewrite_template
     ?fresh
+    ?(external_handler = External.default_external)
     ?(metasyntax = Metasyntax.default_metasyntax)
     ?filepath
     template
     environment =
   let (module M) = Metasyntax.create metasyntax in
-  let module Template_parser = Template.Make(M) in
+  let module External = struct let handler = external_handler end in
+  let module Template_parser = Template.Make(M)(External) in (* FIXME factor out Template_parser *)
   let template = substitute_fresh ~metasyntax ?fresh template in
   let terms = Template_parser.parse template in
   let replacement_content, environment = Template_parser.substitute ?filepath terms environment in
@@ -92,8 +94,15 @@ let substitute_in_rewrite_template
       }
   }
 
-let substitute ?(metasyntax = Metasyntax.default_metasyntax) ?fresh ?filepath template env =
-  let { replacement_content; _ } = substitute_in_rewrite_template ?fresh ?filepath ~metasyntax template env
+let substitute
+    ?(metasyntax = Metasyntax.default_metasyntax)
+    ?external_handler
+    ?fresh
+    ?filepath
+    template
+    env =
+  let { replacement_content; _ } =
+    substitute_in_rewrite_template ~metasyntax ?external_handler ?fresh ?filepath template env
   in replacement_content
 
 let substitute_matches (matches: Match.t list) source replacements =
@@ -115,19 +124,20 @@ let substitute_matches (matches: Match.t list) source replacements =
   ; in_place_substitutions
   }
 
-let all ?source ?metasyntax ?fresh ?filepath ~rewrite_template rev_matches : result option =
+(* FIXME: all the functors help nothing if we end up calling this without parameterizing by metasyntax, etc. *)
+let all ?source ?metasyntax ?external_handler ?fresh ?filepath ~rewrite_template rev_matches : result option =
   Option.some_if (not (List.is_empty rev_matches)) @@
   match source with
   (* in-place substitution *)
   | Some source ->
     rev_matches
-    |> List.map ~f:(fun Match.{ environment; _ } -> substitute_in_rewrite_template ?filepath ?metasyntax ?fresh rewrite_template environment)
+    |> List.map ~f:(fun Match.{ environment; _ } -> substitute_in_rewrite_template ?filepath ?metasyntax ?external_handler ?fresh rewrite_template environment)
     |> substitute_matches rev_matches source
   (* no in place substitution, emit result separated by newlines *)
   | None ->
     let buf = Buffer.create 20 in
     List.iter rev_matches ~f:(fun m ->
-        substitute_in_rewrite_template ?metasyntax ?fresh rewrite_template m.environment
+        substitute_in_rewrite_template ?metasyntax ?external_handler ?fresh rewrite_template m.environment
         |> fun { replacement_content; _ } ->
         Buffer.add_string buf replacement_content;
         Buffer.add_char buf '\n');

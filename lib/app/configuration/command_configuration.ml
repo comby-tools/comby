@@ -104,15 +104,15 @@ let read filename =
   String.chop_suffix template ~suffix:"\n"
   |> Option.value ~default:template
 
-let create_rule rule =
-  match Option.map rule ~f:Matchers.Rule.create with
+let create_rule ~metasyntax rule =
+  match Option.map rule ~f:(Matchers.Rule.create ?metasyntax) with
   | None -> None
   | Some Ok rule -> Some rule
   | Some Error error ->
     Format.eprintf "Rule parse error: %s@." (Error.to_string_hum error);
     exit 1
 
-let parse_toml path =
+let parse_toml ?metasyntax path =
   let open Toml.Types in
   let toml = Toml.Parser.(from_filename path |> unsafe) in
   let toml = Table.remove (Toml.Min.key "flags") toml in
@@ -135,7 +135,7 @@ let parse_toml path =
           Format.eprintf "A 'match' key is required for entry %s@." name;
           exit 1
       in
-      let rule = Table.find_opt (Toml.Min.key "rule") t |> to_string |> create_rule in
+      let rule = Table.find_opt (Toml.Min.key "rule") t |> to_string |> create_rule ~metasyntax in
       let rewrite_template = Table.find_opt (Toml.Min.key "rewrite") t |> to_string in
       if debug then Format.printf "Processed ->%s<-@." match_template;
       (name, (Matchers.Specification.create ~match_template ?rule ?rewrite_template ()))::acc
@@ -147,7 +147,7 @@ let parse_toml path =
   |> List.sort ~compare:(fun x y -> String.compare (fst x) (fst y))
   |> List.map ~f:snd
 
-let parse_templates ?(warn_for_missing_file_in_dir = false) paths =
+let parse_templates ?metasyntax ?(warn_for_missing_file_in_dir = false) paths =
   let parse_directory path =
     let read_optional filename =
       match read filename with
@@ -159,7 +159,7 @@ let parse_templates ?(warn_for_missing_file_in_dir = false) paths =
       if warn_for_missing_file_in_dir then Format.eprintf "WARNING: Could not read required match file in %s@." path;
       None
     | Some match_template ->
-      let rule = create_rule @@ read_optional (path ^/ "rule") in
+      let rule = create_rule ~metasyntax @@ read_optional (path ^/ "rule") in
       let rewrite_template = read_optional (path ^/ "rewrite") in
       Matchers.Specification.create ~match_template ?rule ?rewrite_template ()
       |> Option.some
@@ -181,7 +181,7 @@ let parse_templates ?(warn_for_missing_file_in_dir = false) paths =
       if Sys.is_directory path = `Yes then
         fold_directory path ~sorted:true ~init:[] ~f
       else
-        parse_toml path)
+        parse_toml ?metasyntax path)
 
 type interactive_review =
   { editor : string
@@ -415,6 +415,23 @@ type t =
   ; substitute_in_place : bool
   }
 
+let parse_metasyntax metasyntax_path =
+  match metasyntax_path with
+  | None -> Matchers.Metasyntax.default_metasyntax
+  | Some metasyntax_path ->
+    match Sys.file_exists metasyntax_path with
+    | `No | `Unknown ->
+      Format.eprintf "Could not open file: %s@." metasyntax_path;
+      exit 1
+    | `Yes ->
+      Yojson.Safe.from_file metasyntax_path
+      |> Matchers.Metasyntax.of_yojson
+      |> function
+      | Ok c -> c
+      | Error error ->
+        Format.eprintf "%s@." error;
+        exit 1
+
 let emit_errors { input_options; output_options; _ } =
   let error_on =
     [ input_options.stdin && Option.is_some input_options.zip_file
@@ -477,7 +494,7 @@ let emit_errors { input_options; output_options; _ } =
          Option.value_exn message
        else
          "UNREACHABLE")
-    ; (let result = Matchers.Rule.create input_options.rule in
+    ; (let result = Matchers.Rule.create ~metasyntax:(parse_metasyntax input_options.custom_metasyntax) input_options.rule in
        Or_error.is_error result
      , if Or_error.is_error result then
          Format.sprintf "Match rule parse error: %s@." @@
@@ -513,7 +530,7 @@ let emit_warnings { input_options; output_options; _ } =
          | None, Some ({ match_template; _ } : anonymous_arguments) ->
            [ match_template ]
          | Some templates, _ ->
-           List.map (parse_templates templates) ~f:(fun { match_template; _ } -> match_template)
+           List.map (parse_templates ~metasyntax:(parse_metasyntax input_options.custom_metasyntax) templates) ~f:(fun { match_template; _ } -> match_template)
          | _ -> assert false
        in
        List.exists match_templates ~f:(fun match_template ->
@@ -574,23 +591,6 @@ let filter_zip_entries file_filters exclude_directory_prefix exclude_file_prefix
         && not (exclude_the_file exclude_file_prefix (Filename.basename filename))
         && has_acceptable_suffix filename)
 
-let metasyntax metasyntax_path =
-  match metasyntax_path with
-  | None -> Matchers.Metasyntax.default_metasyntax
-  | Some metasyntax_path ->
-    match Sys.file_exists metasyntax_path with
-    | `No | `Unknown ->
-      Format.eprintf "Could not open file: %s@." metasyntax_path;
-      exit 1
-    | `Yes ->
-      Yojson.Safe.from_file metasyntax_path
-      |> Matchers.Metasyntax.of_yojson
-      |> function
-      | Ok c -> c
-      | Error error ->
-        Format.eprintf "%s@." error;
-        exit 1
-
 let syntax custom_matcher_path =
   match
     Sys.file_exists custom_matcher_path with
@@ -622,40 +622,47 @@ let extension file_filters =
     | _, Some extension -> "." ^ extension
     | extension, None -> "." ^ extension
 
-let of_extension (module E : Matchers.Engine.S) file_filters =
+let of_extension (module Engine : Matchers.Engine.S) (module External : Matchers.External.S) file_filters =
+  let external_handler = External.handler in
   let extension = extension file_filters in
-  match E.select_with_extension extension with
+  match Engine.select_with_extension extension ~external_handler with
   | Some matcher -> matcher, Some extension, None
-  | None -> (module E.Generic), Some extension, None
+  | None -> (module Engine.Generic), Some extension, None
 
 let select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega =
-  let (module E : Matchers.Engine.S) =
+  let (module Engine : Matchers.Engine.S) =
     if omega then
       (module Matchers.Omega)
     else
       (module Matchers.Alpha)
   in
+  let module External = struct let handler = External_semantic.lsif_hover end in
+  if debug then Format.printf "Set custom external@.";
   match custom_matcher, override_matcher, custom_metasyntax with
   | Some custom_matcher, _, custom_metasyntax ->
     (* custom matcher, optional custom metasyntax *)
-    let metasyntax = metasyntax custom_metasyntax in
+    let metasyntax = parse_metasyntax custom_metasyntax in
     let syntax = syntax custom_matcher in
-    E.create ~metasyntax syntax, None, Some metasyntax
+    if debug then Format.printf "Engine.create@.";
+    Engine.create ~metasyntax syntax, None, Some metasyntax
   | _, Some language, custom_metasyntax ->
     (* forced language, optional custom metasyntax *)
-    let metasyntax = metasyntax custom_metasyntax in
+    let metasyntax = parse_metasyntax custom_metasyntax in
     let (module Metasyntax) = Matchers.Metasyntax.create metasyntax in
     let (module Language) = force_language language in
-    (module (E.Make (Language) (Metasyntax)) : Matchers.Matcher.S), None, Some metasyntax
+    if debug then Format.printf "Engine.Make@.";
+    (module (Engine.Make (Language) (Metasyntax) (External)) : Matchers.Matcher.S), None, Some metasyntax
   | _, _, Some custom_metasyntax ->
     (* infer language from file filters, definite custom metasyntax *)
-    let metasyntax = metasyntax (Some custom_metasyntax) in
+    let metasyntax = parse_metasyntax (Some custom_metasyntax) in
     let (module Metasyntax) = Matchers.Metasyntax.create metasyntax in
     let (module Language) = force_language (extension file_filters) in
-    (module (E.Make (Language) (Metasyntax)) : Matchers.Matcher.S), None, Some metasyntax
+    if debug then Format.printf "Engine.Make2@.";
+    (module (Engine.Make (Language) (Metasyntax) (External)) : Matchers.Matcher.S), None, Some metasyntax
   | _, _, None ->
     (* infer language from file filters, use default metasyntax *)
-    of_extension (module E) file_filters
+    if debug then Format.printf "Engine.Infer@.";
+    of_extension (module Engine) (module External) file_filters
 
 let regex_of_specifications specifications =
   Format.sprintf "(%s)"
@@ -714,7 +721,7 @@ let create
   let open Or_error in
   emit_errors configuration >>= fun () ->
   emit_warnings configuration >>= fun () ->
-  let rule =  Matchers.Rule.create rule |> Or_error.ok_exn in
+  let rule =  Matchers.Rule.create ~metasyntax:(parse_metasyntax custom_metasyntax) rule |> Or_error.ok_exn in
   let specifications =
     match templates, anonymous_arguments with
     | None, Some { match_template; rewrite_template; _ } ->

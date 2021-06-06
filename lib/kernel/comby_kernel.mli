@@ -335,6 +335,17 @@ module Matchers : sig
 
   type metasyntax = Metasyntax.t
 
+  module External : sig
+    type t = name:string -> filepath:string -> line:int -> column:int -> string option
+
+    module type S = sig
+      val handler : t
+    end
+
+    (** A module representing the default external handler *)
+    module Default : S
+  end
+
   (** {3 Template}
 
       Parse a template based on metasynax *)
@@ -350,7 +361,6 @@ module Matchers : sig
       | LineEnd
       | ColumnStart
       | ColumnEnd
-      | LsifHover
       | FileName
       | FilePath
       | FileDirectory
@@ -362,6 +372,7 @@ module Matchers : sig
       | LowerCamelCase
       | UpperSnakeCase
       | LowerSnakeCase
+      | External of string
 
     type syntax =
       { variable : string
@@ -379,7 +390,7 @@ module Matchers : sig
     type t = atom list
     [@@deriving sexp]
 
-    module Make : Metasyntax.S -> sig
+    module Make : Metasyntax.S -> External.S -> sig
         val parse : string -> t
         val variables : string -> syntax list
       end
@@ -460,7 +471,11 @@ module Matchers : sig
       { nested : bool
       }
 
-    val create : string -> t Core_kernel.Or_error.t
+    val create
+      :  ?metasyntax:metasyntax
+      -> ?external_handler:External.t
+      -> string
+      -> t Core_kernel.Or_error.t
 
     val options : t -> options
 
@@ -476,20 +491,21 @@ module Matchers : sig
         [substitute_in_place] is true, rewrite rules substitute their values in
         place (default true). [fresh] introduces fresh variables for evaluating
         rules. [metasyntax] uses the custom metasyntax definition. *)
-    val apply :
-      ?substitute_in_place:bool ->
-      ?metasyntax:Metasyntax.t ->
-      ?filepath:string ->
-      match_all:(
-        ?configuration:Configuration.t ->
-        ?filepath:string ->
-        template:string ->
-        source:string ->
-        unit ->
-        Match.t list
-      ) ->
-      Ast.expression list ->
-      Match.Environment.t -> result
+    val apply
+      :  ?substitute_in_place:bool
+      -> ?metasyntax:Metasyntax.t
+      -> ?external_handler:External.t
+      -> ?filepath:string
+      -> match_all:(
+          ?configuration:Configuration.t
+          -> ?filepath:string
+          -> template:string
+          -> source:string
+          -> unit
+          -> Match.t list)
+      -> Ast.expression list
+      -> Match.Environment.t
+      -> result
   end
 
   type rule = Rule.t
@@ -651,7 +667,7 @@ module Matchers : sig
 
   module Engine : sig
     module type S = sig
-      module Make : Language.S -> Metasyntax.S -> Matcher.S
+      module Make : Language.S -> Metasyntax.S -> External.S -> Matcher.S
 
       (** {4 Supported Matchers} *)
       module Text : Matcher.S
@@ -710,18 +726,27 @@ module Matchers : sig
       (** [all] returns all default matchers. *)
       val all : (module Matcher.S) list
 
-      (** [select_with_extension metasyntax file_extension] is a convenience
-          function that returns a matcher associated with a [file_extension]. E.g.,
-          use ".c" to get the C matcher. For a full list of extensions associated
-          with matchers, run comby -list. If [metasyntax] is specified, the matcher
-          will use a custom metasyntax definition instead of the default. *)
-      val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matcher.S) option
+      (** [select_with_extension metasyntax external file_extension] is a
+          convenience function that returns a matcher associated with a
+          [file_extension]. E.g., use ".c" to get the C matcher. For a full list
+          of extensions associated with matchers, run comby -list. If
+          [metasyntax] is specified, the matcher will use a custom metasyntax
+          definition instead of the default. An experimental [external] callback
+          is a general callback for handling external properties in the rewrite
+          template. *)
+      val select_with_extension
+        :  ?metasyntax:Metasyntax.t
+        -> ?external_handler:External.t
+        -> string
+        -> (module Matcher.S) option
 
 
-      (** [create metasyntax syntax] creates a matcher for a language defined by
-          [syntax]. If [metasyntax] is specified, the matcher will use a custom
-          metasyntax definition instead of the default. *)
-      val create : ?metasyntax:Metasyntax.t -> Language.Syntax.t -> (module Matcher.S)
+      (** [create metasyntax external syntax] creates a matcher for a language
+          defined by [syntax]. If [metasyntax] is specified, the matcher will use
+          a custom metasyntax definition instead of the default. An experimental
+          [external] callback is a general callback for handling external
+          properties in the rewrite template. *)
+      val create : ?metasyntax:metasyntax -> ?external_handler:External.t -> Language.Syntax.t -> (module Matcher.S)
     end
   end
 
@@ -741,7 +766,7 @@ module Matchers : sig
 
       Defines rewrite operations.  *)
   module Rewrite : sig
-    (** [all source metasyntax fresh rewrite_template matches] substitutes
+    (** [all source metasyntax external fresh rewrite_template matches] substitutes
         [rewrite_template] with each match in [matches] to create a rewrite result.
         If [source] is specified, each rewrite result is substituted in-place in
         the source. If [source] is not specified, rewritten matches are
@@ -755,13 +780,14 @@ module Matchers : sig
     val all
       :  ?source:string
       -> ?metasyntax:metasyntax
+      -> ?external_handler:External.t
       -> ?fresh:(unit -> string)
       -> ?filepath:string
       -> rewrite_template:string
       -> match' list
       -> replacement option
 
-    (** [substitute metasyntax fresh template environment] substitutes
+    (** [substitute metasyntax external fresh template environment] substitutes
         [template] with the variable and value pairs in the [environment]. It
         returns the result after substitution. If [metasyntax] is defined, the
         rewrite template will respect custom metasyntax definitions.
@@ -770,9 +796,12 @@ module Matchers : sig
         specified, the default behavior substitutes :[id()] starting with 1, and
         subsequent :[id()] values increment the ID. If [fresh] is set,
         substitutes the pattern :[id()] with the value of fresh () as the hole is
-        encountered, left to right. *)
+        encountered, left to right. An experimental [external] callback is a
+        general callback for handling external properties in the rewrite
+        template. *)
     val substitute
       :  ?metasyntax:metasyntax
+      -> ?external_handler:External.t
       -> ?fresh:(unit -> string)
       -> ?filepath:string
       -> string

@@ -116,6 +116,14 @@ module Metasyntax = struct
   end
 end
 
+module External = struct
+  type t = name:string -> filepath:string -> line:int -> column:int -> string option
+
+  module type S = sig
+    val handler : t
+  end
+end
+
 type production =
   | Unit
   | String of string
@@ -132,7 +140,6 @@ module Template = struct
     | LineEnd
     | ColumnStart
     | ColumnEnd
-    | LsifHover
     | FileName
     | FilePath
     | FileDirectory
@@ -144,6 +151,7 @@ module Template = struct
     | LowerCamelCase
     | UpperSnakeCase
     | LowerSnakeCase
+    | External of string
   [@@deriving sexp]
 
   type syntax =
@@ -161,6 +169,21 @@ module Template = struct
 
   type t = atom list
   [@@deriving sexp]
+
+  module type S = sig
+
+    module Matching : sig
+      val hole_parsers : (Hole.sort * string Vangstrom.t) list
+    end
+
+    val parse : string -> t
+
+    val variables : string -> syntax list
+
+    val to_string : t -> string
+
+    val substitute : ?filepath:string -> t -> Match.Environment.t -> (string * Match.Environment.t)
+  end
 end
 
 module Ast = struct
@@ -187,6 +210,10 @@ end
 module Rule = struct
   type t = Ast.expression list
   [@@deriving sexp]
+
+  module type S = sig
+    val create : string -> (Ast.expression list, Error.t) result
+  end
 end
 
 module Matcher = struct
@@ -216,7 +243,7 @@ end
 
 module Engine = struct
   module type S = sig
-    module Make : Language.S -> Metasyntax.S -> Matcher.S
+    module Make : Language.S -> Metasyntax.S -> External.S -> Matcher.S
 
     module Text : Matcher.S
     module Paren : Matcher.S
@@ -272,7 +299,7 @@ module Engine = struct
     module C_nested_comments : Matcher.S
 
     val all : (module Matcher.S) list
-    val select_with_extension : ?metasyntax:Metasyntax.t -> string -> (module Matcher.S) option
-    val create : ?metasyntax:Metasyntax.t -> Language.Syntax.t -> (module Matcher.S)
+    val select_with_extension : ?metasyntax:Metasyntax.t -> ?external_handler:External.t -> string -> (module Matcher.S) option
+    val create : ?metasyntax:Metasyntax.t -> ?external_handler:External.t -> Language.Syntax.t -> (module Matcher.S)
   end
 end

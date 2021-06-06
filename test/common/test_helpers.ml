@@ -48,7 +48,7 @@ let make_env bindings =
 
 let parse_template metasyntax template =
   let (module M) = Matchers.Metasyntax.create metasyntax in
-  let module Template_parser = Template.Make(M) in
+  let module Template_parser = Template.Make(M)(External.Default) in
   let tree = Template_parser.parse template in
   Sexp.to_string_hum (Template.sexp_of_t tree)
 

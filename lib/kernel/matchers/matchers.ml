@@ -1,6 +1,7 @@
 module Configuration = Configuration
 module Languages = Languages
 module Metasyntax = Metasyntax
+module External = External
 module Rule = Rule
 module Ast = struct
   include Types.Ast

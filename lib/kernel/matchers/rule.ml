@@ -3,9 +3,10 @@ open Vangstrom
 
 open Types.Ast
 
-module Template = Template.Make(Metasyntax.Default)
 
-module Parser = struct
+module Make (Metasyntax : Types.Metasyntax.S) (External : Types.External.S) = struct
+
+  module Template = Template.Make (Metasyntax) (External)
 
   let is_whitespace = function
     | ' ' | '\t' | '\r' | '\n' -> true
@@ -30,12 +31,6 @@ module Parser = struct
     | [] -> String ""
     | [ Constant c ] -> String c
     | t -> Template t
-
-  let variable_parser =
-    lift3 (fun _ v _ -> String.of_char_list v)
-      (string Syntax.variable_left_delimiter)
-      (many (alphanum <|> char '_'))
-      (string Syntax.variable_right_delimiter)
 
   (** Interpret escape sequences inside quotes *)
   let char_token_s =
@@ -215,6 +210,15 @@ end
 
 type t = Types.Rule.t
 [@@deriving sexp]
+
+let create
+    ?(metasyntax = Metasyntax.default_metasyntax)
+    ?(external_handler = External.default_external)
+    rule =
+  let (module Metasyntax) = Metasyntax.create metasyntax in
+  let module External = struct let handler = external_handler end in
+  let (module Rule : Types.Rule.S) = (module (Make (Metasyntax) (External))) in
+  Rule.create rule
 
 type options =
   { nested : bool

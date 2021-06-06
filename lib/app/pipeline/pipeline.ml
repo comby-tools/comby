@@ -85,8 +85,10 @@ let process_single_source
         (* If there are no matches, return the original source (for editor support). *)
         Replacement ([], input_text, 0)
       | matches ->
+        (* FIXME this should be configured where it's done in command_configuration.ml *)
+        let external_handler = External_semantic.lsif_hover in
         let source = if substitute_in_place then Some input_text else None in
-        match Rewrite.all ?source ?metasyntax ?fresh ?filepath ~rewrite_template matches with
+        match Rewrite.all ?source ?metasyntax ?fresh ?filepath ~external_handler ~rewrite_template matches with
         | None -> Nothing
         | Some { rewritten_source; in_place_substitutions } ->
           Replacement (in_place_substitutions, rewritten_source, List.length matches)

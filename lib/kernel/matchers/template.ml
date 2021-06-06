@@ -9,7 +9,7 @@ let debug =
   | exception Not_found -> false
   | _ -> true
 
-module Make (Metasyntax : Types.Metasyntax.S) = struct
+module Make (Metasyntax : Types.Metasyntax.S) (External : Types.External.S) : Types.Template.S = struct
 
   let up_to p =
     many1 (not_followed_by p *> any_char)
@@ -88,7 +88,6 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     | "column"
     | "column.start" -> ColumnStart
     | "column.end" -> ColumnEnd
-    | "lsif.hover" -> LsifHover
     | "file.path" -> FilePath
     | "file.name" -> FileName
     | "file.directory" -> FileDirectory
@@ -100,6 +99,7 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     | "lowerCamelCase" -> LowerCamelCase
     | "UPPER_SNAKE_CASE" -> UpperSnakeCase
     | "lower_snake_case" -> LowerSnakeCase
+    | "lsif.hover" -> External "lsif.hover"
     | s -> failwith @@ Format.sprintf "invalid attribute %S" s
 
   let attribute_access () =
@@ -116,7 +116,6 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
       ; string "column.start"
       ; string "column.end"
       ; string "column"
-      ; string "lsif.hover"
       ; string "file.path"
       ; string "file.name"
       ; string "file.directory"
@@ -128,6 +127,7 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
       ; string "lowerCamelCase"
       ; string "UPPER_SNAKE_CASE"
       ; string "lower_snake_case"
+      ; string "lsif.hover"
       ]
     <* not_followed_by (Omega_parser_helper.alphanum)
 
@@ -174,7 +174,7 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
     many @@ choice
       [ (pos >>= fun offset -> hole >>| fun (pattern, variable, kind) ->
          Hole { pattern; variable; offset; kind = attribute_to_kind kind })
-      ; ((up_to (choice rewrite_hole_parsers)) >>| fun c -> Constant (String.of_char_list c))
+      ; (up_to (choice rewrite_hole_parsers) >>| fun c -> Constant (String.of_char_list c))
       ]
 
   let parse template =
@@ -261,29 +261,6 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
       let _, column = Match.Offset.convert_fast ~offset index in
       Int.to_string column
 
-    | LsifHover ->
-      filepath >>= fun filepath ->
-      if debug then Format.printf "File for lsif.hover lookup: %s@." filepath;
-      Environment.lookup env variable >>= fun value ->
-      Environment.lookup_range env variable
-      >>= fun { match_start = { offset; _ }; _ } ->
-      if debug then Format.printf "Var offset is %d@." offset;
-      let source = In_channel.read_all filepath in (* Inefficient. *)
-      if debug then Format.printf "Read filepath, source len is %d@." @@ String.length source;
-      String.chop_prefix_if_exists filepath ~prefix:(Sys.getcwd ()) |> fun filepath_relative_root ->
-      if debug then Format.printf "File relative root: %s@." filepath;
-      let index = Match.Offset.index ~source in
-      let line, column = Match.Offset.convert_fast ~offset index in
-      let line, column = line - 1, column - 1 + String.length value - 1 in
-      if debug then Format.printf "Querying type at %d::%d@." line column;
-      let context =
-        Comby_semantic.Lsif.Context.
-          { repository = "github.com/sourcegraph/sourcegraph"
-          ; lsif_endpoint = "https://sourcegraph.com/.api/graphql"
-          ; formatting = Markdown ("```go", "```") (* Expose. *)
-          }
-      in
-      Comby_semantic.Lsif.hover_at context ~filepath:filepath_relative_root ~line ~column
     | FilePath -> filepath
     | FileName -> filepath >>| Filename.basename
     | FileDirectory -> filepath >>| Filename.dirname
@@ -319,6 +296,22 @@ module Make (Metasyntax : Types.Metasyntax.S) = struct
       Environment.lookup env variable
       >>| camel_to_snake
       >>| String.lowercase
+
+    | External "lsif.hover" ->
+      filepath >>= fun filepath ->
+      if debug then Format.printf "File for lsif.hover lookup: %s@." filepath;
+      Environment.lookup env variable >>= fun value ->
+      Environment.lookup_range env variable
+      >>= fun { match_start = { offset; _ }; _ } ->
+      let source = In_channel.read_all filepath in (* Inefficient. *)
+      if debug then Format.printf "Read filepath, source len is %d@." @@ String.length source;
+      let index = Match.Offset.index ~source in
+      let line, column = Match.Offset.convert_fast ~offset index in
+      let line, column = line - 1, column - 1 + String.length value - 1 in
+      if debug then Format.printf "Var offset:%d line:%d col:%d @." offset line column;
+      External.handler ~name:"lsif.hover" ~filepath ~line ~column
+
+    | External _ -> assert false
 
   let substitute ?filepath template environment =
     let replacement_content, environment', _ =

@@ -45,7 +45,7 @@ let is_not p s =
 type 'a literal_parser_callback = contents:string -> left_delimiter:string -> right_delimiter:string -> 'a
 type 'a nested_delimiter_callback = left_delimiter:string -> right_delimiter:string -> 'a
 
-module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
+module Make (Lang : Types.Language.S) (Meta : Types.Metasyntax.S) (Ext : Types.External.S) = struct
   module rec Matcher : Types.Matcher.S = struct
     module Syntax = Lang.Syntax
     include Lang.Info
@@ -961,7 +961,13 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
     let all ?configuration ?filepath ?(rule = [Types.Ast.True]) ~template ~source:original_source () : Match.t list =
       let _ : string option = filepath in
       let Rule.{ nested } = Rule.options rule in
-      let template, rule = Preprocess.map_aliases template (Some rule) Meta.aliases in
+      let template, rule =
+        Preprocess.map_aliases
+          (module Meta)
+          (module Ext)
+          template
+          (Some rule)
+      in
       let rule = Option.value_exn rule in (* OK in this case *)
       let rec aux_all ?configuration ?(nested = false) ~template ~source:original_source () =
         let open Or_error in
@@ -994,8 +1000,24 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
               let result = { result with matched } in
               let result =
                 if debug then Format.printf "Rule: %s@." (Sexp.to_string @@ Rule.sexp_of_t rule);
-                (* FIXME metasyntax should propagate *)
-                let sat, env = Program.apply ~metasyntax:Metasyntax.default_metasyntax ~substitute_in_place:true ?filepath rule environment in
+                (* FIXME we should not have to convert here. Pass module, but after fixing this functor's signature. *)
+                let metasyntax =
+                  Metasyntax.
+                    { syntax = Meta.syntax
+                    ; identifier = Meta.identifier
+                    ; aliases = Meta.aliases
+                    }
+                in
+                let external_handler = Ext.handler in
+                let sat, env =
+                  Program.apply
+                    ~metasyntax
+                    ~external_handler
+                    ~substitute_in_place:true
+                    ?filepath
+                    rule
+                    environment
+                in
                 if debug && Option.is_some env then Format.printf "Got back: %b %S" sat (Match.Environment.to_string @@ Option.value_exn env);
                 let new_env = if sat then env else None in
                 match new_env with
@@ -1090,6 +1112,7 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
     val apply
       :  ?substitute_in_place:bool
       -> ?metasyntax:Types.Metasyntax.t
+      -> ?external_handler:Types.External.t
       -> ?filepath:string
       -> Rule.t
       -> Match.environment
@@ -1099,12 +1122,14 @@ module Make (Lang : Types.Language.S) (Meta : Metasyntax.S) = struct
     let apply
         ?(substitute_in_place = true)
         ?metasyntax
+        ?external_handler
         ?filepath
         rule
         env =
       Evaluate.apply
         ~substitute_in_place
         ?metasyntax
+        ?external_handler
         ?filepath
         ~match_all:(Matcher.all ~rule:[Types.Ast.True])
         rule

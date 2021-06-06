@@ -7,8 +7,6 @@ open Matchers
 let all ?(configuration = configuration) template source =
   Alpha.C.all ~configuration ~template ~source ()
 
-module Template_parser = Template.Make(Metasyntax.Default)
-
 let%expect_test "comments_in_string_literals_should_not_be_treated_as_comments_by_fuzzy" =
   let source = {|123433312343331122|} in
   let match_template = {|1234:[1]1234:[3]11:[2]|} in
