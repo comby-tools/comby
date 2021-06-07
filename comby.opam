@@ -28,9 +28,9 @@ depends: [
   "conf-pkg-config"
   "conf-sqlite3"
   "conf-zlib" {os = "linux"}
-  "angstrom" {>= "0.15.0"}
   "cohttp-lwt-unix"
-  "comby-kernel" {= "1.4.1"}
+  "comby-kernel" {= "1.7.0"}
+  "comby-semantic" {= "1.7.0"}
   "conduit-lwt-unix"
   "core"
   "hack_parallel" {arch != "arm32" & arch != "arm64"}
@@ -38,7 +38,6 @@ depends: [
   "lwt_react"
   "mparser"
   "mparser-pcre"
-  "opium" {>= "0.19.0"}
   "parany"
   "patience_diff" {>= "v0.14" & < "v0.15"}
   "ppx_deriving"
