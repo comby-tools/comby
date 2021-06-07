@@ -27,6 +27,7 @@ depends: [
   "cohttp-lwt-unix"
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
-synopsis: "An experimental package that interfaces with external services to provide semantic information of programs."
+synopsis: "A match engine for structural code search and replace that supports ~every language"
 description: """
+An early-stage library that interfaces with external services to provide semantic information of programs for the comby application tool."
 """
