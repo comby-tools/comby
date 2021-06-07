@@ -131,13 +131,24 @@ let all ?source ?metasyntax ?external_handler ?fresh ?filepath ~rewrite_template
   (* in-place substitution *)
   | Some source ->
     rev_matches
-    |> List.map ~f:(fun Match.{ environment; _ } -> substitute_in_rewrite_template ?filepath ?metasyntax ?external_handler ?fresh rewrite_template environment)
+    |> List.map ~f:(fun Match.{ environment; _ } ->
+        substitute_in_rewrite_template
+          ?filepath
+          ?metasyntax
+          ?external_handler
+          ?fresh rewrite_template
+          environment)
     |> substitute_matches rev_matches source
   (* no in place substitution, emit result separated by newlines *)
   | None ->
     let buf = Buffer.create 20 in
     List.iter rev_matches ~f:(fun m ->
-        substitute_in_rewrite_template ?metasyntax ?external_handler ?fresh rewrite_template m.environment
+        substitute_in_rewrite_template
+          ?filepath
+          ?metasyntax
+          ?external_handler
+          ?fresh
+          rewrite_template m.environment
         |> fun { replacement_content; _ } ->
         Buffer.add_string buf replacement_content;
         Buffer.add_char buf '\n');
