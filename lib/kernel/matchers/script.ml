@@ -49,7 +49,7 @@ module Make (Metasyntax : Types.Metasyntax.S) (External : Types.External.S) = st
     let match_rewrite_parser =
       both
         (spaces *> template_parser (spaces *> string "->"))
-        (option None (spaces *> string Syntax.arrow *> spaces *> template_parser (spaces1 *> string "where" *> spaces1)  >>| fun v -> Some v)) (* FIXME use of reserved *)
+        (option None (spaces *> string Syntax.arrow *> spaces *> template_parser (spaces1 *> string "where" *> spaces1)  >>| fun v -> Some v))
     in
     match_rewrite_parser >>= fun (match_template_atom, rewrite_template_atom) ->
     (option None (spaces1 *> Parser.parse >>| fun x -> Some x)) >>= fun rule ->

@@ -26,6 +26,17 @@ let map_template (module Parser : Types.Rule.S) template pattern match_template 
   let rule' = append_rule (module Parser) rule parent_rule in
   template', rule'
 
+let rec map_atom (rule : Types.Ast.expression list) f =
+  let open Types.Ast in
+  List.map rule ~f:(function
+      | Equal (l, r) -> Equal (f l, f r)
+      | Not_equal (l, r) -> Not_equal (f l, f r)
+      | Match (e, l) ->
+        Match (f e, List.map l ~f:(fun (a, l) -> (f a, map_atom l f)))
+      | Rewrite (e, (l, r)) ->
+        Rewrite (f e, (f l, f r))
+      | t -> t)
+
 let map_aliases
     (module Metasyntax : Metasyntax.S)
     (module External : External.S)
@@ -39,5 +50,16 @@ let map_aliases
           match String.substr_index template ~pattern with
           | None -> template, parent_rule
           | Some _ -> map_template (module Parser) template pattern match_template rule parent_rule
+        in
+        let parent_rule' =
+          let open Option in
+          parent_rule' >>| fun parent_rule' ->
+          map_atom parent_rule' (function
+              | Template t ->
+                Template (Parser.Template.parse
+                            (String.substr_replace_all
+                               (Parser.Template.to_string t) ~pattern ~with_:match_template))
+              | String s ->
+                String (String.substr_replace_all s ~pattern ~with_:match_template))
         in
         template', parent_rule')
