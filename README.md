@@ -77,14 +77,17 @@ To match these with comby, all you need to write is `if (:[condition])`, and spe
 
 ## Build from source
 
-- Install [opam](https://opam.ocaml.org/doc/Install.html)
+- Install [opam](https://opam.ocaml.org/doc/Install.html). TL;DR do `sh <(curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)`
 
-- Create a new switch if you don't have OCaml installed:
+- Run this if you don't have OCaml installed (it bootstraps the OCaml compiler):
 
 ```
 opam init
 opam switch create 4.11.0 4.11.0
 ```
+
+- Run `eval $(opam env)`
+
 
 - Install OS dependencies:
 
@@ -96,10 +99,11 @@ opam switch create 4.11.0 4.11.0
 
 ```
 git clone https://github.com/comby-tools/comby
-cd comby && opam install . --deps-only -y
+cd comby 
+opam install ./comby-kernel.opam --deps-only
+opam install ./comby-semantic.opam --deps-only
+opam install ./comby.opam --deps-only
 ```
-
-- Run `eval $(opam env)`
 
 - Build and test
 
@@ -108,7 +112,7 @@ make
 make test
 ```
 
-- If you want to install `comby` on your `PATH`, run
+- Install `comby` on your `PATH` by running
 
 ```
 make install
