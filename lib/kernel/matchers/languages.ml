@@ -798,6 +798,9 @@ module Matlab = struct
   module Syntax = struct
     include Generic.Syntax
 
+    (* ' is allowed in var names *)
+    let escapable_string_literals = ordinary_string
+
     let user_defined_delimiters =
       Generic.Syntax.user_defined_delimiters
       @
