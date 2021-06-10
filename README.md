@@ -91,9 +91,9 @@ opam switch create 4.11.0 4.11.0
 
 - Install OS dependencies:
 
-  - **Linux:** `sudo apt-get install pkg-config libpcre3-dev`
+  - **Linux:** `sudo apt-get install autoconf libpcre3-dev pkg-config zlib1g-dev m4 libgmp-dev libev-dev libsqlite3-dev`
 
-  - **Mac:** `brew install pkg-config pcre`
+  - **Mac:** `brew install pkg-config gmp pcre libev`
 
 - Then install the library dependencies:
 
