@@ -25,6 +25,7 @@ depends: [
   "lwt"
   "cohttp"
   "cohttp-lwt-unix"
+  "yojson"
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
 synopsis: "A match engine for structural code search and replace that supports ~every language"
