@@ -3,4 +3,4 @@
   (public_name comby-kernel.parsers)
   (instrumentation (backend bisect_ppx))
   (preprocess (pps ppx_sexp_conv))
-  (libraries core_kernel comby.vangstrom mparser))
+  (libraries core_kernel comby-kernel.vangstrom mparser))

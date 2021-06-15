@@ -1,6 +1,6 @@
 (library
  (name vangstrom)
- (public_name comby.vangstrom)
+ (public_name comby-kernel.vangstrom)
  (libraries bigstringaf)
  (flags :standard -safe-string)
  (preprocess future_syntax))
