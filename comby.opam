@@ -31,21 +31,19 @@ depends: [
   "cohttp-lwt-unix"
   "comby-kernel" {= "1.7.0"}
   "comby-semantic" {= "1.7.0"}
-  "conduit-lwt-unix"
   "core"
   "hack_parallel" {arch != "arm32" & arch != "arm64"}
   "lwt"
   "lwt_react"
   "mparser"
   "mparser-pcre"
-  "parany"
+  "parany" {>= "12.0.3"}
   "patience_diff" {>= "v0.14" & < "v0.15"}
   "ppx_deriving"
   "ppx_deriving_yojson" {>= "3.6.0"}
   "pcre"
   "shell"
   "toml" {>= "6.0.0"}
-  "tls"
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
 synopsis: "A tool for structural code search and replace that supports ~every language"
