@@ -1,3 +1,5 @@
+open Core_kernel
+
 (** {2 Match}
 
     A match is a result of matching a template pattern in an input source.
