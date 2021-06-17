@@ -22,7 +22,7 @@ depends: [
   "ocaml" {>= "4.08.1"}
   "conf-autoconf"
   "conf-gmp"
-  "conf-libev"
+  "conf-libev" {os-distribution != "ol"}
   "conf-libpcre"
   "conf-m4" {os = "linux"}
   "conf-pkg-config"
