@@ -25,5 +25,5 @@
          -o %{targets})))
 
 (alias
-  (name default)
+  (name js)
   (deps comby.js))
