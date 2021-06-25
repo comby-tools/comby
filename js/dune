@@ -1,0 +1,29 @@
+(executable
+ (libraries comby_kernel js_of_ocaml)
+ (modes byte)
+ (name comby))
+
+(rule
+  (targets comby.js)
+  (action
+    (run %{bin:js_of_ocaml}
+         --noruntime 
+              %{lib:js_of_ocaml-compiler:runtime.js}
+              %{lib:base:runtime.js}
+              %{lib:bin_prot:runtime.js}
+              %{lib:time_now:runtime.js}
+              %{lib:ppx_expect:collector/runtime.js}
+              %{lib:base_bigstring:runtime.js}
+              %{lib:core_kernel:strftime.js}
+              %{lib:core_kernel:runtime.js}
+              %{lib:bigstringaf:runtime.js}
+;        --no-inline
+;        --debug-info
+;        Pretty is actually the flag needed for larger inputs to work. For some reason.
+         --pretty
+         --source-map %{dep:comby.bc}
+         -o %{targets})))
+
+(alias
+  (name default)
+  (deps comby.js))
