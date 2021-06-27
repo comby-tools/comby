@@ -447,7 +447,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
 
               | Line ->
                 let allowed =
-                  many (not_followed_by (string "\n" <|> string "\r\n") *> any_char )
+                  many (not_followed_by (string "\n")  *> any_char )
                   >>| fun x -> [(String.of_char_list x)^"\n"]
                 in
                 let hole_semantics = allowed <* char '\n' >>| String.concat in

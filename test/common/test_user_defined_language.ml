@@ -50,19 +50,6 @@ let%expect_test "user_defined_language" =
   let match_template = {|case :[1] esac|} in
   let rewrite_template = {|case nuked blocks esac|} in
 
-  run (module Alpha) user_lang source match_template rewrite_template ;
-  [%expect_exact {|
-      case nuked blocks esac
-      /*
-      case
-        ignore this
-      esac
-      */
-      // case
-      //   ignore this
-      // esac
-    |}];
-
   run (module Omega) user_lang source match_template rewrite_template ;
   [%expect_exact {|
       case nuked blocks esac
@@ -104,8 +91,6 @@ let%expect_test "user_defined_language_from_json" =
   let match_template = {|""|} in
   let rewrite_template = {|""|} in
 
-  run (module Alpha) user_lang source match_template rewrite_template ;
-  [%expect_exact {|""|}];
   run (module Omega) user_lang source match_template rewrite_template ;
   [%expect_exact {|""|}]
 
@@ -133,7 +118,5 @@ let%expect_test "user_defined_language_from_json_optional_escapable" =
   let match_template = {|""|} in
   let rewrite_template = {|""|} in
 
-  run (module Alpha) user_lang source match_template rewrite_template ;
-  [%expect_exact {|""|}];
   run (module Omega) user_lang source match_template rewrite_template ;
   [%expect_exact {|""|}]

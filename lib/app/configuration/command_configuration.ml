@@ -629,13 +629,8 @@ let of_extension (module Engine : Matchers.Engine.S) (module External : Matchers
   | Some matcher -> matcher, Some extension, None
   | None -> (module Engine.Generic), Some extension, None
 
-let select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega =
-  let (module Engine : Matchers.Engine.S) =
-    if omega then
-      (module Matchers.Omega)
-    else
-      (module Matchers.Alpha)
-  in
+let select_matcher custom_metasyntax custom_matcher override_matcher file_filters =
+  let (module Engine : Matchers.Engine.S) = (module Matchers.Omega) in
   let module External = struct let handler = External_semantic.lsif_hover end in
   if debug then Format.printf "Set custom external@.";
   match custom_matcher, override_matcher, custom_metasyntax with
@@ -705,7 +700,7 @@ let create
          ; override_matcher
          ; regex_pattern
          ; ripgrep_args
-         ; omega
+         ; _ (* FIXME remove omega *)
          }
      ; run_options
      ; output_options =
@@ -811,7 +806,7 @@ let create
         Printer.Rewrite.print replacement_output source_path replacements result source_content
   in
   let (module M) as matcher, _, metasyntax =
-    select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega in
+    select_matcher custom_metasyntax custom_matcher override_matcher file_filters in
   return
     { matcher
     ; sources

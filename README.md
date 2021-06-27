@@ -1,3 +1,9 @@
+# FIX:
+
+- newline-at-toplevel not implemented for omega
+- keyword blocks not implemented for omega
+- word / substring matching not implemented for omega
+
 # comby
 
 [![Apache-2.0](https://img.shields.io/badge/license-Apache-blue.svg)](LICENSE)

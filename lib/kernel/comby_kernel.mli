@@ -753,12 +753,6 @@ module Matchers : sig
     end
   end
 
-  (** {3 Alpha Matcher}
-
-      Alpha is the match engine that defines default matchers for languages.
-  *)
-  module Alpha : Engine.S
-
   (** {3 Omega Matcher}
 
       Alternative, partial, experimental match engine.

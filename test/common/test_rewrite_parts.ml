@@ -5,7 +5,7 @@ open Comby_kernel
 open Matchers
 
 let all ?(configuration = configuration) template source =
-  Alpha.C.all ~configuration ~template ~source ()
+  Omega.C.all ~configuration ~template ~source ()
 
 let%expect_test "comments_in_string_literals_should_not_be_treated_as_comments_by_fuzzy" =
   let source = {|123433312343331122|} in

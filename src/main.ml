@@ -24,13 +24,8 @@ let paths_with_file_size paths =
       in
       (path, length))
 
-let list_supported_languages_and_exit omega =
-  let (module Matcher : Matchers.Engine.S) =
-    if omega then
-      (module Matchers.Omega)
-    else
-      (module Matchers.Alpha)
-  in
+let list_supported_languages_and_exit () =
+  let (module Matcher : Matchers.Engine.S) = (module Matchers.Omega) in
   let list =
     List.map Matcher.all ~f:(fun (module M) ->
         let ext = List.hd_exn M.extensions in
@@ -170,7 +165,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
       else
         Option.bind ~f:file_filters_to_paths file_filters
     in
-    if list then list_supported_languages_and_exit omega;
+    if list then list_supported_languages_and_exit ();
     if Option.is_some substitute_environment then
       substitute_environment_only_and_exit custom_metasyntax anonymous_arguments substitute_environment;
     let interactive_review =

@@ -21,7 +21,6 @@ module Matchers = struct
 
   module External = Matchers.External
 
-  module Alpha = Matchers.Alpha
   module Omega = Matchers.Omega
 
   module Languages = Matchers.Languages
