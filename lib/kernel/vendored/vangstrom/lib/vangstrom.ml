@@ -462,7 +462,7 @@ let fix_direct f =
   r
 
 let fix_lazy f =
-  let max_steps = 20 in
+  let max_steps = 1 in
   let steps = ref max_steps in
   let rec p = lazy (f r)
   and r = { run = fun buf pos more fail succ ->
