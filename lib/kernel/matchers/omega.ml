@@ -376,48 +376,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
             begin
               match sort with
               | Regex ->
-                let separator = List.find_map_exn Meta.syntax ~f:(function
-                    | Hole _ -> None
-                    | Regex (_, separator, _) -> Some separator)
-                in
-                let identifier, pattern = String.lsplit2_exn identifier ~on:separator in (* FIXME parse *)
-                let identifier = if String.(identifier = "") then wildcard else identifier in
-                if debug then Format.printf "Regex: Id: %s Pat: %s@." identifier pattern;
-                let pattern, prefix =
-                  if String.is_prefix pattern ~prefix:"^" then
-                    (* FIXME: match beginning of input too *)
-                    String.drop_prefix pattern 1,
-                    Some (
-                      (char '\n' *> return "")
-                      <|>
-                      (pos >>= fun p -> if p = 0 then return "" else fail "")
-                    )
-                  else
-                    pattern, None
-                in
-                let pattern, suffix =
-                  if String.is_suffix pattern ~suffix:"$" then
-                    String.drop_suffix pattern 1, Some (char '\n' *> return "" <|> end_of_input *> return "")
-                  else
-                    pattern, None
-                in
-                let compiled_regexp = Regexp.PCRE.make_regexp pattern in
-                let regexp_parser = Regexp.PCRE.regexp compiled_regexp in
-                let regexp_parser =
-                  match prefix, suffix with
-                  | Some prefix, None -> prefix *> regexp_parser
-                  | None, Some suffix -> regexp_parser <* suffix
-                  | Some prefix, Some suffix -> prefix *> regexp_parser <* suffix
-                  | None, None -> regexp_parser
-                in
-                (* the eof matters here for that one tricky test case *)
-                let base_parser =
-                  [ regexp_parser
-                  ; end_of_input >>= fun () -> return ""
-                  ]
-                in
-                let hole_semantics = choice base_parser in
-                (add_match user_state identifier hole_semantics)::acc
+                failwith "no"
 
               | Alphanum ->
                 let allowed = choice [alphanum; char '_'] >>| String.of_char in
@@ -529,53 +488,8 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
               begin
                 match sort with
                 | Regex ->
-                  let identifier, pattern = String.lsplit2_exn identifier ~on:'~' in
-                  let identifier = if String.(identifier = "") then "_" else identifier in
-                  if debug then Format.printf "Regex: Id: %s Pat: %s@." identifier pattern;
-                  let pattern, prefix =
-                    if String.is_prefix pattern ~prefix:"^" then
-                      (* FIXME: match beginning of input too *)
-                      String.drop_prefix pattern 1,
-                      Some (
-                        (char '\n' *> return "")
-                        <|>
-                        (pos >>= fun p -> if p = 0 then return "" else fail "")
-                      )
-                    else
-                      pattern, None
-                  in
-                  let pattern, suffix =
-                    if String.is_suffix pattern ~suffix:"$" then
-                      String.drop_suffix pattern 1, Some (char '\n' *> return "" <|> end_of_input *> return "")
-                    else
-                      pattern, None
-                  in
-                  let compiled_regexp = Regexp.PCRE.make_regexp pattern in
-                  let regexp_parser = Regexp.PCRE.regexp compiled_regexp in
-                  let regexp_parser =
-                    match prefix, suffix with
-                    | Some prefix, None -> prefix *> regexp_parser
-                    | None, Some suffix -> regexp_parser <* suffix
-                    | Some prefix, Some suffix -> prefix *> regexp_parser <* suffix
-                    | None, None -> regexp_parser
-                  in
-                  (* the eof matters here for that one tricky test case *)
-                  let base_parser =
-                    [ regexp_parser
-                    ; end_of_input >>= fun () -> return ""
-                    ]
-                  in
-                  pos >>= fun offset ->
-                  choice base_parser >>= fun value ->
-                  if debug then Format.printf "Regex match @@ %d value %s@." offset value;
-                  acc >>= fun _ ->
-                  let m =
-                    { offset
-                    ; identifier
-                    ; text = value
-                    }
-                  in
-                  r user_state (Match m)
+                  failwith "no"
+
                 | Alphanum ->
                   pos >>= fun offset ->
                   many1 (generate_single_hole_parser ())
