@@ -100,9 +100,7 @@ opam switch create 4.11.0 4.11.0
 ```
 git clone https://github.com/comby-tools/comby
 cd comby 
-opam install ./comby-kernel.opam --deps-only
-opam install ./comby-semantic.opam --deps-only
-opam install ./comby.opam --deps-only
+opam install . --deps-only
 ```
 
 - Build and test
