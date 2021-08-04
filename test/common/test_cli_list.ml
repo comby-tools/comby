@@ -32,6 +32,7 @@ let%expect_test "list_languages" =
  -matcher .gql      GraphQL   
  -matcher .dhall    Dhall     
  -matcher .jl       Julia     
+ -matcher .lua      Lua       
  -matcher .kt       Kotlin    
  -matcher .tex      LaTeX     
  -matcher .lisp     Lisp      

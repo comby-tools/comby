@@ -116,6 +116,7 @@ module Make (Make : Types.Language.S -> Types.Metasyntax.S -> Types.External.S -
     ; (module GraphQL)
     ; (module Dhall)
     ; (module Julia)
+    ; (module Lua)
     ; (module Kotlin)
     ; (module Latex)
     ; (module Lisp)
