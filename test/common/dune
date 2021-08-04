@@ -25,6 +25,7 @@
   test_c_style_comments
   test_nested_comments
   test_c
+  test_lua
   test_bash
   test_go
   test_c_separators

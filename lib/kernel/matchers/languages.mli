@@ -43,6 +43,7 @@ module Reason : Language.S
 module Fsharp : Language.S
 module Pascal : Language.S
 module Julia : Language.S
+module Lua : Language.S
 module Fortran : Language.S
 module HCL : Language.S
 module Haskell : Language.S

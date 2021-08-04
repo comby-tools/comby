@@ -789,6 +789,31 @@ module Julia = struct
   end
 end
 
+module Lua = struct
+  module Info = struct
+    let name = "Lua"
+    let extensions = [".lua"]
+  end
+
+  module Syntax = struct
+    include Generic.Syntax
+
+    let user_defined_delimiters =
+      Generic.Syntax.user_defined_delimiters
+      @
+      [ "if", "end"
+      ; "for", "end"
+      ; "function", "end"
+      ; "do", "end"
+      ; "while", "end"
+      ; "until", "end"
+      ]
+    let comments =
+      [ Until_newline "--"
+      ]
+  end
+end
+
 module Matlab = struct
   module Info = struct
     let name = "MATLAB"

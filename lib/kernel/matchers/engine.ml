@@ -78,6 +78,7 @@ module Make (Make : Types.Language.S -> Types.Metasyntax.S -> Types.External.S -
   module Fsharp = Make (Fsharp) (Metasyntax.Default) (External.Default)
   module Pascal = Make (Pascal) (Metasyntax.Default) (External.Default)
   module Julia = Make (Julia) (Metasyntax.Default) (External.Default)
+  module Lua = Make (Lua) (Metasyntax.Default) (External.Default)
   module Fortran = Make (Fortran) (Metasyntax.Default) (External.Default)
   module Haskell = Make (Haskell) (Metasyntax.Default) (External.Default)
   module HCL = Make (HCL) (Metasyntax.Default) (External.Default)

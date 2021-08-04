@@ -288,6 +288,7 @@ module Engine = struct
     module Fsharp : Matcher.S
     module Pascal : Matcher.S
     module Julia : Matcher.S
+    module Lua : Matcher.S
     module Fortran : Matcher.S
     module Haskell : Matcher.S
     module HCL : Matcher.S

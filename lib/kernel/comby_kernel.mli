@@ -653,6 +653,7 @@ module Matchers : sig
     module Fsharp : Language.S
     module Pascal : Language.S
     module Julia : Language.S
+    module Lua : Language.S
     module Fortran : Language.S
     module Haskell : Language.S
     module HCL : Language.S
@@ -716,6 +717,7 @@ module Matchers : sig
       module Fsharp : Matcher.S
       module Pascal : Matcher.S
       module Julia : Matcher.S
+      module Lua : Matcher.S
       module Fortran : Matcher.S
       module Haskell : Matcher.S
       module HCL : Matcher.S
