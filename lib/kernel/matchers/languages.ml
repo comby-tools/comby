@@ -780,6 +780,7 @@ module Julia = struct
       ; "struct", "end"
       ; "begin", "end"
       ; "let", "end"
+      ; "function", "end"
       ]
 
     let comments =
