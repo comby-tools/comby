@@ -1,7 +1,7 @@
 #######################################
 ### Source build for alpine release ###
 #######################################
-FROM comby/base-dependencies-alpine-3.12:latest AS source-build-alpine
+FROM comby/base-dependencies-alpine-3.14:latest AS source-build-alpine
 
 WORKDIR /home/comby
 
