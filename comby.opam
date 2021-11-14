@@ -43,6 +43,8 @@ depends: [
   "ppx_deriving_yojson" {>= "3.6.0"}
   "pcre"
   "shell"
+  "tar"
+  "tar-unix"
   "toml" {>= "6.0.0"}
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]

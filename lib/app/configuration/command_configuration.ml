@@ -209,6 +209,7 @@ type anonymous_arguments =
 type user_input_options =
   { rule : string
   ; stdin : bool
+  ; tar : bool
   ; templates : string list option
   ; anonymous_arguments : anonymous_arguments option
   ; file_filters : string list option
@@ -255,6 +256,7 @@ type input_source =
   | Stdin
   | Zip
   | Directory
+  | Tar
 
 module Printer = struct
 
@@ -441,13 +443,15 @@ let emit_errors { input_options; output_options; _ } =
        file contents and -diff outputs a unified diff. Choose one of these."
     ; output_options.overwrite_file_in_place && is_some input_options.zip_file
     , "-in-place may not be used with -zip."
+    ; output_options.overwrite_file_in_place && input_options.tar
+    , "-in-place may not be used with -tar."
     ; output_options.overwrite_file_in_place && output_options.stdout
     , "-in-place may not be used with -stdout."
     ; output_options.overwrite_file_in_place && output_options.diff
     , "-in-place may not be used with -diff."
     ; Option.is_some output_options.interactive_review
-      && (input_options.stdin || Option.is_some input_options.zip_file || input_options.match_only)
-    , "-review cannot be used with one or more of the following input flags: -stdin, -zip, -match-only."
+      && (input_options.stdin || Option.is_some input_options.zip_file || input_options.match_only || input_options.tar)
+    , "-review cannot be used with one or more of the following input flags: -stdin, -zip, -match-only, -tar."
     ; Option.is_some output_options.interactive_review
       && (output_options.json_lines
           || output_options.json_only_diff
@@ -556,6 +560,8 @@ let emit_warnings { input_options; output_options; _ } =
     , "-in-place has no effect when -stdin is used. Ignoring -in-place."
     ; output_options.count && output_options.json_lines
     , "-count and -json-lines is specified. Ignoring -count."
+    ; input_options.stdin && input_options.tar
+    , "-tar implies -stdin. Ignoring -stdin."
     ]
   in
   List.iter warn_on ~f:(function
@@ -696,6 +702,7 @@ let create
          ; zip_file
          ; match_only
          ; stdin
+         ; tar
          ; target_directory
          ; directory_depth
          ; exclude_directory_prefix
@@ -758,14 +765,16 @@ let create
     | None -> file_filters_from_anonymous_args
   in
   let input_source =
-    match stdin, zip_file with
-    | true, _ -> Stdin
-    | _, Some _ -> Zip
-    | false, None -> Directory
+    match stdin, zip_file, tar with
+    | _, _, true -> Tar
+    | true, _, _ -> Stdin
+    | _, Some _, _ -> Zip
+    | false, None, _ -> Directory
   in
   let sources =
     match input_source with
     | Stdin -> `String (In_channel.input_all In_channel.stdin)
+    | Tar -> `Tar
     | Zip ->
       let zip_file = Option.value_exn zip_file in
       let paths : Zip.entry list =
@@ -789,7 +798,7 @@ let create
       `Paths paths
   in
   let overwrite_file_in_place =
-    if input_source = Zip || input_source = Stdin then
+    if input_source = Zip || input_source = Stdin || input_source = Tar then
       false
     else
       overwrite_file_in_place
