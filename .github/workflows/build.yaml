@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Build and test Comby using Docker image
-        run: docker build . -e COVERALLS_REPO_TOKEN="$COVERALLS_REPO_TOKEN" -e PULL_REQUEST_NUMBER="$PULL_REQUEST_NUMBER" --file Dockerfile --tag test-build:$(date +%s)
+        run: docker build . --build-arg COVERALLS_REPO_TOKEN=${COVERALLS_REPO_TOKEN} --build-arg PULL_REQUEST_NUMBER=${PULL_REQUEST_NUMBER} --file Dockerfile --tag test-build:$(date +%s)
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PULL_REQUEST_NUMBER: ${{ github.event.number }}
