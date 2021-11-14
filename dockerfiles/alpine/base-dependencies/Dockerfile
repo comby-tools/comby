@@ -1,7 +1,7 @@
 #########################
 ### Base Dependencies ###
 #########################
-FROM ocaml/opam2:alpine-3.12-ocaml-4.11
+FROM ocaml/opam:alpine-3.14-ocaml-4.11
 
 WORKDIR /home/comby
 
@@ -33,6 +33,6 @@ COPY push-coverage-report.sh /home/comby/
 RUN sudo chown -R $(whoami) /home/comby
 
 # Build and install the OCaml dependencies.
-RUN eval $(opam env) && opam repository set-url default https://opam.ocaml.org && opam update && opam install . --deps-only --with-test -y
+RUN eval $(opam env) && opam repository set-url default https://opam.ocaml.org && opam update && opam install . --deps-only --with-test -y --no-checksums
 # Delete the source files
 RUN sudo rm -rf /home/comby
