@@ -1,4 +1,4 @@
-FROM ocaml/opam2:ubuntu-18.04-opam
+FROM ocaml/opam:ubuntu-18.04-opam
 
 WORKDIR /home/comby
 
@@ -13,7 +13,7 @@ RUN sudo apt-get update && sudo apt-get install -y \
     libsqlite3-dev
 
 RUN opam init --no-setup --disable-sandboxing --compiler=4.11.0
-RUN eval $(opam env) && opam repository set-url default https://opam.ocaml.org && opam update
+RUN opam switch create 4.11.0 && eval $(opam config env) && opam repository set-url default https://opam.ocaml.org && opam update
 
 COPY Makefile /home/comby/
 COPY comby.opam /home/comby/

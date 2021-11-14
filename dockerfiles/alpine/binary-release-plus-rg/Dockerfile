@@ -1,7 +1,7 @@
 #######################################
 ### Source build for alpine release ###
 #######################################
-FROM comby/base-dependencies-alpine-3.12:latest AS source-build-alpine
+FROM comby/base-dependencies-alpine-3.14:latest AS source-build-alpine
 
 WORKDIR /home/comby
 
@@ -28,7 +28,7 @@ RUN opam exec -- dune build --profile release
 ###########################################################
 ### Binary distribution on minimal alpine image with rg ###
 ###########################################################
-FROM alpine:3.12
+FROM alpine:3.14
 
 LABEL maintainer="Rijnard van Tonder <rvantonder@gmail.com>"
 LABEL name="comby"
