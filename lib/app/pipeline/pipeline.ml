@@ -177,7 +177,7 @@ let write_statistics number_of_matches sources start_time =
     | `Zip (zip_file, paths) ->
       let lines_of_code = Fold.loc_zip zip_file paths in
       lines_of_code, List.length paths
-    | _ -> failwith "No single path handled here"
+    | _ -> failwith "No statistics for this input kind"
   in
   let statistics =
     { number_of_files
@@ -241,6 +241,30 @@ let run_interactive
   Interactive.run editor default_is_accept count rewrites;
   count
 
+module TarReader = struct
+  open Lwt
+  type in_channel = Lwt_unix.file_descr
+  type 'a t = 'a Lwt.t
+  let really_read fd = Lwt_cstruct.(complete (read fd))
+  let skip (ifd: Lwt_unix.file_descr) (n: int) =
+    let buffer_size = 32768 in
+    let buffer = Cstruct.create buffer_size in
+    let rec loop (n: int) =
+      if n <= 0 then Lwt.return_unit
+      else
+        let amount = min n buffer_size in
+        let block = Cstruct.sub buffer 0 amount in
+        really_read ifd block >>= fun () ->
+        loop (n - amount) in
+    loop n
+
+  let read_content ifd n =
+    let buffer = Cstruct.create n in
+    really_read ifd buffer >>= fun () ->
+    return (Cstruct.to_string buffer)
+end
+
+
 let run
     { matcher
     ; sources
@@ -301,6 +325,34 @@ let run
     | None ->
       begin match sources with
         | `String source ->  per_unit ~input:(String source) ~output_path:None
+        | `Tar ->
+          let open Lwt.Infix in
+          let fd = Lwt_unix.stdin in
+          let f =
+            let rec loop () =
+              Tar_lwt_unix.get_next_header fd >>= function
+              | None -> Lwt.return 0
+              | Some header ->
+                let debug () =
+                  if debug then
+                    Lwt_io.eprintf "Reading file %s\n Size %d\n" header.file_name (Int64.to_int_exn header.Tar.Header.file_size)
+                  else
+                    Lwt.return ()
+                in
+                debug () >>= fun () ->
+                let file_size = Int64.to_int_exn header.Tar.Header.file_size in
+                if file_size = 0 then
+                  TarReader.skip fd (Tar.Header.compute_zero_padding_length header) >>= fun () ->
+                  loop ()
+                else
+                  TarReader.read_content fd file_size >>= fun source ->
+                  let n = per_unit ~input:(String source) ~output_path:None in
+                  TarReader.skip fd (Tar.Header.compute_zero_padding_length header) >>= fun () ->
+                  loop () >>= fun n' -> Lwt.return (n+n')
+            in
+            loop ()
+          in
+          (try Lwt_main.run f with err -> Format.printf "Tar processing error: %s@." (Exn.to_string err); 0)
         | #batch_input as sources -> run_batch ~f:per_unit sources compute_mode bound_count
       end
     | Some interactive_review ->

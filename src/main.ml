@@ -129,6 +129,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and ripgrep_args = flag "ripgrep" (optional string) ~aliases:["rg"] ~doc:"flags Activate ripgrep for filtering files. Add flags like '-g *.go' to include or exclude file extensions."
     and bound_count = flag "bound-count" (optional int) ~doc:"num Stop running when at least num matches are found (possibly more are returned for parallel jobs)."
     and parany = flag "parany" no_arg ~doc:"force comby to use the alternative parany parallel processing library."
+    and tar = flag "tar" no_arg ~doc:"read tar format from stdin."
     and anonymous_arguments =
       anon
         (maybe
@@ -220,6 +221,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; zip_file
             ; match_only
             ; stdin
+            ; tar
             ; target_directory
             ; directory_depth
             ; exclude_directory_prefix

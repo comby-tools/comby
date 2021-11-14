@@ -10,6 +10,7 @@ type batch_input =
 type t =
   [ batch_input
   | `String of string
+  | `Tar
   ]
 
 let show_input_kind =
