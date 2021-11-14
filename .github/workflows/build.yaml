@@ -6,5 +6,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Build using Docker image
-        run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
+      - name: Build and test Comby using Docker image
+        run: docker build . --file Dockerfile --tag test-build:$(date +%s)
+      - env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULL_REQUEST_NUMBER: ${{ github.event.number }}

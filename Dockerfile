@@ -23,7 +23,7 @@ RUN opam exec -- make build
 RUN opam exec -- dune clean
 # silence dune
 RUN rm -rf comby
+RUN opam exec -- opam install bisect_ppx
 RUN opam exec -- make build-with-coverage
 RUN opam exec -- dune runtest --instrument-with bisect_ppx --force
 RUN ./push-coverage-report.sh
-
