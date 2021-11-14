@@ -8,6 +8,6 @@ jobs:
       - uses: actions/checkout@v1
       - name: Build and test Comby using Docker image
         run: docker -e COVERALLS_REPO_TOKEN="$COVERALLS_REPO_TOKEN" -e PULL_REQUEST_NUMBER="$PULL_REQUEST_NUMBER" build . --file Dockerfile --tag test-build:$(date +%s)
-      - env:
+        env:
           COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PULL_REQUEST_NUMBER: ${{ github.event.number }}
