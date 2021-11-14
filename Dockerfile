@@ -17,3 +17,12 @@ COPY test /home/comby/test
 COPY push-coverage-report.sh /home/comby/
 
 RUN sudo chown -R $(whoami) /home/comby
+
+RUN opam exec -- make build
+RUN opam exec -- dune clean
+# silence dune
+RUN rm -rf comby
+RUN opam exec -- make build-with-coverage
+RUN opam exec -- dune runtest --instrument-with bisect_ppx --force
+RUN ./push-coverage-report.sh
+
