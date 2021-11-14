@@ -24,8 +24,8 @@ cd ../..
 comby '"0.x.0"' "\"$VERSION\"" .ml -d src -i
 
 # Build ubuntu docker binary release and copy binary
-docker build --tag comby-ubuntu-build . -f dockerfiles/ubuntu/binary-release/Dockerfile
-docker run --rm --entrypoint cat comby-ubuntu-build:latest /home/comby/_build/default/src/main.exe > scripts/$VERSION/comby-$VERSION-x86_64-linux
+docker build --tag comby-ubuntu-18.04-build . -f dockerfiles/ubuntu/binary-release/Dockerfile
+docker run --rm --entrypoint cat comby-ubuntu-18.04-build:latest /home/comby/_build/default/src/main.exe > scripts/$VERSION/comby-$VERSION-x86_64-linux
 cd scripts/$VERSION && tar czvf comby-$VERSION-x86_64-linux.tar.gz comby-$VERSION-x86_64-linux && cd ../..
 
 # Build mac binary
@@ -47,17 +47,18 @@ cp scripts/install-with-licenses.sh scripts/$VERSION/get/index.html
 comby '"0.x.0"' "$VERSION" .html -i -d scripts/$VERSION
 
 # Alpine docker image
+ALPINE_VERSION=alpine-3.14
 cd scripts
-./build-docker-binary-releases.sh
-docker tag comby-alpine-binary-release:latest comby/comby:$VERSION
-docker tag comby-alpine-binary-release-plus-rg:latest comby/comby-rg:$VERSION
-echo "test: docker run -it comby/comby:$VERSION -version"
-echo "push: docker push comby/comby:$VERSION"
-echo "tag latest: docker tag comby/comby:$VERSION comby/comby:latest"
-echo "push: docker push comby/comby:latest"
+./build-docker-binary-releases.sh $ALPINE_VERSION
+docker tag comby-$ALPINE_VERSION-binary-release:latest comby/comby:$ALPINE_VERSION-$VERSION
+docker tag comby-$ALPINE_VERSION-binary-release-plus-rg:latest comby/comby-rg:$ALPINE_VERSION-$VERSION
+echo "test: docker run -it comby/comby:$ALPINE_VERSION-$VERSION -version"
+echo "push: docker push comby/comby:$ALPINE_VERSION-$VERSION"
+echo "tag latest (optional): docker tag comby/comby:$ALPINE_VERSION-$VERSION comby/comby:latest"
+echo "push (optional): docker push comby/comby:latest"
 echo
 echo "test: docker run -it comby/comby-rg 'a' 'b' -rg \"\" -d /home/comby"
-echo "push: docker push comby/comby-rg:$VERSION"
-echo "tag latest: docker tag comby/comby-rg:$VERSION comby/comby-rg:latest"
-echo "push: docker push comby/comby-rg:latest"
+echo "push: docker push comby/comby-rg:$ALPINE_VERSION-VERSION"
+echo "tag latest (optional): docker tag comby/comby-rg:$ALPINE_VERSION-$VERSION comby/comby-rg:latest"
+echo "push (optional): docker push comby/comby-rg:latest"
 
