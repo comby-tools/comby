@@ -11,5 +11,9 @@ jobs:
       - name : Get CodeCov env
         run: ci_env=`bash <(curl -s https://codecov.io/env)`
       - name: Run Comby tests
-        run: docker run $ci_env -e CI="$CI" -e GITHUB_ACTIONS="true" -e GITHUB_WORKFLOW="$GITHUB_WORKFLOW" -e GITHUB_RUN_ID="$GITHUB_RUN_ID" -e GITHUB_RUN_NUMBER="$GITHUB_RUN_NUMBER" -e GITHUB_JOB="$GITHUB_JOB" -e GITHUB_ACTION="$GITHUB_ACTION" -e GITHUB_HEAD_REF="$GITHUB_HEAD_REF" -e GITHUB_REF="$GITHUB_REF" -e GITHUB_REPOSITORY="$GITHUB_REPOSITORY" -e GITHUB_SHA="$GITHUB_SHA" test-build:latest /bin/bash -c "opam exec -- make build-with-coverage && opam exec -- dune runtest --instrument-with bisect_ppx --force && ./push-coverage-report.sh"
+        env:
+          PULL_REQUEST_NUMBER: ${{ github.event.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: docker run $ci_env -e CI="$CI" -e GITHUB_ACTIONS="true" -e GITHUB_WORKFLOW="$GITHUB_WORKFLOW" -e GITHUB_RUN_ID="$GITHUB_RUN_ID" -e GITHUB_RUN_NUMBER="$GITHUB_RUN_NUMBER" -e GITHUB_JOB="$GITHUB_JOB" -e GITHUB_ACTION="$GITHUB_ACTION" -e GITHUB_HEAD_REF="$GITHUB_HEAD_REF" -e GITHUB_REF="$GITHUB_REF" -e GITHUB_REPOSITORY="$GITHUB_REPOSITORY" -e GITHUB_SHA="$GITHUB_SHA" -e PULL_REQUEST_NUMBER="$PULL_REQUEST_NUMBER" -e COVERALLS_REPO_TOKEN="$GH_TOKEN" test-build:latest /bin/bash -c "opam exec -- make build-with-coverage && opam exec -- dune runtest --instrument-with bisect_ppx --force && ./push-coverage-report.sh"
+
 
