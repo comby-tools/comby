@@ -11,4 +11,5 @@ jobs:
       - name : Get CodeCov env
         run: ci_env=`bash <(curl -s https://codecov.io/env)`
       - name: Run Comby tests
-        run: docker run $ci_env test-build:latest /bin/bash -c "opam exec -- make-build-with-coverage && opam exec -- dune runtest --instrument-with bisect_ppx --force && ./push-coverage-report.sh"
+        run: docker run $ci_env test-build:latest /bin/bash -c "opam exec -- make build-with-coverage && opam exec -- dune runtest --instrument-with bisect_ppx --force && ./push-coverage-report.sh"
+
