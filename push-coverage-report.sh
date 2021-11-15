@@ -1,9 +1,6 @@
 #!/bin/bash
 
-bisect-ppx-report send-to Coveralls
-echo $?
-echo '---'
-bisect-ppx-report summary
+opam exec -- bisect-ppx-report summary
 echo '----'
-bisect-ppx-report send-to Codecov
+opam exec -- bisect-ppx-report send-to Codecov
 echo $?
