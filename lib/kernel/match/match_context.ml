@@ -68,8 +68,8 @@ let to_json source_path matches =
   let json_matches matches =
     matches
     |> List.map ~f:(fun m ->
-        { m with matched = String.escaped m.matched;
-                 environment = update_environment String.escaped m.environment })
+        { m with matched = m.matched;
+                 environment = update_environment (fun x -> x) m.environment })
     |> List.map ~f:to_yojson
     |> fun matches ->
     `List matches
