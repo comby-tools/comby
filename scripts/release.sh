@@ -57,8 +57,9 @@ echo "push: docker push comby/comby:$ALPINE_VERSION-$VERSION"
 echo "tag latest (optional): docker tag comby/comby:$ALPINE_VERSION-$VERSION comby/comby:latest"
 echo "push (optional): docker push comby/comby:latest"
 echo
-echo "test: docker run -it  comby/comby-rg:$ALPINE_VERSION-$VERSION 'a' 'b' -rg \"\" -d /home/comby"
+echo "rg sanity check"
+echo "test: docker run --rm -it --entrypoint sh comby/comby-rg:$ALPINE_VERSION-$VERSION"
+echo "test: cd /usr/local/bin/comby-third-party-licenses && comby 'a' 'b' -rg \"\" ALL.txt"
 echo "push: docker push comby/comby-rg:$ALPINE_VERSION-$VERSION"
 echo "tag latest (optional): docker tag comby/comby-rg:$ALPINE_VERSION-$VERSION comby/comby-rg:latest"
 echo "push (optional): docker push comby/comby-rg:latest"
-
