@@ -57,8 +57,8 @@ echo "push: docker push comby/comby:$ALPINE_VERSION-$VERSION"
 echo "tag latest (optional): docker tag comby/comby:$ALPINE_VERSION-$VERSION comby/comby:latest"
 echo "push (optional): docker push comby/comby:latest"
 echo
-echo "test: docker run -it comby/comby-rg 'a' 'b' -rg \"\" -d /home/comby"
-echo "push: docker push comby/comby-rg:$ALPINE_VERSION-VERSION"
+echo "test: docker run -it  comby/comby-rg:$ALPINE_VERSION-$VERSION 'a' 'b' -rg \"\" -d /home/comby"
+echo "push: docker push comby/comby-rg:$ALPINE_VERSION-$VERSION"
 echo "tag latest (optional): docker tag comby/comby-rg:$ALPINE_VERSION-$VERSION comby/comby-rg:latest"
 echo "push (optional): docker push comby/comby-rg:latest"
 
