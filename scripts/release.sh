@@ -28,10 +28,10 @@ docker build --tag comby-ubuntu-18.04-build . -f dockerfiles/ubuntu/binary-relea
 docker run --rm --entrypoint cat comby-ubuntu-18.04-build:latest /home/comby/_build/default/src/main.exe > scripts/$VERSION/comby-$VERSION-x86_64-linux
 cd scripts/$VERSION && tar czvf comby-$VERSION-x86_64-linux.tar.gz comby-$VERSION-x86_64-linux && cd ../..
 
-# Build mac binary
-make clean
-make release
-make test
+# Build mac binary (deprecated--only rely on brew now)
+# make clean
+# make release
+# make test
 
 git checkout -- .
 
