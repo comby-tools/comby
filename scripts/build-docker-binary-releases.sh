@@ -2,6 +2,7 @@
 
 if [ -z "$1" ]; then
   echo "Set alpine version tag name, like 'alpine-3.14'"
+  exit 1
 fi
 
 cd ..
