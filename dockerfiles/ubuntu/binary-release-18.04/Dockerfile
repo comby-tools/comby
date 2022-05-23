@@ -1,4 +1,4 @@
-FROM ocaml/opam:ubuntu-20.04-opam
+FROM ocaml/opam:ubuntu-18.04-opam
 
 WORKDIR /home/comby
 
