@@ -346,7 +346,7 @@ let run
                   loop ()
                 else
                   TarReader.read_content fd file_size >>= fun source ->
-                  let n = per_unit ~input:(String source) ~output_path:None in
+                  let n = per_unit ~input:(String source) ~output_path:(Some header.file_name) in
                   TarReader.skip fd (Tar.Header.compute_zero_padding_length header) >>= fun () ->
                   loop () >>= fun n' -> Lwt.return (n+n')
             in
