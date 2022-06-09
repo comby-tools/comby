@@ -21,6 +21,7 @@
   test_hole_extensions
   test_match_offsets
   test_generic
+  test_match_chunk_conversion
   test_string_literals
   test_c_style_comments
   test_nested_comments

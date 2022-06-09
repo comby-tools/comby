@@ -112,6 +112,17 @@ module Match : sig
       search to perform the conversion quickly. *)
   val convert_offset : fast:bool -> source:string -> t -> t
 
+  type chunk_match =
+    { content : string
+    ; start : Location.t
+    ; ranges : Range.t list
+    }
+
+  val chunk_match_to_yojson : chunk_match -> Yojson.Safe.json
+  val chunk_match_of_yojson : Yojson.Safe.json -> (chunk_match, string) Result.t
+
+  val to_chunks : string -> Range.t list -> chunk_match list
+
   (** [pp] is a grep-like formatted printer for matches. It accepts a (optional
       file path * match list) *)
   val pp : Format.formatter -> string option * t list -> unit
