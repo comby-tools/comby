@@ -26,7 +26,7 @@ let range_chunks source (ranges : chunk_range list) =
       ; start =
           { offset = first_line
           ; line = cover.match_start.line
-          ; column = 0
+          ; column = 1
           }
       ; ranges = List.rev ranges
       })

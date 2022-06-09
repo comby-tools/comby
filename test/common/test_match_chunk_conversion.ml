@@ -14,8 +14,13 @@ d
 e
 baz(qux)
 f
+foo(
+    bar
+    baz
+    qux
+)
 g|} in
-  let template = ":[x](:[y])" in
+  let template = ":[x~\\w+](:[y])" in
   let matches =
     Alpha.Generic.all ~configuration ~template ~source ()
     |> List.map ~f:(Match.convert_offset ~fast:true ~source)
@@ -27,16 +32,22 @@ g|} in
   print_string matches;
   [%expect_exact {|[
   {
-    "content": "a\nb\nc\nfoo(bar)\nd\ne\nbaz(qux)",
-    "start": { "offset": 0, "line": 1, "column": 0 },
+    "content": "baz(qux)",
+    "start": { "offset": 19, "line": 7, "column": 1 },
     "ranges": [
       {
-        "start": { "offset": 0, "line": 1, "column": 1 },
-        "end": { "offset": 14, "line": 4, "column": 9 }
-      },
-      {
-        "start": { "offset": 14, "line": 4, "column": 9 },
+        "start": { "offset": 19, "line": 7, "column": 1 },
         "end": { "offset": 27, "line": 7, "column": 9 }
+      }
+    ]
+  },
+  {
+    "content": "foo(bar)",
+    "start": { "offset": 6, "line": 4, "column": 1 },
+    "ranges": [
+      {
+        "start": { "offset": 6, "line": 4, "column": 1 },
+        "end": { "offset": 14, "line": 4, "column": 9 }
       }
     ]
   }
