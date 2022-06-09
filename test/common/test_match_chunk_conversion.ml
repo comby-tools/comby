@@ -32,12 +32,12 @@ g|} in
   print_string matches;
   [%expect_exact {|[
   {
-    "content": "foo(\n    bar\n    baz\n    qux\n)",
-    "start": { "offset": 30, "line": 9, "column": 1 },
+    "content": "foo(bar)",
+    "start": { "offset": 6, "line": 4, "column": 1 },
     "ranges": [
       {
-        "start": { "offset": 30, "line": 9, "column": 1 },
-        "end": { "offset": 60, "line": 13, "column": 2 }
+        "start": { "offset": 6, "line": 4, "column": 1 },
+        "end": { "offset": 14, "line": 4, "column": 9 }
       }
     ]
   },
@@ -52,12 +52,12 @@ g|} in
     ]
   },
   {
-    "content": "foo(bar)",
-    "start": { "offset": 6, "line": 4, "column": 1 },
+    "content": "foo(\n    bar\n    baz\n    qux\n)",
+    "start": { "offset": 30, "line": 9, "column": 1 },
     "ranges": [
       {
-        "start": { "offset": 6, "line": 4, "column": 1 },
-        "end": { "offset": 14, "line": 4, "column": 9 }
+        "start": { "offset": 30, "line": 9, "column": 1 },
+        "end": { "offset": 60, "line": 13, "column": 2 }
       }
     ]
   }
