@@ -32,6 +32,16 @@ g|} in
   print_string matches;
   [%expect_exact {|[
   {
+    "content": "foo(\n    bar\n    baz\n    qux\n)",
+    "start": { "offset": 30, "line": 9, "column": 1 },
+    "ranges": [
+      {
+        "start": { "offset": 30, "line": 9, "column": 1 },
+        "end": { "offset": 60, "line": 13, "column": 2 }
+      }
+    ]
+  },
+  {
     "content": "baz(qux)",
     "start": { "offset": 19, "line": 7, "column": 1 },
     "ranges": [
