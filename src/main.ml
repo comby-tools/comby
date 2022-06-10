@@ -130,6 +130,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     and bound_count = flag "bound-count" (optional int) ~doc:"num Stop running when at least num matches are found (possibly more are returned for parallel jobs)."
     and parany = flag "parany" no_arg ~doc:"force comby to use the alternative parany parallel processing library."
     and tar = flag "tar" no_arg ~doc:"read tar format from stdin."
+    and chunk_matches = flag "chunk-matches" (optional int) ~aliases:[] ~doc:"line threshold Return content bounded by the min and max line numbers of match ranges. Optionally specify the threshold (number of lines) for grouping content together. Implies -match-only and -json-lines."
     and anonymous_arguments =
       anon
         (maybe
@@ -211,6 +212,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
       | _, _, "arm64" -> `Parany number_of_workers
       | _, false, _ -> `Hack_parallel number_of_workers
     in
+    let match_only = match_only || Option.is_some chunk_matches in
     let configuration =
       Command_configuration.create
         { input_options =
@@ -253,6 +255,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; stdout
             ; substitute_in_place
             ; interactive_review
+            ; chunk_matches
             }
         }
       |> function

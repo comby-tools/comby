@@ -24,7 +24,6 @@ g|} in
   let matches =
     Alpha.Generic.all ~configuration ~template ~source ()
     |> List.map ~f:(Match.convert_offset ~fast:true ~source)
-    |> List.map ~f:(fun Match.{ range; _ } -> range)
     |> Match.to_chunks source
     |> (fun m -> `List (List.map m ~f:(Match.chunk_match_to_yojson)))
     |> Yojson.Safe.pretty_to_string

@@ -86,7 +86,6 @@ val pp_json_lines : Format.formatter -> string option * t list -> unit
 
 val pp_match_count : Format.formatter -> string option * t list -> unit
 
-
 type chunk_match =
   { content : string
   ; start : Location.t
@@ -94,4 +93,6 @@ type chunk_match =
   }
 [@@deriving yojson]
 
-val to_chunks : string -> Range.t list -> chunk_match list
+val to_chunks : ?threshold:int -> string -> t list -> chunk_match list
+
+val pp_chunk_matches : Format.formatter -> string option * chunk_match list -> unit

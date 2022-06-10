@@ -121,7 +121,9 @@ module Match : sig
   val chunk_match_to_yojson : chunk_match -> Yojson.Safe.json
   val chunk_match_of_yojson : Yojson.Safe.json -> (chunk_match, string) Result.t
 
-  val to_chunks : string -> Range.t list -> chunk_match list
+  val to_chunks : ?threshold:int -> string -> t list -> chunk_match list
+
+  val pp_chunk_matches : Format.formatter -> string option * chunk_match list -> unit
 
   (** [pp] is a grep-like formatted printer for matches. It accepts a (optional
       file path * match list) *)
@@ -132,6 +134,7 @@ module Match : sig
   val pp_json_lines : Format.formatter -> string option * t list -> unit
 
   val pp_match_count : Format.formatter -> string option * t list -> unit
+
 end
 
 type match' = Match.t

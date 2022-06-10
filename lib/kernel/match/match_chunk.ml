@@ -29,8 +29,10 @@ let to_range_chunk source (cover, ranges) =
 let compare left right =
   Int.compare left.match_start.offset right.match_start.offset
 
-let to_chunks source l =
-  List.sort l ~compare
+let to_chunks ?(threshold = 0) source (l : Match_context.t list) =
+  let _threshold = threshold in (* FIXME: suppress unused *)
+  List.map l ~f:(fun { range; _ } -> range)
+  |> List.sort ~compare
   |> function
   | [] -> []
   | hd :: tl ->
@@ -51,3 +53,23 @@ let to_chunks source l =
         else
           (current, [current]) :: acc)
     |> List.rev_map ~f:(to_range_chunk source)
+
+let to_json source_path matches =
+  let json_matches matches =
+    matches
+    |> List.map ~f:chunk_match_to_yojson
+    |> fun matches ->
+    `List matches
+  in
+  let uri =
+    match source_path with
+    | Some path -> `String path
+    | None -> `Null
+  in
+  `Assoc
+    [ ("uri", uri)
+    ; ("matches", json_matches matches)
+    ]
+
+let pp_chunk_matches ppf (source_path, matches) =
+  Format.fprintf ppf "%s\n" @@ Yojson.Safe.to_string @@ to_json source_path matches
