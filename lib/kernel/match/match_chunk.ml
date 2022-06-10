@@ -26,7 +26,7 @@ let range_chunks source (ranges : chunk_range list) =
       ; start =
           { offset = first_line
           ; line = cover.match_start.line
-          ; column = 0
+          ; column = 1
           }
       ; ranges = List.rev ranges
       })
@@ -54,3 +54,4 @@ let to_chunks source l =
   |> List.sort ~compare:(fun (left : Range.t) right -> Int.compare left.match_start.offset right.match_start.offset)
   |> fold_matches []
   |> range_chunks source
+  |> List.rev
