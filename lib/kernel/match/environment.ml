@@ -67,7 +67,7 @@ let copy env =
 let exists env key =
   Option.is_some (lookup env key)
 
-let to_yojson env : Yojson.Safe.json =
+let to_yojson env : Yojson.Safe.t =
   let s =
     Map.fold_right env ~init:[] ~f:(fun ~key:variable ~data:{value; range} acc ->
         let item =
@@ -81,7 +81,7 @@ let to_yojson env : Yojson.Safe.json =
   in
   `List s
 
-let of_yojson (json : Yojson.Safe.json) =
+let of_yojson (json : Yojson.Safe.t) =
   let open Yojson.Safe.Util in
   let env = create () in
   match json with

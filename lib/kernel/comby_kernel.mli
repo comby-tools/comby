@@ -17,8 +17,8 @@ module Match : sig
       }
     [@@deriving eq, sexp]
 
-    val to_yojson : t -> Yojson.Safe.json
-    val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+    val to_yojson : t -> Yojson.Safe.t
+    val of_yojson : Yojson.Safe.t -> (t, string) Result.t
 
     val default : t
   end
@@ -33,8 +33,8 @@ module Match : sig
       }
     [@@deriving eq, sexp]
 
-    val to_yojson : t -> Yojson.Safe.json
-    val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+    val to_yojson : t -> Yojson.Safe.t
+    val of_yojson : Yojson.Safe.t -> (t, string) Result.t
 
     val default : t
   end
@@ -49,8 +49,8 @@ module Match : sig
     type t
     [@@deriving eq]
 
-    val to_yojson : t -> Yojson.Safe.json
-    val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+    val to_yojson : t -> Yojson.Safe.t
+    val of_yojson : Yojson.Safe.t -> (t, string) Result.t
 
     (** [create] creates a new, empty environment *)
     val create : unit -> t
@@ -100,8 +100,8 @@ module Match : sig
     ; matched : string
     }
 
-  val to_yojson : t -> Yojson.Safe.json
-  val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_yojson : Yojson.Safe.t -> (t, string) Result.t
 
   (** [create] creates a new match with empty range by default. *)
   val create : ?range:range -> unit -> t
@@ -137,8 +137,8 @@ module Replacement : sig
     ; environment : Match.environment
     }
 
-  val to_yojson : t -> Yojson.Safe.json
-  val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+  val to_yojson : t -> Yojson.Safe.t
+  val of_yojson : Yojson.Safe.t -> (t, string) Result.t
 
   val to_json
     :  ?path:string
@@ -146,7 +146,7 @@ module Replacement : sig
     -> ?rewritten_source:string
     -> diff:string
     -> unit
-    -> Yojson.Safe.json
+    -> Yojson.Safe.t
 
   (** A replacement result is the rewritten source, and the replacement
       fragments. *)
@@ -155,7 +155,7 @@ module Replacement : sig
     ; in_place_substitutions : t list
     }
 
-  val result_to_yojson : result -> Yojson.Safe.json
+  val result_to_yojson : result -> Yojson.Safe.t
 
 end
 
@@ -296,8 +296,8 @@ module Matchers : sig
       ; aliases : alias list
       }
 
-    val to_yojson : t -> Yojson.Safe.json
-    val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+    val to_yojson : t -> Yojson.Safe.t
+    val of_yojson : Yojson.Safe.t -> (t, string) Result.t
 
     (** A module signature for metasyntax to parameterize a matcher *)
     module type S = sig
@@ -584,8 +584,8 @@ module Matchers : sig
         ; comments : comment_kind list
         }
 
-      val to_yojson : t -> Yojson.Safe.json
-      val of_yojson : Yojson.Safe.json -> (t, string) Result.t
+      val to_yojson : t -> Yojson.Safe.t
+      val of_yojson : Yojson.Safe.t -> (t, string) Result.t
 
       (** The module signature that defines language syntax for a matcher *)
       module type S = sig

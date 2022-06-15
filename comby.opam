@@ -41,6 +41,7 @@ depends: [
   "patience_diff" {>= "v0.14" & < "v0.15"}
   "ppx_deriving"
   "ppx_deriving_yojson" {>= "3.6.0"}
+  "yojson" {>= "1.6.0"}
   "pcre"
   "shell"
   "tar"

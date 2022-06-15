@@ -19,6 +19,6 @@ val to_json
   -> ?rewritten_source:string
   -> diff:string
   -> unit
-  -> Yojson.Safe.json
+  -> Yojson.Safe.t
 
 val empty_result : result
