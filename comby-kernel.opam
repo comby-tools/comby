@@ -25,6 +25,7 @@ depends: [
   "mparser-pcre"
   "ppx_deriving"
   "ppx_deriving_yojson" {>= "3.6.0"}
+  "yojson" {>= "1.6.0"}
   "pcre"
   # vendored dependencies
   "bigstringaf"

@@ -7,4 +7,5 @@
    core_kernel
    comby-kernel.match
    comby-kernel.matchers
-   comby-kernel.replacement))
+   comby-kernel.replacement
+   yojson))
