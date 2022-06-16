@@ -6,6 +6,7 @@ module Printer : sig
   type printable_result =
     | Matches of
         { source_path : string option
+        ; source_content : string
         ; matches : Match.t list
         }
     | Replacements of
@@ -33,6 +34,7 @@ type output_options =
   ; substitute_in_place : bool
   ; count : bool
   ; interactive_review : interactive_review option
+  ; chunk_matches : int option
   }
 
 type anonymous_arguments =

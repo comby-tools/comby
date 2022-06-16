@@ -198,6 +198,7 @@ type output_options =
   ; substitute_in_place : bool
   ; count : bool
   ; interactive_review : interactive_review option
+  ; chunk_matches : int option
   }
 
 type anonymous_arguments =
@@ -226,8 +227,6 @@ type user_input_options =
   ; ripgrep_args : string option
   ; omega : bool
   }
-
-type number_of_workers = int
 
 type compute_mode =
   [ `Sequential
@@ -263,6 +262,7 @@ module Printer = struct
   type printable_result =
     | Matches of
         { source_path : string option
+        ; source_content : string
         ; matches : Match.t list
         }
     | Replacements of
@@ -279,6 +279,7 @@ module Printer = struct
     type match_only_kind =
       | Contents
       | Count
+      | Chunk_matches of int option
 
     type match_output =
       | Json_lines
@@ -286,13 +287,14 @@ module Printer = struct
 
     val convert : output_options -> match_output
 
-    val print : match_output -> string option -> Match.t list -> unit
+    val print : match_output -> string -> string option -> Match.t list -> unit
 
   end = struct
 
     type match_only_kind =
       | Contents
       | Count
+      | Chunk_matches of int option
 
     type match_output =
       | Json_lines
@@ -300,21 +302,26 @@ module Printer = struct
 
     let convert output_options =
       match output_options with
+      | { chunk_matches = (Some _ as n); _ } -> Match_only (Chunk_matches n)
       | { json_lines = true; _ } -> Json_lines
       | { count = true; _ } -> Match_only Count
       | _ -> Match_only Contents
 
-    let print (match_output : match_output) source_path matches =
-      let ppf = Format.std_formatter in
-      let pp =
+    let print (match_output : match_output) source_content source_path matches =
+      if List.length matches = 0 then
+        ()
+      else
+        let ppf = Format.std_formatter in
         match match_output with
-        | Match_only Contents -> Match.pp
-        | Match_only Count -> Match.pp_match_count
-        | Json_lines -> Match.pp_json_lines
-      in
-      if List.length matches > 0 then
-        Format.fprintf ppf "%a" pp (source_path, matches)
-
+        | Match_only Contents ->
+          Format.fprintf ppf "%a" Match.pp (source_path, matches)
+        | Match_only Count ->
+          Format.fprintf ppf "%a" Match.pp_match_count (source_path, matches)
+        | Json_lines ->
+          Format.fprintf ppf "%a" Match.pp_json_lines (source_path, matches)
+        | Match_only Chunk_matches threshold ->
+          let chunk_matches = Match.to_chunks ?threshold source_content matches in
+          Format.fprintf ppf "%a" Match.pp_chunk_matches (source_path, chunk_matches)
   end
 
   module Rewrite : sig
@@ -474,6 +481,8 @@ let emit_errors { input_options; output_options; _ } =
     , "Directory specified with -d or -directory is not a directory."
     ; output_options.json_only_diff && not output_options.json_lines
     , "-json-only-diff can only be supplied with -json-lines."
+    ; (Option.is_some output_options.chunk_matches) && Option.is_some input_options.zip_file
+    , "chunk-matches output format is not supported for zip files."
     ; Option.is_some output_options.interactive_review &&
       (not (String.equal input_options.target_directory (Sys.getcwd ())))
     , "Please remove the -d option and `cd` to the directory where you want to \
@@ -562,6 +571,9 @@ let emit_warnings { input_options; output_options; _ } =
     , "-count and -json-lines is specified. Ignoring -count."
     ; input_options.stdin && input_options.tar
     , "-tar implies -stdin. Ignoring -stdin."
+    ; (Option.is_some output_options.chunk_matches) && (not (input_options.stdin || input_options.tar))
+    , "printing chunk match format for output option that is NOT -stdin nor \
+       -tar. This is very inefficient!"
     ]
   in
   List.iter warn_on ~f:(function
@@ -807,10 +819,10 @@ let create
   let output_printer printable =
     let open Printer in
     match printable with
-    | Matches { source_path; matches } ->
+    | Matches { source_path; matches; source_content } ->
       Printer.Match.convert output_options
       |> fun match_output ->
-      Printer.Match.print match_output source_path matches
+      Printer.Match.print match_output source_content source_path matches
     | Replacements { source_path; replacements; result; source_content } ->
       Printer.Rewrite.convert output_options
       |> fun replacement_output ->

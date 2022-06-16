@@ -104,7 +104,16 @@ let output_result output_printer source_path source_content result =
   match result with
   | Nothing -> ()
   | Matches (matches, _) ->
-    output_printer (Printer.Matches { source_path; matches })
+    let source_content =
+      match source_content with
+      | String content -> content
+      (* Content is only needed for chunk matches. It's kind of horrible to read
+         in the file again to output this format--the only efficient case is
+         when -stdin or -tar is used right now. We warn on it in command
+         configuration. *)
+      | Path path ->  In_channel.read_all path
+    in
+    output_printer (Printer.Matches { source_path; source_content; matches })
   | Replacement (replacements, result, _) ->
     let source_content =
       match source_content with
