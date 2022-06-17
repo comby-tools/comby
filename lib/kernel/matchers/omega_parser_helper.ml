@@ -48,31 +48,6 @@ let many1_till_stop p t =
   lift2 cons one (many_till_stop p t)
 
 
-module Deprecate = struct
-  (* XXX can shortcircuit *)
-  (* what if you hit a reserved
-     sequence "{" and then attempt
-     ":[[" and then say "end of
-     input" and then move ahead any_char. not good.
-     going from longest to shortest works though *)
-  let any_char_except ~reserved =
-    List.fold reserved
-      ~init:(return `OK)
-      ~f:(fun acc reserved_sequence ->
-          option `End_of_input
-            (peek_string (String.length reserved_sequence)
-             >>= fun s ->
-             if String.equal s reserved_sequence then
-               return `Reserved_sequence
-             else
-               acc))
-    >>= function
-    | `OK -> any_char
-    | `End_of_input -> any_char
-    | `Reserved_sequence -> fail "reserved sequence hit"
-end
-
-
 let alphanum =
   satisfy (function
       | 'a' .. 'z'
