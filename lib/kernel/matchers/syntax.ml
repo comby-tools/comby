@@ -6,6 +6,7 @@ let not_equal = "!="
 let true' = "true"
 let false' = "false"
 let option_nested = "nested"
+let option_strict = "strict"
 let pipe_operator = "|"
 let arrow = "->"
 

@@ -17,6 +17,7 @@
   test_rewrite_rule
   test_integration
   test_match_rule
+  test_rule_options
   test_python_string_literals
   test_hole_extensions
   test_match_offsets

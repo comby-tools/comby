@@ -578,6 +578,35 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
                   quoted string in the template to a parser list should \
                   not fail here"
 
+    let loose_whitespace g =
+      let loose_constants direction p =
+        match parse_string ~consume:All p "_signal_hole" with
+        | Ok (Hole _, _) -> p (* Hole: let it consume spaces *)
+        | Ok _
+        | Error _ ->
+          match direction, parse_string ~consume:All p " " with
+          | _, Ok _ -> p (* Explicit space: let this consume spaces, don't inject stuff *)
+          | `Left, _ -> option "" spaces1 *> p
+          | `Right, _ -> p <* option "" spaces1
+      in
+      let rec aux acc i =
+        function
+        | [] -> acc
+        | [last] ->
+          let p = loose_constants `Right last in
+          acc @ [p]
+        | hd::tl when i = 0 ->
+          let p = loose_constants `Left hd in
+          aux (acc @ [p]) (i + 1) tl
+        | hd::tl ->
+          aux (acc @ [hd]) (i + 1) tl
+      in
+      match g with
+      | [] -> g
+      | [p] ->
+        [loose_constants `Right (loose_constants `Left p)]
+      | l -> aux [] 0 l
+
     let general_parser_generator rule : (production * 'a) t t =
       let spaces : (production * 'a) t t =
         lift
@@ -593,6 +622,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
         |> List.map ~f:(fun (sort, _) -> hole_parser sort Code)
         |> choice
       in
+      let strict = Option.(value ~default:false (rule >>| Rule.is_strict)) in
       fix (fun (generator : (production * 'a) t list t) ->
           if debug then Format.printf "Descends@.";
           let nested =
@@ -604,16 +634,16 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
                 if debug then Format.printf "G size: %d; delim %s@." (List.length g) left_delimiter;
                 return @@
                 sequence_chain' @@
-                [string left_delimiter >>= fun result -> r acc (Template_string result)]
-                @ g
+                [ string left_delimiter >>= fun result -> r acc (Template_string result)]
+                @ (if strict then g else loose_whitespace g)
                 @ [ string right_delimiter >>= fun result -> r acc (Template_string result)])
           in
           many @@ choice
             [ code_holes
             ; raw_string_literal_parser (generate_hole_for_literal Raw_string_literal ())
             ; escapable_string_literal_parser (generate_hole_for_literal Escapable_string_literal ())
-            ; spaces
             ; nested
+            ; spaces
             ; other
             ]
           >>= fun x ->
@@ -738,7 +768,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
       filepath_ref := filepath;
       push_matches_ref := !matches_ref;
       configuration_ref := Option.value configuration ~default:!configuration_ref;
-      let Rule.{ nested } = Rule.options rule in
+      let Rule.{ nested; _ } = Rule.options rule in
       let template, rule =
         Preprocess.map_aliases
           (module Meta)
@@ -845,8 +875,16 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
         ?filepath
         rule
         env =
-      let Rule.{ nested } = Rule.options rule in
-      let subrule = if nested then [Types.Ast.True; Option "nested"] else [Types.Ast.True] in
+      let Rule.{ nested; strict } = Rule.options rule in
+      let subrule =
+        let open Types.Ast in
+        [ True ] @
+        match nested, strict with
+        | true, true -> [ Option "nested"; Option "strict"]
+        | true, false -> [ Option "nested" ]
+        | false, true -> [ Option "strict" ]
+        | _ -> []
+      in
       Evaluate.apply
         ?substitute_in_place
         ?metasyntax

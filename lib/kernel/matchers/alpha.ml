@@ -960,7 +960,7 @@ module Make (Lang : Types.Language.S) (Meta : Types.Metasyntax.S) (Ext : Types.E
 
     let all ?configuration ?filepath ?(rule = [Types.Ast.True]) ~template ~source:original_source () : Match.t list =
       let _ : string option = filepath in
-      let Rule.{ nested } = Rule.options rule in
+      let Rule.{ nested; _ } = Rule.options rule in
       let template, rule =
         Preprocess.map_aliases
           (module Meta)
@@ -1126,7 +1126,7 @@ module Make (Lang : Types.Language.S) (Meta : Types.Metasyntax.S) (Ext : Types.E
         ?filepath
         rule
         env =
-      let Rule.{ nested } = Rule.options rule in
+      let Rule.{ nested; _ } = Rule.options rule in
       let subrule = if nested then [Types.Ast.True; Option "nested"] else [Types.Ast.True] in
       Evaluate.apply
         ?substitute_in_place

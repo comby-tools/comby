@@ -127,7 +127,10 @@ module Make (Metasyntax : Types.Metasyntax.S) (External : Types.External.S) = st
   let optional_trailing c = option () (skip (Char.equal c))
 
   let option_parser =
-    lift (fun _ -> Option "nested") (spaces *> (string Syntax.option_nested) <* spaces)
+    choice
+      [ lift (fun _ -> Option "nested") (spaces *> (string Syntax.option_nested) <* spaces)
+      ; lift (fun _ -> Option "strict") (spaces *> (string Syntax.option_strict) <* spaces)
+      ]
 
   let true' = lift (fun _ -> True) (spaces *> string Syntax.true' <* spaces)
 
@@ -222,9 +225,15 @@ let create
 
 type options =
   { nested : bool
+  ; strict : bool
   }
 
 let options rule =
-  List.fold rule ~init:{ nested = false } ~f:(fun acc -> function
-      | Types.Ast.Option name when String.(name = Syntax.option_nested) -> { nested = true }
+  List.fold rule ~init:{ nested = false; strict = false } ~f:(fun acc -> function
+      | Types.Ast.Option name when String.(name = Syntax.option_nested) -> { acc with nested = true }
+      | Types.Ast.Option name when String.(name = Syntax.option_strict) -> { acc with strict = true }
       | _ -> acc)
+
+let is_strict rule =
+  let { strict; _ } = options rule in
+  strict

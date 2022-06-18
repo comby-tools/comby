@@ -486,6 +486,7 @@ module Matchers : sig
 
     type options =
       { nested : bool
+      ; strict : bool
       }
 
     val create
