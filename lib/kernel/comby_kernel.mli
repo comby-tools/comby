@@ -118,8 +118,8 @@ module Match : sig
     ; ranges : Range.t list
     }
 
-  val chunk_match_to_yojson : chunk_match -> Yojson.Safe.json
-  val chunk_match_of_yojson : Yojson.Safe.json -> (chunk_match, string) Result.t
+  val chunk_match_to_yojson : chunk_match -> Yojson.Safe.t
+  val chunk_match_of_yojson : Yojson.Safe.t -> (chunk_match, string) Result.t
 
   val to_chunks : ?threshold:int -> string -> t list -> chunk_match list
 
