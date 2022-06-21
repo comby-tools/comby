@@ -24,8 +24,8 @@ cd ../..
 comby '"0.x.0"' "\"$VERSION\"" .ml -d src -i
 
 # Build ubuntu docker binary release and copy binary
-docker build --tag comby-ubuntu-20.04-build . -f dockerfiles/ubuntu/binary-release/Dockerfile
-docker run --rm --entrypoint cat comby-ubuntu-20.04-build:latest /home/comby/_build/default/src/main.exe > scripts/$VERSION/comby-$VERSION-x86_64-linux
+docker build --platform linux/amd64 --tag comby-ubuntu-20.04-build . -f dockerfiles/ubuntu/binary-release/Dockerfile
+docker run --platform linux/amd64 --rm --entrypoint cat comby-ubuntu-20.04-build:latest /home/comby/_build/default/src/main.exe > scripts/$VERSION/comby-$VERSION-x86_64-linux
 cd scripts/$VERSION && tar czvf comby-$VERSION-x86_64-linux.tar.gz comby-$VERSION-x86_64-linux && cd ../..
 
 # Build mac binary (deprecated--only rely on brew now)
@@ -52,13 +52,13 @@ cd scripts
 ./build-docker-binary-releases.sh $ALPINE_VERSION
 docker tag comby-$ALPINE_VERSION-binary-release:latest comby/comby:$ALPINE_VERSION-$VERSION
 docker tag comby-$ALPINE_VERSION-binary-release-plus-rg:latest comby/comby-rg:$ALPINE_VERSION-$VERSION
-echo "test: docker run -it comby/comby:$ALPINE_VERSION-$VERSION -version"
+echo "test: docker run --platform linux/amd64 -it comby/comby:$ALPINE_VERSION-$VERSION -version"
 echo "push: docker push comby/comby:$ALPINE_VERSION-$VERSION"
 echo "tag latest (optional): docker tag comby/comby:$ALPINE_VERSION-$VERSION comby/comby:latest"
 echo "push (optional): docker push comby/comby:latest"
 echo
 echo "rg sanity check"
-echo "test: docker run --rm -it --entrypoint sh comby/comby-rg:$ALPINE_VERSION-$VERSION"
+echo "test: docker run --platform linux/amd64 --rm -it --entrypoint sh comby/comby-rg:$ALPINE_VERSION-$VERSION"
 echo "test: cd /usr/local/bin/comby-third-party-licenses && comby 'a' 'b' -rg \"\" ALL.txt"
 echo "push: docker push comby/comby-rg:$ALPINE_VERSION-$VERSION"
 echo "tag latest (optional): docker tag comby/comby-rg:$ALPINE_VERSION-$VERSION comby/comby-rg:latest"
