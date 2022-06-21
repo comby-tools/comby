@@ -6,6 +6,6 @@ if [ -z "$1" ]; then
 fi
 
 cd ..
-docker build --tag comby-$1-binary-release -f dockerfiles/alpine/binary-release/Dockerfile .
-docker build --tag comby-$1-binary-release-plus-rg -f dockerfiles/alpine/binary-release-plus-rg/Dockerfile .
-docker build --tag comby-ubuntu-20.04-binary-release -f dockerfiles/ubuntu/binary-release/Dockerfile .
+docker build --platform linux/amd64 --tag comby-$1-binary-release -f dockerfiles/alpine/binary-release/Dockerfile .
+docker build --platform linux/amd64 --tag comby-$1-binary-release-plus-rg -f dockerfiles/alpine/binary-release-plus-rg/Dockerfile .
+docker build --platform linux/amd64 --tag comby-ubuntu-20.04-binary-release -f dockerfiles/ubuntu/binary-release/Dockerfile .
