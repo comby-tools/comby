@@ -314,14 +314,14 @@ module Printer = struct
         let ppf = Format.std_formatter in
         match match_output with
         | Match_only Contents ->
-          Format.fprintf ppf "%a" Match.pp (source_path, matches)
+          Format.fprintf ppf "%a%!" Match.pp (source_path, matches)
         | Match_only Count ->
-          Format.fprintf ppf "%a" Match.pp_match_count (source_path, matches)
+          Format.fprintf ppf "%a%!" Match.pp_match_count (source_path, matches)
         | Json_lines ->
-          Format.fprintf ppf "%a" Match.pp_json_lines (source_path, matches)
+          Format.fprintf ppf "%a%!" Match.pp_json_lines (source_path, matches)
         | Match_only Chunk_matches threshold ->
           let chunk_matches = Match.to_chunks ?threshold source_content matches in
-          Format.fprintf ppf "%a" Match.pp_chunk_matches (source_path, chunk_matches)
+          Format.fprintf ppf "%a%!" Match.pp_chunk_matches (source_path, chunk_matches)
   end
 
   module Rewrite : sig
