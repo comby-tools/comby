@@ -304,7 +304,7 @@ let parse_comby_dot_file () =
 
 let () =
   If_hack_parallel.check_entry_point ();
-  Command.run default_command ~version:"1.8.0" ~extend:(fun _ ->
+  Command.run default_command ~version:"1.8.1" ~extend:(fun _ ->
       match Sys.file_exists ".comby" with
       | `Yes -> parse_comby_dot_file ()
       | _ -> [])
