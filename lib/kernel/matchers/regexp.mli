@@ -2,13 +2,10 @@ module type Regexp_engine_intf = sig
   type t
   type substrings
 
-  val make: string -> t
-
-  val get_substring: substrings -> int -> string option
-
-  val get_all_substrings: substrings -> string array
-
-  val exec: rex:t -> pos:int -> Bytes.t -> substrings option
+  val make : string -> t
+  val get_substring : substrings -> int -> string option
+  val get_all_substrings : substrings -> string array
+  val exec : rex:t -> pos:int -> Bytes.t -> substrings option
 end
 
 (** Represents character stream right now.
@@ -17,12 +14,10 @@ end
 *)
 type t
 
-module Make (Regexp : Regexp_engine_intf): sig
+module Make (Regexp : Regexp_engine_intf) : sig
   (* do not use this, use regexp. *)
-  val match_regexp: t -> int -> Regexp.t -> Regexp.substrings option
-
+  val match_regexp : t -> int -> Regexp.t -> Regexp.substrings option
   val make_regexp : string -> Regexp.t
-
   val regexp : Regexp.t -> string Vangstrom.t
 end
 

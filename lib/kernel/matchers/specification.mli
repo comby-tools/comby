@@ -6,5 +6,4 @@ type t =
 [@@deriving sexp]
 
 val create : ?rewrite_template:string -> ?rule:Rule.t -> match_template:string -> unit -> t
-
 val to_regex : t -> string

@@ -1,9 +1,7 @@
 open Core_kernel
-
 open Vangstrom
 
-let (|>>) p f =
-  p >>= fun x -> return (f x)
+let ( |>> ) p f = p >>= fun x -> return (f x)
 
 module Escapable = struct
   module type S = sig
@@ -13,20 +11,17 @@ module Escapable = struct
 
   module Make (M : S) = struct
     (* delimiters can be escaped and parsing continues within the string body *)
-    let escaped_char_s  =
-      any_char
+    let escaped_char_s = any_char
 
     let char_token_s =
-      ((char M.escape *> escaped_char_s >>= fun c -> return (Format.sprintf {|%c%c|} M.escape c))
-       <|> (any_char |>> String.of_char)
-      )
+      char M.escape *> escaped_char_s
+      >>= (fun c -> return (Format.sprintf {|%c%c|} M.escape c))
+      <|> (any_char |>> String.of_char)
 
     let base_string_literal =
-      ((string M.delimiter *> (many_till char_token_s (string M.delimiter))
-        |>> String.concat)
-       >>= fun result ->
-       return (Format.sprintf {|%s%s%s|} M.delimiter result M.delimiter)
-      )
+      string M.delimiter *> many_till char_token_s (string M.delimiter)
+      |>> String.concat
+      >>= fun result -> return (Format.sprintf {|%s%s%s|} M.delimiter result M.delimiter)
   end
 end
 
@@ -37,15 +32,11 @@ module Raw = struct
   end
 
   module Make (M : S) = struct
-    let char_token_s =
-      (any_char |>> String.of_char)
+    let char_token_s = any_char |>> String.of_char
 
     let base_string_literal =
-      ((
-        string M.left_delimiter *> (many_till char_token_s (string M.right_delimiter))
-        |>> String.concat)
-       >>= fun result ->
-       return (Format.sprintf {|%s%s%s|} M.left_delimiter result M.right_delimiter)
-      )
+      string M.left_delimiter *> many_till char_token_s (string M.right_delimiter)
+      |>> String.concat
+      >>= fun result -> return (Format.sprintf {|%s%s%s|} M.left_delimiter result M.right_delimiter)
   end
 end

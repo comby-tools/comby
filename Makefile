@@ -37,7 +37,10 @@ uninstall:
 promote:
 	@dune promote
 
+format:
+	@dune build @fmt --auto-promote
+
 docker-test-build:
 	docker build -t comby-local-test-build .
 
-.PHONY: all build build-with-coverage release install doc test coverage clean uninstall promote docker-test-build
+.PHONY: all build build-with-coverage release install doc test coverage clean uninstall promote format docker-test-build

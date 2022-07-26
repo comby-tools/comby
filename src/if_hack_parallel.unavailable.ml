@@ -1,2 +1,1 @@
-let check_entry_point () =
-  ()
+let check_entry_point () = ()

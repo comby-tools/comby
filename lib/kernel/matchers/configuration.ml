@@ -18,13 +18,14 @@ let counter =
     Format.sprintf "!@#$%012d" !uuid_for_id_counter
 
 let create
-    ?(disable_substring_matching = false)
-    ?(match_kind = Fuzzy)
-    ?(significant_whitespace = false)
-    ?(match_newline_toplevel = true)
-    ?(fresh = counter)
-    ?(substitute_in_place = true)
-    () =
+  ?(disable_substring_matching = false)
+  ?(match_kind = Fuzzy)
+  ?(significant_whitespace = false)
+  ?(match_newline_toplevel = true)
+  ?(fresh = counter)
+  ?(substitute_in_place = true)
+  ()
+  =
   { match_kind
   ; significant_whitespace
   ; disable_substring_matching

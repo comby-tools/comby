@@ -1,5 +1,4 @@
 open Core
-
 open Test_helpers
 open Comby_kernel
 open Matchers
@@ -14,13 +13,11 @@ foo(
   let match_template = {|foo(bar)|} in
   let rewrite_template = {|>yes<|} in
   let rule = "where true" in
-
   run (module Omega.Generic) source match_template rewrite_template ~rule;
   [%expect_exact {|
 >yes< >yes< >yes< >yes<
 >yes<
 |}];
-
   let rule = "where strict" in
   run (module Omega.Generic) source match_template rewrite_template ~rule;
   [%expect_exact {|
@@ -35,14 +32,11 @@ let%expect_test "strict_rule_with_holes" =
   let match_template = {|foo(:[1])|} in
   let rewrite_template = {|:[1]|} in
   let rule = "where true" in
-
   run (module Omega.Generic) source match_template rewrite_template ~rule;
   [%expect_exact {|   bar   |}];
-
   let source = {|foo(   bar,x  )|} in
   let match_template = {|foo(bar,:[1])|} in
   let rewrite_template = {|:[1]|} in
   let rule = "where true" in
-
   run (module Omega.Generic) source match_template rewrite_template ~rule;
-  [%expect_exact {|x  |}];
+  [%expect_exact {|x  |}]

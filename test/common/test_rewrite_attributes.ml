@@ -1,10 +1,10 @@
 open Core
-
 open Comby_kernel
 open Test_helpers
 
 let%expect_test "strings" =
-  let source = {|
+  let source =
+    {|
     LOWERCASE
     uppercase
     capitalize
@@ -15,7 +15,9 @@ let%expect_test "strings" =
     lowerSnakeCase
 |}
   in
-  run (module Matchers.Alpha.Generic) source
+  run
+    (module Matchers.Alpha.Generic)
+    source
     {|
        :[[a]]
        :[[b]]
@@ -36,7 +38,8 @@ let%expect_test "strings" =
        :[[g]].UPPER_SNAKE_CASE
        :[[h]].lower_snake_case
     |};
-  [%expect_exact {|
+  [%expect_exact
+    {|
        lowercase
        UPPERCASE
        Capitalize
@@ -50,12 +53,22 @@ let%expect_test "strings" =
 let%expect_test "filepath_rewrite_template" =
   let source = {|whatever|} in
   let filepath = "this/is/a/path" in
-  run (module Matchers.Alpha.Generic) ~filepath source ":[all]" "\n:[all].file.path\n:[all].file.name\n:[all].file.directory";
+  run
+    (module Matchers.Alpha.Generic)
+    ~filepath
+    source
+    ":[all]"
+    "\n:[all].file.path\n:[all].file.name\n:[all].file.directory";
   [%expect_exact {|
 this/is/a/path
 path
 this/is/a|}];
-  run (module Matchers.Omega.Generic) ~filepath source ":[all]" "\n:[all].file.path\n:[all].file.name\n:[all].file.directory";
+  run
+    (module Matchers.Omega.Generic)
+    ~filepath
+    source
+    ":[all]"
+    "\n:[all].file.path\n:[all].file.name\n:[all].file.directory";
   [%expect_exact {|
 this/is/a/path
 path
@@ -82,8 +95,7 @@ let%expect_test "lines" =
     }
 |} in
   let match_template = "{:[x]}" in
-  let rewrite_template = {|:[x].lines|}
-  in
+  let rewrite_template = {|:[x].lines|} in
   run (module Matchers.Alpha.Generic) source match_template rewrite_template;
   [%expect_exact {|
     2
@@ -102,7 +114,8 @@ first
 <     >first
 |} in
   let match_template = ":[[x]]" in
-  let rewrite_template = {|
+  let rewrite_template =
+    {|
 offset: :[[x]].offset
 offset.start: :[[x]].offset.start
 offset.end: :[[x]].offset.end
@@ -113,7 +126,8 @@ column.end: :[[x]].column.end     // can't compute without source yet
 |}
   in
   run (module Matchers.Alpha.Generic) source match_template rewrite_template;
-  [%expect_exact {|
+  [%expect_exact
+    {|
 
 offset: 1
 offset.start: 1
@@ -143,7 +157,8 @@ column.end: :[[x]].column.end     // can't compute without source yet
 
 |}];
   run (module Matchers.Omega.Generic) source match_template rewrite_template;
-  [%expect_exact {|
+  [%expect_exact
+    {|
 
 offset: 1
 offset.start: 1

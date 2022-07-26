@@ -1,3 +1,4 @@
 open Types
 
-module Make : (Language.S -> Metasyntax.S -> External.S -> Matcher.S) -> Engine.S
+module Make (_ : functor (_ : Language.S) (_ : Metasyntax.S) (_ : External.S) -> Matcher.S) :
+  Engine.S

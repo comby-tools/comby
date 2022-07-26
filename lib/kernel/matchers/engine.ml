@@ -1,19 +1,20 @@
 open Core_kernel
-
 open Languages
 
-module Make (Make : Types.Language.S -> Types.Metasyntax.S -> Types.External.S -> Types.Matcher.S) : Types.Engine.S = struct
+module Make
+  (Make : functor
+    (_ : Types.Language.S)
+    (_ : Types.Metasyntax.S)
+    (_ : Types.External.S)
+    -> Types.Matcher.S) : Types.Engine.S = struct
   module Make = Make
 
   let create
-      ?(metasyntax = Metasyntax.default_metasyntax)
-      ?(external_handler = External.default_external)
-      Types.Language.Syntax.
-        { user_defined_delimiters
-        ; escapable_string_literals
-        ; raw_string_literals
-        ; comments
-        } =
+    ?(metasyntax = Metasyntax.default_metasyntax)
+    ?(external_handler = External.default_external)
+    Types.Language.Syntax.
+      { user_defined_delimiters; escapable_string_literals; raw_string_literals; comments }
+    =
     let module Info = struct
       let name = "User_defined_language"
       let extensions = []
@@ -32,7 +33,10 @@ module Make (Make : Types.Language.S -> Types.Metasyntax.S -> Types.External.S -
     end
     in
     let (module Metasyntax : Metasyntax.S) = Metasyntax.(create metasyntax) in
-    let module External = struct let handler = external_handler end in
+    let module External = struct
+      let handler = external_handler
+    end
+    in
     (module Make (User_language) (Metasyntax) (External) : Types.Matcher.S)
 
   module Text = Make (Text) (Metasyntax.Default) (External.Default)
@@ -83,7 +87,7 @@ module Make (Make : Types.Language.S -> Types.Metasyntax.S -> Types.External.S -
   module HCL = Make (HCL) (Metasyntax.Default) (External.Default)
   module Elm = Make (Elm) (Metasyntax.Default) (External.Default)
   module Zig = Make (Zig) (Metasyntax.Default) (External.Default)
-  module Coq  = Make (Coq) (Metasyntax.Default) (External.Default)
+  module Coq = Make (Coq) (Metasyntax.Default) (External.Default)
   module Move = Make (Move) (Metasyntax.Default) (External.Default)
   module Solidity = Make (Solidity) (Metasyntax.Default) (External.Default)
   module C_nested_comments = Make (C_nested_comments) (Metasyntax.Default) (External.Default)
@@ -143,13 +147,18 @@ module Make (Make : Types.Language.S -> Types.Metasyntax.S -> Types.External.S -
     ]
 
   let select_with_extension
-      ?(metasyntax = Metasyntax.default_metasyntax)
-      ?(external_handler = External.default_external)
-      extension
-    : (module Types.Matcher.S) option =
+    ?(metasyntax = Metasyntax.default_metasyntax)
+    ?(external_handler = External.default_external)
+    extension
+    : (module Types.Matcher.S) option
+    =
     let open Option in
-    Languages.select_with_extension extension >>| fun (module Language : Types.Language.S) ->
+    Languages.select_with_extension extension
+    >>| fun (module Language : Types.Language.S) ->
     let (module Metasyntax) = Metasyntax.(create metasyntax) in
-    let module External = struct let handler = external_handler end in
-    (module (Make (Language) (Metasyntax) (External)) : Types.Matcher.S)
+    let module External = struct
+      let handler = external_handler
+    end
+    in
+    (module Make (Language) (Metasyntax) (External) : Types.Matcher.S)
 end

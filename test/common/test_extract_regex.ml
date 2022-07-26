@@ -1,5 +1,4 @@
 open Core
-
 open Comby
 
 let%expect_test "basic" =
@@ -14,4 +13,5 @@ let%expect_test "different_holes" =
   let spec = Matchers.Specification.create ~match_template () in
   let result = Matchers.Specification.to_regex spec in
   print_string result;
-  [%expect_exact {|(for\s+(\w+),\s+(\ |\t|\s|\r|\n)+\s+:=\s+range\s+([^ \t\s\r\n])+\s+\{(\n|.)*?\})|}]
+  [%expect_exact
+    {|(for\s+(\w+),\s+(\ |\t|\s|\r|\n)+\s+:=\s+range\s+([^ \t\s\r\n])+\s+\{(\n|.)*?\})|}]

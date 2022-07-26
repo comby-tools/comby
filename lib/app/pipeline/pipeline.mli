@@ -1,5 +1,4 @@
 open Comby_kernel
-
 open Configuration
 open Command_input
 
@@ -33,5 +32,4 @@ val execute
   -> output
 
 val with_timeout : int -> Command_input.single_source -> f:(unit -> 'a list) -> 'a list
-
 val run : Command_configuration.t -> unit

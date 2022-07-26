@@ -1,8 +1,6 @@
 open Core
-
 open Test_helpers
 open Comby_kernel
-
 open Matchers
 
 let%expect_test "match_chunk_conversion" =
@@ -25,11 +23,12 @@ g|} in
     Alpha.Generic.all ~configuration ~template ~source ()
     |> List.map ~f:(Match.convert_offset ~fast:true ~source)
     |> Match.to_chunks source
-    |> (fun m -> `List (List.map m ~f:(Match.chunk_match_to_yojson)))
+    |> (fun m -> `List (List.map m ~f:Match.chunk_match_to_yojson))
     |> Yojson.Safe.pretty_to_string
   in
   print_string matches;
-  [%expect_exact {|[
+  [%expect_exact
+    {|[
   {
     "content": "foo(bar)",
     "start": { "offset": 6, "line": 4, "column": 1 },

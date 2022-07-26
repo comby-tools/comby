@@ -1,5 +1,12 @@
 (library
-  (name interactive)
-  (public_name comby.interactive)
-  (preprocess (pps ppx_sexp_conv))
-  (libraries comby-kernel comby.configuration core shell.filename_extended lwt lwt.unix))
+ (name interactive)
+ (public_name comby.interactive)
+ (preprocess
+  (pps ppx_sexp_conv))
+ (libraries
+  comby-kernel
+  comby.configuration
+  core
+  shell.filename_extended
+  lwt
+  lwt.unix))

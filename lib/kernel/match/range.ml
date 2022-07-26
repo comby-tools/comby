@@ -4,7 +4,4 @@ type t =
   }
 [@@deriving yojson, eq, sexp]
 
-let default =
-  { match_start = Location.default
-  ; match_end = Location.default
-  }
+let default = { match_start = Location.default; match_end = Location.default }

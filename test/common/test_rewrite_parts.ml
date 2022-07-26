@@ -1,5 +1,4 @@
 open Core
-
 open Test_helpers
 open Comby_kernel
 open Matchers
@@ -11,12 +10,14 @@ let%expect_test "comments_in_string_literals_should_not_be_treated_as_comments_b
   let source = {|123433312343331122|} in
   let match_template = {|1234:[1]1234:[3]11:[2]|} in
   let rewrite_template = {|1234:[1]1234:[3]11:[2]|} in
-  all match_template source
+  (all match_template source
   |> Rewrite.all ~source ~rewrite_template
-  |> (function
-      | Some rewrite_result -> print_string (Yojson.Safe.pretty_to_string (Replacement.result_to_yojson rewrite_result))
-      | None -> print_string "BROKEN EXPECT");
-  [%expect_exact {|{
+  |> function
+  | Some rewrite_result ->
+    print_string (Yojson.Safe.pretty_to_string (Replacement.result_to_yojson rewrite_result))
+  | None -> print_string "BROKEN EXPECT");
+  [%expect_exact
+    {|{
   "rewritten_source": "123433312343331122",
   "in_place_substitutions": [
     {
@@ -59,12 +60,14 @@ let%expect_test "comments_in_string_literals_should_not_be_treated_as_comments_b
   let source = {|123433312343331122;123433312343331122;|} in
   let match_template = {|1234:[1]1234:[3]11:[2];|} in
   let rewrite_template = {|1234:[1]1234:[3]11:[2];|} in
-  all match_template source
+  (all match_template source
   |> Rewrite.all ~source ~rewrite_template
-  |> (function
-      | Some rewrite_result -> print_string (Yojson.Safe.pretty_to_string (Replacement.result_to_yojson rewrite_result))
-      | None -> print_string "BROKEN EXPECT");
-  [%expect_exact {|{
+  |> function
+  | Some rewrite_result ->
+    print_string (Yojson.Safe.pretty_to_string (Replacement.result_to_yojson rewrite_result))
+  | None -> print_string "BROKEN EXPECT");
+  [%expect_exact
+    {|{
   "rewritten_source": "123433312343331122;123433312343331122;",
   "in_place_substitutions": [
     {
@@ -140,12 +143,14 @@ let%expect_test "multiple_contextual_substitutions" =
   let source = {|foo bar foo|} in
   let match_template = {|foo|} in
   let rewrite_template = {|xxxx|} in
-  all match_template source
+  (all match_template source
   |> Rewrite.all ~source ~rewrite_template
-  |> (function
-      | Some rewrite_result -> print_string (Yojson.Safe.pretty_to_string (Replacement.result_to_yojson rewrite_result))
-      | None -> print_string "BROKEN EXPECT");
-  [%expect_exact {|{
+  |> function
+  | Some rewrite_result ->
+    print_string (Yojson.Safe.pretty_to_string (Replacement.result_to_yojson rewrite_result))
+  | None -> print_string "BROKEN EXPECT");
+  [%expect_exact
+    {|{
   "rewritten_source": "xxxx bar xxxx",
   "in_place_substitutions": [
     {

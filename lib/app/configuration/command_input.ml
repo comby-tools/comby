@@ -13,7 +13,6 @@ type t =
   | `Tar
   ]
 
-let show_input_kind =
-  function
+let show_input_kind = function
   | String _ -> "A long string..."
   | Path path -> Format.sprintf "A path: %s" path

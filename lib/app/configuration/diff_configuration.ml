@@ -39,7 +39,8 @@ let default context =
   ((prefix ((text "@|") (style ((bg bright_black) (fg black)))))
    (suffix ((text " ============================================================") (style ())))
    (style (bold))))
-)|} context
+)|}
+    context
 
 let terminal ?(context = 16) () =
   Patdiff.Configuration.On_disk.t_of_sexp (Sexp.of_string (default context))
@@ -145,14 +146,11 @@ let get_diff kind source_path source_content result =
   let configuration =
     match kind with
     | Plain -> plain ()
-    | Colored
-    | Html
-    | Default -> terminal ~context:3 ()
+    | Colored | Html | Default -> terminal ~context:3 ()
     | Match_only -> match_diff ()
   in
   let prev = Patdiff.Diff_input.{ name = source_path; text = source_content } in
   let next = Patdiff.Diff_input.{ name = source_path; text = result } in
-
   Compare_core.diff_strings ~print_global_header:true configuration ~prev ~next
   |> function
   | `Different diff -> Some diff

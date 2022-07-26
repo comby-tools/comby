@@ -1,5 +1,4 @@
 open Core_kernel
-
 open Match
 
 type t =
@@ -15,11 +14,7 @@ type result =
   }
 [@@deriving yojson]
 
-let empty_result =
-  { rewritten_source = ""
-  ; in_place_substitutions = []
-  }
-[@@deriving yojson]
+let empty_result = { rewritten_source = ""; in_place_substitutions = [] } [@@deriving yojson]
 
 let to_json ?path ?replacements ?rewritten_source ~diff () =
   let uri =
@@ -35,8 +30,4 @@ let to_json ?path ?replacements ?rewritten_source ~diff () =
       ; "in_place_substitutions", `List (List.map ~f:to_yojson replacements)
       ; "diff", `String diff
       ]
-  | _ ->
-    `Assoc
-      [ "uri", uri
-      ; "diff", `String diff
-      ]
+  | _ -> `Assoc [ "uri", uri; "diff", `String diff ]

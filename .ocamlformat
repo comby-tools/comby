@@ -1,0 +1,6 @@
+profile = janestreet
+version = 0.24.1
+
+margin = 100
+let-binding-spacing = compact
+if-then-else = fit-or-vertical
