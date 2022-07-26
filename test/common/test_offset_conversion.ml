@@ -1,16 +1,16 @@
 open Core
-
 open Test_helpers
 open Comby_kernel
 
 let to_string format matches =
-  let f = match format with
+  let f =
+    match format with
     | `Json -> Match.pp_json_lines
     | `Text -> Match.pp
   in
   Format.asprintf "%a" f (Some "file", matches)
 
-let run source match_template format : (string * string) =
+let run source match_template format : string * string =
   let specification = Matchers.Specification.create ~match_template () in
   let run ~fast =
     let result =
@@ -26,17 +26,19 @@ let run source match_template format : (string * string) =
     in
     to_string format result
   in
-  (run ~fast:false, run ~fast:true)
+  run ~fast:false, run ~fast:true
 
 let%expect_test "fast_match_offset_to_line_col_conversions" =
   let source = In_channel.read_all "example/test-match-locations/mod_fortune.c" in
   let template = ":[fn.](:[1])" in
   let slow_result, fast_result = run source template `Text in
   if String.(slow_result <> fast_result) then
-    print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
+    print_string
+    @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
   else
     print_string fast_result;
-  [%expect_exact {|file:8:mod_fortune_init(liModules *mods, liModule *mod)
+  [%expect_exact
+    {|file:8:mod_fortune_init(liModules *mods, liModule *mod)
 file:9:mod_fortune_free(liModules *mods, liModule *mod)
 file:19:*fortune_rand(fortune_data *fd)
 file:20:g_rand_int_range(fd->rand, 0, fd->cookies->len)
@@ -106,10 +108,12 @@ let%expect_test "fast_match_offset_to_line_col_conversions_2" =
   let template = ":[fn.](:[1])" in
   let slow_result, fast_result = run source template `Text in
   if String.(slow_result <> fast_result) then
-    print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
+    print_string
+    @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
   else
     print_string fast_result;
-  [%expect_exact {|file:11:DEF_LUA_MODIFY_GSTRING(attr)
+  [%expect_exact
+    {|file:11:DEF_LUA_MODIFY_GSTRING(attr)
 file:12:lua_physical_attr_read_##attr(liPhysical *phys, lua_State *L)
 file:13:lua_pushlstring(L, phys->attr->str, phys->attr->len)
 file:17:lua_physical_attr_write_##attr(liPhysical *phys, lua_State *L)
@@ -187,7 +191,8 @@ let%expect_test "fast_match_offset_to_line_col_conversions_2" =
   let template = ":[fn.](:[1])" in
   let slow_result, fast_result = run source template `Text in
   if String.(slow_result <> fast_result) then
-    print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
+    print_string
+    @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
   else
     print_string fast_result;
   [%expect_exact {|file:1:foo(bar)
@@ -198,28 +203,32 @@ let%expect_test "correct_columns" =
   let template = "hello :[1]" in
   let slow_result, fast_result = run source template `Json in
   if String.(slow_result <> fast_result) then
-    print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
+    print_string
+    @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
   else
     print_string fast_result;
-  [%expect_exact {|{"uri":"file","matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"1","value":"world","range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":11,"line":1,"column":12}}}],"matched":"hello world"}]}
+  [%expect_exact
+    {|{"uri":"file","matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"1","value":"world","range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":11,"line":1,"column":12}}}],"matched":"hello world"}]}
 |}];
-
   let source = "hello world\nhello potato\n" in
   let template = "hello :[1]" in
   let slow_result, fast_result = run source template `Json in
   if String.(slow_result <> fast_result) then
-    print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
+    print_string
+    @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
   else
     print_string fast_result;
-  [%expect_exact {|{"uri":"file","matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":25,"line":3,"column":1}},"environment":[{"variable":"1","value":"world\nhello potato\n","range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":25,"line":3,"column":1}}}],"matched":"hello world\nhello potato\n"}]}
+  [%expect_exact
+    {|{"uri":"file","matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":25,"line":3,"column":1}},"environment":[{"variable":"1","value":"world\nhello potato\n","range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":25,"line":3,"column":1}}}],"matched":"hello world\nhello potato\n"}]}
 |}];
-
   let source = "hello world\nhello potato" in
   let template = "hello :[1]" in
   let slow_result, fast_result = run source template `Json in
   if String.(slow_result <> fast_result) then
-    print_string @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
+    print_string
+    @@ Format.sprintf "Offset conversion does not match. Expect@.%s@.got %s" slow_result fast_result
   else
     print_string fast_result;
-  [%expect_exact {|{"uri":"file","matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":24,"line":2,"column":13}},"environment":[{"variable":"1","value":"world\nhello potato","range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":24,"line":2,"column":13}}}],"matched":"hello world\nhello potato"}]}
+  [%expect_exact
+    {|{"uri":"file","matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":24,"line":2,"column":13}},"environment":[{"variable":"1","value":"world\nhello potato","range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":24,"line":2,"column":13}}}],"matched":"hello world\nhello potato"}]}
 |}]

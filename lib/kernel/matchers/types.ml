@@ -4,7 +4,7 @@ module Language = struct
   module Syntax = struct
     type escapable_string_literals =
       { delimiters : string list
-      ; escape_character: char
+      ; escape_character : char
       }
     [@@deriving yojson]
 
@@ -53,7 +53,6 @@ type including = char list
 type until = char option
 
 module Hole = struct
-
   type sort =
     | Everything
     | Expression
@@ -71,15 +70,7 @@ module Hole = struct
     ; at_depth : int option
     }
 
-  let sorts () =
-    [ Everything
-    ; Expression
-    ; Alphanum
-    ; Non_space
-    ; Line
-    ; Blank
-    ; Regex
-    ]
+  let sorts () = [ Everything; Expression; Alphanum; Non_space; Line; Blank; Regex ]
 end
 
 type hole = Hole.t
@@ -155,8 +146,8 @@ module Template = struct
   [@@deriving sexp]
 
   type syntax =
-    { variable: string (* E.g., x *)
-    ; pattern: string (* E.g., the entire :[x] part *)
+    { variable : string (* E.g., x *)
+    ; pattern : string (* E.g., the entire :[x] part *)
     ; offset : int
     ; kind : kind (* The kind of hole, to inform substitution *)
     }
@@ -167,22 +158,17 @@ module Template = struct
     | Constant of string
   [@@deriving sexp]
 
-  type t = atom list
-  [@@deriving sexp]
+  type t = atom list [@@deriving sexp]
 
   module type S = sig
-
     module Matching : sig
       val hole_parsers : (Hole.sort * string Vangstrom.t) list
     end
 
     val parse : string -> t
-
     val variables : string -> syntax list
-
     val to_string : t -> string
-
-    val substitute : ?filepath:string -> t -> Match.Environment.t -> (string * Match.Environment.t)
+    val substitute : ?filepath:string -> t -> Match.Environment.t -> string * Match.Environment.t
   end
 end
 
@@ -192,8 +178,7 @@ module Ast = struct
     | String of string
   [@@deriving sexp]
 
-  type antecedent = atom
-  [@@deriving sexp]
+  type antecedent = atom [@@deriving sexp]
 
   type expression =
     | True
@@ -203,13 +188,12 @@ module Ast = struct
     | Not_equal of atom * atom
     | Match of atom * (antecedent * consequent) list
     | Rewrite of atom * (antecedent * atom)
-  and consequent = expression list
-  [@@deriving sexp]
+
+  and consequent = expression list [@@deriving sexp]
 end
 
 module Rule = struct
-  type t = Ast.expression list
-  [@@deriving sexp]
+  type t = Ast.expression list [@@deriving sexp]
 
   module type S = sig
     val create : string -> (Ast.expression list, Error.t) result
@@ -243,8 +227,7 @@ end
 
 module Engine = struct
   module type S = sig
-    module Make : Language.S -> Metasyntax.S -> External.S -> Matcher.S
-
+    module Make (_ : Language.S) (_ : Metasyntax.S) (_ : External.S) : Matcher.S
     module Text : Matcher.S
     module Paren : Matcher.S
     module Dyck : Matcher.S
@@ -292,14 +275,24 @@ module Engine = struct
     module Haskell : Matcher.S
     module HCL : Matcher.S
     module Elm : Matcher.S
-    module Zig: Matcher.S
-    module Coq: Matcher.S
-    module Move: Matcher.S
-    module Solidity: Matcher.S
+    module Zig : Matcher.S
+    module Coq : Matcher.S
+    module Move : Matcher.S
+    module Solidity : Matcher.S
     module C_nested_comments : Matcher.S
 
     val all : (module Matcher.S) list
-    val select_with_extension : ?metasyntax:Metasyntax.t -> ?external_handler:External.t -> string -> (module Matcher.S) option
-    val create : ?metasyntax:Metasyntax.t -> ?external_handler:External.t -> Language.Syntax.t -> (module Matcher.S)
+
+    val select_with_extension
+      :  ?metasyntax:Metasyntax.t
+      -> ?external_handler:External.t
+      -> string
+      -> (module Matcher.S) option
+
+    val create
+      :  ?metasyntax:Metasyntax.t
+      -> ?external_handler:External.t
+      -> Language.Syntax.t
+      -> (module Matcher.S)
   end
 end

@@ -10,5 +10,4 @@ type t =
 [@@deriving yojson]
 
 val empty : t
-
 val merge : t -> t -> t

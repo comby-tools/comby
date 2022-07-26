@@ -1,7 +1,6 @@
 include Types.External
 
-let default_external =
-  fun ~name:_ ~filepath:_ ~line:_ ~column:_ -> None
+let default_external ~name:_ ~filepath:_ ~line:_ ~column:_ = None
 
 let default =
   let module External = struct

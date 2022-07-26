@@ -1,6 +1,5 @@
 open Configuration
 open Command_configuration
-
 open Comby_kernel
 open Matchers
 

@@ -1,3 +1,2 @@
 open Types
-
-module Make : Metasyntax.S -> External.S -> Template.S
+module Make (_ : Metasyntax.S) (_ : External.S) : Template.S

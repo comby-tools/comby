@@ -8,10 +8,7 @@ type t =
 [@@deriving yojson]
 
 let create ?(range = Range.default) () =
-  { range
-  ; environment = Environment.create ()
-  ; matched = ""
-  }
+  { range; environment = Environment.create (); matched = "" }
 
 let update_range f range =
   let open Range in
@@ -26,13 +23,11 @@ let update_range f range =
 
 let update_environment f env =
   List.fold (Environment.vars env) ~init:env ~f:(fun env var ->
-      let open Option in
-      let updated =
-        Environment.lookup_range env var
-        >>| update_range f
-        >>| Environment.update_range env var
-      in
-      Option.value_exn updated)
+    let open Option in
+    let updated =
+      Environment.lookup_range env var >>| update_range f >>| Environment.update_range env var
+    in
+    Option.value_exn updated)
 
 let update_match f m =
   let range = update_range f m.range in
@@ -56,52 +51,39 @@ let convert_offset ~fast ~source match_ =
 
 let update_environment f env =
   List.fold (Environment.vars env) ~init:env ~f:(fun env var ->
-      let open Option in
-      let updated =
-        Environment.lookup env var
-        >>| f
-        >>| Environment.update env var
-      in
-      Option.value_exn updated)
+    let open Option in
+    let updated = Environment.lookup env var >>| f >>| Environment.update env var in
+    Option.value_exn updated)
 
 let to_json source_path matches =
-  let json_matches matches =
-    matches
-    |> List.map ~f:to_yojson
-    |> fun matches ->
-    `List matches
-  in
+  let json_matches matches = matches |> List.map ~f:to_yojson |> fun matches -> `List matches in
   let uri =
     match source_path with
     | Some path -> `String path
     | None -> `Null
   in
-  `Assoc
-    [ ("uri", uri)
-    ; ("matches", json_matches matches)
-    ]
+  `Assoc [ "uri", uri; "matches", json_matches matches ]
 
 let pp_source_path ppf source_path =
   match source_path with
   | Some path -> Format.fprintf ppf "%s:" path
   | None -> Format.fprintf ppf ""
 
-let pp_line_number ppf start_line =
-  Format.fprintf ppf "%d:" start_line
+let pp_line_number ppf start_line = Format.fprintf ppf "%d:" start_line
 
 let pp ppf (source_path, matches) =
   if List.is_empty matches then
     ()
-  else
+  else (
     let matched =
       List.map matches ~f:(fun { matched; range; _ } ->
-          let matched = String.substr_replace_all matched ~pattern:"\n" ~with_:"\\n" in
-          let matched = String.substr_replace_all matched ~pattern:"\r" ~with_:"\\r" in
-          let line = range.match_start.line in
-          Format.asprintf "%a%a%s" pp_source_path source_path pp_line_number line matched)
+        let matched = String.substr_replace_all matched ~pattern:"\n" ~with_:"\\n" in
+        let matched = String.substr_replace_all matched ~pattern:"\r" ~with_:"\\r" in
+        let line = range.match_start.line in
+        Format.asprintf "%a%a%s" pp_source_path source_path pp_line_number line matched)
       |> String.concat ~sep:"\n"
     in
-    Format.fprintf ppf "%s@." matched
+    Format.fprintf ppf "%s@." matched)
 
 let pp_match_count ppf (source_path, matches) =
   let l = List.length matches in

@@ -1,6 +1,5 @@
 open Core
 open Camlzip
-
 module Time = Core_kernel.Time_ns.Span
 
 let binary_path = "../../../../comby"
@@ -18,13 +17,12 @@ let read_with_timeout read_from_channels =
     |> (fun { Unix.Select_fds.read; _ } -> read)
     |> List.map ~f:Unix.in_channel_of_descr
   in
-  List.map read_from_channels ~f:In_channel.input_all
-  |> String.concat ~sep:"\n"
+  List.map read_from_channels ~f:In_channel.input_all |> String.concat ~sep:"\n"
 
 let read_output command =
   let open Unix.Process_channels in
   let { stdout; stderr; _ } =
-    Unix.open_process_full ~env:(Array.of_list ["COMBY_TEST=1"]) command
+    Unix.open_process_full ~env:(Array.of_list [ "COMBY_TEST=1" ]) command
   in
   let stdout_result = In_channel.input_all stdout in
   let stderr_result = In_channel.input_all stderr in
@@ -33,7 +31,7 @@ let read_output command =
 let read_expect_stdin_and_stdout command source =
   let open Unix.Process_channels in
   let { stdin; stdout; stderr } =
-    Unix.open_process_full ~env:(Array.of_list ["COMBY_TEST=1"]) command
+    Unix.open_process_full ~env:(Array.of_list [ "COMBY_TEST=1" ]) command
   in
   Out_channel.output_string stdin source;
   Out_channel.flush stdin;
@@ -45,7 +43,7 @@ let read_expect_stdin_and_stdout command source =
 let read_expect_stderr command source =
   let open Unix.Process_channels in
   let { stdin; stdout; stderr } =
-    Unix.open_process_full ~env:(Array.of_list ["COMBY_TEST=1"]) command
+    Unix.open_process_full ~env:(Array.of_list [ "COMBY_TEST=1" ]) command
   in
   Out_channel.output_string stdin source;
   Out_channel.flush stdin;
@@ -76,7 +74,8 @@ let%expect_test "json_lines_separates_by_line" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|{"uri":null,"rewritten_source":"helli wirld","in_place_substitutions":[{"range":{"start":{"offset":7,"line":-1,"column":-1},"end":{"offset":8,"line":-1,"column":-1}},"replacement_content":"i","environment":[]},{"range":{"start":{"offset":4,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}},"replacement_content":"i","environment":[]}],"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-hello world\n\\ No newline at end of file\n+helli wirld\n\\ No newline at end of file"}
+  [%expect_exact
+    {|{"uri":null,"rewritten_source":"helli wirld","in_place_substitutions":[{"range":{"start":{"offset":7,"line":-1,"column":-1},"end":{"offset":8,"line":-1,"column":-1}},"replacement_content":"i","environment":[]},{"range":{"start":{"offset":4,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}},"replacement_content":"i","environment":[]}],"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-hello world\n\\ No newline at end of file\n+helli wirld\n\\ No newline at end of file"}
 |}]
 
 let%expect_test "json_lines_json_pretty_do_not_output_when_diff_null" =
@@ -89,7 +88,7 @@ let%expect_test "json_lines_json_pretty_do_not_output_when_diff_null" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{| |}]
+  [%expect {| |}]
 
 let%expect_test "json_lines_do_not_output_when_diff_null" =
   let source = "hello world" in
@@ -101,14 +100,15 @@ let%expect_test "json_lines_do_not_output_when_diff_null" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{| |}]
+  [%expect {| |}]
 
 let%expect_test "error_on_zip_and_stdin" =
   let command_args = "-zip x -stdin" in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command "none" in
   print_string result;
-  [%expect_exact {|No templates specified. See -h to specify on the command line, or use -templates <directory-containing-templates>.
+  [%expect_exact
+    {|No templates specified. See -h to specify on the command line, or use -templates <directory-containing-templates>.
 Next error: -zip may not be used with -stdin.
 |}]
 
@@ -117,7 +117,8 @@ let%expect_test "error_on_stdout_and_diff" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command "none" in
   print_string result;
-  [%expect_exact {|-stdout may not be used with -diff. Note: -stdout outputs the changed file contents and -diff outputs a unified diff. Choose one of these.
+  [%expect_exact
+    {|-stdout may not be used with -diff. Note: -stdout outputs the changed file contents and -diff outputs a unified diff. Choose one of these.
 |}]
 
 let%expect_test "error_on_invalid_templates_dir" =
@@ -125,7 +126,10 @@ let%expect_test "error_on_invalid_templates_dir" =
   let match_template = "hello :[1]" in
   let rewrite_template = ":[1]" in
   let command_args =
-    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -templates nonexistent" match_template rewrite_template
+    Format.sprintf
+      "-stdin -sequential '%s' '%s' -f .c -templates nonexistent"
+      match_template
+      rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
@@ -138,15 +142,18 @@ let%expect_test "warn_on_anonymous_and_templates_flag" =
   let match_template = "hello :[1]" in
   let rewrite_template = ":[1]" in
   let command_args =
-    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -templates example/templates/identity" match_template rewrite_template
+    Format.sprintf
+      "-stdin -sequential '%s' '%s' -f .c -templates example/templates/identity"
+      match_template
+      rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|WARNING: Templates specified on the command line AND using -templates. Ignoring match
+  [%expect_exact
+    {|WARNING: Templates specified on the command line AND using -templates. Ignoring match
       and rewrite templates on the command line and only using those in directories.
 |}]
-
 
 let%expect_test "stdin_command" =
   let source = "hello world" in
@@ -158,7 +165,8 @@ let%expect_test "stdin_command" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+  [%expect_exact
+    {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;43;30m!|[0m[0;31mhello [0mworld
@@ -170,30 +178,36 @@ let%expect_test "with_match_rule" =
   let rewrite_template = ":[1]" in
   let rule = {|where :[1] == "world"|} in
   let command_args =
-    Format.sprintf "-stdin -sequential '%s' '%s' -rule '%s' -f .c "
-      match_template rewrite_template rule
+    Format.sprintf
+      "-stdin -sequential '%s' '%s' -rule '%s' -f .c "
+      match_template
+      rewrite_template
+      rule
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+  [%expect_exact
+    {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;43;30m!|[0m[0;31mhello [0mworld
 |}];
-
   let source = "hello world" in
   let match_template = "hello :[1]" in
   let rewrite_template = ":[1]" in
   let rule = {|where :[1] != "world"|} in
   let command_args =
-    Format.sprintf "-stdin -sequential '%s' '%s' -rule '%s' -f .c -stdout"
-      match_template rewrite_template rule
+    Format.sprintf
+      "-stdin -sequential '%s' '%s' -rule '%s' -f .c -stdout"
+      match_template
+      rewrite_template
+      rule
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect {|
     hello world |}]
 
 let%expect_test "with_rewrite_rule" =
@@ -202,13 +216,17 @@ let%expect_test "with_rewrite_rule" =
   let rewrite_template = ":[1]" in
   let rule = {|where rewrite :[1] { ":[_]" -> ":[2]" }|} in
   let command_args =
-    Format.sprintf "-stdin -sequential '%s' '%s' -rule '%s' -f .c "
-      match_template rewrite_template rule
+    Format.sprintf
+      "-stdin -sequential '%s' '%s' -rule '%s' -f .c "
+      match_template
+      rewrite_template
+      rule
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+  [%expect_exact
+    {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;43;30m!|[0mhello[0;31m world[0m
@@ -226,7 +244,8 @@ let%expect_test "with_rewrite_rule_stdin_default_no_extension" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+  [%expect_exact
+    {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;43;30m!|[0mhello[0;31m world[0m
@@ -244,7 +263,8 @@ let%expect_test "generic_matcher" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+  [%expect_exact
+    {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;41;30m-|[0m[0m[0;2m\footnote{[0m[0;31m\small[0m[0;2m \url{https://github.com}}[0m[0m
@@ -253,37 +273,38 @@ let%expect_test "generic_matcher" =
 WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning.
 |}]
 
-
 let%expect_test "json_output_option" =
   let source = "a X c a Y c" in
   let match_template = "a :[1] c" in
   let rewrite_template = "c :[1] a" in
   let command_args =
-    Format.sprintf "-stdin -sequential -json-lines '%s' '%s' -f .c "
-      match_template rewrite_template
+    Format.sprintf "-stdin -sequential -json-lines '%s' '%s' -f .c " match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|{"uri":null,"rewritten_source":"c X a c Y a","in_place_substitutions":[{"range":{"start":{"offset":6,"line":-1,"column":-1},"end":{"offset":11,"line":-1,"column":-1}},"replacement_content":"c Y a","environment":[{"variable":"1","value":"Y","range":{"start":{"offset":2,"line":-1,"column":-1},"end":{"offset":3,"line":-1,"column":-1}}}]},{"range":{"start":{"offset":0,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}},"replacement_content":"c X a","environment":[{"variable":"1","value":"X","range":{"start":{"offset":2,"line":-1,"column":-1},"end":{"offset":3,"line":-1,"column":-1}}}]}],"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-a X c a Y c\n\\ No newline at end of file\n+c X a c Y a\n\\ No newline at end of file"}
+  [%expect_exact
+    {|{"uri":null,"rewritten_source":"c X a c Y a","in_place_substitutions":[{"range":{"start":{"offset":6,"line":-1,"column":-1},"end":{"offset":11,"line":-1,"column":-1}},"replacement_content":"c Y a","environment":[{"variable":"1","value":"Y","range":{"start":{"offset":2,"line":-1,"column":-1},"end":{"offset":3,"line":-1,"column":-1}}}]},{"range":{"start":{"offset":0,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}},"replacement_content":"c X a","environment":[{"variable":"1","value":"X","range":{"start":{"offset":2,"line":-1,"column":-1},"end":{"offset":3,"line":-1,"column":-1}}}]}],"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-a X c a Y c\n\\ No newline at end of file\n+c X a c Y a\n\\ No newline at end of file"}
 |}];
-
   let source = "a X c a Y c" in
   let match_template = "a :[1] c" in
   let rewrite_template = "c :[1] a" in
   let command_args =
-    Format.sprintf "-stdin -sequential -json-lines -match-only '%s' '%s' -f .c "
-      match_template rewrite_template
+    Format.sprintf
+      "-stdin -sequential -json-lines -match-only '%s' '%s' -f .c "
+      match_template
+      rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":5,"line":1,"column":6}},"environment":[{"variable":"1","value":"X","range":{"start":{"offset":2,"line":1,"column":3},"end":{"offset":3,"line":1,"column":4}}}],"matched":"a X c"},{"range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"1","value":"Y","range":{"start":{"offset":8,"line":1,"column":9},"end":{"offset":9,"line":1,"column":10}}}],"matched":"a Y c"}]}
+  [%expect_exact
+    {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":5,"line":1,"column":6}},"environment":[{"variable":"1","value":"X","range":{"start":{"offset":2,"line":1,"column":3},"end":{"offset":3,"line":1,"column":4}}}],"matched":"a X c"},{"range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"1","value":"Y","range":{"start":{"offset":8,"line":1,"column":9},"end":{"offset":9,"line":1,"column":10}}}],"matched":"a Y c"}]}
 |}]
 
 let with_zip f =
   let file = Filename.temp_file "comby_" ".zip" in
-  let zip =  Zip.open_out file in
+  let zip = Zip.open_out file in
   let entry_name = "main.ml" in
   let entry_content = "hello world" in
   Zip.add_entry entry_content zip entry_name;
@@ -293,18 +314,21 @@ let with_zip f =
 
 let%expect_test "patdiff_and_zip" =
   with_zip (fun file ->
-      let match_template = ":[[2]] :[[1]]" in
-      let rewrite_template = ":[1]" in
-      let command_args =
-        Format.sprintf "'%s' '%s' .ml -sequential -json-lines -zip %s"
-          match_template rewrite_template file
-      in
-      let command = Format.sprintf "%s %s" binary_path command_args in
-      let result = read_output command in
-      print_string result;
-      [%expect_exact {|{"uri":"main.ml","rewritten_source":"world","in_place_substitutions":[{"range":{"start":{"offset":0,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}},"replacement_content":"world","environment":[{"variable":"1","value":"world","range":{"start":{"offset":0,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}}}]}],"diff":"--- main.ml\n+++ main.ml\n@@ -1,1 +1,1 @@\n-hello world\n\\ No newline at end of file\n+world\n\\ No newline at end of file"}
-|}]
-    )
+    let match_template = ":[[2]] :[[1]]" in
+    let rewrite_template = ":[1]" in
+    let command_args =
+      Format.sprintf
+        "'%s' '%s' .ml -sequential -json-lines -zip %s"
+        match_template
+        rewrite_template
+        file
+    in
+    let command = Format.sprintf "%s %s" binary_path command_args in
+    let result = read_output command in
+    print_string result;
+    [%expect_exact
+      {|{"uri":"main.ml","rewritten_source":"world","in_place_substitutions":[{"range":{"start":{"offset":0,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}},"replacement_content":"world","environment":[{"variable":"1","value":"world","range":{"start":{"offset":0,"line":-1,"column":-1},"end":{"offset":5,"line":-1,"column":-1}}}]}],"diff":"--- main.ml\n+++ main.ml\n@@ -1,1 +1,1 @@\n-hello world\n\\ No newline at end of file\n+world\n\\ No newline at end of file"}
+|}])
 
 let%expect_test "template_parsing_no_match_template" =
   let source = "hello world" in
@@ -313,7 +337,8 @@ let%expect_test "template_parsing_no_match_template" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|WARNING: Could not read required match file in example/templates/parse-no-match-template
+  [%expect_exact
+    {|WARNING: Could not read required match file in example/templates/parse-no-match-template
 |}]
 
 let%expect_test "template_parsing_with_trailing_newline" =
@@ -323,7 +348,7 @@ let%expect_test "template_parsing_with_trailing_newline" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect {|
     hello world |}]
 
 let%expect_test "template_parsing_with_trailing_newline" =
@@ -333,7 +358,7 @@ let%expect_test "template_parsing_with_trailing_newline" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect {|
     hello world |}]
 
 let%expect_test "nested_templates" =
@@ -343,7 +368,8 @@ let%expect_test "nested_templates" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     +1 +2 +3WARNING: Could not read required match file in example/multiple-nested-templates/invalid-subdir |}]
 
 let%expect_test "diff_is_default" =
@@ -351,13 +377,13 @@ let%expect_test "diff_is_default" =
   let match_template = "a :[1] c" in
   let rewrite_template = "c :[1] a" in
   let command_args =
-    Format.sprintf "-stdin -sequential '%s' '%s' -f .c"
-      match_template rewrite_template
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c" match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+  [%expect_exact
+    {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
@@ -369,13 +395,13 @@ let%expect_test "diff_option" =
   let match_template = "a :[1] c" in
   let rewrite_template = "c :[1] a" in
   let command_args =
-    Format.sprintf "-stdin -sequential -diff '%s' '%s' -f .c"
-      match_template rewrite_template
+    Format.sprintf "-stdin -sequential -diff '%s' '%s' -f .c" match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|--- /dev/null
+  [%expect_exact
+    {|--- /dev/null
 +++ /dev/null
 @@ -1,1 +1,1 @@
 -a X c a Y c
@@ -389,12 +415,10 @@ let%expect_test "stdout_option" =
   let match_template = "a :[1] c" in
   let rewrite_template = "c :[1] a" in
   let command_args =
-    Format.sprintf "-stdin -sequential -stdout '%s' '%s' -f .c"
-      match_template rewrite_template
+    Format.sprintf "-stdin -sequential -stdout '%s' '%s' -f .c" match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_expect_stdin_and_stdout command source
-  |> print_string;
+  read_expect_stdin_and_stdout command source |> print_string;
   [%expect_exact {|c X a c Y a|}]
 
 let%expect_test "only_color_prints_colored_diff" =
@@ -402,13 +426,13 @@ let%expect_test "only_color_prints_colored_diff" =
   let match_template = "a :[1] c" in
   let rewrite_template = "c :[1] a" in
   let command_args =
-    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -color"
-      match_template rewrite_template
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -color" match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+  [%expect_exact
+    {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
@@ -420,13 +444,13 @@ let%expect_test "diff_explicit_color" =
   let match_template = "a :[1] c" in
   let rewrite_template = "c :[1] a" in
   let command_args =
-    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -diff -color"
-      match_template rewrite_template
+    Format.sprintf "-stdin -sequential '%s' '%s' -f .c -diff -color" match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+  [%expect_exact
+    {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;41;30m-|[0m[0m[0;31ma[0m[0;2m X [0m[0;31mc a[0m[0;2m Y [0m[0;31mc[0m[0m
@@ -436,22 +460,27 @@ let%expect_test "diff_explicit_color" =
 let%expect_test "is_real_directory" =
   let source = "hello world" in
   let src_dir = "example" ^/ "src" ^/ "main.c" in
-  let command_args = Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir 'ignore' -diff" src_dir in
+  let command_args =
+    Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir 'ignore' -diff" src_dir
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect {|
     Directory specified with -d or -directory is not a directory. |}]
 
 let%expect_test "exclude_dir_option" =
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
   let exclude_dir = "ignore,also-ignore" in
-  let command_args = Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir %s -diff" src_dir exclude_dir in
+  let command_args =
+    Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir %s -diff" src_dir exclude_dir
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     --- example/src/honor-file-extensions/honor.pb.generic
     +++ example/src/honor-file-extensions/honor.pb.generic
     @@ -1,3 +1,3 @@
@@ -474,13 +503,15 @@ let%expect_test "exclude_dir_option" =
     +int pain() {}
 
     WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}];
-
   let src_dir = "example" ^/ "src" in
-  let command_args = Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir 'nonexist' -diff" src_dir in
+  let command_args =
+    Format.sprintf "'main' 'pain' -sequential -d %s -exclude-dir 'nonexist' -diff" src_dir
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     --- example/src/also-ignore-me/main.c
     +++ example/src/also-ignore-me/main.c
     @@ -1,1 +1,1 @@
@@ -528,11 +559,14 @@ let%expect_test "exclude_file_option" =
   let source = "hello world" in
   let src_dir = "example" ^/ "src" ^/ "ignore-file" in
   let exclude_file = "ignore.pb.go" in
-  let command_args = Format.sprintf "'main' 'pain' -sequential -d %s -exclude %s -diff" src_dir exclude_file in
+  let command_args =
+    Format.sprintf "'main' 'pain' -sequential -d %s -exclude %s -diff" src_dir exclude_file
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     --- example/src/ignore-file/dont-ignore.pb.go
     +++ example/src/ignore-file/dont-ignore.pb.go
     @@ -1,1 +1,1 @@
@@ -544,19 +578,26 @@ let%expect_test "exclude_file_option" =
 let%expect_test "dir_depth_option" =
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
-  let command_args = Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir (-1) in
+  let command_args =
+    Format.sprintf
+      "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff"
+      src_dir
+      (-1)
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{| -depth must be 0 or greater. |}];
-
+  [%expect {| -depth must be 0 or greater. |}];
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
-  let command_args = Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir 0 in
+  let command_args =
+    Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir 0
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     --- example/src/depth-0.c
     +++ example/src/depth-0.c
     @@ -1,1 +1,1 @@
@@ -564,14 +605,16 @@ let%expect_test "dir_depth_option" =
     +int correct_depth_0() {}
 
     WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}];
-
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
-  let command_args = Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir 1 in
+  let command_args =
+    Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir 1
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     --- example/src/depth-0.c
     +++ example/src/depth-0.c
     @@ -1,1 +1,1 @@
@@ -584,14 +627,16 @@ let%expect_test "dir_depth_option" =
     +int correct_depth_1() {}
 
     WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}];
-
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
-  let command_args = Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir 2 in
+  let command_args =
+    Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir 2
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     --- example/src/depth-0.c
     +++ example/src/depth-0.c
     @@ -1,1 +1,1 @@
@@ -609,14 +654,19 @@ let%expect_test "dir_depth_option" =
     +int correct_depth_2() {}
 
     WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}];
-
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
-  let command_args = Format.sprintf "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff" src_dir 1000 in
+  let command_args =
+    Format.sprintf
+      "'depth_' 'correct_depth_' -sequential -directory %s -depth %d -diff"
+      src_dir
+      1000
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     --- example/src/depth-0.c
     +++ example/src/depth-0.c
     @@ -1,1 +1,1 @@
@@ -638,11 +688,14 @@ let%expect_test "dir_depth_option" =
 let%expect_test "matcher_override" =
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
-  let command_args = Format.sprintf "'(' '_unbalanced_match_' main.c -sequential -d %s -matcher .txt -diff" src_dir in
+  let command_args =
+    Format.sprintf "'(' '_unbalanced_match_' main.c -sequential -d %s -matcher .txt -diff" src_dir
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     --- example/src/also-ignore-me/main.c
     +++ example/src/also-ignore-me/main.c
     @@ -1,1 +1,1 @@
@@ -658,14 +711,15 @@ let%expect_test "matcher_override" =
     @@ -1,1 +1,1 @@
     -int main() {}
     +int main_unbalanced_match_) {} |}];
-
   let source = "hello world" in
   let src_dir = "example" ^/ "src" in
-  let command_args = Format.sprintf "'(' '_unbalanced_match_' main.c -sequential -d %s -diff" src_dir in
+  let command_args =
+    Format.sprintf "'(' '_unbalanced_match_' main.c -sequential -d %s -diff" src_dir
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{| |}]
+  [%expect {| |}]
 
 let%expect_test "infer_and_honor_extensions" =
   let source = "doesn't matter" in
@@ -674,7 +728,8 @@ let%expect_test "infer_and_honor_extensions" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     --- example/src/honor-file-extensions/honor.pb.go
     +++ example/src/honor-file-extensions/honor.pb.go
     @@ -1,4 +1,4 @@
@@ -683,14 +738,14 @@ let%expect_test "infer_and_honor_extensions" =
     -foo()
     +bar()
      } |}];
-
   let source = "doesn't matter" in
   let src_dir = "example" ^/ "src" ^/ "honor-file-extensions" in
   let command_args = Format.sprintf "'foo()' 'bar()' .generic -sequential -d %s -diff" src_dir in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     --- example/src/honor-file-extensions/honor.pb.generic
     +++ example/src/honor-file-extensions/honor.pb.generic
     @@ -1,3 +1,3 @@
@@ -703,32 +758,37 @@ let%expect_test "infer_and_honor_extensions" =
 
 let%expect_test "diff_only" =
   let source = "hello world" in
-  let command_args = Format.sprintf "'hello' 'world' -stdin -sequential -json-lines -json-only-diff" in
+  let command_args =
+    Format.sprintf "'hello' 'world' -stdin -sequential -json-lines -json-only-diff"
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     {"uri":null,"diff":"--- /dev/null\n+++ /dev/null\n@@ -1,1 +1,1 @@\n-hello world\n\\ No newline at end of file\n+world world\n\\ No newline at end of file"}
 
     WARNING: the GENERIC matcher was used, because a language could not be inferred from the file extension(s). The GENERIC matcher may miss matches. See '-list' to set a matcher for a specific language and to remove this warning, or add -matcher .generic to suppress this warning. |}];
-
   let source = "hello world" in
   let command_args = Format.sprintf "'hello' 'world' -stdin -sequential -json-only-diff" in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect {|
     -json-only-diff can only be supplied with -json-lines. |}]
 
 let%expect_test "zip_exclude_dir_with_multiple_extension" =
   let source = "doesn't matter" in
   let zip = "example" ^/ "zip-test" ^/ "sample-repo.zip" in
   let exclude_dir = "sample-repo/vendor,sample-repo/ignore-this" in
-  let command_args = Format.sprintf "'main' 'pain' .go -zip %s -sequential -diff -exclude-dir %s" zip exclude_dir in
+  let command_args =
+    Format.sprintf "'main' 'pain' .go -zip %s -sequential -diff -exclude-dir %s" zip exclude_dir
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     --- sample-repo/src/main.go
     +++ sample-repo/src/main.go
     @@ -1,2 +1,2 @@
@@ -740,11 +800,14 @@ let%expect_test "zip_exclude_dir_no_extension" =
   let source = "doesn't matter" in
   let zip = "example" ^/ "zip-test" ^/ "sample-repo.zip" in
   let exclude_dir = "sample-repo/vendor,sample-repo/ignore-this" in
-  let command_args = Format.sprintf "'main' 'pain' -zip %s -sequential -diff -exclude-dir %s" zip exclude_dir in
+  let command_args =
+    Format.sprintf "'main' 'pain' -zip %s -sequential -diff -exclude-dir %s" zip exclude_dir
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     --- sample-repo/src/main.go
     +++ sample-repo/src/main.go
     @@ -1,2 +1,2 @@
@@ -758,11 +821,13 @@ let%expect_test "zip_exclude_file" =
   let source = "doesn't matter" in
   let zip = "example" ^/ "zip-test" ^/ "sample-repo.zip" in
   let exclude_file = "main" in
-  let command_args = Format.sprintf "'main' 'pain' .go -zip %s -sequential -diff -exclude %s" zip exclude_file in
+  let command_args =
+    Format.sprintf "'main' 'pain' .go -zip %s -sequential -diff -exclude %s" zip exclude_file
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{| |}]
+  [%expect {| |}]
 
 let%expect_test "invalid_path_with_error_message" =
   let source = "doesn't matter" in
@@ -770,20 +835,22 @@ let%expect_test "invalid_path_with_error_message" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     No such file or directory: ./invalid/path. Comby interprets patterns containing '/' as file paths. If a pattern does not contain '/' (like '.ml'), it is considered a pattern where file endings must match the pattern. Please supply only valid file paths or patterns. |}]
 
-let%expect_test "newline_separated_output"=
+let%expect_test "newline_separated_output" =
   let source = "a b c" in
   let match_template = ":[[1]]" in
   let rewrite_template = ":[[1]]" in
   let command_args =
-    Format.sprintf "-stdin -sequential -stdout '%s' '%s' -matcher .generic -newline-separated"
-      match_template rewrite_template
+    Format.sprintf
+      "-stdin -sequential -stdout '%s' '%s' -matcher .generic -newline-separated"
+      match_template
+      rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_expect_stdin_and_stdout command source
-  |> print_string;
+  read_expect_stdin_and_stdout command source |> print_string;
   [%expect_exact {|a
 b
 c
@@ -794,12 +861,13 @@ let%expect_test "warn_on_stdin_and_in_place_flags" =
   let match_template = ":[[1]]" in
   let rewrite_template = ":[[1]]" in
   let command_args =
-    Format.sprintf "-stdin -sequential -in-place '%s' '%s' -matcher .generic"
-      match_template rewrite_template
+    Format.sprintf
+      "-stdin -sequential -in-place '%s' '%s' -matcher .generic"
+      match_template
+      rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_expect_stdin_and_stdout command source
-  |> print_string;
+  read_expect_stdin_and_stdout command source |> print_string;
   [%expect_exact {|WARNING: -in-place has no effect when -stdin is used. Ignoring -in-place.
 |}]
 
@@ -807,17 +875,17 @@ let%expect_test "print_single_line_matches" =
   let source = {|
     let () = x in
     let () = y in
-  |}
-  in
+  |} in
   let match_template = "let ()" in
   let rewrite_template = "dont care" in
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -sequential -match-only -matcher .generic"
-      match_template rewrite_template
+    Format.sprintf
+      "-stdin '%s' '%s' -sequential -match-only -matcher .generic"
+      match_template
+      rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_expect_stdin_and_stdout command source
-  |> print_string;
+  read_expect_stdin_and_stdout command source |> print_string;
   [%expect_exact {|2:let ()
 3:let ()
 |}]
@@ -830,51 +898,53 @@ let%expect_test "print_multi_line_matches" =
     ()
 in
     let () = y in
-  |}
-  in
+  |} in
   let match_template = "let ()" in
   let rewrite_template = "dont care" in
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -sequential -match-only -matcher .generic"
-      match_template rewrite_template
+    Format.sprintf
+      "-stdin '%s' '%s' -sequential -match-only -matcher .generic"
+      match_template
+      rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_expect_stdin_and_stdout command source
-  |> print_string;
+  read_expect_stdin_and_stdout command source |> print_string;
   [%expect_exact {|2:let ()
 3:let\n\n    ()
 7:let ()
 |}];
-
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -sequential -match-only -count -matcher .generic"
-      match_template rewrite_template
+    Format.sprintf
+      "-stdin '%s' '%s' -sequential -match-only -count -matcher .generic"
+      match_template
+      rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_expect_stdin_and_stdout command source
-  |> print_string;
+  read_expect_stdin_and_stdout command source |> print_string;
   [%expect_exact {|3 matches
 |}];
-
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -sequential -match-only -count -json-lines -matcher .generic"
-      match_template rewrite_template
+    Format.sprintf
+      "-stdin '%s' '%s' -sequential -match-only -count -json-lines -matcher .generic"
+      match_template
+      rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_expect_stdin_and_stdout command source
-  |> print_string;
-  [%expect_exact {|{"uri":null,"matches":[{"range":{"start":{"offset":5,"line":2,"column":5},"end":{"offset":11,"line":2,"column":11}},"environment":[],"matched":"let ()"},{"range":{"start":{"offset":23,"line":3,"column":5},"end":{"offset":34,"line":5,"column":7}},"environment":[],"matched":"let\n\n    ()"},{"range":{"start":{"offset":42,"line":7,"column":5},"end":{"offset":48,"line":7,"column":11}},"environment":[],"matched":"let ()"}]}
+  read_expect_stdin_and_stdout command source |> print_string;
+  [%expect_exact
+    {|{"uri":null,"matches":[{"range":{"start":{"offset":5,"line":2,"column":5},"end":{"offset":11,"line":2,"column":11}},"environment":[],"matched":"let ()"},{"range":{"start":{"offset":23,"line":3,"column":5},"end":{"offset":34,"line":5,"column":7}},"environment":[],"matched":"let\n\n    ()"},{"range":{"start":{"offset":42,"line":7,"column":5},"end":{"offset":48,"line":7,"column":11}},"environment":[],"matched":"let ()"}]}
 WARNING: -count and -json-lines is specified. Ignoring -count.
 |}];
-
   let command_args =
-    Format.sprintf "-stdin '%s' '%s' -sequential -count -matcher .generic"
-      match_template rewrite_template
+    Format.sprintf
+      "-stdin '%s' '%s' -sequential -count -matcher .generic"
+      match_template
+      rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_expect_stdin_and_stdout command source
-  |> print_string;
-  [%expect_exact {|3 matches
+  read_expect_stdin_and_stdout command source |> print_string;
+  [%expect_exact
+    {|3 matches
 WARNING: -count only works with -match-only. Performing -match-only -count.
 |}]
 
@@ -883,12 +953,10 @@ let%expect_test "unrecognized_matcher" =
   let match_template = "dont care" in
   let rewrite_template = "dont care" in
   let command_args =
-    Format.sprintf "-stdin -sequential '%s' '%s' -matcher invalid"
-      match_template rewrite_template
+    Format.sprintf "-stdin -sequential '%s' '%s' -matcher invalid" match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_expect_stdin_and_stdout command source
-  |> print_string;
+  read_expect_stdin_and_stdout command source |> print_string;
   [%expect_exact {|The matcher "invalid" is not supported. See -list for supported matchers
 |}]
 
@@ -897,13 +965,12 @@ let%expect_test "generic_matcher_ok" =
   let match_template = "dont care" in
   let rewrite_template = "blah" in
   let command_args =
-    Format.sprintf "-stdin -sequential '%s' '%s' -matcher .generic"
-      match_template rewrite_template
+    Format.sprintf "-stdin -sequential '%s' '%s' -matcher .generic" match_template rewrite_template
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_expect_stdin_and_stdout command source
-  |> print_string;
-  [%expect_exact {|[0;31m------ [0m[0;1m/dev/null[0m
+  read_expect_stdin_and_stdout command source |> print_string;
+  [%expect_exact
+    {|[0;31m------ [0m[0;1m/dev/null[0m
 [0;32m++++++ [0m[0;1m/dev/null[0m
 [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
 [0;41;30m-|[0m[0m[0;31mdont care[0m[0m
@@ -913,12 +980,15 @@ let%expect_test "generic_matcher_ok" =
 let%expect_test "warn_on_anonymous_and_templates_flag" =
   let source = "(fun i -> j) (fun x -> x)" in
   let command_args =
-    Format.sprintf "-stdin -sequential 'ignore' 'ignore' -templates example/templates/implicit-equals -matcher .ml -stdout"
+    Format.sprintf
+      "-stdin -sequential 'ignore' 'ignore' -templates example/templates/implicit-equals -matcher \
+       .ml -stdout"
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|(fun i -> j) identWARNING: Templates specified on the command line AND using -templates. Ignoring match
+  [%expect_exact
+    {|(fun i -> j) identWARNING: Templates specified on the command line AND using -templates. Ignoring match
       and rewrite templates on the command line and only using those in directories.
 |}]
 
@@ -926,13 +996,21 @@ let%expect_test "dump_stats" =
   let source = {|dont care|} in
   let match_template = "care" in
   let rewrite_template = "realy care" in
-  let command_args = Format.sprintf "-stdin '%s' '%s' -sequential -stats -matcher .txt" match_template rewrite_template in
+  let command_args =
+    Format.sprintf
+      "-stdin '%s' '%s' -sequential -stats -matcher .txt"
+      match_template
+      rewrite_template
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let stats_json = read_expect_stderr command source in
   (match Statistics.of_yojson (Yojson.Safe.from_string stats_json) with
    | Ok { number_of_files; lines_of_code; number_of_matches; _ } ->
-     Format.printf "number_of_files: %d, lines_of_code: %d, number_of_matches: %d"
-       number_of_files lines_of_code number_of_matches
+     Format.printf
+       "number_of_files: %d, lines_of_code: %d, number_of_matches: %d"
+       number_of_files
+       lines_of_code
+       number_of_matches
    | Error _ -> print_string "Unexpected error");
   [%expect_exact {|number_of_files: 1, lines_of_code: 1, number_of_matches: 1|}]
 
@@ -942,9 +1020,9 @@ let%expect_test "substitute_bad_parse" =
   let rewrite_template = "dont care" in
   let command_args = Format.sprintf "%s %s -substitute 'json'" match_template rewrite_template in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_expect_stdin_and_stdout command source
-  |> print_string;
-  [%expect_exact {|Error, could not parse JSON to environment: Line 1, bytes 0-4:
+  read_expect_stdin_and_stdout command source |> print_string;
+  [%expect_exact
+    {|Error, could not parse JSON to environment: Line 1, bytes 0-4:
 Invalid token 'json'
 |}]
 
@@ -954,37 +1032,46 @@ let%expect_test "substitute_ok" =
   let rewrite_template = ":[1] :[2]" in
   let environment = {|[{"variable":"1","value":"hole_1"},{"variable":"2","value":"hole_2"}]|} in
   let command_args =
-    Format.sprintf "'%s' '%s' -stdin -sequential -match-only -matcher .txt -substitute '%s'" match_template rewrite_template environment
+    Format.sprintf
+      "'%s' '%s' -stdin -sequential -match-only -matcher .txt -substitute '%s'"
+      match_template
+      rewrite_template
+      environment
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_expect_stdin_and_stdout command source
-  |> print_string;
+  read_expect_stdin_and_stdout command source |> print_string;
   [%expect_exact {|hole_1 hole_2
 |}]
 
 let%expect_test "escape_carriage-return" =
   let source = "line1\r\nline2\r\n" in
   let match_template = {|:[x\n]|} in
-  let command_args = Format.sprintf {|'%s' '' -sequential -stdin -match-only -matcher .c|} match_template in
+  let command_args =
+    Format.sprintf {|'%s' '' -sequential -stdin -match-only -matcher .c|} match_template
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
-  read_expect_stdin_and_stdout command source
-  |> print_string;
+  read_expect_stdin_and_stdout command source |> print_string;
   [%expect_exact {|1:line1\r\n
 2:line2\r\n
 |}]
 
 let%expect_test "diff_patches_with_trailing_newlines" =
   let source = "dont care" in
-
   let src_dir = "example" ^/ "diff-no-newlines" ^/ "1" in
   let match_template = "1" in
   let rewrite_template = "2" in
-
-  let command_args = Format.sprintf "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
+  let command_args =
+    Format.sprintf
+      "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt "
+      match_template
+      rewrite_template
+      src_dir
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|--- example/diff-no-newlines/1/a
+  [%expect_exact
+    {|--- example/diff-no-newlines/1/a
 +++ example/diff-no-newlines/1/a
 @@ -1,1 +1,1 @@
 -1
@@ -992,13 +1079,19 @@ let%expect_test "diff_patches_with_trailing_newlines" =
 +2
 \ No newline at end of file
 |}];
-
   let src_dir = "example" ^/ "diff-no-newlines" ^/ "2" in
-  let command_args = Format.sprintf "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
+  let command_args =
+    Format.sprintf
+      "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt "
+      match_template
+      rewrite_template
+      src_dir
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|--- example/diff-no-newlines/2/a
+  [%expect_exact
+    {|--- example/diff-no-newlines/2/a
 +++ example/diff-no-newlines/2/a
 @@ -1,2 +1,2 @@
 -1
@@ -1008,13 +1101,19 @@ let%expect_test "diff_patches_with_trailing_newlines" =
 +2
 \ No newline at end of file
 |}];
-
   let src_dir = "example" ^/ "diff-no-newlines" ^/ "3" in
-  let command_args = Format.sprintf "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
+  let command_args =
+    Format.sprintf
+      "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt "
+      match_template
+      rewrite_template
+      src_dir
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|--- example/diff-no-newlines/3/a
+  [%expect_exact
+    {|--- example/diff-no-newlines/3/a
 +++ example/diff-no-newlines/3/a
 @@ -1,2 +1,2 @@
 -1
@@ -1022,32 +1121,44 @@ let%expect_test "diff_patches_with_trailing_newlines" =
  2
 \ No newline at end of file
 |}];
-
   (* Introduce newline *)
   let match_template = "1" in
   let rewrite_template = "2\n" in
   let src_dir = "example" ^/ "diff-no-newlines" ^/ "4" in
-  let command_args = Format.sprintf "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
+  let command_args =
+    Format.sprintf
+      "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt "
+      match_template
+      rewrite_template
+      src_dir
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|--- example/diff-no-newlines/4/a
+  [%expect_exact
+    {|--- example/diff-no-newlines/4/a
 +++ example/diff-no-newlines/4/a
 @@ -1,1 +1,1 @@
 -1
 \ No newline at end of file
 +2
 |}];
-
   (* Delete newline *)
   let match_template = "1\n" in
   let rewrite_template = "2" in
   let src_dir = "example" ^/ "diff-no-newlines" ^/ "5" in
-  let command_args = Format.sprintf "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
+  let command_args =
+    Format.sprintf
+      "'%s' '%s' -sequential -diff -f a -d %s -matcher .txt "
+      match_template
+      rewrite_template
+      src_dir
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|--- example/diff-no-newlines/5/a
+  [%expect_exact
+    {|--- example/diff-no-newlines/5/a
 +++ example/diff-no-newlines/5/a
 @@ -1,1 +1,1 @@
 -1
@@ -1057,16 +1168,21 @@ let%expect_test "diff_patches_with_trailing_newlines" =
 
 let%expect_test "diff_patches_preserve_slash_r" =
   let source = "dont care" in
-
   let src_dir = "example" ^/ "diff-preserve-slash-r" in
   let match_template = "1" in
   let rewrite_template = "2" in
-
-  let command_args = Format.sprintf "'%s' '%s' -sequential -json-lines -json-only-diff -f a -d %s -matcher .txt " match_template rewrite_template src_dir in
+  let command_args =
+    Format.sprintf
+      "'%s' '%s' -sequential -json-lines -json-only-diff -f a -d %s -matcher .txt "
+      match_template
+      rewrite_template
+      src_dir
+  in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect_exact {|{"uri":"example/diff-preserve-slash-r/a","diff":"--- example/diff-preserve-slash-r/a\n+++ example/diff-preserve-slash-r/a\n@@ -1,3 +1,3 @@\n-1\r\n+2\r\n 2\r\n 3\r"}
+  [%expect_exact
+    {|{"uri":"example/diff-preserve-slash-r/a","diff":"--- example/diff-preserve-slash-r/a\n+++ example/diff-preserve-slash-r/a\n@@ -1,3 +1,3 @@\n-1\r\n+2\r\n 2\r\n 3\r"}
 |}]
 
 let%expect_test "warn_on_match_template_starts_with_everything_hole" =
@@ -1079,7 +1195,8 @@ let%expect_test "warn_on_match_template_starts_with_everything_hole" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     world
     WARNING: The match template starts with a :[hole]. You almost never want to start a template with :[hole], since it matches everything including newlines up to the part that comes after it. This can make things slow. :[[hole]] might be what you're looking for instead, like when you want to match an assignment foo = bar(args) on a line, use :[[var]] = bar(args). :[hole] is typically useful inside balanced delimiters. |}]
 
@@ -1087,18 +1204,17 @@ let%expect_test "test_ellipses" =
   let source = "foo(bar)" in
   let match_ = "...(...)" in
   let rewrite = "delete" in
-  let command_args =
-    Format.sprintf "-stdin -sequential -stdout '%s' '%s' -f .c" match_ rewrite
-  in
+  let command_args = Format.sprintf "-stdin -sequential -stdout '%s' '%s' -f .c" match_ rewrite in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|delete|}]
+  [%expect {|delete|}]
 
 let%expect_test "test_rule_ellipses" =
   let source = "foo(foo, bar, baz)" in
   let match_ = "foo(:[args])" in
-  let rule = {|
+  let rule =
+    {|
     where match :[args] {
     | "nope" -> true
     | "..., bar, ..." -> true
@@ -1113,53 +1229,45 @@ let%expect_test "test_rule_ellipses" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|delete|}]
+  [%expect {|delete|}]
 
 let%expect_test "test_valid_toml" =
   let source = "main(void)\n" in
   let config = "example" ^/ "toml" ^/ "plain" ^/ "config.toml" in
-  let command_args =
-    Format.sprintf "-stdin -sequential -config %s -stdout -f .c" config
-  in
+  let command_args = Format.sprintf "-stdin -sequential -config %s -stdout -f .c" config in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|main()|}]
+  [%expect {|main()|}]
 
 (* If templates rewrite the same thing, the last rule that changes, by
    alphabetical name, persists. *)
 let%expect_test "test_alphabetical_toml_application" =
   let source = "main(void)\n" in
   let config = "example" ^/ "toml" ^/ "alphabetic" ^/ "config.toml" in
-  let command_args =
-    Format.sprintf "-stdin -sequential -config %s -stdout -f .c" config
-  in
+  let command_args = Format.sprintf "-stdin -sequential -config %s -stdout -f .c" config in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|main(cccc)|}]
+  [%expect {|main(cccc)|}]
 
 let%expect_test "test_multi" =
   let source = "main(void)\n" in
   let config = "example" ^/ "toml" ^/ "multi" ^/ "config.toml" in
-  let command_args =
-    Format.sprintf "-stdin -sequential -config %s -stdout -f .c" config
-  in
+  let command_args = Format.sprintf "-stdin -sequential -config %s -stdout -f .c" config in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|foo(rewrite)|}]
+  [%expect {|foo(rewrite)|}]
 
 let%expect_test "test_toml_rule" =
   let source = "main(void)\n" in
   let config = "example" ^/ "toml" ^/ "rule" ^/ "config.toml" in
-  let command_args =
-    Format.sprintf "-stdin -sequential -config %s -stdout -f .c" config
-  in
+  let command_args = Format.sprintf "-stdin -sequential -config %s -stdout -f .c" config in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|main(rewrite)|}]
+  [%expect {|main(rewrite)|}]
 
 let%expect_test "test_toml_match_only_multi" =
   let source = "foo\nbar\nbaz\n" in
@@ -1170,7 +1278,7 @@ let%expect_test "test_toml_match_only_multi" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect {|
     1:foo
     2:bar
     3:baz|}]
@@ -1178,13 +1286,12 @@ let%expect_test "test_toml_match_only_multi" =
 let%expect_test "test_toml_multi_rewrite_with_match_only_in_config" =
   let source = "foo\nbar\nbaz" in
   let config = "example" ^/ "toml" ^/ "match-only-multi" ^/ "config.toml" in
-  let command_args =
-    Format.sprintf "-stdin -sequential -config %s -matcher .c" config
-  in
+  let command_args = Format.sprintf "-stdin -sequential -config %s -matcher .c" config in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     [0;31m------ [0m[0;1m/dev/null[0m
     [0;32m++++++ [0m[0;1m/dev/null[0m
     [0;100;30m@|[0m[0;1m-1,3 +1,3[0m ============================================================
@@ -1202,7 +1309,8 @@ let%expect_test "dot_comby_with_flags" =
   let result = read_expect_stdin_and_stdout command source in
   Sys.chdir "../..";
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     [0;31m------ [0m[0;1m/dev/null[0m
     [0;32m++++++ [0m[0;1m/dev/null[0m
     [0;100;30m@|[0m[0;1m-1,1 +1,1[0m ============================================================
@@ -1213,32 +1321,39 @@ let%expect_test "test_custom_metasyntax_replace" =
   let source = "a(b)" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
   let command_args =
-    Format.sprintf "'$A($B~\\w+$)' '$A $B' -stdin -sequential -custom-metasyntax %s -stdout -matcher .generic" metasyntax_path
+    Format.sprintf
+      "'$A($B~\\w+$)' '$A $B' -stdin -sequential -custom-metasyntax %s -stdout -matcher .generic"
+      metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "
-    a b"]
+  [%expect "\n    a b"]
 
 let%expect_test "test_custom_metasyntax_replace" =
   let source = "a(b)" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
   let command_args =
-    Format.sprintf "'$A($B~\\w+$)' '$A~x$ $B~\\w+$' -stdin -sequential -custom-metasyntax %s -stdout -matcher .generic" metasyntax_path
+    Format.sprintf
+      "'$A($B~\\w+$)' '$A~x$ $B~\\w+$' -stdin -sequential -custom-metasyntax %s -stdout -matcher \
+       .generic"
+      metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "
-    a b"]
+  [%expect "\n    a b"]
 
 let%expect_test "test_custom_metasyntax_substitute" =
   let source = "IGNORED" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
   let env = {|[{"variable":"B", "value":"hello" }]|} in
   let command_args =
-    Format.sprintf "'IGNORED' '$A $B~\\w+$' -stdin -sequential -custom-metasyntax %s -substitute-only '%s' -matcher .generic" metasyntax_path env
+    Format.sprintf
+      "'IGNORED' '$A $B~\\w+$' -stdin -sequential -custom-metasyntax %s -substitute-only '%s' \
+       -matcher .generic"
+      metasyntax_path
+      env
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
@@ -1249,25 +1364,27 @@ let%expect_test "test_custom_metasyntax_rule_support" =
   let source = "a(b)" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "dolla.json" in
   let command_args =
-    Format.sprintf {|'$A($B)' '$A $B' -rule 'where rewrite $A { "$C~a$" -> "$C" }' -stdin -custom-metasyntax %s -stdout -matcher .generic|} metasyntax_path
+    Format.sprintf
+      {|'$A($B)' '$A $B' -rule 'where rewrite $A { "$C~a$" -> "$C" }' -stdin -custom-metasyntax %s -stdout -matcher .generic|}
+      metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "
-    a b"]
+  [%expect "\n    a b"]
 
 let%expect_test "test_custom_metasyntax_reserved_identifiers" =
   let source = "fun f -> (fun x -> f (x x)) (fun x -> f (x x))" in
   let metasyntax_path = "example" ^/ "metasyntax" ^/ "default.json" in
   let command_args =
-    Format.sprintf {|'λ f -> α α' 'α' -stdin -custom-metasyntax %s -stdout -matcher .generic|} metasyntax_path
+    Format.sprintf
+      {|'λ f -> α α' 'α' -stdin -custom-metasyntax %s -stdout -matcher .generic|}
+      metasyntax_path
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect "
-    (fun x -> f (x x))"]
+  [%expect "\n    (fun x -> f (x x))"]
 
 let%expect_test "test_nested_newline_rewrite" =
   let source = "foo(foo(foo(x)))" in
@@ -1275,16 +1392,19 @@ let%expect_test "test_nested_newline_rewrite" =
   let rule = "where nested" in
   let rewrite = ":[x]" in
   let command_args =
-    Format.sprintf "-stdin -sequential -stdout '%s' '%s' -rule '%s' -f .c -newline-separated" match_ rewrite rule
+    Format.sprintf
+      "-stdin -sequential -stdout '%s' '%s' -rule '%s' -f .c -newline-separated"
+      match_
+      rewrite
+      rule
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect {|
     foo(foo(x))
     foo(x)
     x|}]
-
 
 (**
    echo 'qux { bar(bar(t)) } foo { bar(bar(bar(x))) }' | ./comby -stdin '$F {$BODY}' 'xoxo $BODY' -stdout -newline-separated -lang .generic -rule 'where nested, rewrite $BODY { bar($X) -> $F: $X }'  -custom-metasyntax test/example/metasyntax/dolla.json
@@ -1297,12 +1417,19 @@ let%expect_test "test_nested_newline_rule_rewrite" =
   let rule = "where nested, rewrite $BODY { bar($X) -> $F: $X }" in
   let rewrite = ">$BODY<" in
   let command_args =
-    Format.sprintf "-stdin -stdout -newline-separated -sequential -lang .generic -custom-metasyntax %s '%s' '%s' -rule '%s'" metasyntax_path match_ rewrite rule
+    Format.sprintf
+      "-stdin -stdout -newline-separated -sequential -lang .generic -custom-metasyntax %s '%s' \
+       '%s' -rule '%s'"
+      metasyntax_path
+      match_
+      rewrite
+      rule
   in
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_expect_stdin_and_stdout command source in
   print_string result;
-  [%expect{|
+  [%expect
+    {|
     >qux: bar(t)
     qux: t
     <

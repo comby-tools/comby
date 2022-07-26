@@ -1,19 +1,23 @@
 open Core
-
 open Comby_kernel
 open Matchers
 open Match
-
 open Test_helpers
 
 let sat ?(env = Match.Environment.create ()) (module E : Engine.S) rule =
   let rule = Rule.create rule |> Or_error.ok_exn in
-  Format.sprintf "%b" Rule.(sat @@ apply ~substitute_in_place:true ~match_all:(E.Generic.all ~rule:[Ast.True]) rule env)
+  Format.sprintf
+    "%b"
+    Rule.(
+      sat @@ apply ~substitute_in_place:true ~match_all:(E.Generic.all ~rule:[ Ast.True ]) rule env)
 
 let run (module E : Engine.S) template source rule =
   let (module M : Matcher.S) = (module E.Generic) in
   M.all ~configuration ~template ~source ()
-  |> List.filter ~f:(fun { environment; _ } -> Rule.(sat @@ apply ~substitute_in_place:true ~match_all:(M.all ~rule:[Ast.True]) rule environment))
+  |> List.filter ~f:(fun { environment; _ } ->
+       Rule.(
+         sat
+         @@ apply ~substitute_in_place:true ~match_all:(M.all ~rule:[ Ast.True ]) rule environment))
 
 let%expect_test "rule_sat" =
   let rule = {| where "x" != "y" |} in
@@ -21,31 +25,26 @@ let%expect_test "rule_sat" =
   [%expect_exact {|true|}];
   sat (module Omega) rule |> print_string;
   [%expect_exact {|true|}];
-
   let rule = {| where "x" != "x" |} in
   sat (module Alpha) rule |> print_string;
   [%expect_exact {|false|}];
   sat (module Omega) rule |> print_string;
   [%expect_exact {|false|}];
-
   let rule = {| where "x" == "x" |} in
   sat (module Alpha) rule |> print_string;
   [%expect_exact {|true|}];
   sat (module Omega) rule |> print_string;
   [%expect_exact {|true|}];
-
   let rule = {| where "x" == "y" |} in
   sat (module Alpha) rule |> print_string;
   [%expect_exact {|false|}];
   sat (module Omega) rule |> print_string;
   [%expect_exact {|false|}];
-
   let rule = {| where :[x] == "y" |} in
   sat (module Alpha) rule |> print_string;
   [%expect_exact {|false|}];
   sat (module Omega) rule |> print_string;
   [%expect_exact {|false|}];
-
   let rule = {| where :[x] == :[x] |} in
   sat (module Alpha) rule |> print_string;
   [%expect_exact {|true|}];
@@ -53,26 +52,22 @@ let%expect_test "rule_sat" =
   [%expect_exact {|true|}]
 
 let%expect_test "rule_sat_with_env" =
-  let env = make_env ["1", "x"; "2", "y"; "3", "x"] in
-
+  let env = make_env [ "1", "x"; "2", "y"; "3", "x" ] in
   let rule = {| where :[1] == :[3], :[1] != :[2] |} in
   sat (module Alpha) ~env rule |> print_string;
   [%expect_exact {|true|}];
   sat (module Omega) ~env rule |> print_string;
   [%expect_exact {|true|}];
-
   let rule = {| where :[1] == :[3], :[1] != "y" |} in
   sat (module Alpha) ~env rule |> print_string;
   [%expect_exact {|true|}];
   sat (module Omega) ~env rule |> print_string;
   [%expect_exact {|true|}];
-
   let rule = {| where :[1] == :[3], :[1] == "x" |} in
   sat (module Alpha) ~env rule |> print_string;
   [%expect_exact {|true|}];
   sat (module Omega) ~env rule |> print_string;
   [%expect_exact {|true|}];
-
   let rule = {| where :[1] == :[2], :[1] != :[2] |} in
   sat (module Alpha) ~env rule |> print_string;
   [%expect_exact {|false|}];
@@ -80,30 +75,17 @@ let%expect_test "rule_sat_with_env" =
   [%expect_exact {|false|}]
 
 let%expect_test "where_true" =
-  let template =
-    {|
+  let template = {|
       (:[1]) => {}
-    |}
-    |> format
-  in
-
-  let source =
-    {|
+    |} |> format in
+  let source = {|
       (b,c) => {}
-    |}
-    |> format
-  in
-
-  let rule =
-    {| where true
-    |}
-    |> Rule.create
-    |> Or_error.ok_exn
-  in
-
-  run (module Alpha) template source rule
-  |> print_matches;
-  [%expect {|
+    |} |> format in
+  let rule = {| where true
+    |} |> Rule.create |> Or_error.ok_exn in
+  run (module Alpha) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -123,10 +105,9 @@ let%expect_test "where_true" =
         "matched": "(b,c) => {}"
       }
     ] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Omega) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -148,20 +129,12 @@ let%expect_test "where_true" =
     ] |}]
 
 let%expect_test "match_sat" =
-  let template =
-    {|
+  let template = {|
       (:[1]) => {}
-    |}
-    |> format
-  in
-
-  let source =
-    {|
+    |} |> format in
+  let source = {|
       (b,c) => {}
-    |}
-    |> format
-  in
-
+    |} |> format in
   let rule =
     {| where
        match :[1] {
@@ -171,16 +144,12 @@ let%expect_test "match_sat" =
     |> Rule.create
     |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
+  run (module Alpha) template source rule |> print_matches;
   [%expect {|
     [] |}];
-  run (module Omega) template source rule
-  |> print_matches;
+  run (module Omega) template source rule |> print_matches;
   [%expect {|
     [] |}];
-
   let rule =
     {| where
        match :[1] {
@@ -190,62 +159,54 @@ let%expect_test "match_sat" =
     |> Rule.create
     |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
-  [%expect {|
-    [
-      {
-        "range": {
-          "start": { "offset": 0, "line": 1, "column": 1 },
-          "end": { "offset": 11, "line": 1, "column": 12 }
-        },
-        "environment": [
-          {
-            "variable": "1",
-            "value": "b,c",
-            "range": {
-              "start": { "offset": 1, "line": 1, "column": 2 },
-              "end": { "offset": 4, "line": 1, "column": 5 }
-            }
-          }
-        ],
-        "matched": "(b,c) => {}"
-      }
-    ] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
-  [%expect {|
-    [
-      {
-        "range": {
-          "start": { "offset": 0, "line": 1, "column": 1 },
-          "end": { "offset": 11, "line": 1, "column": 12 }
-        },
-        "environment": [
-          {
-            "variable": "1",
-            "value": "b,c",
-            "range": {
-              "start": { "offset": 1, "line": 1, "column": 2 },
-              "end": { "offset": 4, "line": 1, "column": 5 }
-            }
-          }
-        ],
-        "matched": "(b,c) => {}"
-      }
-    ] |}];
-
-
-  let source =
+  run (module Alpha) template source rule |> print_matches;
+  [%expect
     {|
+    [
+      {
+        "range": {
+          "start": { "offset": 0, "line": 1, "column": 1 },
+          "end": { "offset": 11, "line": 1, "column": 12 }
+        },
+        "environment": [
+          {
+            "variable": "1",
+            "value": "b,c",
+            "range": {
+              "start": { "offset": 1, "line": 1, "column": 2 },
+              "end": { "offset": 4, "line": 1, "column": 5 }
+            }
+          }
+        ],
+        "matched": "(b,c) => {}"
+      }
+    ] |}];
+  run (module Omega) template source rule |> print_matches;
+  [%expect
+    {|
+    [
+      {
+        "range": {
+          "start": { "offset": 0, "line": 1, "column": 1 },
+          "end": { "offset": 11, "line": 1, "column": 12 }
+        },
+        "environment": [
+          {
+            "variable": "1",
+            "value": "b,c",
+            "range": {
+              "start": { "offset": 1, "line": 1, "column": 2 },
+              "end": { "offset": 4, "line": 1, "column": 5 }
+            }
+          }
+        ],
+        "matched": "(b,c) => {}"
+      }
+    ] |}];
+  let source = {|
       (a) => {}
       (b,c) => {}
-    |}
-    |> format
-  in
-
+    |} |> format in
   let rule =
     {| where
        match :[1] {
@@ -256,10 +217,9 @@ let%expect_test "match_sat" =
     |> Rule.create
     |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Alpha) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -279,10 +239,9 @@ let%expect_test "match_sat" =
         "matched": "(a) => {}"
       }
     ] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Omega) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -302,7 +261,6 @@ let%expect_test "match_sat" =
         "matched": "(a) => {}"
       }
     ] |}];
-
   let rule =
     {|
        where
@@ -314,10 +272,9 @@ let%expect_test "match_sat" =
     |> Rule.create
     |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Alpha) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -337,10 +294,9 @@ let%expect_test "match_sat" =
         "matched": "(a) => {}"
       }
     ] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Omega) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -360,7 +316,6 @@ let%expect_test "match_sat" =
         "matched": "(a) => {}"
       }
     ] |}];
-
   let rule =
     {| where
        match :[1] {
@@ -371,32 +326,21 @@ let%expect_test "match_sat" =
     |> Rule.create
     |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
+  run (module Alpha) template source rule |> print_matches;
   [%expect {|
     [] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
+  run (module Omega) template source rule |> print_matches;
   [%expect {|
     [] |}]
 
 let%expect_test "match_s_suffix" =
   let template = ":[1]s" in
-
   let source = "names" in
-
-  let rule =
-    {| where true
-    |}
-    |> Rule.create
-    |> Or_error.ok_exn
-  in
-
-  run (module Alpha) template source rule
-  |> print_matches;
-  [%expect {|
+  let rule = {| where true
+    |} |> Rule.create |> Or_error.ok_exn in
+  run (module Alpha) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -416,10 +360,9 @@ let%expect_test "match_s_suffix" =
         "matched": "names"
       }
     ] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Omega) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -442,19 +385,12 @@ let%expect_test "match_s_suffix" =
 
 let%expect_test "match_s_suffix" =
   let template = ":[1]" in
-
   let source = "names" in
-
-  let rule =
-    {| where true
-    |}
-    |> Rule.create
-    |> Or_error.ok_exn
-  in
-
-  run (module Alpha) template source rule
-  |> print_matches;
-  [%expect {|
+  let rule = {| where true
+    |} |> Rule.create |> Or_error.ok_exn in
+  run (module Alpha) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -474,10 +410,9 @@ let%expect_test "match_s_suffix" =
         "matched": "names"
       }
     ] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Omega) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -498,47 +433,32 @@ let%expect_test "match_s_suffix" =
       }
     ] |}]
 
-
 let%expect_test "configuration_choice_based_on_case" =
   let template = ":[1]" in
-
   let source = "names" in
-
   let rule =
     {| where match :[1] {
        | "ame" -> true
        }
-    |}
-    |> Rule.create
-    |> Or_error.ok_exn
+    |} |> Rule.create |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
+  run (module Alpha) template source rule |> print_matches;
   [%expect {|
     [] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
+  run (module Omega) template source rule |> print_matches;
   [%expect {|
     [] |}];
-
   let template = ":[1]" in
-
   let source = "names" in
-
   let rule =
     {| where match :[1] {
        | "names" -> true
        }
-    |}
-    |> Rule.create
-    |> Or_error.ok_exn
+    |} |> Rule.create |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Alpha) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -558,10 +478,9 @@ let%expect_test "configuration_choice_based_on_case" =
         "matched": "names"
       }
     ] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Omega) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -581,45 +500,33 @@ let%expect_test "configuration_choice_based_on_case" =
         "matched": "names"
       }
     ] |}];
-
   let template = ":[1]" in
-
   let source = "namesXXXXX" in
-
   let rule =
     {| where match :[1] {
        | "names" -> true
        }
-    |}
-    |> Rule.create
-    |> Or_error.ok_exn
+    |} |> Rule.create |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
+  run (module Alpha) template source rule |> print_matches;
   [%expect {|
     [] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
+  run (module Omega) template source rule |> print_matches;
   [%expect {|
     [] |}]
 
 let%expect_test "match_using_environment_merge" =
   let template = "{:[1]}" in
-
   let source = "{{ a : a } { a : a }}" in
-
   let rule =
     {| where match :[1] { | "{ :[x] : :[y] }" -> :[x] == :[y] }
     |}
     |> Rule.create
     |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Alpha) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -639,10 +546,9 @@ let%expect_test "match_using_environment_merge" =
         "matched": "{{ a : a } { a : a }}"
       }
     ] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Omega) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -662,34 +568,24 @@ let%expect_test "match_using_environment_merge" =
         "matched": "{{ a : a } { a : a }}"
       }
     ] |}];
-
-
   let template = "{:[1]}" in
-
   let source = "{{ a : a } { a : b }}" in
-
   let rule =
     {| where match :[1] { | "{ :[x] : :[y] }" -> :[x] == :[y] }
     |}
     |> Rule.create
     |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
+  run (module Alpha) template source rule |> print_matches;
   [%expect {|
     [] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
+  run (module Omega) template source rule |> print_matches;
   [%expect {|
     [] |}]
 
 let%expect_test "nested_matches" =
   let template = ":[1]" in
-
   let source = "{ { foo : { bar : { baz : qux } } } }" in
-
   let rule =
     {| where match :[1] {
        | "{ :[foo] : :[tail1] }" -> match :[tail1] {
@@ -702,10 +598,9 @@ let%expect_test "nested_matches" =
     |> Rule.create
     |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Alpha) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -725,10 +620,9 @@ let%expect_test "nested_matches" =
         "matched": "{ { foo : { bar : { baz : qux } } } }"
       }
     ] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Omega) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -748,11 +642,8 @@ let%expect_test "nested_matches" =
         "matched": "{ { foo : { bar : { baz : qux } } } }"
       }
     ] |}];
-
   let template = ":[1]" in
-
   let source = "{ { foo : { bar : { baz : qux } } } }" in
-
   let rule =
     {| where match :[1] {
        | "{ :[foo] : :[tail1] }" -> match :[tail1] {
@@ -765,22 +656,16 @@ let%expect_test "nested_matches" =
     |> Rule.create
     |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
+  run (module Alpha) template source rule |> print_matches;
   [%expect {|
     [] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
+  run (module Omega) template source rule |> print_matches;
   [%expect {|
     [] |}]
 
 let%expect_test "match_on_template" =
   let template = ":[1]" in
-
   let source = "oodles" in
-
   let rule =
     {| where match "p:[1]" {
        | "poodles" -> true
@@ -789,10 +674,9 @@ let%expect_test "match_on_template" =
     |> Rule.create
     |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Alpha) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -812,10 +696,9 @@ let%expect_test "match_on_template" =
         "matched": "oodles"
       }
     ] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Omega) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -835,11 +718,8 @@ let%expect_test "match_on_template" =
         "matched": "oodles"
       }
     ] |}];
-
   let template = ":[1]" in
-
   let source = "poodle" in
-
   let rule =
     {| where match ":[1]s" {
        | "poodles" -> true
@@ -848,10 +728,9 @@ let%expect_test "match_on_template" =
     |> Rule.create
     |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Alpha) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -871,10 +750,9 @@ let%expect_test "match_on_template" =
         "matched": "poodle"
       }
     ] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
-  [%expect {|
+  run (module Omega) template source rule |> print_matches;
+  [%expect
+    {|
     [
       {
         "range": {
@@ -894,11 +772,8 @@ let%expect_test "match_on_template" =
         "matched": "poodle"
       }
     ] |}];
-
   let template = ":[1]" in
-
   let source = "poodle" in
-
   let rule =
     {| where match ":[1]," {
        | "poodle" -> true
@@ -907,13 +782,9 @@ let%expect_test "match_on_template" =
     |> Rule.create
     |> Or_error.ok_exn
   in
-
-  run (module Alpha) template source rule
-  |> print_matches;
+  run (module Alpha) template source rule |> print_matches;
   [%expect {|
     [] |}];
-
-  run (module Omega) template source rule
-  |> print_matches;
+  run (module Omega) template source rule |> print_matches;
   [%expect {|
     [] |}]

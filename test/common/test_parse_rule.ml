@@ -1,5 +1,4 @@
 open Core
-
 open Comby_kernel
 open Matchers
 
@@ -12,39 +11,38 @@ let%expect_test "parse_rule" =
   let rule = {| where :[1] == :[2], :[3] == "y" |} in
   rule_parses rule |> print_string;
   [%expect_exact {|true|}];
-
   let rule = {| where :[1] == :[2], :[3] != "x" |} in
   rule_parses rule |> print_string;
   [%expect_exact {|true|}];
-
-  let rule =  {| where :[1] != :[3] |} in
+  let rule = {| where :[1] != :[3] |} in
   rule_parses rule |> print_string;
   [%expect_exact {|true|}];
-
-  let rule =  {| where :[1] != :[3], |} in
+  let rule = {| where :[1] != :[3], |} in
   rule_parses rule |> print_string;
   [%expect_exact {|true|}]
 
 let%expect_test "parse_basic" =
   Rule.create {|where "a" == "a"|}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
   [%expect_exact {|(rule ((Equal (String a) (String a))))
 |}]
 
 let%expect_test "parse_option_nested" =
   Rule.create {|where nested, "a" == "a" |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
   [%expect_exact {|(rule ((Option nested) (Equal (String a) (String a))))
 |}]
 
 let%expect_test "parse_match_one_case" =
   Rule.create {|where match "match_me" { | "case_one" -> true }|}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule ((Match (String match_me) (((String case_one) (True))))))
-"]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact "(rule ((Match (String match_me) (((String case_one) (True))))))\n"]
 
 let%expect_test "parse_match_multi_case" =
   Rule.create
@@ -55,11 +53,12 @@ let%expect_test "parse_match_multi_case" =
        }
     |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Match (String match_me)
-   (((String case_one) (True)) ((String case_two) (False))))))
-"]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact
+    "(rule\n\
+    \ ((Match (String match_me)\n\
+    \   (((String case_one) (True)) ((String case_two) (False))))))\n"]
 
 let%expect_test "parse_case_optional_trailing" =
   Rule.create
@@ -70,11 +69,12 @@ let%expect_test "parse_case_optional_trailing" =
        }
     |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Match (String match_me)
-   (((String case_one) (True)) ((String case_two) (False))))))
-"]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact
+    "(rule\n\
+    \ ((Match (String match_me)\n\
+    \   (((String case_one) (True)) ((String case_two) (False))))))\n"]
 
 let%expect_test "parse_case_optional_trailing" =
   Rule.create
@@ -85,11 +85,12 @@ let%expect_test "parse_case_optional_trailing" =
        }
     |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Match (String match_me)
-   (((String case_one) (True)) ((String case_two) (False))))))
-"]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact
+    "(rule\n\
+    \ ((Match (String match_me)\n\
+    \   (((String case_one) (True)) ((String case_two) (False))))))\n"]
 
 let%expect_test "parse_freeform_antecedent_pattern" =
   Rule.create
@@ -101,39 +102,38 @@ let%expect_test "parse_freeform_antecedent_pattern" =
        }
     |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Match (String match_me)
-   (((String \"case one\") (True)) ((String \"case two\") (False))
-    ((Template
-      ((Hole
-        ((variable template) (pattern :[template]) (offset 0) (kind Value)))
-       (Constant \" \")
-       (Hole
-        ((variable example) (pattern :[example]) (offset 12) (kind Value)))))
-     (False))))))
-"]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact
+    "(rule\n\
+    \ ((Match (String match_me)\n\
+    \   (((String \"case one\") (True)) ((String \"case two\") (False))\n\
+    \    ((Template\n\
+    \      ((Hole\n\
+    \        ((variable template) (pattern :[template]) (offset 0) (kind Value)))\n\
+    \       (Constant \" \")\n\
+    \       (Hole\n\
+    \        ((variable example) (pattern :[example]) (offset 12) (kind Value)))))\n\
+    \     (False))))))\n"]
 
 let%expect_test "optional_first_pipe_one_case" =
-  Rule.create
-    {|
+  Rule.create {|
        where match "match_me" { thing -> true, }
     |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule ((Match (String match_me) (((String thing) (True))))))
-"]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact "(rule ((Match (String match_me) (((String thing) (True))))))\n"]
 
 let%expect_test "optional_first_pipe_multiple_cases" =
-  Rule.create
-    {|
+  Rule.create {|
        where match "match_me" { thing -> true, | other -> true }
     |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Match (String match_me) (((String thing) (True)) ((String other) (True))))))
-"]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact
+    "(rule\n ((Match (String match_me) (((String thing) (True)) ((String other) (True))))))\n"]
 
 let%expect_test "parse_freeform_antecedent_pattern_single_quote" =
   Rule.create
@@ -146,13 +146,14 @@ line
        }
     |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Match (String match_me)
-   (((String \"\\\"ni\\\\'ce\\\"\") (True)) ((String  \"multi\\
-                                             \\nline\\
-                                             \\n\") (True))))))
-"]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact
+    "(rule\n\
+    \ ((Match (String match_me)\n\
+    \   (((String \"\\\"ni\\\\'ce\\\"\") (True)) ((String  \"multi\\\n\
+    \                                             \\nline\\\n\
+    \                                             \\n\") (True))))))\n"]
 
 let%expect_test "parse_freeform_antecedent_pattern_map_regex" =
   Rule.create
@@ -163,16 +164,17 @@ let%expect_test "parse_freeform_antecedent_pattern_map_regex" =
        }
     |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Match (String match_me)
-   (((Template
-      ((Hole ((variable \"\") (pattern :[~match_me]) (offset 0) (kind Value)))))
-     (True))
-    ((Template
-      ((Hole ((variable _) (pattern :[_]) (offset 0) (kind Value)))))
-     (False))))))
-"]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact
+    "(rule\n\
+    \ ((Match (String match_me)\n\
+    \   (((Template\n\
+    \      ((Hole ((variable \"\") (pattern :[~match_me]) (offset 0) (kind Value)))))\n\
+    \     (True))\n\
+    \    ((Template\n\
+    \      ((Hole ((variable _) (pattern :[_]) (offset 0) (kind Value)))))\n\
+    \     (False))))))\n"]
 
 let%expect_test "parse_regex_hole" =
   Rule.create
@@ -183,17 +185,18 @@ let%expect_test "parse_regex_hole" =
      }
   |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Match
-   (Template ((Hole ((variable 1) (pattern :[1]) (offset 0) (kind Value)))))
-   (((Template
-      ((Hole ((variable \"\") (pattern \":[~^\\\\d+$]\") (offset 0) (kind Value)))))
-     (False))
-    ((Template
-      ((Hole ((variable _) (pattern :[_]) (offset 0) (kind Value)))))
-     (True))))))
-"]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact
+    "(rule\n\
+    \ ((Match\n\
+    \   (Template ((Hole ((variable 1) (pattern :[1]) (offset 0) (kind Value)))))\n\
+    \   (((Template\n\
+    \      ((Hole ((variable \"\") (pattern \":[~^\\\\d+$]\") (offset 0) (kind Value)))))\n\
+    \     (False))\n\
+    \    ((Template\n\
+    \      ((Hole ((variable _) (pattern :[_]) (offset 0) (kind Value)))))\n\
+    \     (True))))))\n"]
 
 let%expect_test "parse_interpreting_escapes" =
   Rule.create
@@ -205,69 +208,70 @@ b` -> false,
        }
     |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Match (String match_me)
-   (((String  \"\\
-             \\n\\\\\") (True)) ((String  \"a\\\\n\\\\heh\\
-                                     \\nb\") (False))))))
-"]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact
+    "(rule\n\
+    \ ((Match (String match_me)\n\
+    \   (((String  \"\\\n\
+    \             \\n\\\\\") (True)) ((String  \"a\\\\n\\\\heh\\\n\
+    \                                     \\nb\") (False))))))\n"]
 
 let%expect_test "parse_freeform_antecedent_in_rewrite_rule" =
-  Rule.create
-    {|
+  Rule.create {|
       where rewrite :[contents] { concat [:[x]] -> "nice" }
     |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Rewrite
-   (Template
-    ((Hole
-      ((variable contents) (pattern :[contents]) (offset 0) (kind Value)))))
-   ((Template
-     ((Constant \"concat [\")
-      (Hole ((variable x) (pattern :[x]) (offset 8) (kind Value)))
-      (Constant ])))
-    (String nice)))))
-"]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact
+    "(rule\n\
+    \ ((Rewrite\n\
+    \   (Template\n\
+    \    ((Hole\n\
+    \      ((variable contents) (pattern :[contents]) (offset 0) (kind Value)))))\n\
+    \   ((Template\n\
+    \     ((Constant \"concat [\")\n\
+    \      (Hole ((variable x) (pattern :[x]) (offset 8) (kind Value)))\n\
+    \      (Constant ])))\n\
+    \    (String nice)))))\n"]
 
 let%expect_test "parse_freeform_consequent_in_rewrite_rule" =
-  Rule.create
-    {| where
+  Rule.create {| where
        rewrite :[0] { :[1] :[2] -> :[1] a }
     |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Rewrite
-   (Template ((Hole ((variable 0) (pattern :[0]) (offset 0) (kind Value)))))
-   ((Template
-     ((Hole ((variable 1) (pattern :[1]) (offset 0) (kind Value)))
-      (Constant \" \")
-      (Hole ((variable 2) (pattern :[2]) (offset 5) (kind Value)))))
-    (Template
-     ((Hole ((variable 1) (pattern :[1]) (offset 0) (kind Value)))
-      (Constant \" a\")))))))
-"]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact
+    "(rule\n\
+    \ ((Rewrite\n\
+    \   (Template ((Hole ((variable 0) (pattern :[0]) (offset 0) (kind Value)))))\n\
+    \   ((Template\n\
+    \     ((Hole ((variable 1) (pattern :[1]) (offset 0) (kind Value)))\n\
+    \      (Constant \" \")\n\
+    \      (Hole ((variable 2) (pattern :[2]) (offset 5) (kind Value)))))\n\
+    \    (Template\n\
+    \     ((Hole ((variable 1) (pattern :[1]) (offset 0) (kind Value)))\n\
+    \      (Constant \" a\")))))))\n"]
 
 let%expect_test "this_damn_rule" =
-  Rule.create
-    {|
+  Rule.create {|
   where match :[1] {
  | ":[~^\\d+$]" -> false
  | ":[_]" -> true
  }
 |}
   |> Or_error.ok_exn
-  |> fun rule -> print_s [%message (rule : Ast.expression list)];
-  [%expect_exact "(rule
- ((Match
-   (Template ((Hole ((variable 1) (pattern :[1]) (offset 0) (kind Value)))))
-   (((Template
-      ((Hole ((variable \"\") (pattern \":[~^\\\\d+$]\") (offset 0) (kind Value)))))
-     (False))
-    ((Template
-      ((Hole ((variable _) (pattern :[_]) (offset 0) (kind Value)))))
-     (True))))))
-" ]
+  |> fun rule ->
+  print_s [%message (rule : Ast.expression list)];
+  [%expect_exact
+    "(rule\n\
+    \ ((Match\n\
+    \   (Template ((Hole ((variable 1) (pattern :[1]) (offset 0) (kind Value)))))\n\
+    \   (((Template\n\
+    \      ((Hole ((variable \"\") (pattern \":[~^\\\\d+$]\") (offset 0) (kind Value)))))\n\
+    \     (False))\n\
+    \    ((Template\n\
+    \      ((Hole ((variable _) (pattern :[_]) (offset 0) (kind Value)))))\n\
+    \     (True))))))\n"]

@@ -5,7 +5,8 @@ let%expect_test "list_languages" =
   let command = Format.sprintf "%s %s" binary_path command_args in
   let result = read_output command in
   print_string result;
-  [%expect_exact {|Option              Language  
+  [%expect_exact
+    {|Option              Language  
  -matcher .s        Assembly  
  -matcher .sh       Bash      
  -matcher .c        C         

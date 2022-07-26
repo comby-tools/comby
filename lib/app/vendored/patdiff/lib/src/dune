@@ -1,4 +1,11 @@
-(library (name patdiff) (public_name comby.patdiff)
- (libraries core_kernel.composition_infix core core.linux_ext comby.patdiff_kernel
+(library
+ (name patdiff)
+ (public_name comby.patdiff)
+ (libraries
+  core_kernel.composition_infix
+  core
+  core.linux_ext
+  comby.patdiff_kernel
   patience_diff)
- (preprocess (pps ppx_jane)))
+ (preprocess
+  (pps ppx_jane)))

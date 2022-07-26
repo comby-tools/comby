@@ -9,13 +9,10 @@ module type Regexp_engine_intf = sig
   type t
   type substrings
 
-  val make: string -> t
-
-  val get_substring: substrings -> int -> string option
-
-  val get_all_substrings: substrings -> string array
-
-  val exec: rex:t -> pos:int -> Bytes.t -> substrings option
+  val make : string -> t
+  val get_substring : substrings -> int -> string option
+  val get_all_substrings : substrings -> string array
+  val exec : rex:t -> pos:int -> Bytes.t -> substrings option
 end
 
 type t =
@@ -25,13 +22,10 @@ type t =
 
 (* I think I should just implement the analog of string_ for regex with some bounded buffer size. *)
 
-module Make (Regexp: Regexp_engine_intf) = struct
+module Make (Regexp : Regexp_engine_intf) = struct
   (* https://sourcegraph.com/github.com/comby-tools/mparser/-/blob/src/mParser_Char_Stream.ml#L231:8 *)
-  let match_regexp s pos rex =
-    Regexp.exec ~rex ~pos:(pos - s.buffer_pos) s.buffer
-
-  let make_regexp pat =
-    Regexp.make pat
+  let match_regexp s pos rex = Regexp.exec ~rex ~pos:(pos - s.buffer_pos) s.buffer
+  let make_regexp pat = Regexp.make pat
 
   (* TODO: tests and blit thing below *)
 
@@ -41,24 +35,25 @@ module Make (Regexp: Regexp_engine_intf) = struct
   let regexp rex =
     (* Why do Unsafe if I can just do peek_string? => So I don't allocate on copy of buffer. *)
     (* But it looks like we can't avoid allocation in converting bigstringaf to bytes *)
-    Unsafe.peek 1 (fun buffer ~off ~len:_ -> Bigstringaf.length buffer - off) >>= fun n ->
+    Unsafe.peek 1 (fun buffer ~off ~len:_ -> Bigstringaf.length buffer - off)
+    >>= fun n ->
     Unsafe.peek n (fun buffer ~off ~len ->
-        (* This still does a copy :( *)
-        let bytes = Bytes.create len in
-        Bigstringaf.unsafe_blit_to_bytes buffer ~src_off:off bytes ~dst_off:0 ~len;
-        if debug then Format.printf "Matching regex against string: %S@." @@ Bytes.to_string bytes;
-        match Regexp.exec ~rex ~pos:0 bytes with
-        | None ->
-          if debug then Format.printf "None (1)@.";
-          None
-        | Some substrings ->
-          match Regexp.get_substring substrings 0 with
-          | None ->
-            if debug then Format.printf "None (2)@.";
-            None
-          | Some result ->
-            if debug then Format.printf "Matchy Matchy (3)@.";
-            Some (result, String.length result))
+      (* This still does a copy :( *)
+      let bytes = Bytes.create len in
+      Bigstringaf.unsafe_blit_to_bytes buffer ~src_off:off bytes ~dst_off:0 ~len;
+      if debug then Format.printf "Matching regex against string: %S@." @@ Bytes.to_string bytes;
+      match Regexp.exec ~rex ~pos:0 bytes with
+      | None ->
+        if debug then Format.printf "None (1)@.";
+        None
+      | Some substrings ->
+        (match Regexp.get_substring substrings 0 with
+         | None ->
+           if debug then Format.printf "None (2)@.";
+           None
+         | Some result ->
+           if debug then Format.printf "Matchy Matchy (3)@.";
+           Some (result, String.length result)))
     >>= function
     | Some (result, n) ->
       (* if empty string matches, this hole like for optionals (x?), advance 1. *)
@@ -68,10 +63,8 @@ module Make (Regexp: Regexp_engine_intf) = struct
       (* let n = if n > 0 then n else 1 in
          advance n >>= fun () -> *)
       if debug then Format.printf "Result indeed: %S len %d@." result n;
-      advance n >>= fun () ->
-      return result
-    | None ->
-      fail "No match"
+      advance n >>= fun () -> return result
+    | None -> fail "No match"
 end
 
 module PCRE = struct
@@ -79,20 +72,15 @@ module PCRE = struct
     type t = Pcre.regexp
     type substrings = Pcre.substrings
 
-    let compile_flags =
-      Pcre.cflags [ `ANCHORED ]
-
-    let make pattern =
-      Pcre.regexp ~iflags:compile_flags pattern
+    let compile_flags = Pcre.cflags [ `ANCHORED ]
+    let make pattern = Pcre.regexp ~iflags:compile_flags pattern
 
     let get_substring s idx =
       match Pcre.get_substring s idx with
       | result -> Some result
-      | exception Not_found
-      | exception Invalid_argument _ -> None
+      | (exception Not_found) | (exception Invalid_argument _) -> None
 
-    let get_all_substrings s =
-      Pcre.get_substrings s
+    let get_all_substrings s = Pcre.get_substrings s
 
     let exec ~rex ~pos b =
       match Pcre.exec ~pos ~rex (Bytes.unsafe_to_string b) with
@@ -100,7 +88,7 @@ module PCRE = struct
       | exception Not_found -> None
   end
 
-  include Make(Engine)
+  include Make (Engine)
 end
 
 module RE = struct
@@ -108,19 +96,15 @@ module RE = struct
     type t = Re.re
     type substrings = Re.substrings
 
-    let compile_flags =
-      [ `Anchored ]
-
-    let make pattern =
-      Re.Perl.(compile (re ~opts:compile_flags pattern))
+    let compile_flags = [ `Anchored ]
+    let make pattern = Re.Perl.(compile (re ~opts:compile_flags pattern))
 
     let get_substring s idx =
       match Re.get s idx with
       | result -> Some result
       | exception Not_found -> None
 
-    let get_all_substrings s =
-      Re.get_all s
+    let get_all_substrings s = Re.get_all s
 
     let exec ~rex ~pos b =
       match Re.exec ~pos rex (Bytes.unsafe_to_string b) with
@@ -128,5 +112,5 @@ module RE = struct
       | exception Not_found -> None
   end
 
-  include Make(Engine)
+  include Make (Engine)
 end

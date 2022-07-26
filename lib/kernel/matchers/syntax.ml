@@ -9,5 +9,4 @@ let option_nested = "nested"
 let option_strict = "strict"
 let pipe_operator = "|"
 let arrow = "->"
-
 let separator = "---"

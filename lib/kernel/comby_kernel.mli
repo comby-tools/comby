@@ -19,12 +19,10 @@ module Match : sig
 
     val to_yojson : t -> Yojson.Safe.t
     val of_yojson : Yojson.Safe.t -> (t, string) Result.t
-
     val default : t
   end
 
-  type location = Location.t
-  [@@deriving eq, sexp]
+  type location = Location.t [@@deriving eq, sexp]
 
   module Range : sig
     type t =
@@ -35,19 +33,16 @@ module Match : sig
 
     val to_yojson : t -> Yojson.Safe.t
     val of_yojson : Yojson.Safe.t -> (t, string) Result.t
-
     val default : t
   end
 
-  type range = Range.t
-  [@@deriving eq, sexp]
+  type range = Range.t [@@deriving eq, sexp]
 
   (** {3 Environment}
 
       A match environment maps metavariables to values for a given match. *)
   module Environment : sig
-    type t
-    [@@deriving eq]
+    type t [@@deriving eq]
 
     val to_yojson : t -> Yojson.Safe.t
     val of_yojson : Yojson.Safe.t -> (t, string) Result.t
@@ -78,13 +73,9 @@ module Match : sig
     val update_range : t -> string -> range -> t
 
     val equal : t -> t -> bool
-
     val copy : t -> t
-
     val merge : t -> t -> t
-
     val to_string : t -> string
-
     val exists : t -> string -> bool
   end
 
@@ -120,9 +111,7 @@ module Match : sig
 
   val chunk_match_to_yojson : chunk_match -> Yojson.Safe.t
   val chunk_match_of_yojson : Yojson.Safe.t -> (chunk_match, string) Result.t
-
   val to_chunks : ?threshold:int -> string -> t list -> chunk_match list
-
   val pp_chunk_matches : Format.formatter -> string option * chunk_match list -> unit
 
   (** [pp] is a grep-like formatted printer for matches. It accepts a (optional
@@ -134,7 +123,6 @@ module Match : sig
   val pp_json_lines : Format.formatter -> string option * t list -> unit
 
   val pp_match_count : Format.formatter -> string option * t list -> unit
-
 end
 
 type match' = Match.t
@@ -170,7 +158,6 @@ module Replacement : sig
     }
 
   val result_to_yojson : result -> Yojson.Safe.t
-
 end
 
 type replacement = Replacement.result
@@ -180,7 +167,6 @@ type replacement = Replacement.result
     Defines modules for matching a pattern in input sources to produce
     matches. *)
 module Matchers : sig
-
   (** {3 Configuration}
 
       Defines some parameters for changing match behavior. *)
@@ -404,13 +390,12 @@ module Matchers : sig
       | Constant of string
     [@@deriving sexp]
 
-    type t = atom list
-    [@@deriving sexp]
+    type t = atom list [@@deriving sexp]
 
-    module Make : Metasyntax.S -> External.S -> sig
-        val parse : string -> t
-        val variables : string -> syntax list
-      end
+    module Make (_ : Metasyntax.S) (_ : External.S) : sig
+      val parse : string -> t
+      val variables : string -> syntax list
+    end
   end
 
   (** {3 AST}
@@ -422,8 +407,7 @@ module Matchers : sig
       | String of string
     [@@deriving sexp]
 
-    type antecedent = atom
-    [@@deriving sexp]
+    type antecedent = atom [@@deriving sexp]
 
     type expression =
       | True
@@ -433,8 +417,8 @@ module Matchers : sig
       | Not_equal of atom * atom
       | Match of atom * (antecedent * consequent) list
       | Rewrite of atom * (antecedent * atom)
-    and consequent = expression list
-    [@@deriving sexp]
+
+    and consequent = expression list [@@deriving sexp]
   end
 
   (** {3 Matcher}
@@ -480,9 +464,7 @@ module Matchers : sig
 
       Defines types and operations for match rules. *)
   and Rule : sig
-
-    type t = Ast.expression list
-    [@@deriving sexp]
+    type t = Ast.expression list [@@deriving sexp]
 
     type options =
       { nested : bool
@@ -514,13 +496,13 @@ module Matchers : sig
       -> ?metasyntax:Metasyntax.t
       -> ?external_handler:External.t
       -> ?filepath:string
-      -> match_all:(
-          ?configuration:Configuration.t
-          -> ?filepath:string
-          -> template:string
-          -> source:string
-          -> unit
-          -> Match.t list)
+      -> match_all:
+           (?configuration:Configuration.t
+            -> ?filepath:string
+            -> template:string
+            -> source:string
+            -> unit
+            -> Match.t list)
       -> Ast.expression list
       -> Match.Environment.t
       -> result
@@ -552,18 +534,15 @@ module Matchers : sig
 
   type specification = Specification.t
 
-
   (** {3 Language}
 
       Language definitions *)
   module Language : sig
-
     (** {4 Syntax}
 
         Defines the syntax structures for the target language (C, Go, etc.) that
         are significant for matching. *)
     module Syntax : sig
-
       (** Defines a set of quoted syntax for strings based on one or more
           delimiters and associated escape chracter.
 
@@ -571,7 +550,7 @@ module Matchers : sig
           as: { delimiters = [ {|"|}, {|'|} ]; escape_character = '\\' } *)
       type escapable_string_literals =
         { delimiters : string list
-        ; escape_character: char
+        ; escape_character : char
         }
 
       (** Defines comment syntax as one of Multiline, Nested_multiline with
@@ -679,16 +658,16 @@ module Matchers : sig
     module C_nested_comments : Language.S
 
     val all : (module Language.S) list
-
     val select_with_extension : string -> (module Language.S) option
   end
 
   module Engine : sig
     module type S = sig
-      module Make : Language.S -> Metasyntax.S -> External.S -> Matcher.S
+      module Make (_ : Language.S) (_ : Metasyntax.S) (_ : External.S) : Matcher.S
 
       (** {4 Supported Matchers} *)
       module Text : Matcher.S
+
       module Paren : Matcher.S
       module Dyck : Matcher.S
       module JSON : Matcher.S
@@ -735,10 +714,10 @@ module Matchers : sig
       module Haskell : Matcher.S
       module HCL : Matcher.S
       module Elm : Matcher.S
-      module Zig: Matcher.S
-      module Coq: Matcher.S
-      module Move: Matcher.S
-      module Solidity: Matcher.S
+      module Zig : Matcher.S
+      module Coq : Matcher.S
+      module Move : Matcher.S
+      module Solidity : Matcher.S
       module C_nested_comments : Matcher.S
 
       (** [all] returns all default matchers. *)
@@ -758,13 +737,16 @@ module Matchers : sig
         -> string
         -> (module Matcher.S) option
 
-
       (** [create metasyntax external syntax] creates a matcher for a language
           defined by [syntax]. If [metasyntax] is specified, the matcher will use
           a custom metasyntax definition instead of the default. An experimental
           [external] callback is a general callback for handling external
           properties in the rewrite template. *)
-      val create : ?metasyntax:metasyntax -> ?external_handler:External.t -> Language.Syntax.t -> (module Matcher.S)
+      val create
+        :  ?metasyntax:metasyntax
+        -> ?external_handler:External.t
+        -> Language.Syntax.t
+        -> (module Matcher.S)
     end
   end
 
