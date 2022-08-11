@@ -697,7 +697,16 @@ module Make (Lang : Types.Language.S) (Meta : Types.Metasyntax.S) (Ext : Types.E
                  ?priority_left_delimiter:left_delimiter
                  ?priority_right_delimiter:right_delimiter
              in
-             let matcher = non_space <|> delimited in
+             let matcher =
+               choice
+                 [ raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ ->
+                     contents)
+                 ; escapable_string_literal_parser
+                     (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
+                 ; non_space
+                 ; delimited
+                 ]
+             in
              let rest =
                match acc with
                | [] -> eof >>= fun () -> f [ "" ]
@@ -727,7 +736,7 @@ module Make (Lang : Types.Language.S) (Meta : Types.Metasyntax.S) (Ext : Types.E
                | _ -> sequence_chain acc
              in
              (* Continue until rest, but don't consume rest. acc will
-                   propagate the rest that needs to be consumed. *)
+                     propagate the rest that needs to be consumed. *)
              let hole_semantics = many (not_followed_by rest "" >> matcher) in
              record_matches identifier hole_semantics :: acc)
         | Success Unit -> acc (* for comment *)
