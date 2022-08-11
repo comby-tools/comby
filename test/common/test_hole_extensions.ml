@@ -208,3 +208,12 @@ let%expect_test "expression_hole_multiple" =
   [%expect_exact {|>a(b, c, d)e< >[][]< >{ { } }<|}];
   run_all (module Omega) source match_template rewrite_template;
   [%expect_exact {|>a(b, c, d)e< >[][]< >{ { } }<|}]
+
+let%expect_test "expression_hole_multiple" =
+  let source = {|foo("b", c, 'd') { }|} in
+  let match_template = {|foo(:[x:e], :[y:e], :[z:e])|} in
+  let rewrite_template = {|>:[x]< >:[y]< >:[z]<|} in
+  run_all (module Alpha) source match_template rewrite_template;
+  [%expect_exact {|>"b"< >c< >'d'< { }|}];
+  run_all (module Omega) source match_template rewrite_template;
+  [%expect_exact {|>"b"< >c< >'d'< { }|}]

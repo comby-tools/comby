@@ -488,7 +488,17 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
                  ?priority_right_delimiter:right_delimiter
                  ()
              in
-             let matcher = non_space <|> delimited in
+             let matcher =
+               choice
+                 [ comment_parser
+                 ; raw_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ ->
+                     contents)
+                 ; escapable_string_literal_parser
+                     (fun ~contents ~left_delimiter:_ ~right_delimiter:_ -> contents)
+                 ; non_space
+                 ; delimited
+                 ]
+             in
              let rest =
                match acc with
                | [] -> end_of_input *> return (Unit, "")
