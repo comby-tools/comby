@@ -54,7 +54,7 @@ struct
           | Regex (left, separator, right) ->
             ( Regex
             , (* matcher wants <identifier><sep><expr> and splits it later. Fix
-                 this later to give v and pattern only *)
+                         this later to give v and pattern only *)
               lift3
                 (fun _left (v, expr) _right -> Format.sprintf "%s%c%s" v separator expr)
                 (string left)
@@ -311,10 +311,10 @@ struct
                      }
                  in
                  (* FIXME: here we should probably use pattern, or hole. We don't
-                 want to substitute var x for length value if it's used as :[x]
-                 vs :[x].length in the same rewrite template. This will only
-                 affect the replacement values, which won't clobber the actual
-                 result. *)
+                      want to substitute var x for length value if it's used as :[x]
+                      vs :[x].length in the same rewrite template. This will only
+                      affect the replacement values, which won't clobber the actual
+                      result. *)
                  let env = Environment.add ~range env variable value in
                  value :: result, env, advance))
     in

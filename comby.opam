@@ -35,6 +35,7 @@ depends: [
   "hack_parallel" {arch != "arm32" & arch != "arm64"}
   "lwt"
   "lwt_react"
+  "lwt_ssl"
   "mparser" {>= "1.3"}
   "mparser-pcre"
   "parany" {>= "12.0.3"}
