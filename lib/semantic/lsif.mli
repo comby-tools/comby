@@ -1,6 +1,6 @@
 module Formatting : sig
   type t =
-    | Markdown of string * string
+    | Markdown
     | Text
 end
 
@@ -8,6 +8,7 @@ module Context : sig
   type t =
     { lsif_endpoint : string
     ; repository : string
+    ; revision : string
     ; formatting : Formatting.t
     }
 end

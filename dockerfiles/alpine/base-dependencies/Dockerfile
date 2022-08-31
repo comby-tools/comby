@@ -15,7 +15,8 @@ RUN sudo apk --no-cache add \
     zlib-dev \
     sqlite-dev \
     libev-dev \
-    autoconf
+    autoconf \
+    openssl-dev
 
 # Copy the source files.
 COPY Makefile /home/comby/

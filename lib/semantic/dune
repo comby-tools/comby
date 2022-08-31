@@ -5,4 +5,4 @@
   (backend bisect_ppx))
  (preprocess
   (pps ppx_deriving.show ppx_deriving.eq ppx_sexp_conv))
- (libraries core_kernel lwt cohttp cohttp-lwt-unix yojson))
+ (libraries core lwt lwt_ssl cohttp cohttp-lwt-unix yojson))
