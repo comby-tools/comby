@@ -144,8 +144,8 @@ let handle_patch_errors = function
     Lwt_io.print message
     >>= fun _input -> Lwt_io.read_line Lwt_io.stdin >>= fun _input -> return `Ok
 
-let apply_patch hunk_patch =
-  let cmd = Lwt_process.shell "patch -p 0" in
+let apply_patch_with_cmd cmd hunk_patch =
+  let cmd = Lwt_process.shell cmd in
   return (Lwt_process.open_process_full cmd)
   >>= fun process ->
   Lwt_io.write_line process#stdin hunk_patch
@@ -158,6 +158,12 @@ let apply_patch hunk_patch =
   >>= fun stderr ->
   (if debug then Lwt_io.printf "[debug] %s,%s\n" stdout stderr else return ())
   >>= fun () -> process#close
+
+let apply_patch_with_git hunk_patch =
+  apply_patch_with_cmd "git apply --index" hunk_patch
+
+let apply_patch hunk_patch =
+  apply_patch_with_cmd "patch -p 0" hunk_patch
 
 let drop_into_editor editor path ~at_line =
   let command = Format.sprintf "%s +%d %s" editor at_line path in
@@ -173,6 +179,10 @@ let process_input default_is_accept hunk_patch prev_start next_start editor path
       ; "\x1b[1m"
       ; " [default], "
       ; "\x1b[0m"
+      ; "\x1b[32m"
+      ; "g = accept as git patch"
+      ; "\x1b[0m"
+      ; ", "
       ; "\x1b[31m"
       ; "n = no"
       ; "\x1b[0m"
@@ -191,6 +201,10 @@ let process_input default_is_accept hunk_patch prev_start next_start editor path
       [ "Accept change ("
       ; "\x1b[32m"
       ; "y = yes"
+      ; "\x1b[0m"
+      ; ", "
+      ; "\x1b[32m"
+      ; "g = accept as git patch"
       ; "\x1b[0m"
       ; ", "
       ; "\x1b[31m"
@@ -220,6 +234,7 @@ let process_input default_is_accept hunk_patch prev_start next_start editor path
     | "y" -> apply_patch hunk_patch >>= handle_patch_errors >>= fun _ -> continue ()
     | "" when default_is_accept ->
       apply_patch hunk_patch >>= handle_patch_errors >>= fun _ -> continue ()
+    | "g" -> apply_patch_with_git hunk_patch >>= handle_patch_errors >>= fun _ -> continue ()
     | "n" -> continue ()
     | "" when not default_is_accept -> continue ()
     | "e" ->
