@@ -11,7 +11,7 @@ let process_interactive ~f paths number_of_workers =
   let map path = path, f ~input:(Path path) ~path:(Some path) in
   Parany.Parmap.parfold ~csize:16 number_of_workers map reduce init paths
 
-let process ~f number_of_workers _bound_count sources =
+let process ~f number_of_workers bound_count sources =
   match sources with
   | `Paths paths ->
     Parany.Parmap.parfold
@@ -21,4 +21,15 @@ let process ~f number_of_workers _bound_count sources =
       ( + )
       0
       paths
-  | `Zip _ -> failwith "Not supported"
+  | `Zip (zip_file, paths) ->
+    Parany.Parmap.parfold
+      ~csize:16
+      number_of_workers
+      (fun path ->
+         Fold.with_zip zip_file ~f:(fun zip ->
+             Fold.zip_paths ~init:0 ~f zip [path] bound_count
+           )
+      )
+      ( + )
+      0
+      paths
