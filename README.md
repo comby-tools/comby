@@ -76,7 +76,7 @@ To match these with comby, all you need to write is `if (:[condition])`, and spe
 
 ## Build from source
 
-- Install [opam](https://opam.ocaml.org/doc/Install.html). TL;DR do `sh <(curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)`
+- Install [opam](https://opam.ocaml.org/doc/Install.html). TL;DR do `sh <(curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)` after making sure you have the basic dependencies (i.e., `sudo apt-get install build-essential patch unzip bubblewrap`)
 
 - Run this if you don't have OCaml installed (it bootstraps the OCaml compiler):
 
