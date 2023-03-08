@@ -1,0 +1,40 @@
+name: Release workflow
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+        ocaml-compiler:
+          - 4.11.x
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+
+      - name: install dependencies for linux
+        if: ${{ runner.os == "Linux" }}
+        run: |
+          apt-get install autoconf libpcre3-dev pkg-config zlib1g-dev m4 libgmp-dev libev4 libsqlite3-dev
+
+      - name: install dependencies for darwin
+        if: ${{ runner.os == "Darwin" }}
+        run: |
+          brew install pkg-config gmp pcre libev
+
+      - run: opam install . --deps-only
+
+      - run: make && make test
