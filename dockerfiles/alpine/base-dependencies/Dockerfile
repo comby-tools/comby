@@ -1,7 +1,7 @@
 #########################
 ### Base Dependencies ###
 #########################
-FROM ocaml/opam:alpine-3.14-ocaml-4.11
+FROM ocaml/opam:alpine-3.19-ocaml-4.12
 
 WORKDIR /home/comby
 

@@ -14,8 +14,8 @@ RUN sudo apt-get update && sudo apt-get install -y \
     openssl \
     libssl-dev
 
-RUN opam init --no-setup --disable-sandboxing --compiler=4.11.0
-RUN opam switch create 4.11.0 && eval $(opam config env) && opam repository set-url default https://opam.ocaml.org && opam update
+RUN opam init --no-setup --disable-sandboxing --compiler=4.12.0
+RUN opam switch create 4.12.0 && eval $(opam config env) && opam repository set-url default https://opam.ocaml.org && opam update
 
 COPY Makefile /home/comby/
 COPY comby.opam /home/comby/

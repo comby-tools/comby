@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ -z "$1" ]; then
-  echo "Set alpine version tag name, like 'alpine-3.14'"
+  echo "Set alpine version tag name, like 'alpine-3.19'"
   exit 1
 fi
 

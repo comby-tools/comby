@@ -1,7 +1,7 @@
 ##########################################################################################################################
 ### Binary build for testing. Pulled from registry. The base-dependencies-alpine spec builds this. Used by .travis.yml ###
 ##########################################################################################################################
-FROM comby/comby:base-dependencies-alpine-3.14
+FROM comby/comby:base-dependencies-alpine-3.19
 
 WORKDIR /home/comby
 
