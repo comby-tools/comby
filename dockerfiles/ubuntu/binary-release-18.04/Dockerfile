@@ -12,8 +12,8 @@ RUN sudo apt-get update && sudo apt-get install -y \
     libev-dev \
     libsqlite3-dev
 
-RUN opam init --no-setup --disable-sandboxing --compiler=4.11.0
-RUN opam switch create 4.11.0 && eval $(opam config env) && opam repository set-url default https://opam.ocaml.org && opam update
+RUN opam init --no-setup --disable-sandboxing --compiler=4.12.1
+RUN opam switch create 4.12.1 && eval $(opam config env) && opam repository set-url default https://opam.ocaml.org && opam update
 
 COPY Makefile /home/comby/
 COPY comby.opam /home/comby/

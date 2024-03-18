@@ -47,7 +47,7 @@ cp scripts/install-with-licenses.sh scripts/$VERSION/get/index.html
 comby '"0.x.0"' "$VERSION" .html -i -d scripts/$VERSION
 
 # Alpine docker image
-ALPINE_VERSION=alpine-3.14
+ALPINE_VERSION=alpine-3.19
 cd scripts
 ./build-docker-binary-releases.sh $ALPINE_VERSION
 docker tag comby-$ALPINE_VERSION-binary-release:latest comby/comby:$ALPINE_VERSION-$VERSION
