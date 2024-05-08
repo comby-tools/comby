@@ -1,7 +1,6 @@
 # comby
 
 [![Apache-2.0](https://img.shields.io/badge/license-Apache-blue.svg)](LICENSE)
-[![Build Status](https://travis-ci.com/comby-tools/comby.svg?branch=master)](https://travis-ci.com/comby-tools/comby)
 [![codecov](https://codecov.io/gh/comby-tools/comby/branch/master/graph/badge.svg?token=I1F0PC32E5)](https://codecov.io/gh/comby-tools/comby)
 [![Downloads](https://img.shields.io/github/downloads/comby-tools/comby/total.svg?color=orange)](Downloads)
 [![Commit](https://img.shields.io/github/last-commit/comby-tools/comby.svg)](Commit)
