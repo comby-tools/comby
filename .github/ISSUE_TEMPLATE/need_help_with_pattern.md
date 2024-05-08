@@ -1,6 +1,6 @@
 ---
 name: I need help writing a pattern, or have questions
-about: ''
+about: 'Create an issue for help'
 title: ''
 labels: ''
 assignees: ''
