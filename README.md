@@ -4,7 +4,6 @@
 [![codecov](https://codecov.io/gh/comby-tools/comby/branch/master/graph/badge.svg?token=I1F0PC32E5)](https://codecov.io/gh/comby-tools/comby)
 [![Downloads](https://img.shields.io/github/downloads/comby-tools/comby/total.svg?color=orange)](Downloads)
 [![Commit](https://img.shields.io/github/last-commit/comby-tools/comby.svg)](Commit)
-[![Gitter](https://img.shields.io/gitter/room/comby-tools/comby.svg?color=teal)](https://gitter.im/comby-tools/community)
 
 ![](https://user-images.githubusercontent.com/888624/64916761-0b657780-d752-11e9-96e2-cd81a2681139.gif)
 
@@ -17,8 +16,6 @@
 ![](https://user-images.githubusercontent.com/888624/69503010-b8870980-0ed2-11ea-828d-68c152ed9def.gif)
 
 </details>
-
-**Need help writing patterns or have other problems? Post them in [Gitter](https://gitter.im/comby-tools/community).**
 
 ## Install (pre-built binaries)
 
