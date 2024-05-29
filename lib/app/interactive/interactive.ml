@@ -144,8 +144,8 @@ let handle_patch_errors = function
     Lwt_io.print message
     >>= fun _input -> Lwt_io.read_line Lwt_io.stdin >>= fun _input -> return `Ok
 
-let apply_patch hunk_patch =
-  let cmd = Lwt_process.shell "patch -p 0" in
+let apply_patch_with_cmd cmd hunk_patch =
+  let cmd = Lwt_process.shell cmd in
   return (Lwt_process.open_process_full cmd)
   >>= fun process ->
   Lwt_io.write_line process#stdin hunk_patch
@@ -159,11 +159,34 @@ let apply_patch hunk_patch =
   (if debug then Lwt_io.printf "[debug] %s,%s\n" stdout stderr else return ())
   >>= fun () -> process#close
 
+let apply_patch_with_git hunk_patch =
+  apply_patch_with_cmd "git apply --index --intent-to-add" hunk_patch
+
+let apply_patch hunk_patch =
+  apply_patch_with_cmd "patch -p 0" hunk_patch
+
 let drop_into_editor editor path ~at_line =
   let command = Format.sprintf "%s +%d %s" editor at_line path in
   Lwt_unix.system command
 
+let file_in_git_repo path =
+  let command = Format.sprintf "test ! -z \"$(git ls-files -- %s)\"" path in
+  Lwt_unix.system command
+  >>= fun status ->
+  match status with
+  | Lwt_unix.WEXITED x -> return (x == 0)
+  | _ -> return false
+
 let process_input default_is_accept hunk_patch prev_start next_start editor path ~continue =
+  file_in_git_repo path
+  >>= fun file_gited ->
+  let git_option =
+    if file_gited then
+      [ "\x1b[32m"
+      ; "g = accept as git patch"
+      ; "\x1b[0m"
+      ; ", "
+      ] else [] in
   let prompt =
     if default_is_accept then
       [ "Accept change ("
@@ -173,7 +196,8 @@ let process_input default_is_accept hunk_patch prev_start next_start editor path
       ; "\x1b[1m"
       ; " [default], "
       ; "\x1b[0m"
-      ; "\x1b[31m"
+      ] @ git_option @ [
+        "\x1b[31m"
       ; "n = no"
       ; "\x1b[0m"
       ; ", "
@@ -193,7 +217,8 @@ let process_input default_is_accept hunk_patch prev_start next_start editor path
       ; "y = yes"
       ; "\x1b[0m"
       ; ", "
-      ; "\x1b[31m"
+      ] @ git_option @ [
+        "\x1b[31m"
       ; "n = no"
       ; "\x1b[0m"
       ; "\x1b[1m"
@@ -210,6 +235,7 @@ let process_input default_is_accept hunk_patch prev_start next_start editor path
       ; "q = quit)?"
       ]
   in
+  let no_command = fun () -> Lwt_io.printl "Uh, I don't know that one. Try again." in
   let prompt = String.concat prompt in
   Lwt_io.printl prompt
   >>= fun () ->
@@ -220,6 +246,8 @@ let process_input default_is_accept hunk_patch prev_start next_start editor path
     | "y" -> apply_patch hunk_patch >>= handle_patch_errors >>= fun _ -> continue ()
     | "" when default_is_accept ->
       apply_patch hunk_patch >>= handle_patch_errors >>= fun _ -> continue ()
+    | "g" when file_gited -> apply_patch_with_git hunk_patch >>= handle_patch_errors >>= fun _ -> continue ()
+    | "g" when not file_gited -> no_command () >>= try_again
     | "n" -> continue ()
     | "" when not default_is_accept -> continue ()
     | "e" ->
@@ -234,7 +262,7 @@ let process_input default_is_accept hunk_patch prev_start next_start editor path
       >>= handle_editor_errors
       >>= fun _ -> continue ()
     | "q" -> raise Sys.Break
-    | _ -> Lwt_io.printl "Uh, I don't know that one. Try again." >>= try_again
+    | _ -> no_command () >>= try_again
   in
   try_again ()
 
