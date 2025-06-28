@@ -628,6 +628,7 @@ module Matchers : sig
     module Csharp : Language.S
     module Java : Language.S
     module CSS : Language.S
+    module Groovy : Language.S
     module Kotlin : Language.S
     module Scala : Language.S
     module Nim : Language.S
@@ -691,6 +692,7 @@ module Matchers : sig
       module Csharp : Matcher.S
       module Java : Matcher.S
       module CSS : Matcher.S
+      module Groovy : Matcher.S
       module Kotlin : Matcher.S
       module Scala : Matcher.S
       module Nim : Matcher.S

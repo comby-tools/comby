@@ -22,6 +22,7 @@ let%expect_test "list_languages" =
  -matcher .f        Fortran   
  -matcher .fsx      F#        
  -matcher .go       Go        
+ -matcher .kt       Groovy    
  -matcher .html     HTML      
  -matcher .hs       Haskell   
  -matcher .tf       Terraform (HashiCorp Configuration Language
