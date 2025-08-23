@@ -54,7 +54,7 @@ docker run -a stdin -a stdout -a stderr -i comby/comby '(:[emoji] hi)' 'bye :[em
 
 
 
-### Or [try it live](https://bit.ly/2UXkonD).
+### Or [try it live](https://bit.ly/4lHlDlG).
 
 ## Isn't a regex approach like sed good enough?
 
@@ -68,7 +68,7 @@ if (scanf("%d) %d", &x, &y) == 2) // 2) if (scanf("%d) %d", &x, &y) == 2) return
       return 0;
 ```
 
-To match these with comby, all you need to write is `if (:[condition])`, and specify one flag that this language is C-like. The replacement is `if (1)`. See the [live example](https://bit.ly/30935ou).
+To match these with comby, all you need to write is `if (:[condition])`, and specify one flag that this language is C-like. The replacement is `if (1)`. See the [live example](https://bit.ly/41iZZNa).
 
 ## Build from source
 
