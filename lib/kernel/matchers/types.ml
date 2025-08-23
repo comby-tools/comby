@@ -252,6 +252,7 @@ module Engine = struct
     module Csharp : Matcher.S
     module Java : Matcher.S
     module CSS : Matcher.S
+    module Groovy : Matcher.S
     module Kotlin : Matcher.S
     module Scala : Matcher.S
     module Nim : Matcher.S

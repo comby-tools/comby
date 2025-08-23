@@ -329,6 +329,15 @@ module CSS = struct
   module Syntax = C.Syntax
 end
 
+module Groovy = struct
+  module Info = struct
+    let name = "Groovy"
+    let extensions = [ ".groovy" ]
+  end
+
+  module Syntax = C.Syntax
+end
+
 module Kotlin = struct
   module Info = struct
     let name = "Kotlin"
@@ -748,6 +757,7 @@ let all : (module Types.Language.S) list =
   ; (module Fortran)
   ; (module Fsharp)
   ; (module Go)
+  ; (module Groovy)
   ; (module Html)
   ; (module Haskell)
   ; (module HCL)

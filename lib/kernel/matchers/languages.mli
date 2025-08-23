@@ -23,6 +23,7 @@ module C : Language.S
 module Csharp : Language.S
 module Java : Language.S
 module CSS : Language.S
+module Groovy : Language.S
 module Kotlin : Language.S
 module Scala : Language.S
 module Nim : Language.S
