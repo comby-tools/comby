@@ -32,6 +32,7 @@ depends: [
   "comby-kernel" {= version}
   "comby-semantic" {= version}
   "core"
+  "cstruct-lwt"
   "hack_parallel" {arch != "arm32" & arch != "arm64"}
   "lwt"
   "lwt_react"
@@ -45,8 +46,8 @@ depends: [
   "yojson" {>= "1.6.0" < "2.0.0"}
   "pcre"
   "shell"
-  "tar"
-  "tar-unix"
+  "tar" {< "3.0.0"}
+  "tar-unix" {< "3.0.0"}
   "toml" {>= "6.0.0"}
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]

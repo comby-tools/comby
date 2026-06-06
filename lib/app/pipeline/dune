@@ -13,6 +13,7 @@
   comby.camlzip
   core
   core.uuid
+  cstruct-lwt
   yojson
   ppx_deriving_yojson
   parany
