@@ -117,7 +117,6 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
            implicit_equals_match_satisfied := false;
            return (Unit, acc) (* don't record, unsat *)
          | Some environment ->
-           let environment = Environment.add ~range environment identifier content in
            current_environment_ref := environment;
            return (Unit, acc))
       | _ -> return (Unit, acc)
@@ -223,6 +222,16 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
       in
       M.comment
 
+    let nested_multiline left right =
+      let open Parsers.Comments.Omega.Nested_multiline in
+      let module M =
+        Make (struct
+          let left = left
+          let right = right
+        end)
+      in
+      M.comment
+
     let comment_parser =
       match Language.Syntax.comments with
       | [] -> zero
@@ -231,8 +240,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
           List.map syntax ~f:(function
             | Multiline (left, right) -> multiline left right
             | Until_newline start -> until_newline start
-            | Nested_multiline (_, _) -> zero)
-          (* FIXME: unimplemented nested multiline comments *)
+            | Nested_multiline (left, right) -> nested_multiline left right)
         in
         choice parsers
 
@@ -319,6 +327,58 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
       |> List.concat
       |> choice
 
+    let is_word_char = function
+      | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' -> true
+      | _ -> false
+
+    let is_word_token str = (not (String.is_empty str)) && String.for_all str ~f:is_word_char
+
+    let is_reserved_word_delimiter str =
+      is_word_token str
+      &&
+      List.exists Language.Syntax.user_defined_delimiters ~f:(fun (left, right) ->
+        String.equal str left || String.equal str right)
+
+    let word_boundary_before =
+      pos
+      >>= fun offset ->
+      if offset = 0 || offset > String.length !source_ref then
+        return ()
+      else if is_word_char (String.get !source_ref (offset - 1)) then
+        fail "substring prefix"
+      else
+        return ()
+
+    let word_boundary_after =
+      pos
+      >>= fun offset ->
+      if offset >= String.length !source_ref then
+        return ()
+      else if is_word_char (String.get !source_ref offset) then
+        fail "substring suffix"
+      else
+        return ()
+
+    let reserved_delimiter_token ?(check_boundaries = true) str =
+      if check_boundaries && is_reserved_word_delimiter str then
+        word_boundary_before *> string str <* word_boundary_after
+      else
+        string str
+
+    let substring_checked_token str =
+      let token = string str in
+      if not !configuration_ref.disable_substring_matching then
+        token
+      else (
+        let starts_with_word =
+          (not (String.is_empty str)) && is_word_char (String.get str 0)
+        in
+        let ends_with_word =
+          (not (String.is_empty str)) && is_word_char (String.get str (String.length str - 1))
+        in
+        let token = if starts_with_word then word_boundary_before *> token else token in
+        if ends_with_word then token <* word_boundary_after else token)
+
     let generate_single_hole_parser () = alphanum <|> char '_' >>| String.of_char
 
     let delimiters left right =
@@ -329,7 +389,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
     let between_nested_delims p delimiters =
       let between_nested_delims p from =
         let until = until_of_from from in
-        between (string from) (string until) p
+        between (reserved_delimiter_token from) (reserved_delimiter_token until) p
         >>| fun result -> String.concat @@ [ from ] @ result @ [ until ]
       in
       delimiters |> List.map ~f:fst |> List.map ~f:(between_nested_delims p) |> choice
@@ -337,12 +397,25 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
     let generate_everything_hole_parser
       ?priority_left_delimiter:left
       ?priority_right_delimiter:right
+      ?at_depth
       ()
       =
       let delimiters = delimiters left right in
-      let reserved = List.concat_map delimiters ~f:(fun (from, until) -> [ from; until ]) in
+      let reserved =
+        List.concat_map delimiters ~f:(fun (from, until) ->
+          [ reserved_delimiter_token from; reserved_delimiter_token until ])
+      in
+      let whitespace =
+        if Option.equal Int.equal (Some 0) at_depth then
+          many1 blank >>| String.of_char_list
+        else
+          spaces1
+      in
+      let reserved_or_space =
+        choice [ Omega_parser_helper.skip (choice reserved); Omega_parser_helper.skip space1 ]
+      in
       let other =
-        not_followed_by (choice @@ List.map reserved ~f:string) *> any_char >>| String.of_char
+        not_followed_by reserved_or_space *> any_char >>| String.of_char
       in
       fix (fun grammar ->
         let delims_over_holes = between_nested_delims (many grammar) delimiters in
@@ -352,7 +425,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
               contents)
           ; escapable_string_literal_parser (fun ~contents ~left_delimiter:_ ~right_delimiter:_ ->
               contents)
-          ; spaces1
+          ; whitespace
           ; delims_over_holes
           ; other
           ])
@@ -403,7 +476,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
         | Error s ->
           if debug then Format.printf "Composing p with terminating parser, error %s@." s;
           p :: acc
-        | Ok (Hole { sort; identifier; dimension; _ }, user_state) ->
+        | Ok (Hole { sort; identifier; dimension; at_depth }, user_state) ->
           (match sort with
            | Regex ->
              let separator =
@@ -466,7 +539,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
              add_match user_state identifier hole_semantics :: acc
            | Line ->
              let allowed =
-               many (not_followed_by (string "\n" <|> string "\r\n") *> any_char)
+               many (not_followed_by (char '\n') *> any_char)
                >>| fun x -> [ String.of_char_list x ^ "\n" ]
              in
              let hole_semantics = allowed <* char '\n' >>| String.concat in
@@ -513,6 +586,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
                  generate_everything_hole_parser
                    ?priority_left_delimiter:left_delimiter
                    ?priority_right_delimiter:right_delimiter
+                   ?at_depth
                    ()
                | Escapable_string_literal ->
                  let right_delimiter = Option.value_exn right_delimiter in
@@ -548,9 +622,16 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
     let generate_string_token_parser str =
       if debug then Format.printf "Template_string(%s)@." str;
       many comment_parser
-      >>= fun s1 -> string str >>= fun result -> r acc (Template_string (String.concat s1 ^ result))
+      >>= fun s1 ->
+      let token =
+        if is_reserved_word_delimiter str then
+          reserved_delimiter_token str
+        else
+          substring_checked_token str
+      in
+      token >>= fun result -> r acc (Template_string (String.concat s1 ^ result))
 
-    let hole_parser sort dimension : (production * 'a) t t =
+    let hole_parser ?at_depth sort dimension : (production * 'a) t t =
       let hole_parser =
         (* This must be fold, can't be find *)
         let open Polymorphic_compare in
@@ -565,7 +646,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
       | l ->
         choice l
         >>| (function
-        | identifier -> skip_signal { sort; identifier; dimension; at_depth = None })
+        | identifier -> skip_signal { sort; identifier; dimension; at_depth })
 
     let generate_hole_for_literal dimension ~contents ~left_delimiter ~right_delimiter () =
       let literal_holes =
@@ -630,8 +711,16 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
         >>| generate_string_token_parser
       in
       let code_holes =
+        let at_depth =
+          if !configuration_ref.match_newline_toplevel then
+            None
+          else (
+            match Language.Info.name with
+            | "HTML" | "XML" | "Text" | "LaTeX" -> None
+            | _ -> Some 0)
+        in
         Template.Matching.hole_parsers
-        |> List.map ~f:(fun (sort, _) -> hole_parser sort Code)
+        |> List.map ~f:(fun (sort, _) -> hole_parser ?at_depth sort Code)
         |> choice
       in
       let strict = Option.(value ~default:false (rule >>| Rule.is_strict)) in
@@ -643,15 +732,19 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
           @@ List.map
                Language.Syntax.user_defined_delimiters
                ~f:(fun (left_delimiter, right_delimiter) ->
-               string left_delimiter *> generator
-               <* string right_delimiter
+               reserved_delimiter_token ~check_boundaries:false left_delimiter *> generator
+               <* reserved_delimiter_token ~check_boundaries:false right_delimiter
                >>= fun (g : (production * 'a) t list) ->
                if debug then Format.printf "G size: %d; delim %s@." (List.length g) left_delimiter;
                return
                @@ sequence_chain'
-               @@ [ (string left_delimiter >>= fun result -> r acc (Template_string result)) ]
+               @@ [ (reserved_delimiter_token left_delimiter
+                     >>= fun result -> r acc (Template_string result))
+                  ]
                @ (if strict then g else loose_whitespace g)
-               @ [ (string right_delimiter >>= fun result -> r acc (Template_string result)) ])
+               @ [ (reserved_delimiter_token right_delimiter
+                     >>= fun result -> r acc (Template_string result))
+                  ])
         in
         many
         @@ choice
@@ -722,8 +815,8 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
              in
              (if String.length value = 0 then
                 advance 1
-             else
-               return ())
+              else
+                return ())
              >>= fun () ->
              if debug then Format.printf "Calculated end_pos %d@." end_pos;
              if !implicit_equals_match_satisfied then record_match_context start_pos end_pos rule;

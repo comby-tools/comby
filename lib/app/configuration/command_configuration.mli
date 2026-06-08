@@ -60,6 +60,7 @@ type user_input_options =
   ; override_matcher : string option
   ; regex_pattern : bool
   ; ripgrep_args : string option
+  ; alpha : bool
   ; omega : bool
   }
 

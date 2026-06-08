@@ -1,7 +1,7 @@
 open Core
 module Time = Core_kernel.Time_ns.Span
 
-let binary_path = "../../../../comby"
+let binary_path = Filename.realpath "../../src/main.exe"
 
 let read_with_timeout read_from_channels =
   let read_from_fds = List.map ~f:Unix.descr_of_in_channel read_from_channels in

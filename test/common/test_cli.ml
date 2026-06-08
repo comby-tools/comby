@@ -2,7 +2,7 @@ open Core
 open Camlzip
 module Time = Core_kernel.Time_ns.Span
 
-let binary_path = "../../../../comby"
+let binary_path = Filename.realpath "../../src/main.exe"
 
 let read_with_timeout read_from_channels =
   let read_from_fds = List.map ~f:Unix.descr_of_in_channel read_from_channels in
@@ -1305,7 +1305,7 @@ let%expect_test "test_toml_multi_rewrite_with_match_only_in_config" =
 let%expect_test "dot_comby_with_flags" =
   let source = "main(void)\n" in
   Sys.chdir ("example" ^/ "dot-comby");
-  let command = Format.sprintf "../../%s %s" binary_path "" in
+  let command = Format.sprintf "%s %s" binary_path "" in
   let result = read_expect_stdin_and_stdout command source in
   Sys.chdir "../..";
   print_string result;

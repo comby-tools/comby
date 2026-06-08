@@ -547,9 +547,22 @@ line
       )
 line
     |}];
-  (* Unimplemented: Does not stop at newline *)
   run_all (module Omega.Generic) ~configuration source match_template rewrite_template;
-  [%expect_exact {|line|}]
+  [%expect_exact
+    {|
+line
+line
+      (
+line
+        (
+line
+line
+        )
+line
+line
+      )
+line
+    |}]
 
 let%expect_test "test_top_level_hole_stops_at_newline_for_example_generic_go_false" =
   let source =
@@ -575,9 +588,12 @@ let%expect_test "test_top_level_hole_stops_at_newline_for_example_generic_go_fal
 
       erased
     |}];
-  (* Unimplemented: Does not stop at newline *)
   run_all (module Omega.Generic) ~configuration source match_template rewrite_template;
   [%expect_exact {|
+      for i, x := range derp {
+        do not match
+      }
+
       erased
     |}]
 
@@ -644,7 +660,7 @@ let%expect_test "test_top_level_hole_crosses_newlines_for_html_by_default" =
       stuff
       
     |}];
-  (* Unimplemented: Has no effect *)
+  (* HTML intentionally allows top-level holes to cross newlines by default. *)
   run_all (module Omega.Html) ~configuration source match_template rewrite_template;
   [%expect_exact {|
       
