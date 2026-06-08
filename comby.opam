@@ -37,8 +37,6 @@ depends: [
   "lwt"
   "lwt_react"
   "lwt_ssl"
-  "mparser" {>= "1.3"}
-  "mparser-pcre"
   "parany" {>= "12.0.3"}
   "patience_diff" {>= "v0.14" & < "v0.15"}
   "ppx_deriving"

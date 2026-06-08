@@ -8,10 +8,7 @@ module type Regexp_engine_intf = sig
   val exec : rex:t -> pos:int -> Bytes.t -> substrings option
 end
 
-(** Represents character stream right now.
-    Compare char stream interface on t and match_regexp descriptions
-    in https://sourcegraph.com/github.com/comby-tools/mparser/-/blob/src/mParser_Char_Stream.mli#L102:8
-*)
+(** Represents character stream right now. *)
 type t
 
 module Make (Regexp : Regexp_engine_intf) : sig
