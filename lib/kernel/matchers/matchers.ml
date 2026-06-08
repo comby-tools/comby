@@ -10,7 +10,6 @@ module Ast = struct
 end
 
 module Evaluate = Evaluate
-module Alpha = Engine.Make (Alpha.Make)
 module Omega = Engine.Make (Omega.Make)
 module Engine = Types.Engine
 module Matcher = Types.Matcher

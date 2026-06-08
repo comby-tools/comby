@@ -219,8 +219,6 @@ type user_input_options =
   ; override_matcher : string option
   ; regex_pattern : bool
   ; ripgrep_args : string option
-  ; alpha : bool
-  ; omega : bool
   }
 
 type compute_mode =
@@ -640,11 +638,8 @@ let of_extension
   | Some matcher -> matcher, Some extension, None
   | None -> (module Engine.Generic), Some extension, None
 
-let select_matcher custom_metasyntax custom_matcher override_matcher file_filters alpha _omega =
-  let module Engine =
-    (val (if alpha then (module Matchers.Alpha) else (module Matchers.Omega))
-      : Matchers.Engine.S)
-  in
+let select_matcher custom_metasyntax custom_matcher override_matcher file_filters =
+  let module Engine = (val (module Matchers.Omega) : Matchers.Engine.S) in
   let module External = struct
     let handler = External_semantic.lsif_hover
   end
@@ -721,8 +716,6 @@ let create
        ; override_matcher
        ; regex_pattern
        ; ripgrep_args
-       ; alpha
-       ; omega
        }
    ; run_options
    ; output_options =
@@ -831,7 +824,7 @@ let create
         Printer.Rewrite.print replacement_output source_path replacements result source_content
   in
   let ((module M) as matcher), _, metasyntax =
-    select_matcher custom_metasyntax custom_matcher override_matcher file_filters alpha omega
+    select_matcher custom_metasyntax custom_matcher override_matcher file_filters
   in
   return
     { matcher

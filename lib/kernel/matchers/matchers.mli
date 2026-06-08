@@ -7,7 +7,6 @@ module Rule = Rule
 (* Only need to expose Types.Ast. module type of to export sexp. *)
 module Ast : module type of Types.Ast
 module Evaluate = Evaluate
-module Alpha : Types.Engine.S
 module Omega : Types.Engine.S
 module Engine = Types.Engine
 module Matcher = Types.Matcher

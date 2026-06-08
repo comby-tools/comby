@@ -20,11 +20,6 @@ let%expect_test "gosimple_s1000" =
       :[1] := :[2]
       :[3]
     |} in
-  run (module Alpha.Go) source match_template rewrite_template;
-  [%expect_exact {|
-      x := <-ch
-      fmt.Println(x)
-    |}];
   run (module Omega.Go) source match_template rewrite_template;
   [%expect_exact {|
       x := <-ch
@@ -50,10 +45,6 @@ let%expect_test "gosimple_s1001" =
   let rule =
     {|where :[index_define] == :[index_use], :[src_element_define] == :[src_element_use]|}
   in
-  run (module Alpha.Go) ~rule source match_template rewrite_template;
-  [%expect_exact {|
-      copy(dst, src)
-    |}];
   run (module Omega.Go) ~rule source match_template rewrite_template;
   [%expect_exact {|
       copy(dst, src)
@@ -67,7 +58,5 @@ let%expect_test "gosimple_s1003" =
       if strings.:[1](x, y) != -1 { :[_] }
     |} in
   let rewrite_template = {|:[1]|} in
-  run (module Alpha.Go) source match_template rewrite_template;
-  [%expect_exact {|Index|}];
   run (module Omega.Go) source match_template rewrite_template;
   [%expect_exact {|Index|}]

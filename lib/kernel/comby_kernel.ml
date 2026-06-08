@@ -20,7 +20,6 @@ module Matchers = struct
   type metasyntax = Matchers.Metasyntax.t
 
   module External = Matchers.External
-  module Alpha = Matchers.Alpha
   module Omega = Matchers.Omega
   module Languages = Matchers.Languages
   module Template = Matchers.Template

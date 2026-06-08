@@ -217,8 +217,6 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
            Setting this option activates -review mode."
     and disable_substring_matching =
       flag "disable-substring-matching" no_arg ~doc:"Allow :[holes] to match substrings"
-    and alpha = flag "alpha" no_arg ~doc:"Use Alpha matcher engine for comparison."
-    and omega = flag "omega" no_arg ~doc:"Use Omega matcher engine. Omega is the default."
     and fast_offset_conversion =
       flag
         "fast-offset-conversion"
@@ -334,8 +332,6 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
       | None -> None
     in
     let substitute_in_place = not newline_separated_rewrites in
-    let omega_env = Option.is_some @@ Sys.getenv "OMEGA_COMBY" in
-    let omega = omega || omega_env in
     let fast_offset_conversion_env = Option.is_some @@ Sys.getenv "FAST_OFFSET_CONVERSION_COMBY" in
     let fast_offset_conversion = fast_offset_conversion_env || fast_offset_conversion in
     let arch = Unix.Utsname.machine (Core.Unix.uname ()) in
@@ -366,8 +362,6 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; override_matcher
             ; regex_pattern
             ; ripgrep_args
-            ; alpha
-            ; omega
             }
         ; run_options =
             { verbose

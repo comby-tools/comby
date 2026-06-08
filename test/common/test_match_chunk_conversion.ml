@@ -20,7 +20,7 @@ foo(
 g|} in
   let template = ":[x~\\w+](:[y])" in
   let matches =
-    Alpha.Generic.all ~configuration ~template ~source ()
+    Omega.Generic.all ~configuration ~template ~source ()
     |> List.map ~f:(Match.convert_offset ~fast:true ~source)
     |> Match.to_chunks source
     |> (fun m -> `List (List.map m ~f:Match.chunk_match_to_yojson))

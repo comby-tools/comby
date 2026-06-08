@@ -613,7 +613,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
     (* XXX change ignore to unit once everything works.
        right now it's the string that was parsed by spaces1 *)
     let generate_spaces_parser _ignored =
-      (* XXX still some parts ignored in the choice case in Alpha *)
+      (* XXX still some parts ignored in the choice case *)
       if debug then Format.printf "Template_spaces(%s)@." _ignored;
       many1 @@ choice [ comment_parser; spaces1 ]
       >>= fun result -> r acc (Template_string (String.concat result))

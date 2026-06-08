@@ -19,13 +19,13 @@ let%expect_test "statistics" =
   in
   let rule = {| where true
     |} |> Rule.create |> Or_error.ok_exn in
-  Alpha.Go.all ~configuration ~template ~source ()
+  Omega.Go.all ~configuration ~template ~source ()
   |> List.filter ~f:(fun { environment; _ } ->
        Rule.(
          sat
          @@ apply
               ~substitute_in_place:true
-              ~match_all:(Alpha.Generic.all ~rule:[ Ast.True ])
+              ~match_all:(Omega.Generic.all ~rule:[ Ast.True ])
               rule
               environment))
   |> fun matches ->
