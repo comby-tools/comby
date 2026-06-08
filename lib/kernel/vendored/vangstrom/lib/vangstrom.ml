@@ -531,7 +531,10 @@ let sep_by s p =
 
 let skip_many p =
   fix (fun m ->
-    (p *> m) <|> return ())
+      ((p >>| fun _ -> true) <|> return false) >>= function
+      | true -> m
+      | false -> return ()
+    )
 
 let skip_many1 p =
   p *> skip_many p

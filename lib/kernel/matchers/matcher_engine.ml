@@ -829,8 +829,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
            let prefix = prefix >>= fun s -> r acc (String s) in
            let first_match_attempt = choice [ match_one; prefix ] in
            (* consumes a character in prefix if no match *)
-           let matches = many first_match_attempt *> end_of_input in
-           matches >>= fun _result -> r acc Unit)
+           skip_many first_match_attempt *> end_of_input >>= fun () -> r acc Unit)
 
     let to_template template rule =
       match parse_string ~consume:All (general_parser_generator rule) template with
