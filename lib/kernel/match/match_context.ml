@@ -35,13 +35,13 @@ let update_match f m =
   { m with range; environment }
 
 let convert_offset ~fast ~source match_ =
+  let index =
+    if fast then
+      Offset.index ~source
+    else
+      Offset.empty
+  in
   let f offset =
-    let index =
-      if fast then
-        Offset.index ~source
-      else
-        Offset.empty
-    in
     if fast then
       Offset.convert_fast ~offset index
     else

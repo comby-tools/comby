@@ -11,8 +11,7 @@
   comby-kernel.match
   comby-kernel.vangstrom
   core_kernel
-  mparser
-  mparser-pcre
+  pcre
   re
   yojson
   ppx_deriving_yojson))

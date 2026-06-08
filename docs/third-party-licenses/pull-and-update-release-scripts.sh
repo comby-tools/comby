@@ -1,6 +1,6 @@
 #!/bin/bash
 
-LIBS="ppx_deriving_yojson core ppxlib ppx_deriving hack_parallel opium pcre-ocaml ocaml-tls camlzip bisect_ppx mparser ocaml-ci-scripts patdiff lwt toml"
+LIBS="ppx_deriving_yojson core ppxlib ppx_deriving hack_parallel opium pcre-ocaml ocaml-tls camlzip bisect_ppx ocaml-ci-scripts patdiff lwt toml"
 
 rm ALL.txt 2> /dev/null
 for l in $LIBS; do rm -rf $l; done
@@ -48,10 +48,6 @@ wget -P camlzip https://raw.githubusercontent.com/xavierleroy/camlzip/master/LIC
 # MIT
 mkdir bisect_ppx && \
 wget -P bisect_ppx https://raw.githubusercontent.com/aantron/bisect_ppx/master/LICENSE.md
-
-# LGPL
-mkdir mparser && \
-wget -P mparser https://raw.githubusercontent.com/comby-tools/mparser/master/LICENSE.txt
 
 # ISC
 mkdir ocaml-ci-scripts && \

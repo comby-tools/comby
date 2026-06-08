@@ -117,18 +117,24 @@ let substitute_matches (matches : Match.t list) source replacements =
       "Matches: %d | Replacements: %d@."
       (List.length matches)
       (List.length replacements);
-  let rewritten_source, in_place_substitutions, _ =
+  let buf = Buffer.create (String.length source) in
+  let add_source_slice start finish =
+    if finish > start then
+      Buffer.add_substring buf source ~pos:start ~len:(finish - start)
+  in
+  let in_place_substitutions, _, cursor =
     (* shift adjusts the difference of the matched part and the replacement part to the matched offsets *)
     List.fold2_exn
       matches
       replacements
-      ~init:(source, [], 0)
-      ~f:(fun (rolling_result, replacements, shift) { range; _ } ({ replacement_content; _ } as r)
-         ->
+      ~init:([], 0, 0)
+      ~f:(fun (replacements, shift, cursor) { range; _ } ({ replacement_content; _ } as r) ->
+      let original_start_index = range.match_start.offset in
+      let original_end_index = range.match_end.offset in
       let start_index = range.match_start.offset + shift in
       let end_index = range.match_end.offset + shift in
-      let before = if start_index = 0 then "" else String.slice rolling_result 0 start_index in
-      let after = String.slice rolling_result end_index (String.length rolling_result) in
+      add_source_slice cursor original_start_index;
+      Buffer.add_string buf replacement_content;
       let match_length = end_index - start_index in
       let difference = String.length replacement_content - match_length in
       let range =
@@ -138,8 +144,10 @@ let substitute_matches (matches : Match.t list) source replacements =
           }
       in
       let replacements = { r with range } :: replacements in
-      String.concat [ before; replacement_content; after ], replacements, shift + difference)
+      replacements, shift + difference, original_end_index)
   in
+  add_source_slice cursor (String.length source);
+  let rewritten_source = Buffer.contents buf in
   { rewritten_source; in_place_substitutions }
 
 (* FIXME: all the functors help nothing if we end up calling this without parameterizing by metasyntax, etc. *)

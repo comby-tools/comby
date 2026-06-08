@@ -23,7 +23,6 @@ type t =
 (* I think I should just implement the analog of string_ for regex with some bounded buffer size. *)
 
 module Make (Regexp : Regexp_engine_intf) = struct
-  (* https://sourcegraph.com/github.com/comby-tools/mparser/-/blob/src/mParser_Char_Stream.ml#L231:8 *)
   let match_regexp s pos rex = Regexp.exec ~rex ~pos:(pos - s.buffer_pos) s.buffer
   let make_regexp pat = Regexp.make pat
 

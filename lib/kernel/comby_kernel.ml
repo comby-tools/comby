@@ -7,7 +7,6 @@ module Replacement = Replacement
 type replacement = Replacement.result
 
 module Matchers = struct
-  module Engine = Matchers.Engine
   module Language = Matchers.Language
   module Matcher = Matchers.Matcher
   module Configuration = Matchers.Configuration
@@ -20,11 +19,10 @@ module Matchers = struct
   type metasyntax = Matchers.Metasyntax.t
 
   module External = Matchers.External
-  module Alpha = Matchers.Alpha
-  module Omega = Matchers.Omega
   module Languages = Matchers.Languages
   module Template = Matchers.Template
   module Ast = Matchers.Ast
+  include Matchers.Matcher_engine
 
   module Rule = struct
     include Matchers.Rule

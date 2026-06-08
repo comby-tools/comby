@@ -10,9 +10,7 @@ let%expect_test "rewrite_rule" =
   let rule = {|
       where rewrite :[1] { "int" -> "expect" }
     |} in
-  run (module Alpha.Generic) source match_template rewrite_template ~rule;
-  [%expect_exact {|expect|}];
-  run (module Omega.Generic) source match_template rewrite_template ~rule;
+  run (module Generic) source match_template rewrite_template ~rule;
   [%expect_exact {|expect|}]
 
 let%expect_test "sequenced_rewrite_rule" =
@@ -26,9 +24,7 @@ let%expect_test "sequenced_rewrite_rule" =
       rewrite :[rest] { "{ b : { :[other] } }" -> "{ :[other] }" }
     |}
   in
-  run (module Alpha.Generic) source match_template rewrite_template ~rule;
-  [%expect_exact {|{ { qqq : { c : d } } }|}];
-  run (module Omega.Generic) source match_template rewrite_template ~rule;
+  run (module Generic) source match_template rewrite_template ~rule;
   [%expect_exact {|{ { qqq : { c : d } } }|}]
 
 let%expect_test "rewrite_rule_for_list" =
@@ -38,9 +34,7 @@ let%expect_test "rewrite_rule_for_list" =
   let rule = {|
       where rewrite :[contents] { ":[[x]]," -> ":[[x]];" }
     |} in
-  run (module Alpha.Generic) source match_template rewrite_template ~rule;
-  [%expect_exact {|[1; 2; 3; 4;]|}];
-  run (module Omega.Generic) source match_template rewrite_template ~rule;
+  run (module Generic) source match_template rewrite_template ~rule;
   [%expect_exact {|[1; 2; 3; 4;]|}]
 
 let%expect_test "rewrite_rule_for_list_strip_last" =
@@ -50,9 +44,7 @@ let%expect_test "rewrite_rule_for_list_strip_last" =
   let rule = {|
       where rewrite :[contents] { ":[x], " -> ":[x]; " }
     |} in
-  run (module Alpha.Generic) source match_template rewrite_template ~rule;
-  [%expect_exact {|[1; 2; 3; 4]|}];
-  run (module Omega.Generic) source match_template rewrite_template ~rule;
+  run (module Generic) source match_template rewrite_template ~rule;
   [%expect_exact {|[1; 2; 3; 4]|}]
 
 let%expect_test "haskell_example" =
@@ -67,13 +59,7 @@ let%expect_test "haskell_example" =
   let rule = {|
       where rewrite :[contents] { "," -> "++" }
     |} in
-  run (module Alpha.Generic) source match_template rewrite_template ~rule;
-  [%expect_exact {|
-     ( "blah blah blah"
-     ++ "blah"
-     )
-|}];
-  run (module Omega.Generic) source match_template rewrite_template ~rule;
+  run (module Generic) source match_template rewrite_template ~rule;
   [%expect_exact {|
      ( "blah blah blah"
      ++ "blah"
@@ -92,11 +78,7 @@ let%expect_test "rewrite_freeform_antecedent_pattern" =
   let rule = {|
       where rewrite :[contents] { concat [:[x]] -> "nice" }
     |} in
-  run (module Alpha.Generic) source match_template rewrite_template ~rule;
-  [%expect_exact {|(
-     (nice)
-)|}];
-  run (module Omega.Generic) source match_template rewrite_template ~rule;
+  run (module Generic) source match_template rewrite_template ~rule;
   [%expect_exact {|(
      (nice)
 )|}]

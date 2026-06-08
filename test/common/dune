@@ -45,5 +45,6 @@
 (alias
  (name runtest)
  (deps
+  ../../src/main.exe
   (source_tree example)
   (source_tree example/src/.ignore-me)))

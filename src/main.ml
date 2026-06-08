@@ -21,15 +21,9 @@ let paths_with_file_size paths =
     in
     path, length)
 
-let list_supported_languages_and_exit omega =
-  let (module Matcher : Matchers.Engine.S) =
-    if omega then
-      (module Matchers.Omega)
-    else
-      (module Matchers.Alpha)
-  in
+let list_supported_languages_and_exit () =
   let list =
-    List.map Matcher.all ~f:(fun (module M) ->
+    List.map Matchers.all ~f:(fun (module M) ->
       let ext = List.hd_exn M.extensions in
       Format.sprintf " -matcher %-10s%-10s\n" ext M.name)
     |> String.concat
@@ -222,7 +216,6 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
            Setting this option activates -review mode."
     and disable_substring_matching =
       flag "disable-substring-matching" no_arg ~doc:"Allow :[holes] to match substrings"
-    and omega = flag "omega" no_arg ~doc:"Use Omega matcher engine."
     and fast_offset_conversion =
       flag
         "fast-offset-conversion"
@@ -310,7 +303,7 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
       else
         Option.bind ~f:file_filters_to_paths file_filters
     in
-    if list then list_supported_languages_and_exit omega;
+    if list then list_supported_languages_and_exit ();
     if Option.is_some substitute_environment then
       substitute_environment_only_and_exit
         custom_metasyntax
@@ -338,8 +331,6 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
       | None -> None
     in
     let substitute_in_place = not newline_separated_rewrites in
-    let omega_env = Option.is_some @@ Sys.getenv "OMEGA_COMBY" in
-    let omega = omega || omega_env in
     let fast_offset_conversion_env = Option.is_some @@ Sys.getenv "FAST_OFFSET_CONVERSION_COMBY" in
     let fast_offset_conversion = fast_offset_conversion_env || fast_offset_conversion in
     let arch = Unix.Utsname.machine (Core.Unix.uname ()) in
@@ -370,7 +361,6 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
             ; override_matcher
             ; regex_pattern
             ; ripgrep_args
-            ; omega
             }
         ; run_options =
             { verbose

@@ -15,7 +15,7 @@ let run source match_template format : string * string =
   let run ~fast =
     let result =
       Pipeline.process_single_source
-        (module Matchers.Omega.C)
+        (module Matchers.C)
         ~fast_offset_conversion:fast
         configuration
         (String source)

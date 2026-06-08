@@ -219,7 +219,6 @@ type user_input_options =
   ; override_matcher : string option
   ; regex_pattern : bool
   ; ripgrep_args : string option
-  ; omega : bool
   }
 
 type compute_mode =
@@ -628,24 +627,14 @@ let extension file_filters =
      | _, Some extension -> "." ^ extension
      | extension, None -> "." ^ extension)
 
-let of_extension
-  (module Engine : Matchers.Engine.S)
-  (module External : Matchers.External.S)
-  file_filters
-  =
+let of_extension (module External : Matchers.External.S) file_filters =
   let external_handler = External.handler in
   let extension = extension file_filters in
-  match Engine.select_with_extension extension ~external_handler with
+  match Matchers.select_with_extension extension ~external_handler with
   | Some matcher -> matcher, Some extension, None
-  | None -> (module Engine.Generic), Some extension, None
+  | None -> (module Matchers.Generic), Some extension, None
 
-let select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega =
-  let (module Engine : Matchers.Engine.S) =
-    if omega then
-      (module Matchers.Omega)
-    else
-      (module Matchers.Alpha)
-  in
+let select_matcher custom_metasyntax custom_matcher override_matcher file_filters =
   let module External = struct
     let handler = External_semantic.lsif_hover
   end
@@ -656,15 +645,15 @@ let select_matcher custom_metasyntax custom_matcher override_matcher file_filter
     (* custom matcher, optional custom metasyntax *)
     let metasyntax = parse_metasyntax custom_metasyntax in
     let syntax = syntax custom_matcher in
-    if debug then Format.printf "Engine.create@.";
-    Engine.create ~metasyntax syntax, None, Some metasyntax
+    if debug then Format.printf "Matchers.create@.";
+    Matchers.create ~metasyntax syntax, None, Some metasyntax
   | _, Some language, custom_metasyntax ->
     (* forced language, optional custom metasyntax *)
     let metasyntax = parse_metasyntax custom_metasyntax in
     let (module Metasyntax) = Matchers.Metasyntax.create metasyntax in
     let (module Language) = force_language language in
     if debug then Format.printf "Engine.Make@.";
-    ( (module Engine.Make (Language) (Metasyntax) (External) : Matchers.Matcher.S)
+    ( (module Matchers.Make (Language) (Metasyntax) (External) : Matchers.Matcher.S)
     , None
     , Some metasyntax )
   | _, _, Some custom_metasyntax ->
@@ -673,13 +662,13 @@ let select_matcher custom_metasyntax custom_matcher override_matcher file_filter
     let (module Metasyntax) = Matchers.Metasyntax.create metasyntax in
     let (module Language) = force_language (extension file_filters) in
     if debug then Format.printf "Engine.Make2@.";
-    ( (module Engine.Make (Language) (Metasyntax) (External) : Matchers.Matcher.S)
+    ( (module Matchers.Make (Language) (Metasyntax) (External) : Matchers.Matcher.S)
     , None
     , Some metasyntax )
   | _, _, None ->
     (* infer language from file filters, use default metasyntax *)
-    if debug then Format.printf "Engine.Infer@.";
-    of_extension (module Engine) (module External) file_filters
+    if debug then Format.printf "Matchers.Infer@.";
+    of_extension (module External) file_filters
 
 let regex_of_specifications specifications =
   Format.sprintf "(%s)"
@@ -722,7 +711,6 @@ let create
        ; override_matcher
        ; regex_pattern
        ; ripgrep_args
-       ; omega
        }
    ; run_options
    ; output_options =
@@ -831,7 +819,7 @@ let create
         Printer.Rewrite.print replacement_output source_path replacements result source_content
   in
   let ((module M) as matcher), _, metasyntax =
-    select_matcher custom_metasyntax custom_matcher override_matcher file_filters omega
+    select_matcher custom_metasyntax custom_matcher override_matcher file_filters
   in
   return
     { matcher

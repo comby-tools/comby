@@ -26,6 +26,22 @@ let anything_excluding_newlines () = anything_including_newlines ~until:"\n"
 let non_nested_comment from until =
   between (string from) (string until) (anything_including_newlines ~until) |>> to_string from until
 
+let nested_comment from until =
+  let reserved = choice [ string from *> return (); string until *> return () ] in
+  let grammar =
+    fix (fun grammar ->
+      let comment_delimiters =
+        between
+          (string from)
+          (string until)
+          (many grammar >>| fun result -> String.concat result)
+      in
+      let other = not_followed_by reserved *> any_char >>| Char.to_string in
+      choice [ comment_delimiters; other ])
+  in
+  between (string from) (string until) (many grammar >>| fun result -> String.concat result)
+  >>| fun content -> from ^ content ^ until
+
 module Multiline = struct
   module type S = sig
     val left : string
@@ -49,5 +65,16 @@ module Until_newline = struct
 
   module Make (M : S) = struct
     let comment = until_newline M.start
+  end
+end
+
+module Nested_multiline = struct
+  module type S = sig
+    val left : string
+    val right : string
+  end
+
+  module Make (M : S) = struct
+    let comment = nested_comment M.left M.right
   end
 end

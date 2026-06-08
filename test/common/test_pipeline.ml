@@ -3,8 +3,8 @@ open Command_configuration
 open Comby_kernel
 open Matchers
 
-let configuration (module E : Engine.S) =
-  { matcher = (module E.Generic : Matchers.Matcher.S)
+let configuration =
+  { matcher = (module Generic : Matchers.Matcher.S)
   ; sources = `String "source"
   ; specifications = []
   ; run_options =
