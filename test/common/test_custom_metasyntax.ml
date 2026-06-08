@@ -236,8 +236,8 @@ let%expect_test "custom_metasyntax_test_alias" =
   in
   (* Need to use default metasyntax because rules don't yet support arbitrary metasyntax *)
   let metasyntax = { Matchers.Metasyntax.default_metasyntax with aliases } in
-  let omega = Option.value_exn (Matchers.select_with_extension ~metasyntax ".go") in
-  run ~metasyntax omega "foo(a) foo(ab) foo(abc) foo(abcd)" "foo(_2)" "matched";
+  let matcher = Option.value_exn (Matchers.select_with_extension ~metasyntax ".go") in
+  run ~metasyntax matcher "foo(a) foo(ab) foo(abc) foo(abcd)" "foo(_2)" "matched";
   [%expect_exact {|foo(a) matched foo(abc) foo(abcd)|}];
-  run ~metasyntax omega "foo(a) foo(ab) foo(abc) foo(abcd)" "foo(_3)" "matched";
+  run ~metasyntax matcher "foo(a) foo(ab) foo(abc) foo(abcd)" "foo(_3)" "matched";
   [%expect_exact {|foo(a) foo(ab) matched foo(abcd)|}]
