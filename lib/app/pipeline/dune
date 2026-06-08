@@ -12,13 +12,8 @@
   comby.interactive
   comby.camlzip
   core
-  core.uuid
+  core_unix.uuid
   cstruct-lwt
   yojson
   ppx_deriving_yojson
-  parany
-  (select
-   parallel_hack.ml
-   from
-   (hack_parallel -> parallel_hack.available.ml)
-   (!hack_parallel -> parallel_hack.parany_fallback.ml))))
+  parany))

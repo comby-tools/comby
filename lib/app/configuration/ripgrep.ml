@@ -1,7 +1,7 @@
 open Core
 open Lwt
 
-let debug = Sys.getenv "DEBUG_COMBY" |> Option.is_some
+let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
 
 let run ~pattern ~args =
   let options = [ "--files-with-matches"; "--multiline" ] in

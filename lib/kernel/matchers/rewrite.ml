@@ -3,10 +3,7 @@ open Core_kernel
 open Match
 open Replacement
 
-let debug =
-  match Sys.getenv "DEBUG_COMBY" with
-  | exception Not_found -> false
-  | _ -> true
+let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
 
 let counter =
   let uuid_for_id_counter = ref 0 in
@@ -51,7 +48,7 @@ let parse_first_label ?(metasyntax = Metasyntax.default_metasyntax) template =
   in
   parse_string ~consume:All parser template
   |> function
-  | Ok label -> List.find_map label ~f:ident
+  | Ok label -> List.find_map label ~f:Fn.id
   | Error _ -> None
 
 let substitute_fresh ?(metasyntax = Metasyntax.default_metasyntax) ?(fresh = counter) template =
@@ -61,11 +58,11 @@ let substitute_fresh ?(metasyntax = Metasyntax.default_metasyntax) ?(fresh = cou
   while Option.is_some !current_label_ref do
     let label = Option.value_exn !current_label_ref in
     let id =
-      match String.Table.find label_table label with
+      match Hashtbl.find label_table label with
       | Some id -> id
       | None ->
         let id = fresh () in
-        if String.(label <> "") then String.Table.add_exn label_table ~key:label ~data:id;
+        if String.(label <> "") then Hashtbl.add_exn label_table ~key:label ~data:id;
         id
     in
     let left, right = replacement_sentinel metasyntax in

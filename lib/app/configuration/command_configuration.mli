@@ -64,7 +64,6 @@ type user_input_options =
 
 type compute_mode =
   [ `Sequential
-  | `Hack_parallel of int
   | `Parany of int
   ]
 

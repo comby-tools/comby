@@ -2,10 +2,7 @@ open Core_kernel
 open Match
 open Types.Ast
 
-let debug =
-  match Sys.getenv "DEBUG_COMBY" with
-  | exception Not_found -> false
-  | _ -> true
+let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
 
 type result = bool * Match.environment option
 
@@ -101,7 +98,7 @@ let apply
           List.fold matches ~init:(true, None) ~f:fold_matches |> Option.some
       in
       List.find_map cases ~f:(fun (template, case_expression) -> evaluate template case_expression)
-      |> Option.value_map ~f:ident ~default:(false, Some env)
+      |> Option.value_map ~f:Fn.id ~default:(false, Some env)
     (* rewrite ... { ... } *)
     | Rewrite (Template t, (match_template, rewrite_template)) ->
       let rewrite_template = substitute env rewrite_template in
@@ -112,7 +109,7 @@ let apply
       let matches = match_all ?filepath ~configuration ~template ~source () in
       let source = if substitute_in_place then Some source else None in
       let result = Rewrite.all ~metasyntax ?filepath ?source ~rewrite_template matches in
-      if Option.is_empty result then
+      if Option.is_none result then
         if substitute_in_place then
           (* rewrites are always sat for in-place. always unsat for newline-sep. *)
           true, Some env

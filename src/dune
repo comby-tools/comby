@@ -2,16 +2,13 @@
  (libraries
   comby
   core
+  core_unix.command_unix
+  core_unix.filename_unix
   ppx_deriving_yojson
-  ppx_deriving_yojson.runtime
-  (select
-   if_hack_parallel.ml
-   from
-   (hack_parallel -> if_hack_parallel.available.ml)
-   (!hack_parallel -> if_hack_parallel.unavailable.ml)))
+  ppx_deriving_yojson.runtime)
  (preprocess
   (pps ppx_deriving_yojson ppx_let ppx_deriving.show ppx_sexp_conv))
- (modules main if_hack_parallel)
+ (modules main)
  (modes byte exe)
  (names main))
 

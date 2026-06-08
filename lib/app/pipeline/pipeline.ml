@@ -7,7 +7,7 @@ open Statistics
 open Matchers
 
 let verbose_out_file = "/tmp/comby.out"
-let debug = Sys.getenv "DEBUG_COMBY" |> Option.is_some
+let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
 
 let timed_run
   (module Matcher : Matcher.S)
@@ -189,8 +189,6 @@ let run_batch ~f:per_unit sources compute_mode bound_count =
   | `Sequential -> Sequential.process ~f:per_unit bound_count sources
   | `Parany number_of_workers ->
     Parallel_parany.process ~f:per_unit number_of_workers bound_count sources
-  | `Hack_parallel number_of_workers ->
-    Parallel_hack.process ~f:per_unit number_of_workers bound_count sources
 
 let run_interactive
   specifications
@@ -230,8 +228,6 @@ let run_interactive
     | `Sequential -> Sequential.process_interactive ~f:with_rewrites paths
     | `Parany number_of_workers ->
       Parallel_parany.process_interactive ~f:with_rewrites paths number_of_workers
-    | `Hack_parallel number_of_workers ->
-      Parallel_hack.process_interactive ~f:with_rewrites paths number_of_workers
   in
   let { editor; default_is_accept } = interactive_review in
   Interactive.run editor default_is_accept count rewrites;
@@ -261,6 +257,38 @@ module TarReader = struct
   let read_content ifd n =
     let buffer = Cstruct.create n in
     really_read ifd buffer >>= fun () -> return (Cstruct.to_string buffer)
+
+  let next_header () =
+    let state = ref (Tar.decode_state ()) in
+    let rec loop fd =
+      read_content fd Tar.Header.length
+      >>= fun block ->
+      match Tar.decode !state block with
+      | Error (`Msg message) -> failwith message
+      | Error _ -> failwith "Tar decoding error"
+      | Ok (state', action, _) ->
+        state := state';
+        (match action with
+         | None -> return_none
+         | Some (`Header header) -> return_some header
+         | Some (`Skip n) ->
+           skip fd (Int64.to_int_exn n) >>= fun () -> loop fd
+         | Some (`Read n) ->
+           read_content fd (Int64.to_int_exn n)
+           >>= fun data ->
+           (match Tar.decode !state data with
+            | Error (`Msg message) -> failwith message
+            | Error _ -> failwith "Tar decoding error"
+            | Ok (state', action, _) ->
+              state := state';
+              (match action with
+               | None -> return_none
+               | Some (`Header header) -> return_some header
+               | Some (`Skip n) ->
+                 skip fd (Int64.to_int_exn n) >>= fun () -> loop fd
+               | Some (`Read _) -> failwith "Unexpected nested tar read")))
+    in
+    loop
 end
 
 let run
@@ -326,8 +354,9 @@ let run
          let open Lwt.Infix in
          let fd = Lwt_unix.stdin in
          let f =
+           let next_header = TarReader.next_header () in
            let rec loop () =
-             Tar_lwt_unix.get_next_header fd
+             next_header fd
              >>= function
              | None -> Lwt.return 0
              | Some header ->

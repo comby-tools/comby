@@ -23,7 +23,7 @@ let configuration =
   ; substitute_in_place = true
   }
 
-(* TODO restore this, can't access the Parallel_hack module *)
+(* TODO restore this interactive path test. *)
 (*
 let%expect_test "interactive_paths" =
   let _, count =

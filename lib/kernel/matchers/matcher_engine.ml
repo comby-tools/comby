@@ -27,15 +27,10 @@ let push_matches_ref : Match.t list ref = ref []
 let push_source_ref : string ref = ref ""
 let filepath_ref : string option ref = ref None
 
-let debug =
-  match Sys.getenv "DEBUG_COMBY" with
-  | exception Not_found -> false
-  | _ -> true
+let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
 
 let rewrite =
-  match Sys.getenv "REWRITE" with
-  | exception Not_found -> false
-  | _ -> true
+  Stdlib.Sys.getenv_opt "REWRITE" |> Option.is_some
 
 let actual = Buffer.create 10
 let rewrite_template = ref ""
@@ -634,7 +629,7 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
     let hole_parser ?at_depth sort dimension : (production * 'a) t t =
       let hole_parser =
         (* This must be fold, can't be find *)
-        let open Polymorphic_compare in
+        let open Poly in
         List.fold ~init:[] Template.Matching.hole_parsers ~f:(fun acc (sort', parser) ->
           if sort' = sort then parser :: acc else acc)
       in

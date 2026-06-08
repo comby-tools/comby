@@ -98,7 +98,7 @@ let%expect_test "custom_metasyntax_equivalence" =
   in
   run_all_matches (create matcher) "foo(foo)" {|$A($A~\w+$)|};
   [%expect_exact
-    {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":8,"line":1,"column":9}},"environment":[{"variable":"A","value":"foo","range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}}},{"variable":"A_equal_!@#$000000000004","value":"foo","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}}}],"matched":"foo(foo)"}]}
+    {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":8,"line":1,"column":9}},"environment":[{"variable":"A","value":"foo","range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}}},{"variable":"A_equal_!@#$000000000001","value":"foo","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}}}],"matched":"foo(foo)"}]}
 |}]
 
 let%expect_test "custom_metasyntax_definition_order" =

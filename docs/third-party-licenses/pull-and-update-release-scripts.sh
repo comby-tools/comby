@@ -1,6 +1,6 @@
 #!/bin/bash
 
-LIBS="ppx_deriving_yojson core ppxlib ppx_deriving hack_parallel opium pcre-ocaml ocaml-tls camlzip bisect_ppx ocaml-ci-scripts patdiff lwt toml"
+LIBS="ppx_deriving_yojson core ppxlib ppx_deriving opium pcre-ocaml ocaml-tls camlzip bisect_ppx ocaml-ci-scripts patdiff lwt toml"
 
 rm ALL.txt 2> /dev/null
 for l in $LIBS; do rm -rf $l; done
@@ -24,10 +24,6 @@ wget -P ppxlib https://raw.githubusercontent.com/ocaml-ppx/ppxlib/master/LICENSE
 # MIT
 mkdir ppx_deriving && \
 wget -P ppx_deriving https://raw.githubusercontent.com/ocaml-ppx/ppx_deriving/master/LICENSE.txt
-
-# MIT
-mkdir hack_parallel && \
-wget -P hack_parallel https://raw.githubusercontent.com/rvantonder/hack-parallel/master/LICENSE
 
 # MIT
 mkdir opium && \

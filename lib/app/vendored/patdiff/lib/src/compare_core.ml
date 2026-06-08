@@ -1,5 +1,6 @@
 open! Core
 open! Import
+module Unix = Core_unix
 
 let lines_of_contents contents =
   let lines = Array.of_list (String.split_lines contents) in
@@ -58,17 +59,17 @@ let convert_to_patch_compatible_hunks ?prev_diff ?next_diff lines_prev lines_nex
                  let prev, next = Array.get a (Array.length a - 1) in
                  Array.set a (Array.length a - 1) (prev^correction, next^correction)
               (* if the last hunk had things deleted *)
-              | Some Prev a when prev_file_no_trailing_newline ->
+              | Some (Prev (a, _)) when prev_file_no_trailing_newline ->
                  let prev = Array.get a (Array.length a - 1) in
                  Array.set a (Array.length a - 1) (prev^correction)
-              | Some Next a when next_file_no_trailing_newline ->
+              | Some (Next (a, _)) when next_file_no_trailing_newline ->
                  (* Prev has a newline, dest does not *)
                  let next = Array.get a (Array.length a - 1) in
                  Array.set a (Array.length a - 1) (next^correction)
-              | Some Unified a ->
+              | Some (Unified (a, _)) ->
                  let unified = Array.get a (Array.length a - 1) in
                  Array.set a (Array.length a - 1) (unified^correction)
-              | Some Replace (a1, a2) ->
+              | Some (Replace (a1, a2, _)) ->
                  if prev_file_no_trailing_newline then
                    (
                      let prev = Array.get a1 (Array.length a1 - 1) in
@@ -100,6 +101,7 @@ let compare_lines (config : Configuration.t) ?prev_diff ?next_diff ~prev ~next (
         ~big_enough:line_big_enough
         ~prev
         ~next
+        ()
     | Some prog ->
       let compare x y =
         let cmd = sprintf "%s %S %S" prog x y in
@@ -116,7 +118,7 @@ let compare_lines (config : Configuration.t) ?prev_diff ?next_diff ~prev ~next (
           let compare = compare
         end)
       in
-      P.get_hunks ~transform ~context ~big_enough:line_big_enough ~prev ~next
+      P.get_hunks ~transform ~context ~big_enough:line_big_enough ~prev ~next ()
   in
   let hunks =
     match config.float_tolerance with
@@ -361,7 +363,7 @@ let rec diff_dirs_internal (config : Configuration.t) ~prev_dir ~next_dir ~file_
       | None -> Fn.const true
       | Some file_filter -> file_filter
     in
-    Sys.ls_dir (File_name.real_name_exn dir)
+    (Stdlib.Sys.readdir (File_name.real_name_exn dir) |> Array.to_list)
     |> List.filter ~f:(fun x ->
       let x = File_name.real_name_exn dir ^/ x in
       match Unix.stat x with

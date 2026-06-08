@@ -1,9 +1,6 @@
 open Vangstrom
 
-let debug =
-  match Sys.getenv "DEBUG_COMBY" with
-  | exception Not_found -> false
-  | _ -> true
+let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
 
 module type Regexp_engine_intf = sig
   type t

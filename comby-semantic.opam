@@ -18,14 +18,14 @@ build: [
     ]
 ]
 depends: [
-  "dune" {>= "2.8.0"}
-  "ocaml" {>= "4.08.1"}
-  "core_kernel"
+  "dune" {>= "3.11.0"}
+  "ocaml" {>= "5.1.0"}
+  "core_kernel" {>= "v0.17" & < "v0.18~"}
   "ppx_deriving"
   "lwt"
   "cohttp"
   "cohttp-lwt-unix"
-  "yojson" {>= "1.6.0" < "2.0.0"}
+  "yojson" {>= "1.6.0" & < "3.0.0"}
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]
 synopsis: "A match engine for structural code search and replace that supports ~every language"
