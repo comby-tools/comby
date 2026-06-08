@@ -22,9 +22,8 @@ let paths_with_file_size paths =
     path, length)
 
 let list_supported_languages_and_exit () =
-  let module Matcher = Matchers.Omega in
   let list =
-    List.map Matcher.all ~f:(fun (module M) ->
+    List.map Matchers.all ~f:(fun (module M) ->
       let ext = List.hd_exn M.extensions in
       Format.sprintf " -matcher %-10s%-10s\n" ext M.name)
     |> String.concat

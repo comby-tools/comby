@@ -4,26 +4,26 @@ open Test_helpers
 
 let configuration = Matchers.Configuration.create ~match_kind:Fuzzy ()
 
-let create (module E : Matchers.Engine.S) syntax =
+let create syntax =
   let metasyntax =
     Matchers.Metasyntax.{ syntax; identifier = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"; aliases = [] }
   in
-  Option.value_exn (E.select_with_extension ~metasyntax ".go")
+  Option.value_exn (Matchers.select_with_extension ~metasyntax ".go")
 
 let%expect_test "custom_metasyntax_everything" =
   let matcher = [ Matchers.Metasyntax.Hole (Everything, Delimited (Some "$", None)) ] in
   let source = "simple(test)" in
-  run_all_matches (create (module Matchers.Omega) matcher) source "simple($A)";
+  run_all_matches (create matcher) source "simple($A)";
   [%expect_exact
     {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":12,"line":1,"column":13}},"environment":[{"variable":"A","value":"test","range":{"start":{"offset":7,"line":1,"column":8},"end":{"offset":11,"line":1,"column":12}}}],"matched":"simple(test)"}]}
 |}];
   let source = "(nested(test))" in
-  run_all_matches (create (module Matchers.Omega) matcher) source "($A)";
+  run_all_matches (create matcher) source "($A)";
   [%expect_exact
     {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":14,"line":1,"column":15}},"environment":[{"variable":"A","value":"nested(test)","range":{"start":{"offset":1,"line":1,"column":2},"end":{"offset":13,"line":1,"column":14}}}],"matched":"(nested(test))"}]}
 |}];
   let source = "flat stuff yeah" in
-  run_all_matches (create (module Matchers.Omega) matcher) source "flat $A yeah";
+  run_all_matches (create matcher) source "flat $A yeah";
   [%expect_exact
     {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":15,"line":1,"column":16}},"environment":[{"variable":"A","value":"stuff","range":{"start":{"offset":5,"line":1,"column":6},"end":{"offset":10,"line":1,"column":11}}}],"matched":"flat stuff yeah"}]}
 |}]
@@ -31,7 +31,7 @@ let%expect_test "custom_metasyntax_everything" =
 let%expect_test "custom_metasyntax_regex" =
   let matcher = Matchers.Metasyntax.[ Regex ("$", ':', " ") ] in
   let source = "simple(test)" in
-  run_all_matches (create (module Matchers.Omega) matcher) source {|$A:\w+ |};
+  run_all_matches (create matcher) source {|$A:\w+ |};
   [%expect_exact
     {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}},"environment":[{"variable":"A","value":"simple","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}}}],"matched":"simple"},{"range":{"start":{"offset":7,"line":1,"column":8},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"A","value":"test","range":{"start":{"offset":7,"line":1,"column":8},"end":{"offset":11,"line":1,"column":12}}}],"matched":"test"}]}
 |}]
@@ -41,11 +41,11 @@ let%expect_test "custom_metasyntax_multiple_holes" =
     Matchers.Metasyntax.
       [ Hole (Everything, Delimited (Some "$", None)); Hole (Alphanum, Delimited (Some "?", None)) ]
   in
-  run_all_matches (create (module Matchers.Omega) matcher) "simple(bar)" {|$FOO(?BAR)|};
+  run_all_matches (create matcher) "simple(bar)" {|$FOO(?BAR)|};
   [%expect_exact
     {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"BAR","value":"bar","range":{"start":{"offset":7,"line":1,"column":8},"end":{"offset":10,"line":1,"column":11}}},{"variable":"FOO","value":"simple","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}}}],"matched":"simple(bar)"}]}
 |}];
-  run_all_matches (create (module Matchers.Omega) matcher) "foo(bar)" {|?FOO($BAR)|};
+  run_all_matches (create matcher) "foo(bar)" {|?FOO($BAR)|};
   [%expect_exact
     {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":8,"line":1,"column":9}},"environment":[{"variable":"BAR","value":"bar","range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}}},{"variable":"FOO","value":"foo","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}}}],"matched":"foo(bar)"}]}
 |}];
@@ -55,7 +55,7 @@ let%expect_test "custom_metasyntax_multiple_holes" =
       ; Hole (Alphanum, Delimited (Some "$$", None))
       ]
   in
-  run_all_matches (create (module Matchers.Omega) matcher) "foo(bar.baz)" {|$$A|};
+  run_all_matches (create matcher) "foo(bar.baz)" {|$$A|};
   [%expect_exact
     {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}},"environment":[{"variable":"A","value":"foo","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}}}],"matched":"foo"},{"range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}},"environment":[{"variable":"A","value":"bar","range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}}}],"matched":"bar"},{"range":{"start":{"offset":8,"line":1,"column":9},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"A","value":"baz","range":{"start":{"offset":8,"line":1,"column":9},"end":{"offset":11,"line":1,"column":12}}}],"matched":"baz"}]}
 |}];
@@ -66,7 +66,7 @@ let%expect_test "custom_metasyntax_multiple_holes" =
       ; Regex ("$", ':', " ")
       ]
   in
-  run_all_matches (create (module Matchers.Omega) matcher) "foo(bar.baz)" {|$M:\w+ |};
+  run_all_matches (create matcher) "foo(bar.baz)" {|$M:\w+ |};
   [%expect_exact
     {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}},"environment":[{"variable":"M","value":"foo","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}}}],"matched":"foo"},{"range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}},"environment":[{"variable":"M","value":"bar","range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}}}],"matched":"bar"},{"range":{"start":{"offset":8,"line":1,"column":9},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"M","value":"baz","range":{"start":{"offset":8,"line":1,"column":9},"end":{"offset":11,"line":1,"column":12}}}],"matched":"baz"}]}
 |}];
@@ -78,7 +78,7 @@ let%expect_test "custom_metasyntax_multiple_holes" =
       ; Hole (Alphanum, Delimited (Some "$$", None))
       ]
   in
-  run_all_matches (create (module Matchers.Omega) matcher) "foo(bar.baz)" {|$M:\w+ |};
+  run_all_matches (create matcher) "foo(bar.baz)" {|$M:\w+ |};
   [%expect_exact {|No matches.|}]
 
 let%expect_test "custom_metasyntax_underscore" =
@@ -87,7 +87,7 @@ let%expect_test "custom_metasyntax_underscore" =
       [ Hole (Everything, Delimited (Some "$", None)); Hole (Alphanum, Delimited (Some "?", None)) ]
   in
   (* We record _ the first time and don't subsequently for implicit_equals *)
-  run_all_matches (create (module Matchers.Omega) matcher) "simple(bar)" {|$_(?_)|};
+  run_all_matches (create matcher) "simple(bar)" {|$_(?_)|};
   [%expect_exact
     {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"_","value":"bar","range":{"start":{"offset":7,"line":1,"column":8},"end":{"offset":10,"line":1,"column":11}}}],"matched":"simple(bar)"}]}
 |}]
@@ -96,7 +96,7 @@ let%expect_test "custom_metasyntax_equivalence" =
   let matcher =
     Matchers.Metasyntax.[ Hole (Everything, Delimited (Some "$", None)); Regex ("$", '~', "$") ]
   in
-  run_all_matches (create (module Matchers.Omega) matcher) "foo(foo)" {|$A($A~\w+$)|};
+  run_all_matches (create matcher) "foo(foo)" {|$A($A~\w+$)|};
   [%expect_exact
     {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":8,"line":1,"column":9}},"environment":[{"variable":"A","value":"foo","range":{"start":{"offset":4,"line":1,"column":5},"end":{"offset":7,"line":1,"column":8}}},{"variable":"A_equal_!@#$000000000004","value":"foo","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":3,"line":1,"column":4}}}],"matched":"foo(foo)"}]}
 |}]
@@ -105,12 +105,12 @@ let%expect_test "custom_metasyntax_definition_order" =
   let matcher =
     Matchers.Metasyntax.[ Regex ("$", '~', "$"); Hole (Everything, Delimited (Some "$", None)) ]
   in
-  run_all_matches (create (module Matchers.Omega) matcher) "simple(bar)baz" {|$A($B)$C~\w+$|};
+  run_all_matches (create matcher) "simple(bar)baz" {|$A($B)$C~\w+$|};
   [%expect_exact {|No matches.|}];
   let matcher =
     Matchers.Metasyntax.[ Hole (Everything, Delimited (Some "$", None)); Regex ("$", '~', "$") ]
   in
-  run_all_matches (create (module Matchers.Omega) matcher) "simple(bar)baz" {|$A($B)$C~\w+$|};
+  run_all_matches (create matcher) "simple(bar)baz" {|$A($B)$C~\w+$|};
   [%expect_exact
     {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":14,"line":1,"column":15}},"environment":[{"variable":"A","value":"simple","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}}},{"variable":"B","value":"bar","range":{"start":{"offset":7,"line":1,"column":8},"end":{"offset":10,"line":1,"column":11}}},{"variable":"C","value":"baz","range":{"start":{"offset":11,"line":1,"column":12},"end":{"offset":14,"line":1,"column":15}}}],"matched":"simple(bar)baz"}]}
 |}]
@@ -123,7 +123,7 @@ let%expect_test "custom_metasyntax_rewrite_fresh_1" =
   let metasyntax =
     Matchers.Metasyntax.{ syntax; identifier = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"; aliases = [] }
   in
-  let matcher = Option.value_exn (Matchers.Omega.select_with_extension ~metasyntax ".go") in
+  let matcher = Option.value_exn (Matchers.select_with_extension ~metasyntax ".go") in
   let specification =
     Matchers.Specification.create ~match_template:"$A(?B)" ~rewrite_template:"??B -> $A$A" ()
   in
@@ -160,7 +160,7 @@ let%expect_test "custom_metasyntax_rewrite_fresh_2" =
   let metasyntax =
     Matchers.Metasyntax.{ syntax; identifier = "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"; aliases = [] }
   in
-  let matcher = Option.value_exn (Matchers.Omega.select_with_extension ~metasyntax ".go") in
+  let matcher = Option.value_exn (Matchers.select_with_extension ~metasyntax ".go") in
   let specification =
     Matchers.Specification.create ~match_template:"$A(?B)" ~rewrite_template:"??B -> $A$A" ()
   in
@@ -191,7 +191,7 @@ let%expect_test "custom_metasyntax_rewrite_fresh_2" =
 
 let%expect_test "custom_metasyntax_greek_letters" =
   let matcher = Matchers.Metasyntax.[ Hole (Alphanum, Reserved_identifiers [ "α"; "β" ]) ] in
-  run_all_matches (create (module Matchers.Omega) matcher) "simple(bar)" {|α(β)|};
+  run_all_matches (create matcher) "simple(bar)" {|α(β)|};
   [%expect_exact
     {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"α","value":"simple","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}}},{"variable":"β","value":"bar","range":{"start":{"offset":7,"line":1,"column":8},"end":{"offset":10,"line":1,"column":11}}}],"matched":"simple(bar)"}]}
 |}]
@@ -203,7 +203,7 @@ let%expect_test "custom_metasyntax_alphanum_test" =
       ; Hole (Alphanum, Reserved_identifiers [ "α"; "β" ])
       ]
   in
-  run_all_matches (create (module Matchers.Omega) matcher) "simple(bar)" {|[:A:](α)|};
+  run_all_matches (create matcher) "simple(bar)" {|[:A:](α)|};
   [%expect_exact
     {|{"uri":null,"matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":11,"line":1,"column":12}},"environment":[{"variable":"A","value":"simple","range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":6,"line":1,"column":7}}},{"variable":"α","value":"bar","range":{"start":{"offset":7,"line":1,"column":8},"end":{"offset":10,"line":1,"column":11}}}],"matched":"simple(bar)"}]}
 |}]
@@ -220,7 +220,7 @@ let%expect_test "custom_metasyntax_rewrite_length" =
   in
   run
     ~metasyntax
-    (create (module Matchers.Omega) syntax)
+    (create syntax)
     "simple(bar)"
     {|[:A:](α)|}
     {|[:A:].length (α.length)|};
@@ -236,7 +236,7 @@ let%expect_test "custom_metasyntax_test_alias" =
   in
   (* Need to use default metasyntax because rules don't yet support arbitrary metasyntax *)
   let metasyntax = { Matchers.Metasyntax.default_metasyntax with aliases } in
-  let omega = Option.value_exn (Matchers.Omega.select_with_extension ~metasyntax ".go") in
+  let omega = Option.value_exn (Matchers.select_with_extension ~metasyntax ".go") in
   run ~metasyntax omega "foo(a) foo(ab) foo(abc) foo(abcd)" "foo(_2)" "matched";
   [%expect_exact {|foo(a) matched foo(abc) foo(abcd)|}];
   run ~metasyntax omega "foo(a) foo(ab) foo(abc) foo(abcd)" "foo(_3)" "matched";

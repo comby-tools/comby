@@ -16,7 +16,7 @@ let%expect_test "strings" =
 |}
   in
   run
-    (module Matchers.Omega.Generic)
+    (module Matchers.Generic)
     source
     {|
        :[[a]]
@@ -54,7 +54,7 @@ let%expect_test "filepath_rewrite_template" =
   let source = {|whatever|} in
   let filepath = "this/is/a/path" in
   run
-    (module Matchers.Omega.Generic)
+    (module Matchers.Generic)
     ~filepath
     source
     ":[all]"
@@ -69,7 +69,7 @@ let%expect_test "filepath_rule" =
   let filepath = "this/is/a/path" in
   let match_template = ":[x]" in
   let rule = {|where rewrite :[x] { _ -> :[x].file.path }|} in
-  run (module Matchers.Omega.Generic) ~filepath source ~rule match_template "ok: :[x]";
+  run (module Matchers.Generic) ~filepath source ~rule match_template "ok: :[x]";
   [%expect_exact {|ok: this/is/a/path|}]
 
 let%expect_test "lines" =
@@ -84,7 +84,7 @@ let%expect_test "lines" =
 |} in
   let match_template = "{:[x]}" in
   let rewrite_template = {|:[x].lines|} in
-  run (module Matchers.Omega.Generic) source match_template rewrite_template;
+  run (module Matchers.Generic) source match_template rewrite_template;
   [%expect_exact {|
     2
     3
@@ -108,7 +108,7 @@ column.start: :[[x]].column.start // can't compute without source yet
 column.end: :[[x]].column.end     // can't compute without source yet
 |}
   in
-  run (module Matchers.Omega.Generic) source match_template rewrite_template;
+  run (module Matchers.Generic) source match_template rewrite_template;
   [%expect_exact
     {|
 

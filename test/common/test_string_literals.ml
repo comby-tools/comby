@@ -36,20 +36,20 @@ let%expect_test "comments_in_string_literals_should_not_be_treated_as_comments_b
   let source = {|"/*"(x)|} in
   let template = {|(:[1])|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all (module Omega.C) template source rewrite_template;
+  rewrite_all (module C) template source rewrite_template;
   [%expect_exact {|"/*"x|}]
 
 let%expect_test "comments_in_string_literals_should_not_be_treated_as_comments_by_fuzzy_go_raw" =
   let source = {|`//`(x)|} in
   let template = {|(:[1])|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all (module Omega.Go) template source rewrite_template;
+  rewrite_all (module Go) template source rewrite_template;
   [%expect_exact {|`//`x|}]
 
 let%expect_test "tolerate_unbalanced_stuff_in_string_literals" =
   let template = {|"("|} in
   let source = {|"("|} in
-  all (module Omega.C) ~configuration template source |> print_matches;
+  all (module C) ~configuration template source |> print_matches;
   [%expect_exact
     {|[
   {
@@ -66,35 +66,35 @@ let%expect_test "base_literal_matching" =
   let source = {|"hello"|} in
   let match_template = {|":[1]"|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|hello|}]
 
 let%expect_test "base_literal_matching" =
   let source = {|rewrite ("hello") this string|} in
   let match_template = {|rewrite (":[1]") this string|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|hello|}]
 
 let%expect_test "match_string_literals" =
   let source = {|rewrite (".") this string|} in
   let match_template = {|rewrite (":[1]") this string|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|.|}]
 
 let%expect_test "match_string_literals" =
   let source = {|rewrite ("") this string|} in
   let match_template = {|rewrite (":[1]") this string|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {||}]
 
 let%expect_test "match_string_literals" =
   let source = {|"(" match "a""a" this "(" |} in
   let match_template = {|match :[1] this|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|"(" "a""a" "(" |}]
 
 (* this tests special functionality in non-literal hole parser
@@ -103,42 +103,42 @@ let%expect_test "match_string_literals" =
   let source = {|"(" match "(""(" this "(" |} in
   let match_template = {|match :[1] this|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|"(" "(""(" "(" |}]
 
 let%expect_test "match_string_literals" =
   let source = {|rewrite ("") this string|} in
   let match_template = {|rewrite (:[1]) this string|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|""|}]
 
 let%expect_test "base_literal_matching" =
   let source = {|"("|} in
   let match_template = {|":[1]"|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|(|}]
 
 let%expect_test "base_literal_matching" =
   let source = {|"(""("|} in
   let match_template = {|":[1]"|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|((|}]
 
 let%expect_test "base_literal_matching" =
   let source = {|"(""("|} in
   let match_template = {|":[1]"|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|((|}]
 
 let%expect_test "base_literal_matching" =
   let source = {|"hello world"|} in
   let match_template = {|":[x] :[y]"|} in
   let rewrite_template = {|:[x] :[y]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|hello world|}]
 
 (* complex test: basically, we are checking that the inside of this literal is only matched by the val b part *)
@@ -146,77 +146,77 @@ let%expect_test "base_literal_matching" =
   let source = {|val a = "class = ${String::class}" val b = "not $a"|} in
   let match_template = {|":[x]$:[[y]]"|} in
   let rewrite_template = {|(rewritten part: (:[x]) ([y]))|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|val a = "class = ${String::class}" val b = (rewritten part: (not ) ([y]))|}]
 
 let%expect_test "base_literal_matching" =
   let source = {|get("type") rekt ("enabled", True)|} in
   let match_template = {|(":[1]", :[[3]])|} in
   let rewrite_template = {|(rewritten part: (:[1]) (:[3]))|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|get("type") rekt (rewritten part: (enabled) (True))|}]
 
 let%expect_test "rewrite_string_literals_8" =
   let source = {|match "\"" this|} in
   let match_template = {|match "\"" this|} in
   let rewrite_template = "" in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {||}]
 
 let%expect_test "rewrite_string_literals_8" =
   let source = {|match "\"" this|} in
   let match_template = {|match :[1] this|} in
   let rewrite_template = ":[1]" in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|"\""|}]
 
 let%expect_test "rewrite_string_literals_8" =
   let source = {|match "\"\"" this|} in
   let match_template = {|match :[1] this|} in
   let rewrite_template = ":[1]" in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|"\"\""|}]
 
 let%expect_test "rewrite_string_literals_8" =
   let source = {|match "\"(\"" "(\"" this|} in
   let match_template = {|match :[1] this|} in
   let rewrite_template = ":[1]" in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|"\"(\"" "(\""|}]
 
 let%expect_test "rewrite_string_literals_8" =
   let source = {|match "\"(\"" "(\"" this|} in
   let match_template = {|match ":[1]" ":[2]" this|} in
   let rewrite_template = {|:[1] :[2]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|\"(\" (\"|}]
 
 let%expect_test "rewrite_string_literals_8" =
   let source = {|match 'sin(gle' 'quo(tes' this|} in
   let match_template = {|:[1]|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|match 'sin(gle' 'quo(tes' this|}]
 
 let%expect_test "rewrite_string_literals_8" =
   let source = {|match '\''|} in
   let match_template = {|:[1]|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|match '\''|}]
 
 let%expect_test "rewrite_string_literals_8" =
   let source = {|match 'asdf'|} in
   let match_template = {|':[1]'|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|match asdf|}]
 
 let%expect_test "rewrite_string_literals_8" =
   let source = {|match '\''|} in
   let match_template = {|':[1]'|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.C) match_template source rewrite_template;
+  rewrite_all' (module C) match_template source rewrite_template;
   [%expect_exact {|match \'|}]
 
 let%expect_test "go_raw_string_literals" =
@@ -231,7 +231,7 @@ let%expect_test "go_raw_string_literals" =
   in
   let match_template = {|`:[1]`|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.Go) match_template source rewrite_template;
+  rewrite_all' (module Go) match_template source rewrite_template;
   [%expect_exact
     {|
        x = x
@@ -245,14 +245,14 @@ let%expect_test "go_raw_string_literals" =
   let source = {|blah `(` quux|} in
   let match_template = {|:[1]|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.Go) match_template source rewrite_template;
+  rewrite_all' (module Go) match_template source rewrite_template;
   [%expect_exact {|blah `(` quux|}]
 
 let%expect_test "match_string_literals" =
   let source = {|`(` match `(``(` this `(` |} in
   let match_template = {|match :[1] this|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.Go) match_template source rewrite_template;
+  rewrite_all' (module Go) match_template source rewrite_template;
   [%expect_exact {|`(` `(``(` `(` |}]
 
 let%expect_test "go_raw_string_literals" =
@@ -267,7 +267,7 @@ let%expect_test "go_raw_string_literals" =
   in
   let match_template = {|`:[1]`|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all' (module Omega.Go) match_template source rewrite_template;
+  rewrite_all' (module Go) match_template source rewrite_template;
   [%expect_exact
     {|
        x = x
@@ -281,28 +281,28 @@ let%expect_test "regression_matching_kubernetes" =
   let source = {|"\n" y = 5|} in
   let template = {|y = :[1]|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all (module Omega.Go) template source rewrite_template;
+  rewrite_all (module Go) template source rewrite_template;
   [%expect_exact {|"\n" 5|}]
 
 let%expect_test "match_escaped_any_char" =
   let source = {|printf("hello world\n");|} in
   let template = {|printf(":[1]");|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all (module Omega.Go) template source rewrite_template;
+  rewrite_all (module Go) template source rewrite_template;
   [%expect_exact {|hello world\n|}]
 
 let%expect_test "match_escaped_escaped" =
   let source = {|printf("hello world\n\\");|} in
   let template = {|printf(":[1]");|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all (module Omega.Go) template source rewrite_template;
+  rewrite_all (module Go) template source rewrite_template;
   [%expect_exact {|hello world\n\\|}]
 
 let%expect_test "match_escaped_escaped" =
   let source = {|printf("hello world\n\");|} in
   let template = {|printf(":[1]");|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all_want_fail_case (module Omega.Go) template source rewrite_template;
+  rewrite_all_want_fail_case (module Go) template source rewrite_template;
   [%expect_exact {|EXPECT SUCCESS|}]
 
 let%expect_test "holes_in_raw_literals" =
@@ -326,7 +326,7 @@ let%expect_test "holes_in_raw_literals" =
 |}
   in
   let template = {|`:[1]`|} in
-  head_match (module Omega.Typescript) template source;
+  head_match (module Typescript) template source;
   [%expect_exact
     {|`
                         query ResolveRepo($repoName: String!) {
@@ -357,7 +357,7 @@ let%expect_test "holes_in_raw_literals_partial" =
 |}
   in
   let template = {|` query ResolveRepo(:[1]) {:[2]} `|} in
-  head_match (module Omega.Typescript) template source;
+  head_match (module Typescript) template source;
   [%expect_exact
     {|`
                         query ResolveRepo($repoName: String!) {
@@ -371,7 +371,7 @@ let%expect_test "dont_detect_comments_in_strings_with_hole_matcher" =
   let source = {|"// not a comment"|} in
   let template = {|":[1]"|} in
   let rewrite_template = {|:[1]|} in
-  rewrite_all (module Omega.Go) template source rewrite_template;
+  rewrite_all (module Go) template source rewrite_template;
   [%expect_exact {|// not a comment|}]
 
 (* Deactivated: this will conflict with division syntax *)

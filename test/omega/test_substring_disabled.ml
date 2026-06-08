@@ -1,7 +1,6 @@
 open Core
 open Comby_kernel
 open Matchers
-open Matchers.Omega
 
 let configuration = Configuration.create ~disable_substring_matching:true ~match_kind:Fuzzy ()
 

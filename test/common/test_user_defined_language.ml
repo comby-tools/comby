@@ -3,8 +3,8 @@ open Comby_kernel
 open Matchers
 open Test_helpers
 
-let run (module E : Engine.S) user_lang source match_template rewrite_template =
-  let (module M) = E.create user_lang in
+let run user_lang source match_template rewrite_template =
+  let (module M) = Matchers.create user_lang in
   M.first ~configuration match_template source
   |> function
   | Ok result ->
@@ -46,7 +46,7 @@ let%expect_test "user_defined_language" =
   in
   let match_template = {|case :[1] esac|} in
   let rewrite_template = {|case nuked blocks esac|} in
-  run (module Omega) user_lang source match_template rewrite_template;
+  run user_lang source match_template rewrite_template;
   [%expect_exact
     {|
       case nuked blocks esac
@@ -84,7 +84,7 @@ let%expect_test "user_defined_language_from_json" =
   let source = "" in
   let match_template = {|""|} in
   let rewrite_template = {|""|} in
-  run (module Omega) user_lang source match_template rewrite_template;
+  run user_lang source match_template rewrite_template;
   [%expect_exact {|""|}]
 
 let%expect_test "user_defined_language_from_json_optional_escapable" =
@@ -107,5 +107,5 @@ let%expect_test "user_defined_language_from_json_optional_escapable" =
   let source = "" in
   let match_template = {|""|} in
   let rewrite_template = {|""|} in
-  run (module Omega) user_lang source match_template rewrite_template;
+  run user_lang source match_template rewrite_template;
   [%expect_exact {|""|}]

@@ -7,35 +7,35 @@ open Test_helpers
 let%expect_test "nested_multiline_c" =
   let source = {|int nest = /*/*/ 0 */**/ 1;|} in
   let template = {|0 * 1|} in
-  Omega.C.all ~configuration ~template ~source () |> print_only_match;
+  C.all ~configuration ~template ~source () |> print_only_match;
   [%expect_exact {|[ "0 */**/ 1" ]|}];
-  Omega.C_nested_comments.all ~configuration ~template ~source () |> print_only_match;
+  C_nested_comments.all ~configuration ~template ~source () |> print_only_match;
   [%expect_exact {|[]|}]
 
 let%expect_test "nested_multiline_ocaml_comments_are_skipped" =
   let source = {|(* let commented = 2 (* nested *) *)
 let live = 1|} in
   let template = {|let commented = :[value]|} in
-  Omega.OCaml.all ~configuration ~template ~source () |> print_only_match;
+  OCaml.all ~configuration ~template ~source () |> print_only_match;
   [%expect_exact {|[]|}]
 
 let%expect_test "nested_multiline_haskell_comments_are_skipped" =
   let source = {|{- let commented = 2 {- nested -} -}
 let live = 1|} in
   let template = {|let commented = :[value]|} in
-  Omega.Haskell.all ~configuration ~template ~source () |> print_only_match;
+  Haskell.all ~configuration ~template ~source () |> print_only_match;
   [%expect_exact {|[]|}]
 
 let%expect_test "nested_multiline_nim_comments_are_skipped" =
   let source = {|#[ let commented = 2 #[ nested ]# ]#
 let live = 1|} in
   let template = {|let commented = :[value]|} in
-  Omega.Nim.all ~configuration ~template ~source () |> print_only_match;
+  Nim.all ~configuration ~template ~source () |> print_only_match;
   [%expect_exact {|[]|}]
 
 let%expect_test "nested_multiline_julia_comments_are_skipped" =
   let source = {|#= commented = 2 #= nested =# =#
 live = 1|} in
   let template = {|commented = :[value]|} in
-  Omega.Julia.all ~configuration ~template ~source () |> print_only_match;
+  Julia.all ~configuration ~template ~source () |> print_only_match;
   [%expect_exact {|[]|}]
