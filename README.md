@@ -74,11 +74,11 @@ To match these with comby, all you need to write is `if (:[condition])`, and spe
 
 - Install [opam](https://opam.ocaml.org/doc/Install.html). TL;DR do `sh <(curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh)`
 
-- Run this if you don't have OCaml installed (it bootstraps the OCaml compiler):
+- Run this if you don't have an OCaml 5 switch installed (it bootstraps the OCaml compiler):
 
 ```
 opam init
-opam switch create 4.11.0 4.11.0
+opam switch create 5.1.0 5.1.0
 ```
 
 - Run `eval $(opam env)`
