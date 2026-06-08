@@ -18,12 +18,12 @@ build: [
     ]
 ]
 depends: [
-  "dune" {>= "2.8.0"}
-  "ocaml" {>= "4.08.1"}
-  "core_kernel"
+  "dune" {>= "3.11.0"}
+  "ocaml" {>= "5.1.0"}
+  "core_kernel" {>= "v0.17" & < "v0.18~"}
   "ppx_deriving"
-  "ppx_deriving_yojson" {>= "3.6.0"}
-  "yojson" {>= "1.6.0" < "2.0.0"}
+  "ppx_deriving_yojson" {>= "3.6.0" & < "4.0.0"}
+  "yojson" {>= "1.6.0" & < "3.0.0"}
   "pcre"
   # vendored dependencies
   "bigstringaf"

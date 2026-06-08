@@ -4,7 +4,8 @@
  (libraries
   core_kernel.composition_infix
   core
-  core.linux_ext
+  core_unix
+  core_unix.linux_ext
   comby.patdiff_kernel
   patience_diff)
  (preprocess

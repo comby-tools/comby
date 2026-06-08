@@ -1,9 +1,6 @@
 open Core_kernel
 
-let debug =
-  match Sys.getenv "DEBUG_COMBY" with
-  | exception Not_found -> false
-  | _ -> true
+let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
 
 let append_rule (module Parser : Types.Rule.S) rule parent_rule =
   let open Option in

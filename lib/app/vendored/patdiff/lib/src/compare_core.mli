@@ -1,5 +1,6 @@
 open! Core
 open! Import
+module Unix = Core_unix
 
 val diff_files
   :  Configuration.t

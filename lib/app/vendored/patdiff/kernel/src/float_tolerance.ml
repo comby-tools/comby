@@ -220,9 +220,9 @@ let recover_ranges xs ys a =
     | Matching ijs ->
       let xys = Array.of_list ijs |> Array.map ~f:(fun (i, j) -> xs.(i), ys.(j)) in
       Range.Same xys
-    | Nonmatching (is, []) -> Prev (elts_of_indices is xs)
-    | Nonmatching ([], js) -> Next (elts_of_indices js ys)
-    | Nonmatching (is, js) -> Replace (elts_of_indices is xs, elts_of_indices js ys))
+    | Nonmatching (is, []) -> Prev (elts_of_indices is xs, None)
+    | Nonmatching ([], js) -> Next (elts_of_indices js ys, None)
+    | Nonmatching (is, js) -> Replace (elts_of_indices is xs, elts_of_indices js ys, None))
 ;;
 
 let%expect_test "recover_ranges" =
@@ -239,10 +239,10 @@ let%expect_test "recover_ranges" =
 let do_tolerance ~equal hunks =
   Hunks.concat_map_ranges hunks ~f:(fun range ->
     match (range : string Range.t) with
-    | Same _ | Prev _ | Next _ -> [ range ]
-    | Unified _ ->
+    | Same _ | Prev (_, _) | Next (_, _) -> [ range ]
+    | Unified (_, _) ->
       raise_s [%message "Unexpected Unified range." ~_:(range : string Range.t)]
-    | Replace (prev, next) ->
+    | Replace (prev, next, _) ->
       needleman_wunsch
         (Array.map prev ~f:String_with_floats.create)
         (Array.map next ~f:String_with_floats.create)
@@ -287,35 +287,36 @@ end = struct
           ~running_step:(fun (car, pos) cadr ->
             match car, cadr with
             | Same car_lines, Same cadr_lines ->
-              Skip (Same (Array.concat [ car_lines; cadr_lines ]), pos)
-            | Unified _, _ | _, Unified _ ->
+              Skip { state = Same (Array.concat [ car_lines; cadr_lines ]), pos }
+            | Unified (_, _), _ | _, Unified (_, _) ->
               raise_s
                 [%message
                   "Unexpected unified range."
                     (car : string Range.t)
                     (cadr : string Range.t)]
-            | (Prev _ | Next _ | Replace _), (Prev _ | Next _ | Replace _)
-            | Same _, (Prev _ | Next _ | Replace _)
-            | (Prev _ | Next _ | Replace _), Same _ -> Yield ((car, pos), (cadr, Middle)))
+            | (Prev (_, _) | Next (_, _) | Replace (_, _, _)), (Prev (_, _) | Next (_, _) | Replace (_, _, _))
+            | Same _, (Prev (_, _) | Next (_, _) | Replace (_, _, _))
+            | (Prev (_, _) | Next (_, _) | Replace (_, _, _)), Same _ ->
+              Yield { value = car, pos; state = cadr, Middle })
           ~inner_finished:(fun (last, pos) ->
             match last, pos with
-            | Unified _, _ ->
+            | Unified (_, _), _ ->
               raise_s [%message "Unexpected unified range." ~_:(last : string Range.t)]
             | _, End ->
               raise_s [%message "Produced End in running step." (last : string Range.t)]
             | Same _, Start -> None
-            | (Prev _ | Next _ | Replace _), (Start | Middle) | Same _, Middle ->
+            | (Prev (_, _) | Next (_, _) | Replace (_, _, _)), (Start | Middle) | Same _, Middle ->
               Some (last, End))
           ~finishing_step:(function
             | None -> Done
-            | Some result -> Yield (result, None))
+            | Some result -> Yield { value = result; state = None })
     ;;
 
     include struct
       let%expect_test _ =
         let test ranges = print_s [%sexp (f ranges : t Sequence.t)] in
         let same = Range.Same [| "same", "same" |] in
-        let not_same = Range.Next [| "new" |] in
+        let not_same = Range.Next ([| "new" |], None) in
         test [ same; same ];
         [%expect {| () |}];
         test [ same; not_same; same; same; not_same; same; same ];
@@ -376,9 +377,9 @@ end = struct
     let f ~context (ranges : Merged_with_position.t Sequence.t) =
       Sequence.bind ranges ~f:(fun (range, pos) ->
         match range with
-        | Unified _ ->
+        | Unified (_, _) ->
           raise_s [%message "Unexpected Unified range." ~_:(range : string Range.t)]
-        | Prev _ | Next _ | Replace _ -> Sequence.singleton (Keep range)
+        | Prev (_, _) | Next (_, _) | Replace (_, _, _) -> Sequence.singleton (Keep range)
         | Same lines ->
           (match pos with
            | Start -> drop_from_start context lines
@@ -392,7 +393,7 @@ end = struct
           print_s [%sexp (Merged_with_position.f ranges |> f ~context:1 : t Sequence.t)]
         in
         let same = Range.Same [| "same", "same" |] in
-        let not_same = Range.Next [| "new" |] in
+        let not_same = Range.Next ([| "new" |], None) in
         test [ same; same ];
         [%expect {| () |}];
         test
@@ -448,7 +449,7 @@ end = struct
         ~init:{ prev_start; next_start; ranges = [] }
         ~running_step:(fun t drop_or_keep ->
           match (drop_or_keep : Drop_or_keep.t) with
-          | Keep range -> Skip { t with ranges = range :: t.ranges }
+          | Keep range -> Skip { state = { t with ranges = range :: t.ranges } }
           | Drop n ->
             let hunk = to_hunk t in
             let t =
@@ -457,11 +458,14 @@ end = struct
               ; ranges = []
               }
             in
-            if List.is_empty (Hunk.ranges hunk) then Skip t else Yield (hunk, t))
+            if List.is_empty (Hunk.ranges hunk) then
+              Skip { state = t }
+            else
+              Yield { value = hunk; state = t })
         ~inner_finished:(fun t -> if List.is_empty t.ranges then None else Some t)
         ~finishing_step:(function
           | None -> Done
-          | Some t -> Yield (to_hunk t, None))
+          | Some t -> Yield { value = to_hunk t; state = None })
     ;;
   end
 

@@ -92,14 +92,16 @@ module Make (Output_impls : Output_impls) = struct
               app x, app y)
           in
           Same formatted_ar
-        | Next ar -> Next (Array.map ar ~f:(apply ~refined:false ~rule:rules.line_next))
-        | Prev ar -> Prev (Array.map ar ~f:(apply ~refined:false ~rule:rules.line_prev))
-        | Unified ar ->
-          Unified (Array.map ar ~f:(apply ~refined:true ~rule:rules.line_unified))
-        | Replace (ar1, ar2) ->
+        | Next (ar, move_kind) ->
+          Next (Array.map ar ~f:(apply ~refined:false ~rule:rules.line_next), move_kind)
+        | Prev (ar, move_kind) ->
+          Prev (Array.map ar ~f:(apply ~refined:false ~rule:rules.line_prev), move_kind)
+        | Unified (ar, move_id) ->
+          Unified (Array.map ar ~f:(apply ~refined:true ~rule:rules.line_unified), move_id)
+        | Replace (ar1, ar2, move_id) ->
           let ar1 = Array.map ar1 ~f:(apply ~refined:true ~rule:rules.line_prev) in
           let ar2 = Array.map ar2 ~f:(apply ~refined:true ~rule:rules.line_next) in
-          Replace (ar1, ar2)
+          Replace (ar1, ar2, move_id)
       ;;
 
       let map_ranges (hunks : _ Patience_diff.Hunk.t list) ~f =
@@ -138,6 +140,7 @@ module Make (Output_impls : Output_impls) = struct
       ~big_enough:line_big_enough
       ~prev
       ~next
+      ()
   ;;
 
   type word_or_newline =
@@ -281,13 +284,13 @@ module Make (Output_impls : Output_impls) = struct
             | `Unified -> snd
           in
           Array.map ar ~f
-        | Prev ar ->
+        | Prev (ar, _) ->
           flag := `Prev;
           ar
-        | Next ar ->
+        | Next (ar, _) ->
           flag := `Next;
           ar
-        | Replace _ | Unified _ ->
+        | Replace (_, _, _) | Unified (_, _) ->
           (* When calling collapse, we always call
            * Patience_diff.unified first, which removes all R.Replaces
            * and R.Unifieds. *)
@@ -345,11 +348,12 @@ module Make (Output_impls : Output_impls) = struct
       ~big_enough:word_big_enough
       ~prev:prev_pieces
       ~next:next_pieces
+      ()
   ;;
 
   let ranges_are_just_whitespace (ranges : _ Patience_diff.Range.t list) =
     List.for_all ranges ~f:(function
-      | Prev piece_array | Next piece_array ->
+      | Prev (piece_array, _) | Next (piece_array, _) ->
         Array.for_all piece_array ~f:(function
           | `Word s -> String.is_empty (remove_ws s)
           | `Newline _ -> true)
@@ -366,7 +370,7 @@ module Make (Output_impls : Output_impls) = struct
     List.iter rangelist ~f:(fun range ->
       let split_was_executed =
         match (range : _ Patience_diff.Range.t) with
-        | Next _ | Prev _ | Replace _ | Unified _ -> false
+        | Next (_, _) | Prev (_, _) | Replace (_, _, _) | Unified (_, _) -> false
         | Same seq ->
           let first_newline =
             Array.find_mapi seq ~f:(fun i ->
@@ -429,11 +433,11 @@ module Make (Output_impls : Output_impls) = struct
          | Ok width -> width)
     in
     let refine_range : _ Patience_diff.Range.t -> _ Patience_diff.Range.t list = function
-      | Next a when (not keep_ws) && Array.for_all a ~f:is_ws ->
+      | Next (a, _) when (not keep_ws) && Array.for_all a ~f:is_ws ->
         [ Same (Array.zip_exn a a) ]
-      | Prev a when (not keep_ws) && Array.for_all a ~f:is_ws -> []
-      | (Next _ | Prev _ | Same _ | Unified _) as range -> [ range ]
-      | Replace (prev_ar, next_ar) ->
+      | Prev (a, _) when (not keep_ws) && Array.for_all a ~f:is_ws -> []
+      | (Next (_, _) | Prev (_, _) | Same _ | Unified (_, _)) as range -> [ range ]
+      | Replace (prev_ar, next_ar, _) ->
         (* Explode the arrays *)
         let prev_pieces = explode prev_ar ~keep_ws in
         let next_pieces = explode next_ar ~keep_ws in
@@ -529,17 +533,17 @@ module Make (Output_impls : Output_impls) = struct
                          | `Range r -> r :: rangeaccum, rangelistaccum)
                    in
                    split_lines new_len_so_far rest rangeaccum rangelistaccum
-                 | Next tokens_arr | Prev tokens_arr ->
+                 | Next (tokens_arr, _) | Prev (tokens_arr, _) ->
                    let new_len_so_far = get_new_len_so_far ~len_so_far tokens_arr in
                    split_lines new_len_so_far rest (range :: rangeaccum) rangelistaccum
-                 | Replace (prev_arr, next_arr) ->
+                 | Replace (prev_arr, next_arr, _) ->
                    let new_len_so_far =
                      Int.max
                        (get_new_len_so_far ~len_so_far prev_arr)
                        (get_new_len_so_far ~len_so_far next_arr)
                    in
                    split_lines new_len_so_far rest (range :: rangeaccum) rangelistaccum
-                 | Unified _ -> assert false)
+                 | Unified (_, _) -> assert false)
             in
             split_lines 0 sub_diff [] [])
         in
@@ -555,7 +559,7 @@ module Make (Output_impls : Output_impls) = struct
             List.for_all ranges ~f:(fun range ->
               match (range : _ Patience_diff.Range.t) with
               | Same _ -> true
-              | Prev a | Next a ->
+              | Prev (a, _) | Next (a, _) ->
                 if keep_ws
                 then false
                 else
@@ -619,13 +623,13 @@ module Make (Output_impls : Output_impls) = struct
               | _ ->
                 (match prev_ar, next_ar with
                  (* Ugly hack that takes care of empty files *)
-                 | [| "" |], next_ar -> Replace ([||], next_ar)
-                 | prev_ar, [| "" |] -> Replace (prev_ar, [||])
+                 | [| "" |], next_ar -> Replace ([||], next_ar, None)
+                 | prev_ar, [| "" |] -> Replace (prev_ar, [||], None)
                  | prev_ar, next_ar ->
                    (match produce_unified_lines, prev_all_same, next_all_same with
-                    | true, true, false -> Unified next_ar
-                    | true, false, true -> Unified prev_ar
-                    | false, _, _ | _, false, false -> Replace (prev_ar, next_ar)
+                    | true, true, false -> Unified (next_ar, None)
+                    | true, false, true -> Unified (prev_ar, None)
+                    | false, _, _ | _, false, false -> Replace (prev_ar, next_ar, None)
                     | _ -> assert false))
             in
             range))

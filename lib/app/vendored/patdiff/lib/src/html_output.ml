@@ -1,5 +1,6 @@
 open! Core
 open! Import
+module Unix = Core_unix
 
 include Patdiff_kernel.Html_output.Private.Make (struct
     let mtime file =

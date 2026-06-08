@@ -3,10 +3,7 @@ open Core_kernel
 open Match
 open Types.Template
 
-let debug =
-  match Sys.getenv "DEBUG_COMBY" with
-  | exception Not_found -> false
-  | _ -> true
+let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
 
 module Make (Metasyntax : Types.Metasyntax.S) (External : Types.External.S) : Types.Template.S =
 struct

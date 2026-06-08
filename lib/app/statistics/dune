@@ -5,4 +5,4 @@
   (backend bisect_ppx))
  (preprocess
   (pps ppx_deriving_yojson))
- (libraries yojson ppx_deriving_yojson ppx_deriving_yojson.runtime))
+ (libraries unix yojson ppx_deriving_yojson ppx_deriving_yojson.runtime))

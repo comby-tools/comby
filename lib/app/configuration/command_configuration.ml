@@ -1,9 +1,17 @@
 open Core
 open Camlzip
-open Polymorphic_compare
+open Poly
 open Comby_kernel
 
-let debug = Sys.getenv "DEBUG_COMBY" |> Option.is_some
+let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
+
+let ls_dir path = Stdlib.Sys.readdir path |> Array.to_list
+
+let is_directory path =
+  try Stdlib.Sys.is_directory path with
+  | Sys_error _ -> false
+
+let is_file path = Stdlib.Sys.file_exists path && not (is_directory path)
 
 (* skip or continue directory descent *)
 type 'a next =
@@ -12,18 +20,18 @@ type 'a next =
 
 let fold_directory ?(sorted = false) root ~init ~f =
   let rec aux acc absolute_path depth =
-    if Sys.is_file absolute_path = `Yes then (
+    if is_file absolute_path then (
       match f acc ~depth ~absolute_path ~is_file:true with
       | Continue acc | Skip acc -> acc)
-    else if Sys.is_directory absolute_path = `Yes then (
+    else if is_directory absolute_path then (
       match f acc ~depth ~absolute_path ~is_file:false with
       | Skip acc -> acc
       | Continue acc ->
         let dir_contents =
           if Option.is_some (Sys.getenv "COMBY_TEST") || sorted then
-            Sys.ls_dir absolute_path |> List.sort ~compare:String.compare |> List.rev
+            ls_dir absolute_path |> List.sort ~compare:String.compare |> List.rev
           else
-            Sys.ls_dir absolute_path
+            ls_dir absolute_path
         in
         List.fold dir_contents ~init:acc ~f:(fun acc subdir ->
           aux acc (Filename.concat absolute_path subdir) (depth + 1)))
@@ -44,7 +52,7 @@ let parse_source_directories
   let exact_file_paths, file_patterns =
     List.partition_map file_filters ~f:(fun path ->
       let is_exact path =
-        (String.contains path '/' && Sys.is_file path = `Yes) || Sys.is_file ("." ^/ path) = `Yes
+        (String.contains path '/' && is_file path) || is_file ("." ^/ path)
         (* See if it matches something in the current directory *)
       in
       if is_exact path then Either.First path else Either.Second path)
@@ -161,8 +169,8 @@ let parse_templates ?metasyntax ?(warn_for_missing_file_in_dir = false) paths =
   let f acc ~depth:_ ~absolute_path ~is_file =
     let is_leaf_directory absolute_path =
       (not is_file)
-      && Sys.ls_dir absolute_path
-         |> List.for_all ~f:(fun path -> Sys.is_directory (absolute_path ^/ path) = `No)
+      && ls_dir absolute_path
+         |> List.for_all ~f:(fun path -> not (is_directory (absolute_path ^/ path)))
     in
     if is_leaf_directory absolute_path then (
       match parse_directory absolute_path with
@@ -172,7 +180,7 @@ let parse_templates ?metasyntax ?(warn_for_missing_file_in_dir = false) paths =
       Continue acc
   in
   List.concat_map paths ~f:(fun path ->
-    if Sys.is_directory path = `Yes then
+    if is_directory path then
       fold_directory path ~sorted:true ~init:[] ~f
     else
       parse_toml ?metasyntax path)
@@ -223,7 +231,6 @@ type user_input_options =
 
 type compute_mode =
   [ `Sequential
-  | `Hack_parallel of int
   | `Parany of int
   ]
 
@@ -411,11 +418,11 @@ let parse_metasyntax metasyntax_path =
   match metasyntax_path with
   | None -> Matchers.Metasyntax.default_metasyntax
   | Some metasyntax_path ->
-    (match Sys.file_exists metasyntax_path with
-     | `No | `Unknown ->
+    (match Stdlib.Sys.file_exists metasyntax_path with
+     | false ->
        Format.eprintf "Could not open file: %s@." metasyntax_path;
        exit 1
-     | `Yes ->
+     | true ->
        Yojson.Safe.from_file metasyntax_path
        |> Matchers.Metasyntax.of_yojson
        |> (function
@@ -462,14 +469,14 @@ let emit_errors { input_options; output_options; _ } =
     ; ( Option.is_some input_options.directory_depth
         && Option.value_exn input_options.directory_depth < 0
       , "-depth must be 0 or greater." )
-    ; ( Sys.is_directory input_options.target_directory = `No
+    ; ( not (is_directory input_options.target_directory)
       , "Directory specified with -d or -directory is not a directory." )
     ; ( output_options.json_only_diff && not output_options.json_lines
       , "-json-only-diff can only be supplied with -json-lines." )
     ; ( Option.is_some output_options.chunk_matches && Option.is_some input_options.zip_file
       , "chunk-matches output format is not supported for zip files." )
     ; ( Option.is_some output_options.interactive_review
-        && not (String.equal input_options.target_directory (Sys.getcwd ()))
+        && not (String.equal input_options.target_directory (Stdlib.Sys.getcwd ()))
       , "Please remove the -d option and `cd` to the directory where you want to review from. The \
          -review, -editor, or -default-no options should only be run at the root directory of the \
          project files to patch." )
@@ -477,11 +484,11 @@ let emit_errors { input_options; output_options; _ } =
          match input_options.templates with
          | Some inputs ->
            List.find_map inputs ~f:(fun input ->
-             if Sys.is_file input = `Yes then (
+             if is_file input then (
                match Toml.Parser.from_filename input with
                | `Error (s, _) -> Some s
                | _ -> None)
-             else if not (Sys.is_directory input = `Yes) then
+             else if not (is_directory input) then
                Some
                  (Format.sprintf "Directory %S specified with -templates is not a directory." input)
              else
@@ -598,11 +605,11 @@ let filter_zip_entries file_filters exclude_directory_prefix exclude_file_prefix
       && has_acceptable_suffix filename)
 
 let syntax custom_matcher_path =
-  match Sys.file_exists custom_matcher_path with
-  | `No | `Unknown ->
+  match Stdlib.Sys.file_exists custom_matcher_path with
+  | false ->
     Format.eprintf "Could not open file: %s@." custom_matcher_path;
     exit 1
-  | `Yes ->
+  | true ->
     Yojson.Safe.from_file custom_matcher_path
     |> Matchers.Language.Syntax.of_yojson
     |> (function
@@ -783,7 +790,7 @@ let create
     | Directory ->
       let target_directory =
         if target_directory = "." then
-          Filename.realpath target_directory
+          Filename_unix.realpath target_directory
         else
           target_directory
       in

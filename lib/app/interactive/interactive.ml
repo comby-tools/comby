@@ -2,7 +2,7 @@ open Core
 open Lwt
 open Configuration
 
-let debug = Sys.getenv "DEBUG_COMBY" |> Option.is_some
+let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
 
 module Diff = struct
   open Patdiff
@@ -19,11 +19,11 @@ module Diff = struct
       (* Use external compare program? *)
       match ext_cmp with
       | None ->
-        Patience_diff.String.get_hunks ~transform ~context ~big_enough:line_big_enough ~prev ~next
+        Patience_diff.String.get_hunks ~transform ~context ~big_enough:line_big_enough ~prev ~next ()
       | Some prog ->
         let compare x y =
           let cmd = sprintf "%s %S %S" prog x y in
-          match Unix.system cmd with
+          match Core_unix.system cmd with
           | Ok () -> 0
           | Error (`Exit_non_zero 1) -> 1
           | Error _ -> failwithf "External compare %S failed!" prog ()
@@ -36,7 +36,7 @@ module Diff = struct
             let compare = compare
           end)
         in
-        P.get_hunks ~transform ~context ~big_enough:line_big_enough ~prev ~next
+        P.get_hunks ~transform ~context ~big_enough:line_big_enough ~prev ~next ()
     in
     match float_tolerance with
     | None -> hunks

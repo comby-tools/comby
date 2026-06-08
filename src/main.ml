@@ -5,7 +5,7 @@ open Configuration
 open Command_configuration
 
 let verbose_out_file = "/tmp/comby.out"
-let debug = Sys.getenv "DEBUG_COMBY" |> Option.is_some
+let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
 
 let paths_with_file_size paths =
   List.map paths ~f:(fun path ->
@@ -38,11 +38,11 @@ let substitute_environment_only_and_exit metasyntax_path anonymous_arguments jso
     match metasyntax_path with
     | None -> Matchers.Metasyntax.default_metasyntax
     | Some metasyntax_path ->
-      (match Sys.file_exists metasyntax_path with
-       | `No | `Unknown ->
+      (match Stdlib.Sys.file_exists metasyntax_path with
+       | false ->
          Format.eprintf "Could not open file: %s@." metasyntax_path;
          exit 1
-       | `Yes ->
+       | true ->
          Yojson.Safe.from_file metasyntax_path
          |> Matchers.Metasyntax.of_yojson
          |> (function
@@ -100,12 +100,12 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
       flag
         "directory"
         ~aliases:[ "d" ]
-        (optional_with_default (Sys.getcwd ()) string)
+        (optional_with_default (Stdlib.Sys.getcwd ()) string)
         ~doc:
           (Format.sprintf
              "path Run recursively on files in a directory relative to the root. Default is \
               current directory: %s"
-          @@ Sys.getcwd ())
+          @@ Stdlib.Sys.getcwd ())
     and directory_depth =
       flag "depth" (optional int) ~doc:"n Depth to recursively descend into directories"
     and templates =
@@ -249,11 +249,6 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
         ~doc:
           "num Stop running when at least num matches are found (possibly more are returned for \
            parallel jobs)."
-    and parany =
-      flag
-        "parany"
-        no_arg
-        ~doc:"force comby to use the alternative parany parallel processing library."
     and tar = flag "tar" no_arg ~doc:"read tar format from stdin."
     and chunk_matches =
       flag
@@ -278,8 +273,8 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
       | l ->
         List.map l ~f:(fun pattern ->
           if String.contains pattern '/' then (
-            match Filename.realpath pattern with
-            | exception Unix.Unix_error _ ->
+            match Filename_unix.realpath pattern with
+            | exception Core_unix.Unix_error _ ->
               Format.eprintf
                 "No such file or directory: %s. Comby interprets patterns containing '/' as file \
                  paths. If a pattern does not contain '/' (like '.ml'), it is considered a pattern \
@@ -333,12 +328,8 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
     let substitute_in_place = not newline_separated_rewrites in
     let fast_offset_conversion_env = Option.is_some @@ Sys.getenv "FAST_OFFSET_CONVERSION_COMBY" in
     let fast_offset_conversion = fast_offset_conversion_env || fast_offset_conversion in
-    let arch = Unix.Utsname.machine (Core.Unix.uname ()) in
     let compute_mode =
-      match sequential, parany, arch with
-      | true, _, _ -> `Sequential
-      | _, true, _ | _, _, "arm32" | _, _, "arm64" -> `Parany number_of_workers
-      | _, false, _ -> `Hack_parallel number_of_workers
+      if sequential then `Sequential else `Parany number_of_workers
     in
     let match_only = match_only || Option.is_some chunk_matches in
     let configuration =
@@ -436,8 +427,5 @@ let parse_comby_dot_file () =
     to_flags flags
 
 let () =
-  If_hack_parallel.check_entry_point ();
-  Command.run default_command ~version:"1.8.2" ~extend:(fun _ ->
-    match Sys.file_exists ".comby" with
-    | `Yes -> parse_comby_dot_file ()
-    | _ -> [])
+  Command_unix.run default_command ~version:"1.8.2" ~extend:(fun _ ->
+    if Stdlib.Sys.file_exists ".comby" then parse_comby_dot_file () else [])

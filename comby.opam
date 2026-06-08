@@ -18,8 +18,8 @@ build: [
     ]
 ]
 depends: [
-  "dune" {>= "2.8.0"}
-  "ocaml" {>= "4.08.1"}
+  "dune" {>= "3.11.0"}
+  "ocaml" {>= "5.1.0"}
   "conf-autoconf"
   "conf-gmp"
   "conf-libev" {os-distribution != "ol"}
@@ -31,21 +31,21 @@ depends: [
   "cohttp-lwt-unix"
   "comby-kernel" {= version}
   "comby-semantic" {= version}
-  "core"
+  "core" {>= "v0.17" & < "v0.18~"}
+  "core_unix" {>= "v0.17" & < "v0.18~"}
   "cstruct-lwt"
-  "hack_parallel" {arch != "arm32" & arch != "arm64"}
   "lwt"
   "lwt_react"
   "lwt_ssl"
   "parany" {>= "12.0.3"}
-  "patience_diff" {>= "v0.14" & < "v0.15"}
+  "patience_diff" {>= "v0.17" & < "v0.18~"}
   "ppx_deriving"
-  "ppx_deriving_yojson" {>= "3.6.0"}
-  "yojson" {>= "1.6.0" < "2.0.0"}
+  "ppx_deriving_yojson" {>= "3.6.0" & < "4.0.0"}
+  "yojson" {>= "1.6.0" & < "3.0.0"}
   "pcre"
-  "shell"
-  "tar" {< "3.0.0"}
-  "tar-unix" {< "3.0.0"}
+  "shell" {>= "v0.17" & < "v0.18~"}
+  "tar"
+  "tar-unix"
   "toml" {>= "6.0.0"}
   "bisect_ppx" {with-test & dev & >= "2.5.0"}
 ]

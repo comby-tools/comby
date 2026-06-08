@@ -1,8 +1,9 @@
 open Core
 open Camlzip
+module Unix = Core_unix
 module Time = Core_kernel.Time_ns.Span
 
-let binary_path = Filename.realpath "../../src/main.exe"
+let binary_path = Filename_unix.realpath "../../src/main.exe"
 
 let read_with_timeout read_from_channels =
   let read_from_fds = List.map ~f:Unix.descr_of_in_channel read_from_channels in
@@ -303,7 +304,7 @@ let%expect_test "json_output_option" =
 |}]
 
 let with_zip f =
-  let file = Filename.temp_file "comby_" ".zip" in
+  let file = Filename_unix.temp_file "comby_" ".zip" in
   let zip = Zip.open_out file in
   let entry_name = "main.ml" in
   let entry_content = "hello world" in
@@ -1304,10 +1305,10 @@ let%expect_test "test_toml_multi_rewrite_with_match_only_in_config" =
 
 let%expect_test "dot_comby_with_flags" =
   let source = "main(void)\n" in
-  Sys.chdir ("example" ^/ "dot-comby");
+  Stdlib.Sys.chdir ("example" ^/ "dot-comby");
   let command = Format.sprintf "%s %s" binary_path "" in
   let result = read_expect_stdin_and_stdout command source in
-  Sys.chdir "../..";
+  Stdlib.Sys.chdir "../..";
   print_string result;
   [%expect
     {|

@@ -1,22 +1,18 @@
 open Comby_semantic
 
-let debug =
-  match Sys.getenv "DEBUG_COMBY" with
-  | exception Not_found -> false
-  | _ -> true
+let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
 
 let lsif_endpoint =
-  match Sys.getenv "LSIF_SERVER" with
-  | exception Not_found -> "https://sourcegraph.com/.api/graphql"
-  | address -> address
+  Stdlib.Sys.getenv_opt "LSIF_SERVER"
+  |> Option.value ~default:"https://sourcegraph.com/.api/graphql"
 
 let repository_remote () =
   let open Core in
-  In_channel.input_all (Unix.open_process_in "git config --get remote.origin.url")
+  In_channel.input_all (Core_unix.open_process_in "git config --get remote.origin.url")
 
 let revision () =
   let open Core in
-  In_channel.input_all (Unix.open_process_in "git rev-parse HEAD")
+  In_channel.input_all (Core_unix.open_process_in "git rev-parse HEAD")
 
 let lsif_hover ~name:_ ~filepath ~line ~column =
   let open Core_kernel in
@@ -29,7 +25,7 @@ let lsif_hover ~name:_ ~filepath ~line ~column =
     in
     let revision = revision () |> String.rstrip in
     if debug then Format.printf "Repository remote: %s\nRevision: %s@." repository revision;
-    String.chop_prefix_if_exists filepath ~prefix:(Sys.getcwd ())
+    String.chop_prefix_if_exists filepath ~prefix:(Stdlib.Sys.getcwd ())
     |> fun filepath_relative_root ->
     if debug then Format.printf "File relative root: %s@." filepath;
     if debug then Format.printf "Querying type at %d::%d@." line column;

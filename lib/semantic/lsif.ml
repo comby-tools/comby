@@ -3,10 +3,7 @@ open Lwt
 open Cohttp
 open Cohttp_lwt_unix
 
-let debug =
-  match Sys.getenv "DEBUG_COMBY" with
-  | exception Not_found -> false
-  | _ -> true
+let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
 
 module Formatting = struct
   type t =

@@ -117,8 +117,8 @@ module Make (Mtime : Mtime) = struct
         | Same r ->
           let mr = Array.map r ~f:snd in
           Array.iter mr ~f:print
-        | Prev r | Next r | Unified r -> Array.iter r ~f:print
-        | Replace (ar1, ar2) ->
+        | Prev (r, _) | Next (r, _) | Unified (r, _) -> Array.iter r ~f:print
+        | Replace (ar1, ar2, _) ->
           Array.iter ar1 ~f:print;
           Array.iter ar2 ~f:print
       in

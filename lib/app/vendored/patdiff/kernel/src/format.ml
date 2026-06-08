@@ -236,7 +236,7 @@ module Location_style = struct
           List.fold hunk.ranges ~init:hunk.prev_start ~f:(fun init ->
             function
             | Same s -> init + Array.length s
-            | Prev _ | Next _ | Replace _ | Unified _ -> r.return init))
+            | Prev (_, _) | Next (_, _) | Replace (_, _, _) | Unified (_, _) -> r.return init))
       in
       omake_style_error_message_start ~file:prev_filename ~line:prev_start
     | None -> rule ""

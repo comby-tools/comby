@@ -11,6 +11,8 @@
   comby.patdiff
   comby.camlzip
   core
+  core_unix
+  core_unix.filename_unix
   pcre
   yojson
   ppx_deriving_yojson

@@ -481,9 +481,9 @@ let rec load_exn' ~set config_file =
        | Error _another_exn -> raise exn
        | Ok c ->
          (let new_file = config_file ^ ".new" in
-          match Sys.file_exists new_file with
-          | `Yes | `Unknown -> ()
-          | `No ->
+          if Stdlib.Sys.file_exists new_file then
+            ()
+          else
             (try Sexp.save_hum new_file (On_disk.V1.sexp_of_t c) with
              | _ -> ()));
          c)
@@ -564,9 +564,7 @@ let get_config ?filename () =
       (* ~/.patdiff exists *)
       Option.bind (Sys.getenv "HOME") ~f:(fun home ->
         let f = home ^/ ".patdiff" in
-        match Sys.file_exists f with
-        | `Yes -> Some f
-        | `No | `Unknown -> None)
+        if Stdlib.Sys.file_exists f then Some f else None)
   in
   (* load prints warnings to stderr. This is desired because [file] is only Some if it
      was manually specified or if ~/.patdiff exists. The user should be notified of
