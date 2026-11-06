@@ -1,4 +1,4 @@
-(** The regular expression language accepted by regex holes, [:\[x~regex\]]. *)
+(** The regular expression language accepted by regex holes, [:[x~regex]]. *)
 
 (** Raised for a pattern that is malformed or uses an unsupported feature, with
     a message suitable for showing to the user. *)

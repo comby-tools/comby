@@ -127,8 +127,8 @@ let hex_escape =
     >>= fun digits ->
     peek_char
     >>= (function
-    | Some '}' when digits <> "" -> advance 1 *> char_of_code ~prefix:"0x" digits
-    | _ -> reject "expected hex digits and a closing } in \\x{...}")
+     | Some '}' when digits <> "" -> advance 1 *> char_of_code ~prefix:"0x" digits
+     | _ -> reject "expected hex digits and a closing } in \\x{...}")
   | _ -> up_to 2 is_hex >>= char_of_code ~prefix:"0x"
 
 let octal_escape = up_to 3 is_octal >>= char_of_code ~prefix:"0o"
@@ -157,17 +157,17 @@ let class_escape =
   | Some c ->
     advance 1
     *>
-    (match shorthand_class c, control_escape c with
-     | Some set, _ -> return (Set set)
-     | None, Some literal -> return (Literal literal)
-     | None, None ->
-       (match c with
-        | 'b' -> return (Literal '\x08')
-        | 'x' -> hex_escape >>| fun c -> Literal c
-        | 'c' -> control_char >>| fun c -> Literal c
-        | 'Q' -> reject "\\Q is not supported in a character class"
-        | c when alnum c -> reject (unsupported_escape c)
-        | c -> return (Literal c)))
+      (match shorthand_class c, control_escape c with
+      | Some set, _ -> return (Set set)
+      | None, Some literal -> return (Literal literal)
+      | None, None ->
+        (match c with
+         | 'b' -> return (Literal '\x08')
+         | 'x' -> hex_escape >>| fun c -> Literal c
+         | 'c' -> control_char >>| fun c -> Literal c
+         | 'Q' -> reject "\\Q is not supported in a character class"
+         | c when alnum c -> reject (unsupported_escape c)
+         | c -> return (Literal c)))
 
 (* The '[:' has been consumed. *)
 let posix_bracket =
@@ -191,8 +191,8 @@ let class_item =
     any_char
     <|> reject "missing ] to close character class"
     >>= (function
-    | '\\' -> class_escape
-    | c -> return (Literal c))
+     | '\\' -> class_escape
+     | c -> return (Literal c))
 
 (* The '[' has been consumed. A ] straight after the opening is a literal. *)
 let character_class flags =
@@ -206,20 +206,20 @@ let character_class flags =
     | Some _ ->
       class_item
       >>= (function
-      | Set set -> items (set :: acc) ~first:false
-      | Literal lo ->
-        peek_string 2
-        <|> return ""
-        >>= fun next ->
-        if String.length next = 2 && next.[0] = '-' && next.[1] <> ']' then
-          advance 1 *> class_item
-          >>= function
-          | Literal hi when Char.compare hi lo < 0 ->
-            reject (Format.sprintf "range out of order in character class: %c-%c" lo hi)
-          | Literal hi -> items (range lo hi :: acc) ~first:false
-          | Set set -> items (set :: single '-' :: single lo :: acc) ~first:false
-        else
-          items (single lo :: acc) ~first:false)
+       | Set set -> items (set :: acc) ~first:false
+       | Literal lo ->
+         peek_string 2
+         <|> return ""
+         >>= fun next ->
+         if String.length next = 2 && next.[0] = '-' && next.[1] <> ']' then
+           advance 1 *> class_item
+           >>= function
+           | Literal hi when Char.compare hi lo < 0 ->
+             reject (Format.sprintf "range out of order in character class: %c-%c" lo hi)
+           | Literal hi -> items (range lo hi :: acc) ~first:false
+           | Set set -> items (set :: single '-' :: single lo :: acc) ~first:false
+         else
+           items (single lo :: acc) ~first:false)
   in
   items [] ~first:true
   >>| fun sets ->
@@ -352,8 +352,8 @@ let escape flags =
          | _ ->
            peek_char
            >>= (function
-           | None -> return acc
-           | Some c -> advance 1 *> quoted (literal flags c :: acc))
+            | None -> return acc
+            | Some c -> advance 1 *> quoted (literal flags c :: acc))
        in
        quoted [] >>| fun atoms -> Atoms atoms
      | 'x' -> hex_escape >>| fun c -> one (literal flags c)
@@ -387,10 +387,10 @@ and sequence flags acc =
   | Some _ ->
     element flags
     >>= (function
-    | Set_flags flags -> sequence flags acc
-    | Atoms [] -> sequence flags acc
-    | Atoms (last :: rest) ->
-      quantified flags last >>= fun last -> sequence flags ((last :: rest) @ acc))
+     | Set_flags flags -> sequence flags acc
+     | Atoms [] -> sequence flags acc
+     | Atoms (last :: rest) ->
+       quantified flags last >>= fun last -> sequence flags ((last :: rest) @ acc))
 
 and element flags =
   any_char
@@ -431,8 +431,8 @@ and extended_group flags =
   | '#', _ ->
     advance 1 *> take_till (Char.equal ')') *> peek_char
     >>= (function
-    | Some ')' -> advance 1 *> return (Atoms [])
-    | _ -> reject "missing ) to close comment")
+     | Some ')' -> advance 1 *> return (Atoms [])
+     | _ -> reject "missing ) to close comment")
   | '=', _ | '!', _ -> reject "lookahead is not supported"
   | '<', ('=' | '!') -> reject "lookbehind is not supported"
   | '<', _ -> advance 1 *> group_name ~closing:'>' *> group_body flags
@@ -452,9 +452,9 @@ and extended_group flags =
      | Ok new_flags ->
        peek_char
        >>= (function
-       | Some ')' -> advance 1 *> return (Set_flags new_flags)
-       | Some ':' -> advance 1 *> group_body new_flags
-       | _ -> reject "malformed (?flags) group"))
+        | Some ')' -> advance 1 *> return (Set_flags new_flags)
+        | Some ':' -> advance 1 *> group_body new_flags
+        | _ -> reject "malformed (?flags) group"))
   | _ -> reject "unrecognized (? group"
 
 let pattern =
