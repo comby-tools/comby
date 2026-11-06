@@ -12,4 +12,15 @@ jobs:
         run: ci_env=`bash <(curl -s https://codecov.io/env)`
       - name: Run Comby tests
         run: docker run $ci_env -e CI="$CI" -e GITHUB_ACTIONS="true" -e GITHUB_WORKFLOW="$GITHUB_WORKFLOW" -e GITHUB_RUN_ID="$GITHUB_RUN_ID" -e GITHUB_RUN_NUMBER="$GITHUB_RUN_NUMBER" -e GITHUB_JOB="$GITHUB_JOB" -e GITHUB_ACTION="$GITHUB_ACTION" -e GITHUB_HEAD_REF="$GITHUB_HEAD_REF" -e GITHUB_REF="$GITHUB_REF" -e GITHUB_REPOSITORY="$GITHUB_REPOSITORY" -e GITHUB_SHA="$GITHUB_SHA" test-build:latest /bin/bash -c "opam exec -- make build-with-coverage && opam exec -- dune runtest --instrument-with bisect_ppx --force && ./push-coverage-report.sh"
-
+  release-images:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile:
+          - dockerfiles/alpine/binary-release/Dockerfile
+          - dockerfiles/ubuntu/binary-release/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build release image, which also runs the tests
+        run: docker build . --file ${{ matrix.dockerfile }} --tag release-image:latest

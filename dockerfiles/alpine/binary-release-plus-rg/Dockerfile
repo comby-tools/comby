@@ -1,7 +1,7 @@
 #######################################
 ### Source build for alpine release ###
 #######################################
-FROM ocaml/opam:alpine-3.20-ocaml-5.3 AS source-build-alpine
+FROM ocaml/opam:alpine-3.20-ocaml-5.2 AS source-build-alpine
 
 RUN sudo apk --no-cache add \
     m4 \
