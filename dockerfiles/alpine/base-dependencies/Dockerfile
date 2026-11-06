@@ -7,7 +7,6 @@ WORKDIR /home/comby
 
 # Install alpine system dependencies. Yes,these need to be -dev.
 RUN sudo apk --no-cache add \
-    pcre-dev \
     m4 \
     linux-headers \
     perl \

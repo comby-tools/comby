@@ -3,6 +3,7 @@ module Languages = Languages
 module Metasyntax = Metasyntax
 module External = External
 module Rule = Rule
+module Regex_syntax = Regex_syntax
 
 (* Only need to expose Types.Ast. module type of to export sexp. *)
 module Ast : module type of Types.Ast

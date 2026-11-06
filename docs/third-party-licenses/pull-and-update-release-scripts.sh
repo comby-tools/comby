@@ -1,6 +1,6 @@
 #!/bin/bash
 
-LIBS="ppx_deriving_yojson core ppxlib ppx_deriving opium pcre-ocaml ocaml-tls camlzip bisect_ppx ocaml-ci-scripts patdiff lwt toml"
+LIBS="ppx_deriving_yojson core ppxlib ppx_deriving opium ocaml-re ocaml-tls camlzip bisect_ppx ocaml-ci-scripts patdiff lwt toml"
 
 rm ALL.txt 2> /dev/null
 for l in $LIBS; do rm -rf $l; done
@@ -30,8 +30,8 @@ mkdir opium && \
 wget -P opium https://raw.githubusercontent.com/rgrinberg/opium/master/opium.opam
 
 # LGPL
-mkdir pcre-ocaml && \
-wget -P pcre-ocaml https://raw.githubusercontent.com/mmottl/pcre-ocaml/master/LICENSE.md
+mkdir ocaml-re && \
+wget -P ocaml-re https://raw.githubusercontent.com/ocaml/ocaml-re/master/LICENSE.md
 
 # BSD-2
 mkdir ocaml-tls && \

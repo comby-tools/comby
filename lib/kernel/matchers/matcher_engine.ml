@@ -500,8 +500,8 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
                else
                  pattern, None
              in
-             let compiled_regexp = Regexp.PCRE.make_regexp pattern in
-             let regexp_parser = Regexp.PCRE.regexp compiled_regexp in
+             let compiled_regexp = Regexp.RE.make_regexp pattern in
+             let regexp_parser = Regexp.RE.regexp compiled_regexp in
              let regexp_parser =
                match prefix, suffix with
                | Some prefix, None -> prefix *> regexp_parser

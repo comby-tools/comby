@@ -63,37 +63,12 @@ module Make (Regexp : Regexp_engine_intf) = struct
     | None -> fail "No match"
 end
 
-module PCRE = struct
-  module Engine : Regexp_engine_intf = struct
-    type t = Pcre.regexp
-    type substrings = Pcre.substrings
-
-    let compile_flags = Pcre.cflags [ `ANCHORED ]
-    let make pattern = Pcre.regexp ~iflags:compile_flags pattern
-
-    let get_substring s idx =
-      match Pcre.get_substring s idx with
-      | result -> Some result
-      | (exception Not_found) | (exception Invalid_argument _) -> None
-
-    let get_all_substrings s = Pcre.get_substrings s
-
-    let exec ~rex ~pos b =
-      match Pcre.exec ~pos ~rex (Bytes.unsafe_to_string b) with
-      | result -> Some result
-      | exception Not_found -> None
-  end
-
-  include Make (Engine)
-end
-
 module RE = struct
   module Engine : Regexp_engine_intf = struct
     type t = Re.re
     type substrings = Re.substrings
 
-    let compile_flags = [ `Anchored ]
-    let make pattern = Re.Perl.(compile (re ~opts:compile_flags pattern))
+    let make pattern = Re.compile (Re.seq [ Re.start; Regex_syntax.parse pattern ])
 
     let get_substring s idx =
       match Re.get s idx with

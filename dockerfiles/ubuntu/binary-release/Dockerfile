@@ -4,7 +4,6 @@ WORKDIR /home/comby
 
 RUN sudo apt-get update && sudo apt-get install -y \
     autoconf \
-    libpcre3-dev \
     pkg-config \
     zlib1g-dev \
     m4 \

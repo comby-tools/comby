@@ -24,7 +24,7 @@ depends: [
   "ppx_deriving"
   "ppx_deriving_yojson" {>= "3.6.0" & < "4.0.0"}
   "yojson" {>= "1.6.0" & < "3.0.0"}
-  "pcre"
+  "re"
   # vendored dependencies
   "bigstringaf"
   # testing

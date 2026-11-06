@@ -3,6 +3,7 @@ module Languages = Languages
 module Metasyntax = Metasyntax
 module External = External
 module Rule = Rule
+module Regex_syntax = Regex_syntax
 
 module Ast = struct
   include Types.Ast

@@ -23,7 +23,6 @@ depends: [
   "conf-autoconf"
   "conf-gmp"
   "conf-libev" {os-distribution != "ol"}
-  "conf-libpcre"
   "conf-m4" {os = "linux"}
   "conf-pkg-config"
   "conf-sqlite3"
@@ -42,7 +41,7 @@ depends: [
   "ppx_deriving"
   "ppx_deriving_yojson" {>= "3.6.0" & < "4.0.0"}
   "yojson" {>= "1.6.0" & < "3.0.0"}
-  "pcre"
+  "re"
   "shell" {>= "v0.17" & < "v0.18~"}
   "tar"
   "tar-unix"

@@ -18,11 +18,6 @@ module Make (Regexp : Regexp_engine_intf) : sig
   val regexp : Regexp.t -> string Vangstrom.t
 end
 
-module PCRE : sig
-  module Engine : Regexp_engine_intf
-  include module type of Make (Engine)
-end
-
 module RE : sig
   module Engine : Regexp_engine_intf
   include module type of Make (Engine)

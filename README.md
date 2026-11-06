@@ -86,9 +86,9 @@ opam switch create 5.1.0 5.1.0
 
 - Install OS dependencies:
 
-  - **Linux:** `sudo apt-get install autoconf libpcre3-dev pkg-config zlib1g-dev m4 libgmp-dev libev4 libsqlite3-dev`
+  - **Linux:** `sudo apt-get install autoconf pkg-config zlib1g-dev m4 libgmp-dev libev4 libsqlite3-dev`
 
-  - **Mac:** `brew install pkg-config gmp pcre libev`
+  - **Mac:** `brew install pkg-config gmp libev`
 
 - Then install the library dependencies:
 

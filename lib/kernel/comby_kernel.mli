@@ -167,6 +167,20 @@ type replacement = Replacement.result
     Defines modules for matching a pattern in input sources to produce
     matches. *)
 module Matchers : sig
+  (** {3 Regex holes}
+
+      The regular expression language accepted by regex holes. *)
+  module Regex_syntax : sig
+    (** Raised when a template has a regex hole with a malformed or unsupported
+        pattern, with a message suitable for showing to the user. *)
+    exception Invalid of string
+
+    (** [parse pattern] parses Perl-style regular expression syntax.
+
+        @raise Invalid if [pattern] is not accepted. *)
+    val parse : string -> Re.t
+  end
+
   (** {3 Configuration}
 
       Defines some parameters for changing match behavior. *)

@@ -102,6 +102,9 @@ let process_single_source
           | Some { rewritten_source; in_place_substitutions } ->
             Replacement (in_place_substitutions, rewritten_source, List.length matches)))
   with
+  | Matchers.Regex_syntax.Invalid message ->
+    Format.eprintf "%s@." message;
+    Nothing
   | exn ->
     if debug then Format.eprintf "Big error: %s@." (Exn.to_string exn);
     Nothing
