@@ -7,6 +7,7 @@ module Replacement = Replacement
 type replacement = Replacement.result
 
 module Matchers = struct
+  module Regex_syntax = Matchers.Regex_syntax
   module Language = Matchers.Language
   module Matcher = Matchers.Matcher
   module Configuration = Matchers.Configuration

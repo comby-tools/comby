@@ -12,18 +12,34 @@ struct
   let character () = choice @@ List.map ~f:char (String.to_list Metasyntax.identifier)
   let identifier () = many1 @@ character () >>| String.of_char_list
 
+  (* Only delimits the regex: finds where it ends, keeping its text as is. It
+     must understand classes and escapes, or a ] inside of them ends the hole. *)
   let regex_expression suffix =
-    lift
-      String.concat
-      (many1
-      @@ fix (fun expr ->
-           choice
-             [ lift
-                 (fun x -> Format.sprintf "[%s]" @@ String.concat x)
-                 (char '[' *> many1 expr <* char ']')
-             ; lift (fun c -> Format.sprintf {|\%c|} c) (char '\\' *> any_char)
-             ; lift String.of_char_list (up_to (string suffix))
-             ]))
+    let escape = lift (fun c -> Format.sprintf {|\%c|} c) (char '\\' *> any_char) in
+    let posix_class =
+      lift
+        (fun name -> Format.sprintf "[:%s:]" (String.of_char_list name))
+        (string "[:" *> up_to (string ":]") <* string ":]")
+    in
+    let class_member =
+      choice
+        [ escape
+        ; posix_class
+        ; lift String.of_char (not_followed_by (char ']') *> any_char)
+        ]
+    in
+    let character_class =
+      lift3
+        (fun negation first members ->
+          Format.sprintf "[%s%s%s]" negation first (String.concat members))
+        (char '[' *> option "" (string "^"))
+        (option "" (string "]"))
+        (many class_member <* char ']')
+    in
+    let literal =
+      lift String.of_char_list (up_to (choice [ string suffix; string "["; string "\\" ]))
+    in
+    lift String.concat (many1 (choice [ character_class; escape; literal ]))
 
   let regex_body separator suffix =
     both (option "" (identifier ())) (char separator *> regex_expression suffix)

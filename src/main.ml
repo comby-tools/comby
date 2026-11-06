@@ -221,8 +221,8 @@ let base_command_parameters : (unit -> 'result) Command.Param.t =
         "fast-offset-conversion"
         no_arg
         ~doc:
-          "Enable fast offset conversion. This is experimental and will become the default once \
-           vetted."
+          "Deprecated and has no effect: offset conversion is always fast. Accepted for \
+           compatibility."
     and match_newline_toplevel =
       flag
         "match-newline-at-toplevel"

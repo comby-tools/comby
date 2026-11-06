@@ -49,6 +49,8 @@ module Offset : sig
   val index : source:string -> index_t
   val convert_fast : offset:int -> index_t -> int * int
   val convert_slow : offset:int -> source:string -> int * int
+  val line_starts : source:string -> int array
+  val convert : offset:int -> source_length:int -> int array -> int * int
 end
 
 type t =
@@ -60,6 +62,9 @@ type t =
 
 val create : ?range:range -> unit -> t
 val convert_offset : fast:bool -> source:string -> t -> t
+
+(** Like [convert_offset], for all of the matches in [source]. *)
+val convert_offsets : source:string -> t list -> t list
 val pp : Format.formatter -> string option * t list -> unit
 val pp_json_lines : Format.formatter -> string option * t list -> unit
 val pp_match_count : Format.formatter -> string option * t list -> unit

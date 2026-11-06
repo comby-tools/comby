@@ -1,18 +1,19 @@
 #########################
 ### Base Dependencies ###
 #########################
-FROM ocaml/opam:alpine-3.14-ocaml-4.11
+FROM ocaml/opam:alpine-3.20-ocaml-5.2
 
 WORKDIR /home/comby
 
 # Install alpine system dependencies. Yes,these need to be -dev.
 RUN sudo apk --no-cache add \
-    pcre-dev \
     m4 \
     linux-headers \
     perl \
+    pkgconf \
     gmp-dev \
     zlib-dev \
+    zstd-dev \
     sqlite-dev \
     libev-dev \
     autoconf \

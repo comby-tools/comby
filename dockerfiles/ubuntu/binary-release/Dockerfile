@@ -1,10 +1,9 @@
-FROM ocaml/opam:ubuntu-20.04-opam
+FROM ocaml/opam:ubuntu-24.04-ocaml-5.3
 
 WORKDIR /home/comby
 
 RUN sudo apt-get update && sudo apt-get install -y \
     autoconf \
-    libpcre3-dev \
     pkg-config \
     zlib1g-dev \
     m4 \
@@ -12,10 +11,10 @@ RUN sudo apt-get update && sudo apt-get install -y \
     libev-dev \
     libsqlite3-dev \
     openssl \
-    libssl-dev
+    libssl-dev \
+    libzstd-dev
 
-RUN opam init --no-setup --disable-sandboxing --compiler=4.11.0
-RUN opam switch create 4.11.0 && eval $(opam config env) && opam repository set-url default https://opam.ocaml.org && opam update
+RUN opam repository set-url default https://opam.ocaml.org && opam update
 
 COPY Makefile /home/comby/
 COPY comby.opam /home/comby/
@@ -30,7 +29,7 @@ COPY test /home/comby/test
 COPY push-coverage-report.sh /home/comby/
 
 RUN sudo chown -R $(whoami) /home/comby
-RUN eval $(opam env) && opam install . --deps-only -y
+RUN eval $(opam env) && opam install . --deps-only --with-test -y
 RUN opam exec -- make build
 RUN opam exec -- dune runtest
 RUN opam exec -- dune clean

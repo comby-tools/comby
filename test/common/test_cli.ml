@@ -1438,3 +1438,25 @@ let%expect_test "test_nested_newline_rule_rewrite" =
      foo: bar(x)
      foo: x
     <|}]
+
+let%expect_test "invalid_regex_hole_is_an_error" =
+  let source = "foobar" in
+  let command =
+    Format.sprintf "%s ':[x~foo(?=bar)]' 'y' -matcher .txt -stdin -stdout || echo failed" binary_path
+  in
+  read_expect_stdin_and_stdout command source |> print_string;
+  [%expect_exact {|failed
+invalid regex "foo(?=bar)": lookahead is not supported
+|}]
+
+let%expect_test "invalid_regex_hole_in_rule_is_an_error" =
+  let source = "foobar" in
+  let command =
+    Format.sprintf
+      {|%s 'foobar' 'y' -rule 'where match :[x] { | ":[~(?=a)]" -> true }' -matcher .txt -stdin -stdout || echo failed|}
+      binary_path
+  in
+  read_expect_stdin_and_stdout command source |> print_string;
+  [%expect_exact {|failed
+invalid regex "(?=a)": lookahead is not supported
+|}]

@@ -544,7 +544,7 @@ let emit_warnings { input_options; output_options; _ } =
            | _ -> assert false
          in
          List.exists match_templates ~f:(fun match_template ->
-           Pcre.(pmatch ~rex:(regexp "^:\\[[[:alnum:]]+\\]") match_template)))
+           Re.execp (Re.Perl.compile_pat "^:\\[[[:alnum:]]+\\]") match_template))
       , "The match template starts with a :[hole]. You almost never want to start a template with \
          :[hole], since it matches everything including newlines up to the part that comes after \
          it. This can make things slow. :[[hole]] might be what you're looking for instead, like \
@@ -699,6 +699,22 @@ let ripgrep_file_filters specifications args : string list =
     if debug then Format.eprintf "%s@." (Error.to_string_hum e);
     exit 1
 
+(* Regex holes are compiled when a template runs, once per source. Running each
+   template on empty input surfaces a bad regex before we process anything. *)
+let check_regex_holes (module M : Matchers.Matcher.S) specifications =
+  let templates { Matchers.Specification.match_template; rule; _ } =
+    match_template :: Option.value_map rule ~default:[] ~f:Matchers.Rule.match_templates
+  in
+  let invalid template =
+    match M.all ~template ~source:"" () with
+    | _ -> None
+    | exception Matchers.Regex_syntax.Invalid message -> Some message
+    | exception _ -> None
+  in
+  match List.find_map (List.concat_map specifications ~f:templates) ~f:invalid with
+  | Some message -> Or_error.error_string message
+  | None -> Ok ()
+
 let create
   ({ input_options =
        { rule
@@ -828,6 +844,8 @@ let create
   let ((module M) as matcher), _, metasyntax =
     select_matcher custom_metasyntax custom_matcher override_matcher file_filters
   in
+  check_regex_holes matcher specifications
+  >>= fun () ->
   return
     { matcher
     ; sources
