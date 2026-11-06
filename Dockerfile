@@ -1,7 +1,7 @@
 ##################################################
 ### Source build and tests. Used by build.yaml ###
 ##################################################
-FROM ocaml/opam:alpine-3.21-ocaml-5.3
+FROM ocaml/opam:alpine-3.20-ocaml-5.3
 
 WORKDIR /home/comby
 

@@ -1,7 +1,7 @@
 #######################################
 ### Source build for alpine release ###
 #######################################
-FROM ocaml/opam:alpine-3.21-ocaml-5.3 AS source-build-alpine
+FROM ocaml/opam:alpine-3.20-ocaml-5.3 AS source-build-alpine
 
 RUN sudo apk --no-cache add \
     m4 \
@@ -43,7 +43,7 @@ RUN opam exec -- dune build --profile release
 ###########################################################
 ### Binary distribution on minimal alpine image with rg ###
 ###########################################################
-FROM alpine:3.21
+FROM alpine:3.20
 
 LABEL maintainer="Rijnard van Tonder <rvantonder@gmail.com>"
 LABEL name="comby"
