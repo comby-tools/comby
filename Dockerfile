@@ -1,9 +1,22 @@
-##########################################################################################################################
-### Binary build for testing. Pulled from registry. The base-dependencies-alpine spec builds this. Used by .travis.yml ###
-##########################################################################################################################
-FROM comby/comby:base-dependencies-alpine-3.14
+##################################################
+### Source build and tests. Used by build.yaml ###
+##################################################
+FROM ocaml/opam:alpine-3.21-ocaml-5.3
 
 WORKDIR /home/comby
+
+RUN sudo apk --no-cache add \
+    m4 \
+    linux-headers \
+    perl \
+    pkgconf \
+    gmp-dev \
+    zlib-dev \
+    zstd-dev \
+    sqlite-dev \
+    libev-dev \
+    autoconf \
+    openssl-dev
 
 COPY Makefile /home/comby/
 COPY comby.opam /home/comby/
@@ -19,6 +32,8 @@ COPY push-coverage-report.sh /home/comby/
 
 RUN sudo chown -R $(whoami) /home/comby
 
+RUN opam repository set-url default https://opam.ocaml.org && opam update
+RUN opam install . --deps-only --with-test -y
 RUN opam exec -- make build
 RUN opam exec -- dune clean
 # silence dune

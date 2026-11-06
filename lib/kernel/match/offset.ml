@@ -63,3 +63,25 @@ let convert_slow ~offset ~source =
   in
   let _, line, col = String.fold ~init:(offset, 1, 1) ~f source in
   line, col
+
+(* The offset where each line starts, in order. *)
+let line_starts ~source =
+  String.foldi source ~init:[ 0 ] ~f:(fun i acc c ->
+    if Char.equal c '\n' then (i + 1) :: acc else acc)
+  |> Array.of_list_rev
+
+(* Same result as [convert_slow], given [line_starts] of the source. *)
+let convert ~offset ~source_length starts =
+  let offset = Int.min offset source_length in
+  let rec last_start_at_or_before low high =
+    if low = high then
+      low
+    else (
+      let mid = (low + high + 1) / 2 in
+      if starts.(mid) <= offset then
+        last_start_at_or_before mid high
+      else
+        last_start_at_or_before low (mid - 1))
+  in
+  let line = last_start_at_or_before 0 (Array.length starts - 1) in
+  line + 1, offset - starts.(line) + 1

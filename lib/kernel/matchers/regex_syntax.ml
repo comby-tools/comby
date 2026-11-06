@@ -465,6 +465,13 @@ let pattern =
   | Some ')' -> reject "unmatched )"
   | _ -> return parsed
 
+let ends_with_anchor source =
+  let dollar = String.length source - 1 in
+  let rec backslashes_before i =
+    if i >= 0 && source.[i] = '\\' then 1 + backslashes_before (i - 1) else 0
+  in
+  dollar >= 0 && source.[dollar] = '$' && backslashes_before (dollar - 1) mod 2 = 0
+
 let parse source =
   match parse_string ~consume:All pattern source with
   | Ok parsed -> parsed

@@ -494,14 +494,13 @@ module Make (Language : Types.Language.S) (Meta : Metasyntax.S) (Ext : External.
                  pattern, None
              in
              let pattern, suffix =
-               if String.is_suffix pattern ~suffix:"$" then
+               if Regex_syntax.ends_with_anchor pattern then
                  ( String.drop_suffix pattern 1
                  , Some (char '\n' *> return "" <|> end_of_input *> return "") )
                else
                  pattern, None
              in
-             let compiled_regexp = Regexp.RE.make_regexp pattern in
-             let regexp_parser = Regexp.RE.regexp compiled_regexp in
+             let regexp_parser = Regexp.regexp (Regexp.make pattern) in
              let regexp_parser =
                match prefix, suffix with
                | Some prefix, None -> prefix *> regexp_parser

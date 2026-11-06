@@ -27,7 +27,7 @@
 
 - `bash <(curl -sL get-comby.netlify.app)`
 
-- **Other Linux distributions**: The PCRE library is dynamically linked in the Ubuntu binary. For other distributions like Arch Linux, a fixup is needed: `sudo ln -s /usr/lib/libpcre.so /usr/lib/libpcre.so.3`. On Fedora, use `sudo ln -s /usr/lib64/libpcre.so /usr/lib64/libpcre.so.3`. Alternatively, consider [building from source](https://github.com/comby-tools/comby#build-from-source).
+- **Other Linux distributions**: Releases up to 1.8.1 dynamically link the PCRE library, which newer distributions no longer ship. For those releases, consider [building from source](https://github.com/comby-tools/comby#build-from-source) instead. Comby no longer depends on PCRE as of this source tree.
 
 
 ### Windows

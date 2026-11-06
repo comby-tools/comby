@@ -232,3 +232,33 @@ let%expect_test "correct_columns" =
   [%expect_exact
     {|{"uri":"file","matches":[{"range":{"start":{"offset":0,"line":1,"column":1},"end":{"offset":24,"line":2,"column":13}},"environment":[{"variable":"1","value":"world\nhello potato","range":{"start":{"offset":6,"line":1,"column":7},"end":{"offset":24,"line":2,"column":13}}}],"matched":"hello world\nhello potato"}]}
 |}]
+
+let%expect_test "convert_offsets_agrees_with_converting_each_match" =
+  let check source =
+    let matches =
+      List.init
+        (String.length source + 3)
+        ~f:(fun offset ->
+          let location = Match.Location.{ default with offset } in
+          Match.create ~range:Match.Range.{ match_start = location; match_end = location } ())
+    in
+    let locations =
+      List.map ~f:(fun (m : Match.t) -> m.range.match_start, m.range.match_end)
+    in
+    let each = List.map matches ~f:(Match.convert_offset ~fast:false ~source) in
+    let all = Match.convert_offsets ~source matches in
+    let equal (a, b) (c, d) = Match.Location.equal a c && Match.Location.equal b d in
+    Format.printf "%S %b@." source (List.equal equal (locations each) (locations all))
+  in
+  List.iter ~f:check [ ""; "a"; "\n"; "ab"; "a\nb"; "a\nb\n"; "\n\n\nabc\n\nd"; "abc\n" ];
+  [%expect
+    {|
+    "" true
+    "a" true
+    "\n" true
+    "ab" true
+    "a\nb" true
+    "a\nb\n" true
+    "\n\n\nabc\n\nd" true
+    "abc\n" true
+    |}]

@@ -1449,13 +1449,14 @@ let%expect_test "invalid_regex_hole_is_an_error" =
 invalid regex "foo(?=bar)": lookahead is not supported
 |}]
 
-let%expect_test "invalid_regex_hole_in_rule_is_reported" =
+let%expect_test "invalid_regex_hole_in_rule_is_an_error" =
   let source = "foobar" in
   let command =
     Format.sprintf
-      {|%s 'foobar' 'y' -rule 'where match :[x] { | ":[~(?=a)]" -> true }' -matcher .txt -stdin -stdout|}
+      {|%s 'foobar' 'y' -rule 'where match :[x] { | ":[~(?=a)]" -> true }' -matcher .txt -stdin -stdout || echo failed|}
       binary_path
   in
   read_expect_stdin_and_stdout command source |> print_string;
-  [%expect_exact {|invalid regex "(?=a)": lookahead is not supported
+  [%expect_exact {|failed
+invalid regex "(?=a)": lookahead is not supported
 |}]

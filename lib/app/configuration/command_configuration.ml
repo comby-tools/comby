@@ -702,13 +702,16 @@ let ripgrep_file_filters specifications args : string list =
 (* Regex holes are compiled when a template runs, once per source. Running each
    template on empty input surfaces a bad regex before we process anything. *)
 let check_regex_holes (module M : Matchers.Matcher.S) specifications =
-  let invalid { Matchers.Specification.match_template; _ } =
-    match M.all ~template:match_template ~source:"" () with
+  let templates { Matchers.Specification.match_template; rule; _ } =
+    match_template :: Option.value_map rule ~default:[] ~f:Matchers.Rule.match_templates
+  in
+  let invalid template =
+    match M.all ~template ~source:"" () with
     | _ -> None
     | exception Matchers.Regex_syntax.Invalid message -> Some message
     | exception _ -> None
   in
-  match List.find_map specifications ~f:invalid with
+  match List.find_map (List.concat_map specifications ~f:templates) ~f:invalid with
   | Some message -> Or_error.error_string message
   | None -> Ok ()
 

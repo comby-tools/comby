@@ -1,7 +1,20 @@
 #######################################
 ### Source build for alpine release ###
 #######################################
-FROM comby/comby:base-dependencies-alpine-3.14 AS source-build-alpine
+FROM ocaml/opam:alpine-3.21-ocaml-5.3 AS source-build-alpine
+
+RUN sudo apk --no-cache add \
+    m4 \
+    linux-headers \
+    perl \
+    pkgconf \
+    gmp-dev \
+    zlib-dev \
+    zstd-dev \
+    sqlite-dev \
+    libev-dev \
+    autoconf \
+    openssl-dev
 
 WORKDIR /home/comby
 
@@ -18,6 +31,8 @@ COPY test /home/comby/test
 COPY push-coverage-report.sh /home/comby/
 
 RUN sudo chown -R $(whoami) /home/comby
+RUN opam repository set-url default https://opam.ocaml.org && opam update
+RUN opam install . --deps-only --with-test -y
 RUN opam exec -- make build
 RUN opam exec -- dune runtest
 RUN opam exec -- dune clean
@@ -28,7 +43,7 @@ RUN opam exec -- dune build --profile release
 ###########################################################
 ### Binary distribution on minimal alpine image with rg ###
 ###########################################################
-FROM alpine:3.14
+FROM alpine:3.21
 
 LABEL maintainer="Rijnard van Tonder <rvantonder@gmail.com>"
 LABEL name="comby"

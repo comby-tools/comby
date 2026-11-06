@@ -11,7 +11,6 @@ let debug = Stdlib.Sys.getenv_opt "DEBUG_COMBY" |> Option.is_some
 
 let timed_run
   (module Matcher : Matcher.S)
-  ?(fast_offset_conversion = false)
   ?filepath
   ~configuration
   ~source
@@ -22,7 +21,7 @@ let timed_run
    | Some template -> Matcher.set_rewrite_template template
    | None -> ());
   Matcher.all ~configuration ?filepath ?rule ~template ~source ()
-  |> List.map ~f:(Match.convert_offset ~fast:fast_offset_conversion ~source)
+  |> Match.convert_offsets ~source
 
 type output =
   | Matches of (Match.t list * int)
@@ -45,7 +44,7 @@ let log_to_file path =
 
 let process_single_source
   matcher
-  ?(fast_offset_conversion = false)
+  ?fast_offset_conversion:_
   ?(verbose = false)
   ?(timeout = 3)
   ?metasyntax
@@ -67,7 +66,6 @@ let process_single_source
       with_timeout timeout source ~f:(fun () ->
         timed_run
           matcher
-          ~fast_offset_conversion
           ~configuration
           ~specification
           ?filepath

@@ -107,11 +107,11 @@ CHECK=$(printf 'printf("hello world!\\\n");' | $INSTALL_DIR/comby 'printf("hello
 if [ "$CHECK"  == "broken" ]; then
     printf "${RED}[-]${NORMAL} ${YELLOW}comby${NORMAL} did not install correctly.\n"
     if [ $OS == "macos" ]; then
-        printf "${YELLOW}[-]${NORMAL} My guess is that you need to install the pcre library on your system. Try:\n"
-        printf "${YELLOW}[*]${NORMAL} ${BOLD}brew install pcre && bash <(curl -sL get.comby.dev)${NORMAL}\n"
+        printf "${YELLOW}[-]${NORMAL} My guess is that you need to install the libev library on your system. Try:\n"
+        printf "${YELLOW}[*]${NORMAL} ${BOLD}brew install libev && bash <(curl -sL get.comby.dev)${NORMAL}\n"
     else
-        printf "${YELLOW}[-]${NORMAL} My guess is that you need to install the pcre and/or libev libraries on your system. Try:\n"
-        printf "${YELLOW}[*]${NORMAL} ${BOLD}sudo apt-get install libpcre3-dev libev4 && bash <(curl -sL get.comby.dev)${NORMAL}\n"
+        printf "${YELLOW}[-]${NORMAL} My guess is that you need to install the libev library on your system. Try:\n"
+        printf "${YELLOW}[*]${NORMAL} ${BOLD}sudo apt-get install libev4 && bash <(curl -sL get.comby.dev)${NORMAL}\n"
     fi
     rm -f $TMP/$RELEASE_BIN
     rm -f $TMP/$RELEASE_TAR

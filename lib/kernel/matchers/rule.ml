@@ -218,3 +218,21 @@ let options rule =
 let is_strict rule =
   let { strict; _ } = options rule in
   strict
+
+let match_templates rule =
+  let to_string = function
+    | String s -> s
+    | Template template ->
+      List.map template ~f:(function
+        | Types.Template.Constant c -> c
+        | Types.Template.Hole { pattern; _ } -> pattern)
+      |> String.concat
+  in
+  let rec of_expression = function
+    | Match (_, cases) ->
+      List.concat_map cases ~f:(fun (template, consequent) ->
+        to_string template :: List.concat_map consequent ~f:of_expression)
+    | Rewrite (_, (template, _)) -> [ to_string template ]
+    | True | False | Option _ | Equal _ | Not_equal _ -> []
+  in
+  List.concat_map rule ~f:of_expression

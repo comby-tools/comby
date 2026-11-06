@@ -103,6 +103,10 @@ module Match : sig
       search to perform the conversion quickly. *)
   val convert_offset : fast:bool -> source:string -> t -> t
 
+  (** Like [convert_offset], for all of the matches in [source]. Prefer this when
+      there is more than one match: the work done per match is logarithmic. *)
+  val convert_offsets : source:string -> t list -> t list
+
   type chunk_match =
     { content : string
     ; start : Location.t
@@ -479,6 +483,9 @@ module Matchers : sig
       Defines types and operations for match rules. *)
   and Rule : sig
     type t = Ast.expression list [@@deriving sexp]
+
+    (** The match templates a rule runs, at any depth, as written in the rule. *)
+    val match_templates : t -> string list
 
     type options =
       { nested : bool

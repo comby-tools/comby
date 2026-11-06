@@ -8,3 +8,6 @@ exception Invalid of string
 
     @raise Invalid if [pattern] is not accepted. *)
 val parse : string -> Re.t
+
+(** Whether [pattern] ends with a $ anchor, rather than an escaped \\$. *)
+val ends_with_anchor : string -> bool

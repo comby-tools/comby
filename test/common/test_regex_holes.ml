@@ -476,3 +476,40 @@ let%expect_test "regex_syntax_word_boundaries_are_latin1" =
      <caf>é, we leave the word alone. *)
   show ~source:"café x" {|\b\w+\b|};
   [%expect {|\b\w+\b          "caf\195\169 x" -> café <x>|}]
+
+let%expect_test "regex_holes_see_the_source_to_their_left" =
+  show ~source:"ab b" {|\Bb|};
+  show ~source:"foo" {|\bo|};
+  show ~source:"xfoo foo" {|\bfoo|};
+  [%expect
+    {|
+    \Bb              "ab b" -> a<b> b
+    \bo              "foo" -> No matches.
+    \bfoo            "xfoo foo" -> xfoo <foo>
+    |}]
+
+let%expect_test "regex_holes_start_of_source_is_not_every_position" =
+  show ~source:"a\na" {|(^a)|};
+  show ~source:"a\na" {|(?m)(^a)|};
+  show ~source:"aa" {|\Aa|};
+  [%expect
+    {|
+    (^a)             "a\na" -> <a>
+    a
+    (?m)(^a)         "a\na" -> <a>
+    <a>
+    \Aa              "aa" -> <a>a
+    |}]
+
+let%expect_test "regex_holes_escaped_dollar_is_not_an_anchor" =
+  show ~source:"foo$ foo" {|foo\$|};
+  show ~source:{|foo\ foo|} {|foo\\$|};
+  show ~source:{|foo\|} {|foo\\$|};
+  show ~source:"foo$" {|foo\$$|};
+  [%expect
+    {|
+    foo\$            "foo$ foo" -> <foo$> foo
+    foo\\$           "foo\\ foo" -> No matches.
+    foo\\$           "foo\\" -> <foo\>
+    foo\$$           "foo$" -> <foo$>
+    |}]

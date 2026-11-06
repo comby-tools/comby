@@ -1,7 +1,7 @@
 #########################
 ### Base Dependencies ###
 #########################
-FROM ocaml/opam:alpine-3.14-ocaml-4.11
+FROM ocaml/opam:alpine-3.21-ocaml-5.3
 
 WORKDIR /home/comby
 
@@ -10,8 +10,10 @@ RUN sudo apk --no-cache add \
     m4 \
     linux-headers \
     perl \
+    pkgconf \
     gmp-dev \
     zlib-dev \
+    zstd-dev \
     sqlite-dev \
     libev-dev \
     autoconf \

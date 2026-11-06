@@ -49,6 +49,11 @@ let convert_offset ~fast ~source match_ =
   in
   update_match f match_
 
+let convert_offsets ~source matches =
+  let starts = Offset.line_starts ~source in
+  let source_length = String.length source in
+  List.map matches ~f:(update_match (fun offset -> Offset.convert ~offset ~source_length starts))
+
 let update_environment f env =
   List.fold (Environment.vars env) ~init:env ~f:(fun env var ->
     let open Option in
