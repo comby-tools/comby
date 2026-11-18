@@ -28,7 +28,6 @@ COPY docs /home/comby/docs
 COPY src /home/comby/src
 COPY lib /home/comby/lib
 COPY test /home/comby/test
-COPY push-coverage-report.sh /home/comby/
 
 RUN sudo chown -R $(whoami) /home/comby
 RUN opam repository set-url default https://opam.ocaml.org && opam update
